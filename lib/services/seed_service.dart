@@ -1,34 +1,58 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/menu_item_model.dart';
 import '../models/coupon_model.dart';
 import '../models/inventory_item_model.dart';
 import '../models/order_model.dart';
 import '../models/notification_model.dart';
 
-/// Call once (from Settings → "Seed sample data") so the client never
-/// needs to open the Firebase console to create documents.
+/// Seeds development/sample data into Firestore.
+///
+/// Call this from Settings → Seed Sample Data.
+///
+/// The service is designed to be safely called multiple times.
+/// Once the seed marker exists, it will not create duplicate data.
 class SeedService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  static const String _seedDocument = 'initial_data_v1';
+
   Future<bool> isAlreadySeeded() async {
-    final snap = await _db.collection('menu_items').limit(1).get();
-    return snap.docs.isNotEmpty;
+    final doc = await _db.collection('settings').doc('seed_status').get();
+
+    return doc.exists && doc.data()?['seed_version'] == _seedDocument;
   }
 
   Future<void> seedAll() async {
+    if (await isAlreadySeeded()) {
+      return;
+    }
+
     final batch = _db.batch();
+
+    final now = DateTime.now();
+
+    // ============================================================
+    // MENU ITEMS
+    // ============================================================
 
     final menuItems = [
       MenuItemModel(
         id: '',
         name: 'Spicy Tuna Roll',
-        description: 'Fresh tuna, spicy mayo, cucumber, wrapped in seasoned rice and nori.',
+        description:
+            'Fresh tuna, spicy mayo, cucumber, wrapped in seasoned rice and nori.',
         price: 450,
         category: 'Rolls',
         subCategory: 'Signature Rolls',
         imageUrl: '',
         isVeg: false,
-        majorIngredients: const ['Tuna', 'Nori', 'Sushi Rice', 'Cucumber'],
+        majorIngredients: const [
+          'Tuna',
+          'Nori',
+          'Sushi Rice',
+          'Cucumber',
+        ],
         selectedSize: ItemSize.medium,
         portionQuantities: const {
           ItemSize.small: '4 pcs',
@@ -41,8 +65,16 @@ class SeedService {
             title: 'Portion Size',
             required: true,
             options: [
-              MenuItemOption(id: 'o1', name: 'Regular', included: true),
-              MenuItemOption(id: 'o2', name: 'Family Size (Serves 2)', extraPrice: 150),
+              MenuItemOption(
+                id: 'o1',
+                name: 'Regular',
+                included: true,
+              ),
+              MenuItemOption(
+                id: 'o2',
+                name: 'Family Size (Serves 2)',
+                extraPrice: 150,
+              ),
             ],
           ),
         ],
@@ -56,7 +88,11 @@ class SeedService {
         subCategory: 'Biryani',
         imageUrl: '',
         isVeg: false,
-        majorIngredients: const ['Basmati Rice', 'Chicken', 'Saffron'],
+        majorIngredients: const [
+          'Basmati Rice',
+          'Chicken',
+          'Saffron',
+        ],
         portionQuantities: const {
           ItemSize.small: '300 g',
           ItemSize.medium: '450 g',
@@ -66,13 +102,18 @@ class SeedService {
       MenuItemModel(
         id: '',
         name: 'Paneer Tikka',
-        description: 'Char-grilled cottage cheese marinated in tandoori spices.',
+        description:
+            'Char-grilled cottage cheese marinated in tandoori spices.',
         price: 280,
         category: 'Starters',
         subCategory: 'Tandoori',
         imageUrl: '',
         isVeg: true,
-        majorIngredients: const ['Paneer', 'Yogurt', 'Tandoori Masala'],
+        majorIngredients: const [
+          'Paneer',
+          'Yogurt',
+          'Tandoori Masala',
+        ],
       ),
       MenuItemModel(
         id: '',
@@ -83,13 +124,25 @@ class SeedService {
         subCategory: 'Naan',
         imageUrl: '',
         isVeg: true,
+        majorIngredients: const [
+          'Flour',
+          'Butter',
+        ],
       ),
     ];
 
     for (final item in menuItems) {
       final ref = _db.collection('menu_items').doc();
-      batch.set(ref, item.toJson());
+
+      batch.set(
+        ref,
+        item.toJson(),
+      );
     }
+
+    // ============================================================
+    // COUPONS
+    // ============================================================
 
     final coupons = [
       CouponModel(
@@ -101,8 +154,11 @@ class SeedService {
         minOrderValue: 500,
         usageLimit: 200,
         usageCount: 0,
-        startDate: DateTime(2025, 12, 1),
-        endDate: DateTime(2026, 3, 31),
+
+        // Updated so the sample coupon is actually usable.
+        startDate: DateTime(2026, 9, 1),
+        endDate: DateTime(2026, 12, 31),
+
         status: CouponStatus.active,
       ),
       CouponModel(
@@ -112,26 +168,72 @@ class SeedService {
         discountType: DiscountType.flat,
         discountValue: 10,
         minOrderValue: 200,
-        startDate: DateTime(2025, 1, 1),
+        startDate: DateTime(2026, 1, 1),
         endDate: DateTime(2026, 12, 31),
         status: CouponStatus.active,
       ),
     ];
-    for (final c in coupons) {
+
+    for (final coupon in coupons) {
       final ref = _db.collection('coupons').doc();
-      batch.set(ref, c.toJson());
+
+      batch.set(
+        ref,
+        coupon.toJson(),
+      );
     }
 
+    // ============================================================
+    // INVENTORY
+    // ============================================================
+
     final inventory = [
-      InventoryItemModel(id: '', name: 'All Wagyu Beef Ribeye', quantity: 3, unit: 'kg', lowStockThreshold: 5, lastUpdated: DateTime.now()),
-      InventoryItemModel(id: '', name: 'Black Winter Truffles', quantity: 0, unit: 'kg', lowStockThreshold: 1, lastUpdated: DateTime.now()),
-      InventoryItemModel(id: '', name: 'Arborio Rice', quantity: 42, unit: 'kg', lowStockThreshold: 10, lastUpdated: DateTime.now()),
-      InventoryItemModel(id: '', name: 'Extra Virgin Olive Oil', quantity: 18, unit: 'ltr', lowStockThreshold: 5, lastUpdated: DateTime.now()),
+      InventoryItemModel(
+        id: '',
+        name: 'All Wagyu Beef Ribeye',
+        quantity: 3,
+        unit: 'kg',
+        lowStockThreshold: 5,
+        lastUpdated: now,
+      ),
+      InventoryItemModel(
+        id: '',
+        name: 'Black Winter Truffles',
+        quantity: 0,
+        unit: 'kg',
+        lowStockThreshold: 1,
+        lastUpdated: now,
+      ),
+      InventoryItemModel(
+        id: '',
+        name: 'Arborio Rice',
+        quantity: 42,
+        unit: 'kg',
+        lowStockThreshold: 10,
+        lastUpdated: now,
+      ),
+      InventoryItemModel(
+        id: '',
+        name: 'Extra Virgin Olive Oil',
+        quantity: 18,
+        unit: 'ltr',
+        lowStockThreshold: 5,
+        lastUpdated: now,
+      ),
     ];
-    for (final i in inventory) {
+
+    for (final item in inventory) {
       final ref = _db.collection('inventory').doc();
-      batch.set(ref, i.toJson());
+
+      batch.set(
+        ref,
+        item.toJson(),
+      );
     }
+
+    // ============================================================
+    // ORDERS
+    // ============================================================
 
     final orders = [
       OrderModel(
@@ -141,10 +243,18 @@ class SeedService {
         deliveryAddress: '221B Baker Street, MG Road',
         status: OrderStatus.preparing,
         total: 845,
-        createdAt: DateTime.now().subtract(const Duration(minutes: 12)),
+        createdAt: now.subtract(const Duration(minutes: 12)),
         items: [
-          OrderItemModel(name: 'Spicy Tuna Roll', quantity: 2, price: 450),
-          OrderItemModel(name: 'Miso Soup', quantity: 1, price: 120),
+          OrderItemModel(
+            name: 'Spicy Tuna Roll',
+            quantity: 2,
+            price: 450,
+          ),
+          OrderItemModel(
+            name: 'Miso Soup',
+            quantity: 1,
+            price: 120,
+          ),
         ],
         deliveryLat: 28.6139,
         deliveryLng: 77.2090,
@@ -156,10 +266,18 @@ class SeedService {
         deliveryAddress: 'Sector 18, Noida',
         status: OrderStatus.pending,
         total: 620,
-        createdAt: DateTime.now().subtract(const Duration(minutes: 4)),
+        createdAt: now.subtract(const Duration(minutes: 4)),
         items: [
-          OrderItemModel(name: 'Chicken Biryani', quantity: 1, price: 320),
-          OrderItemModel(name: 'Butter Naan', quantity: 2, price: 150),
+          OrderItemModel(
+            name: 'Chicken Biryani',
+            quantity: 1,
+            price: 320,
+          ),
+          OrderItemModel(
+            name: 'Butter Naan',
+            quantity: 2,
+            price: 150,
+          ),
         ],
       ),
       OrderModel(
@@ -169,44 +287,93 @@ class SeedService {
         deliveryAddress: 'Andheri West, Mumbai',
         status: OrderStatus.ready,
         total: 1120,
-        createdAt: DateTime.now().subtract(const Duration(minutes: 28)),
+        createdAt: now.subtract(const Duration(minutes: 28)),
         items: [
-          OrderItemModel(name: 'Paneer Tikka', quantity: 2, price: 280),
-          OrderItemModel(name: 'Dal Makhani', quantity: 1, price: 260),
+          OrderItemModel(
+            name: 'Paneer Tikka',
+            quantity: 2,
+            price: 280,
+          ),
+          OrderItemModel(
+            name: 'Dal Makhani',
+            quantity: 1,
+            price: 260,
+          ),
         ],
       ),
     ];
-    for (final o in orders) {
+
+    for (final order in orders) {
       final ref = _db.collection('orders').doc();
-      batch.set(ref, o.toJson());
+
+      batch.set(
+        ref,
+        order.toJson(),
+      );
     }
 
-    final notifs = [
+    // ============================================================
+    // NOTIFICATIONS
+    // ============================================================
+
+    final notifications = [
       NotificationModel(
         id: '',
         title: 'System Notification',
         message: 'Weekly Menu Rollout Alert',
         audience: NotificationAudience.allApp,
-        sentAt: DateTime.now().subtract(const Duration(days: 1)),
+        createdAt: now.subtract(const Duration(days: 1)),
+        scheduledAt: null,
+        sentAt: now.subtract(const Duration(days: 1)),
         recipientCount: 0,
+        scheduled: false,
       ),
     ];
-    for (final n in notifs) {
+
+    for (final notification in notifications) {
       final ref = _db.collection('notifications').doc();
-      batch.set(ref, n.toJson());
+
+      batch.set(
+        ref,
+        notification.toJson(),
+      );
     }
 
-    batch.set(_db.collection('settings').doc('restaurant'), {
-      'restaurant_name': 'Uttarakhand Waffles',
-      'description': 'Best comfort waffles in town, freshly made every morning.',
-      'address': '17 Winchester Road, Suite 4',
-      'phone': '+91 98765 43210',
-      'email': 'contact@uttarakhandwaffles.com',
-      'auto_accept_orders': true,
-      'require_manager_approval_for_refunds': true,
-      'keep_pricing_consistent': false,
-      'updated_at': FieldValue.serverTimestamp(),
-    });
+    // ============================================================
+    // RESTAURANT SETTINGS
+    // ============================================================
+
+    batch.set(
+      _db.collection('settings').doc('restaurant'),
+      {
+        'restaurant_name': 'Uttarakhand Waffles',
+        'description':
+            'Best comfort waffles in town, freshly made every morning.',
+        'address': '17 Winchester Road, Suite 4',
+        'phone': '+91 98765 43210',
+        'email': 'contact@uttarakhandwaffles.com',
+        'auto_accept_orders': true,
+        'require_manager_approval_for_refunds': true,
+        'keep_pricing_consistent': false,
+        'updated_at': FieldValue.serverTimestamp(),
+      },
+    );
+
+    // ============================================================
+    // SEED STATUS
+    // ============================================================
+
+    batch.set(
+      _db.collection('settings').doc('seed_status'),
+      {
+        'seed_version': _seedDocument,
+        'seeded_at': FieldValue.serverTimestamp(),
+      },
+    );
+
+    // ============================================================
+    // COMMIT
+    // ============================================================
 
     await batch.commit();
   }

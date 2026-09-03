@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/utils/responsive.dart';
 
 class RdxSearchBar extends StatefulWidget {
   final String hintText;
@@ -71,6 +72,53 @@ class RdxSearchBar extends StatefulWidget {
 
   @override
   State<RdxSearchBar> createState() => _RdxSearchBarState();
+}
+
+/// Shared page toolbar that keeps search and page actions in a stable layout.
+class RdxSearchToolbar extends StatelessWidget implements PreferredSizeWidget {
+  final String hintText;
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
+  final List<Widget> actions;
+  final EdgeInsetsGeometry? padding;
+
+  const RdxSearchToolbar({
+    super.key,
+    this.hintText = 'Search...',
+    this.controller,
+    this.onChanged,
+    this.actions = const [],
+    EdgeInsetsGeometry? padding,
+  }) : padding = padding;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(64);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: preferredSize.height,
+      child: Padding(
+        padding: padding ?? Responsive.toolbarPadding(context),
+        child: Row(
+          children: [
+            Expanded(
+              child: RdxSearchBar(
+                height: 44,
+                hintText: hintText,
+                controller: controller,
+                onChanged: onChanged,
+              ),
+            ),
+            for (final action in actions) ...[
+              const SizedBox(width: 14),
+              action,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _RdxSearchBarState extends State<RdxSearchBar> {
@@ -146,6 +194,7 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
             horizontal: 13,
           ),
       decoration: BoxDecoration(
+        color: widget.backgroundColor ?? Colors.transparent,
         borderRadius: BorderRadius.circular(
           widget.borderRadius,
         ),
@@ -157,10 +206,10 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
       child: Row(
         children: [
           widget.leading ??
-              const Icon(
+              Icon(
                 Icons.search_rounded,
                 size: 19,
-                color: Color(0xFFE5BDBB),
+                color: widget.hintColor ?? const Color(0xFFE5BDBB),
               ),
           const SizedBox(width: 9),
           Expanded(
@@ -175,8 +224,8 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
               style: widget.textStyle ??
-                  const TextStyle(
-                    color: Color(0xFFE5BDBB),
+                  TextStyle(
+                    color: widget.textColor ?? const Color(0xFFE5BDBB),
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
                   ),

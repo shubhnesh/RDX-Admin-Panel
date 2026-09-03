@@ -37,21 +37,11 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         preferredSize: const Size.fromHeight(64),
         child: SafeArea(
           bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              22,
-              10,
-              22,
-              10,
-            ),
-            child: RdxSearchBar(
-              width: double.infinity,
-              height: 44,
-              hintText: 'Search orders...',
-              onChanged: (value) {
-                // Search/filter logic here.
-              },
-            ),
+          child: RdxSearchToolbar(
+            hintText: 'Search orders...',
+            onChanged: (value) {
+              // Search/filter logic here.
+            },
           ),
         ),
       ),

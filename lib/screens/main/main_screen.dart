@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive.dart';
 import '../../widgets/main_side_nav.dart';
+import '../../core/router/app_router.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../live_orders/live_orders_screen.dart';
 import '../menu/menu_screen.dart';
@@ -23,6 +24,10 @@ class _MainScreenState extends State<MainScreen> {
   String _currentRoute = '/dashboard';
   bool _sidebarExpanded = true;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey<NavigatorState> _contentNavigatorKey =
+      GlobalKey<NavigatorState>();
+  final ValueNotifier<String> _currentRouteNotifier =
+      ValueNotifier<String>('/dashboard');
 
   static const _screens = <String, Widget>{
     '/dashboard': DashboardScreen(),
@@ -36,6 +41,8 @@ class _MainScreenState extends State<MainScreen> {
   };
 
   void _navigate(String route) {
+    _contentNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+    _currentRouteNotifier.value = route;
     setState(() => _currentRoute = route);
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.of(context).pop();
@@ -44,12 +51,44 @@ class _MainScreenState extends State<MainScreen> {
 
   void _toggleSidebar() => setState(() => _sidebarExpanded = !_sidebarExpanded);
 
+  Widget _content() {
+    final routes = _screens.keys.toList();
+
+    return Navigator(
+      key: _contentNavigatorKey,
+      onGenerateRoute: (settings) {
+        if (settings.name == '/') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => ValueListenableBuilder<String>(
+              valueListenable: _currentRouteNotifier,
+              builder: (context, currentRoute, child) {
+                return IndexedStack(
+                  index:
+                      routes.indexOf(currentRoute).clamp(0, routes.length - 1),
+                  children:
+                      routes.map<Widget>((route) => _screens[route]!).toList(),
+                );
+              },
+            ),
+          );
+        }
+
+        return AppRoutes.generateRoute(settings);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _currentRouteNotifier.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final isMobile = Responsive.isMobile(context);
-    final routes = _screens.keys.toList();
-    final currentIndex = routes.indexOf(_currentRoute).clamp(0, routes.length - 1);
 
     final sideNav = MainSideNav(
       currentRoute: _currentRoute,
@@ -84,10 +123,7 @@ class _MainScreenState extends State<MainScreen> {
               onMenu: () => _scaffoldKey.currentState?.openDrawer(),
             ),
             Expanded(
-              child: IndexedStack(
-                index: currentIndex,
-                children: routes.map<Widget>((r) => _screens[r]!).toList(),
-              ),
+              child: _content(),
             ),
           ],
         ),
@@ -100,10 +136,7 @@ class _MainScreenState extends State<MainScreen> {
         children: [
           sideNav,
           Expanded(
-            child: IndexedStack(
-              index: currentIndex,
-              children: routes.map<Widget>((r) => _screens[r]!).toList(),
-            ),
+            child: _content(),
           ),
         ],
       ),

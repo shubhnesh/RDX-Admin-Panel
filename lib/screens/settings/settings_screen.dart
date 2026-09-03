@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/responsive.dart';
 import '../../providers/settings_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/rdx_header.dart';
@@ -30,11 +31,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'Sunday': false,
   };
   final Map<String, String> _openTime = {
-    for (final d in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+    for (final d in [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ])
       d: '09:00',
   };
   final Map<String, String> _closeTime = {
-    for (final d in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+    for (final d in [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ])
       d: '22:00',
   };
 
@@ -91,14 +108,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
                   )
                 : const Text('Save Changes'),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: Responsive.pagePadding(context),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
           child: Column(
@@ -160,7 +178,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: colors.border),
             ),
-            child: const Icon(Icons.restaurant, size: 32, color: AppColors.primary),
+            child: const Icon(Icons.restaurant,
+                size: 32, color: AppColors.primary),
           ),
           const SizedBox(width: 20),
           Expanded(
@@ -168,7 +187,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  nameController.text.isEmpty ? 'Restaurant Name' : nameController.text,
+                  nameController.text.isEmpty
+                      ? 'Restaurant Name'
+                      : nameController.text,
                   style: TextStyle(
                     color: colors.textPrimary,
                     fontSize: 17,
@@ -190,7 +211,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: const Icon(Icons.upload_outlined, size: 16),
                   label: const Text('Change Logo'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
                   ),
                 ),
               ],
@@ -240,17 +262,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (constraints.maxWidth < 480) {
                 return Column(
                   children: [
-                    CustomTextField(controller: phoneController, label: 'Phone'),
+                    CustomTextField(
+                        controller: phoneController, label: 'Phone'),
                     const SizedBox(height: 16),
-                    CustomTextField(controller: emailController, label: 'Email'),
+                    CustomTextField(
+                        controller: emailController, label: 'Email'),
                   ],
                 );
               }
               return Row(
                 children: [
-                  Expanded(child: CustomTextField(controller: phoneController, label: 'Phone')),
+                  Expanded(
+                      child: CustomTextField(
+                          controller: phoneController, label: 'Phone')),
                   const SizedBox(width: 16),
-                  Expanded(child: CustomTextField(controller: emailController, label: 'Email')),
+                  Expanded(
+                      child: CustomTextField(
+                          controller: emailController, label: 'Email')),
                 ],
               );
             },
@@ -292,12 +320,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(width: 8),
                 if (isOpen) ...[
-                  _timeChip(colors, _openTime[day]!, (t) => setState(() => _openTime[day] = t)),
+                  _timeChip(colors, _openTime[day]!,
+                      (t) => setState(() => _openTime[day] = t)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Text('–', style: TextStyle(color: colors.textMuted)),
                   ),
-                  _timeChip(colors, _closeTime[day]!, (t) => setState(() => _closeTime[day] = t)),
+                  _timeChip(colors, _closeTime[day]!,
+                      (t) => setState(() => _closeTime[day] = t)),
                 ] else
                   Text(
                     'Closed',
@@ -311,7 +341,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _timeChip(AppColorScheme colors, String time, ValueChanged<String> onChanged) {
+  Widget _timeChip(
+      AppColorScheme colors, String time, ValueChanged<String> onChanged) {
     return InkWell(
       onTap: () async {
         final parts = time.split(':');
@@ -319,7 +350,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           hour: int.tryParse(parts[0]) ?? 9,
           minute: int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0,
         );
-        final picked = await showTimePicker(context: context, initialTime: initial);
+        final picked =
+            await showTimePicker(context: context, initialTime: initial);
         if (picked != null) {
           final h = picked.hour.toString().padLeft(2, '0');
           final m = picked.minute.toString().padLeft(2, '0');
@@ -336,13 +368,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         child: Text(
           time,
-          style: TextStyle(color: colors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500),
+          style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500),
         ),
       ),
     );
   }
 
-  Widget _buildOperationalRules(SettingsProvider provider, AppColorScheme colors) {
+  Widget _buildOperationalRules(
+      SettingsProvider provider, AppColorScheme colors) {
     return Column(
       children: [
         _switchTile(
@@ -393,7 +429,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(color: colors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 2),
                 Text(

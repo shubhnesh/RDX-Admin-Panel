@@ -9,6 +9,7 @@ import '../../models/dashboard_stats_model.dart';
 import '../../models/activity_log_model.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/rdx_search_bar.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -41,7 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: AppColors.primary,
                   onRefresh: provider.load,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                    padding: Responsive.pagePadding(context),
                     children: [
                       _buildTopBar(colors),
                       const SizedBox(height: 20),
@@ -63,43 +64,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildTopBar(AppColorScheme colors) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: colors.border),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
-              children: [
-                Icon(Icons.search, size: 20, color: colors.textMuted),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    style: TextStyle(color: colors.textPrimary, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Search orders, items...',
-                      hintStyle:
-                          TextStyle(color: colors.textMuted, fontSize: 14),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                      filled: false,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
+    return RdxSearchToolbar(
+      hintText: 'Search orders, items...',
+      actions: [
         _plainIconBtn(colors,
             icon: Icons.notifications_outlined, badge: true, onTap: () {}),
-        const SizedBox(width: 14),
         _plainIconBtn(colors, icon: Icons.settings_outlined, onTap: () {}),
       ],
     );
@@ -125,11 +94,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 top: -1,
                 right: -1,
                 child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
                     color: AppColors.primary,
                     shape: BoxShape.circle,
+                    border: Border.all(color: colors.background, width: 1),
                   ),
                 ),
               ),
@@ -138,10 +108,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // STAT CARDS
-  // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildStatCards(DashboardStatsModel s, AppColorScheme colors) {
     final isNarrow = Responsive.isMobile(context);

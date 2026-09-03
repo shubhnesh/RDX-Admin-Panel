@@ -21,14 +21,14 @@ class AppColors {
   static const Color statusDelivered = Color(0xFF6B8E6B);
 
   // ─── Dark palette (default) ───────────────────────────────────────
-  static const Color darkBackground = Color(0xFF1A0E10);
-  static const Color darkSurface = Color(0xFF241316);
-  static const Color darkSurfaceVariant = Color(0xFF2E181C);
+  static const Color darkBackground = Color(0xFF0B0506);
+  static const Color darkSurface = Color(0xFF0B0506);
+  static const Color darkSurfaceVariant = Color(0xFF120709);
   static const Color darkSidebar = Color(0xFF200F12);
   static const Color darkTextPrimary = Color(0xFFF5EAEA);
   static const Color darkTextSecondary = Color(0xFFB79196);
   static const Color darkTextMuted = Color(0xFF7C5C60);
-  static const Color darkBorder = Color(0xFF3A2226);
+  static const Color darkBorder = Color(0xFF64252F);
   static const Color darkDivider = Color(0xFF32191D);
 
   // ─── Light palette ────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/responsive.dart';
 import '../../models/order_model.dart';
 import '../../providers/order_detail_provider.dart';
 import '../../services/order_service.dart';
@@ -68,7 +69,7 @@ class _OrderDetailContent extends StatelessWidget {
 
         if (compact) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(14),
+            padding: Responsive.pagePadding(context, top: 14, bottom: 80),
             child: Column(
               children: [
                 _OrderHeader(order: order),
@@ -95,11 +96,10 @@ class _OrderDetailContent extends StatelessWidget {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  18,
-                  14,
-                  18,
-                  12,
+                padding: Responsive.pagePadding(
+                  context,
+                  top: 14,
+                  bottom: 12,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

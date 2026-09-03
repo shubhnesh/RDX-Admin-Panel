@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
+import '../../core/utils/responsive.dart';
 import '../../models/inventory_item_model.dart';
 import '../../providers/inventory_provider.dart';
 import '../../widgets/loading_indicator.dart';
@@ -60,45 +61,56 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 color: AppColors.warning.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text('${provider.lowStockCount + provider.outOfStockCount} items need attention',
-                  style: const TextStyle(color: AppColors.warning, fontSize: 12)),
+              child: Text(
+                  '${provider.lowStockCount + provider.outOfStockCount} items need attention',
+                  style:
+                      const TextStyle(color: AppColors.warning, fontSize: 12)),
             ),
         ],
       ),
       body: provider.isLoading
           ? const LoadingIndicator()
           : ListView.separated(
-              padding: const EdgeInsets.all(24),
+              padding: Responsive.pagePadding(context),
               itemCount: provider.items.length,
               separatorBuilder: (_, __) => const Divider(height: 24),
               itemBuilder: (context, index) {
                 final item = provider.items[index];
                 return Row(
                   children: [
-                    Expanded(flex: 2, child: Text(item.name, style: AppTextStyles.body)),
                     Expanded(
-                        child: Text('${item.quantity.toStringAsFixed(1)} ${item.unit}',
+                        flex: 2,
+                        child: Text(item.name, style: AppTextStyles.body)),
+                    Expanded(
+                        child: Text(
+                            '${item.quantity.toStringAsFixed(1)} ${item.unit}',
                             style: AppTextStyles.bodyMuted)),
-                    Expanded(child: Text(_timeAgo(item.lastUpdated), style: AppTextStyles.caption)),
+                    Expanded(
+                        child: Text(_timeAgo(item.lastUpdated),
+                            style: AppTextStyles.caption)),
                     Expanded(
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: _statusColor(item.status).withOpacity(0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(_statusLabel(item.status),
                               style: TextStyle(
-                                  color: _statusColor(item.status), fontSize: 11, fontWeight: FontWeight.w600)),
+                                  color: _statusColor(item.status),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600)),
                         ),
                       ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.edit_outlined, size: 16),
                       color: AppColors.textSecondary,
-                      onPressed: () => _showUpdateDialog(context, provider, item),
+                      onPressed: () =>
+                          _showUpdateDialog(context, provider, item),
                     ),
                   ],
                 );
@@ -115,20 +127,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return '${diff.inDays}d ago';
   }
 
-  void _showUpdateDialog(BuildContext context, InventoryProvider provider, InventoryItemModel item) {
+  void _showUpdateDialog(BuildContext context, InventoryProvider provider,
+      InventoryItemModel item) {
     final controller = TextEditingController(text: item.quantity.toString());
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text('Update ${item.name}', style: const TextStyle(color: AppColors.textPrimary)),
+        title: Text('Update ${item.name}',
+            style: const TextStyle(color: AppColors.textPrimary)),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(suffixText: item.unit),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               final value = double.tryParse(controller.text);

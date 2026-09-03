@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/responsive.dart';
 
 /// Shared top bar used at the top of every admin screen's content area.
 class RdxHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -7,14 +8,16 @@ class RdxHeader extends StatelessWidget implements PreferredSizeWidget {
   final bool showBack;
   final List<Widget>? actions;
 
-  const RdxHeader({super.key, required this.title, this.showBack = false, this.actions});
+  const RdxHeader(
+      {super.key, required this.title, this.showBack = false, this.actions});
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding:
+          EdgeInsets.symmetric(horizontal: Responsive.pageHorizontal(context)),
       decoration: BoxDecoration(
         color: colors.background,
         border: Border(bottom: BorderSide(color: colors.border)),
@@ -23,7 +26,8 @@ class RdxHeader extends StatelessWidget implements PreferredSizeWidget {
         children: [
           if (showBack) ...[
             IconButton(
-              icon: Icon(Icons.arrow_back_ios_new, size: 18, color: colors.textPrimary),
+              icon: Icon(Icons.arrow_back_ios_new,
+                  size: 18, color: colors.textPrimary),
               onPressed: () => Navigator.of(context).maybePop(),
             ),
             const SizedBox(width: 4),

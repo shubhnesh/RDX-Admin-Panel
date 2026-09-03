@@ -63,7 +63,7 @@ class _SupportScreenState extends State<SupportScreen> {
         builder: (context, constraints) {
           final content = isNarrow
               ? ListView(
-                  padding: const EdgeInsets.all(20),
+                  padding: Responsive.pagePadding(context, top: 20),
                   children: [
                     _buildIntro(colors),
                     const SizedBox(height: 20),
@@ -75,7 +75,7 @@ class _SupportScreenState extends State<SupportScreen> {
                   ],
                 )
               : Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: Responsive.pagePadding(context),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -115,7 +115,8 @@ class _SupportScreenState extends State<SupportScreen> {
       children: [
         Text(
           'Questions? Our Support team is here. Create tickets or reply to existing problems.',
-          style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
+          style:
+              TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
         ),
       ],
     );
@@ -148,7 +149,8 @@ class _SupportScreenState extends State<SupportScreen> {
                 onTap: () => setState(() => _selectedCategory = c.$1),
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
@@ -161,15 +163,19 @@ class _SupportScreenState extends State<SupportScreen> {
                       Icon(
                         c.$2,
                         size: 18,
-                        color: selected ? AppColors.primary : colors.textSecondary,
+                        color:
+                            selected ? AppColors.primary : colors.textSecondary,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         c.$1,
                         style: TextStyle(
-                          color: selected ? colors.textPrimary : colors.textSecondary,
+                          color: selected
+                              ? colors.textPrimary
+                              : colors.textSecondary,
                           fontSize: 13,
-                          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w500,
                         ),
                       ),
                     ],
@@ -220,7 +226,8 @@ class _SupportScreenState extends State<SupportScreen> {
             ),
             child: Column(
               children: [
-                Icon(Icons.cloud_upload_outlined, size: 32, color: colors.textMuted),
+                Icon(Icons.cloud_upload_outlined,
+                    size: 32, color: colors.textMuted),
                 const SizedBox(height: 8),
                 Text(
                   'Drag & drop screenshots or logs',
@@ -243,7 +250,8 @@ class _SupportScreenState extends State<SupportScreen> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.send_rounded, size: 18),
               label: Text(_sending ? 'Submitting…' : 'Submit Ticket'),

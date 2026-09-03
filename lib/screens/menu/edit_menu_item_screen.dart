@@ -86,7 +86,9 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
     if (value.isEmpty) return;
     if (majorIngredients.length >= MenuItemModel.maxMajorIngredients) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('You can add up to ${MenuItemModel.maxMajorIngredients} major ingredients.')),
+        SnackBar(
+            content: Text(
+                'You can add up to ${MenuItemModel.maxMajorIngredients} major ingredients.')),
       );
       return;
     }
@@ -105,8 +107,10 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
   }
 
   Future<void> _save() async {
-    if (nameController.text.trim().isEmpty || double.tryParse(priceController.text.trim()) == null) {
-      setState(() => errorMessage = 'Please fill in item name and a valid price.');
+    if (nameController.text.trim().isEmpty ||
+        double.tryParse(priceController.text.trim()) == null) {
+      setState(
+          () => errorMessage = 'Please fill in item name and a valid price.');
       return;
     }
 
@@ -124,7 +128,8 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
       majorIngredients: majorIngredients,
       selectedSize: selectedSize,
       portionQuantities: {
-        for (final size in ItemSize.values) size: _portionControllers[size]!.text.trim(),
+        for (final size in ItemSize.values)
+          size: _portionControllers[size]!.text.trim(),
       },
     );
 
@@ -170,7 +175,9 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
                   _buildTopBar(colors),
                   const SizedBox(height: 20),
                   if (errorMessage != null) ...[
-                    Text(errorMessage!, style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+                    Text(errorMessage!,
+                        style: const TextStyle(
+                            color: AppColors.danger, fontSize: 12)),
                     const SizedBox(height: 12),
                   ],
                   LayoutBuilder(
@@ -239,22 +246,34 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
                 children: [
                   Text(
                     'MENU MANAGEMENT',
-                    style: TextStyle(color: colors.textMuted, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.6),
+                    style: TextStyle(
+                        color: colors.textMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.6),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Icon(Icons.chevron_right, size: 14, color: colors.textMuted),
+                    child: Icon(Icons.chevron_right,
+                        size: 14, color: colors.textMuted),
                   ),
                   const Text(
                     'EDIT ITEM',
-                    style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6),
+                    style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.6),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
               Text(
                 isEditing ? 'Edit Menu Item' : 'Add Menu Item',
-                style: TextStyle(color: colors.textPrimary, fontSize: 22, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -290,7 +309,8 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
             height: 220,
             width: double.infinity,
             color: colors.surfaceVariant,
-            child: Icon(Icons.image_outlined, size: 40, color: colors.textMuted),
+            child:
+                Icon(Icons.image_outlined, size: 40, color: colors.textMuted),
           ),
           Positioned.fill(
             child: Container(
@@ -298,7 +318,10 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.black.withOpacity(0.05), Colors.black.withOpacity(0.6)],
+                  colors: [
+                    Colors.black.withOpacity(0.05),
+                    Colors.black.withOpacity(0.6)
+                  ],
                 ),
               ),
             ),
@@ -315,18 +338,24 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white.withOpacity(0.15)),
                     ),
-                    child: const Icon(Icons.cloud_upload_outlined, color: Colors.white, size: 22),
+                    child: const Icon(Icons.cloud_upload_outlined,
+                        color: Colors.white, size: 22),
                   ),
                   const SizedBox(height: 10),
                   const Text('Update Item Image',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15)),
                   const SizedBox(height: 4),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Text(
                       'Drag and drop or click to replace the current photo',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 11.5),
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 11.5),
                     ),
                   ),
                 ],
@@ -359,21 +388,29 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
       title: 'Display Settings',
       child: Column(
         children: [
-          _switchRow(colors, 'Show on Mobile App', showOnMobileApp, (v) => setState(() => showOnMobileApp = v)),
+          _switchRow(colors, 'Show on Mobile App', showOnMobileApp,
+              (v) => setState(() => showOnMobileApp = v)),
           const SizedBox(height: 14),
-          _switchRow(colors, 'Featured Item', featuredItem, (v) => setState(() => featuredItem = v)),
+          _switchRow(colors, 'Featured Item', featuredItem,
+              (v) => setState(() => featuredItem = v)),
           const SizedBox(height: 14),
-          _switchRow(colors, 'Available on Menu', available, (v) => setState(() => available = v)),
+          _switchRow(colors, 'Available on Menu', available,
+              (v) => setState(() => available = v)),
         ],
       ),
     );
   }
 
-  Widget _switchRow(AppColorScheme colors, String label, bool value, ValueChanged<bool> onChanged) {
+  Widget _switchRow(AppColorScheme colors, String label, bool value,
+      ValueChanged<bool> onChanged) {
     return Row(
       children: [
         Expanded(
-          child: Text(label, style: TextStyle(color: colors.textPrimary, fontSize: 13.5, fontWeight: FontWeight.w500)),
+          child: Text(label,
+              style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500)),
         ),
         _CustomToggle(value: value, onChanged: onChanged),
       ],
@@ -389,9 +426,14 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
       colors: colors,
       child: Column(
         children: [
-          _LabeledField(colors: colors, label: 'Item Name', controller: nameController),
+          _LabeledField(
+              colors: colors, label: 'Item Name', controller: nameController),
           const SizedBox(height: 16),
-          _LabeledField(colors: colors, label: 'Description', controller: descriptionController, maxLines: 3),
+          _LabeledField(
+              colors: colors,
+              label: 'Description',
+              controller: descriptionController,
+              maxLines: 3),
         ],
       ),
     );
@@ -432,12 +474,14 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
                 : _CustomDropdown(
                     colors: colors,
                     label: 'Subcategory',
-                    value: subOptions.contains(subCategory) ? subCategory : null,
+                    value:
+                        subOptions.contains(subCategory) ? subCategory : null,
                     placeholder: 'Select subcategory',
                     options: subOptions,
                     trailingAddNew: true,
                     onSelected: (v) => setState(() => subCategory = v),
-                    onAddNew: () => setState(() => _addingCustomSubCategory = true),
+                    onAddNew: () =>
+                        setState(() => _addingCustomSubCategory = true),
                   ),
           ),
         ],
@@ -480,7 +524,9 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
               bg: AppColors.success.withOpacity(0.15),
               iconColor: AppColors.success,
               onTap: () => setState(() {
-                subCategory = controller.text.trim().isEmpty ? null : controller.text.trim();
+                subCategory = controller.text.trim().isEmpty
+                    ? null
+                    : controller.text.trim();
                 _addingCustomSubCategory = false;
               }),
             ),
@@ -493,7 +539,11 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
   Widget _fieldLabel(AppColorScheme colors, String text) {
     return Text(
       text.toUpperCase(),
-      style: TextStyle(color: colors.textMuted, fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.7),
+      style: TextStyle(
+          color: colors.textMuted,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.7),
     );
   }
 
@@ -574,7 +624,8 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
               final selected = selectedSize == size;
               return Expanded(
                 child: Padding(
-                  padding: EdgeInsets.only(right: size != ItemSize.large ? 8 : 0),
+                  padding:
+                      EdgeInsets.only(right: size != ItemSize.large ? 8 : 0),
                   child: _OutlinePill(
                     label: size.label.toUpperCase(),
                     selected: selected,
@@ -597,7 +648,8 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
             children: ItemSize.values.map((size) {
               return Expanded(
                 child: Padding(
-                  padding: EdgeInsets.only(right: size != ItemSize.large ? 12 : 0),
+                  padding:
+                      EdgeInsets.only(right: size != ItemSize.large ? 12 : 0),
                   child: _LabeledField(
                     colors: colors,
                     label: size.label,
@@ -618,13 +670,17 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
   // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildIngredientsCard(AppColorScheme colors) {
-    final atLimit = majorIngredients.length >= MenuItemModel.maxMajorIngredients;
+    final atLimit =
+        majorIngredients.length >= MenuItemModel.maxMajorIngredients;
     return _Card(
       colors: colors,
       title: 'Major Ingredients',
       trailing: Text(
         '${majorIngredients.length}/${MenuItemModel.maxMajorIngredients}',
-        style: TextStyle(color: colors.textMuted, fontSize: 11.5, fontWeight: FontWeight.w700),
+        style: TextStyle(
+            color: colors.textMuted,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -633,9 +689,14 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final ingredient in majorIngredients) _IngredientChip(label: ingredient, colors: colors, onRemove: () => _removeIngredient(ingredient)),
+              for (final ingredient in majorIngredients)
+                _IngredientChip(
+                    label: ingredient,
+                    colors: colors,
+                    onRemove: () => _removeIngredient(ingredient)),
               if (majorIngredients.isEmpty)
-                Text('No major ingredients added yet', style: TextStyle(color: colors.textMuted, fontSize: 12)),
+                Text('No major ingredients added yet',
+                    style: TextStyle(color: colors.textMuted, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 12),
@@ -651,7 +712,9 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
                     decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
-                      hintText: atLimit ? 'Maximum of 5 ingredients reached' : 'e.g. Basmati Rice',
+                      hintText: atLimit
+                          ? 'Maximum of 5 ingredients reached'
+                          : 'e.g. Basmati Rice',
                     ),
                     onSubmitted: (_) => _addIngredient(),
                   ),
@@ -693,16 +756,24 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
               SizedBox(width: 4),
               Text(
                 'ADD NEW GROUP',
-                style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4),
               ),
             ],
           ),
         ),
       ),
       child: customizations.isEmpty
-          ? Text('No customization groups yet.', style: TextStyle(color: colors.textMuted, fontSize: 12))
+          ? Text('No customization groups yet.',
+              style: TextStyle(color: colors.textMuted, fontSize: 12))
           : Column(
-              children: customizations.map((group) => _CustomizationGroupCard(group: group, colors: colors)).toList(),
+              children: customizations
+                  .map((group) =>
+                      _CustomizationGroupCard(group: group, colors: colors))
+                  .toList(),
             ),
     );
   }
@@ -718,7 +789,8 @@ class _Card extends StatelessWidget {
   final Widget? trailing;
   final Widget child;
 
-  const _Card({required this.colors, this.title, this.trailing, required this.child});
+  const _Card(
+      {required this.colors, this.title, this.trailing, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -737,7 +809,11 @@ class _Card extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(title!, style: TextStyle(color: colors.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+                  child: Text(title!,
+                      style: TextStyle(
+                          color: colors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600)),
                 ),
                 if (trailing != null) trailing!,
               ],
@@ -779,7 +855,11 @@ class _LabeledField extends StatelessWidget {
       children: [
         Text(
           label.toUpperCase(),
-          style: TextStyle(color: colors.textMuted, fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.7),
+          style: TextStyle(
+              color: colors.textMuted,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.7),
         ),
         const SizedBox(height: 7),
         _InputBox(
@@ -858,7 +938,10 @@ class _CustomToggle extends StatelessWidget {
               color: Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 3, offset: const Offset(0, 1)),
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1)),
               ],
             ),
           ),
@@ -911,7 +994,8 @@ class _CustomDropdownState extends State<_CustomDropdown> {
   }
 
   void _openMenu() {
-    final renderBox = _triggerKey.currentContext!.findRenderObject() as RenderBox;
+    final renderBox =
+        _triggerKey.currentContext!.findRenderObject() as RenderBox;
     final size = renderBox.size;
     final offset = renderBox.localToGlobal(Offset.zero);
     final colors = widget.colors;
@@ -938,7 +1022,10 @@ class _CustomDropdownState extends State<_CustomDropdown> {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: colors.border),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 16, offset: const Offset(0, 8)),
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8)),
                   ],
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -947,12 +1034,15 @@ class _CustomDropdownState extends State<_CustomDropdown> {
                   shrinkWrap: true,
                   children: [
                     for (final option in widget.options)
-                      _menuItem(colors, label: option, selected: option == widget.value, onTap: () {
+                      _menuItem(colors,
+                          label: option,
+                          selected: option == widget.value, onTap: () {
                         widget.onSelected(option);
                         _closeMenu();
                       }),
                     if (widget.trailingAddNew) ...[
-                      if (widget.options.isNotEmpty) Divider(height: 1, color: colors.divider),
+                      if (widget.options.isNotEmpty)
+                        Divider(height: 1, color: colors.divider),
                       _menuItem(
                         colors,
                         label: 'Add new',
@@ -968,8 +1058,11 @@ class _CustomDropdownState extends State<_CustomDropdown> {
                     ],
                     if (widget.options.isEmpty && !widget.trailingAddNew)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        child: Text('No options yet', style: TextStyle(color: colors.textMuted, fontSize: 12.5)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        child: Text('No options yet',
+                            style: TextStyle(
+                                color: colors.textMuted, fontSize: 12.5)),
                       ),
                   ],
                 ),
@@ -998,7 +1091,8 @@ class _CustomDropdownState extends State<_CustomDropdown> {
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        color: selected ? AppColors.primary.withOpacity(0.12) : Colors.transparent,
+        color:
+            selected ? AppColors.primary.withOpacity(0.12) : Colors.transparent,
         child: Row(
           children: [
             if (icon != null) ...[
@@ -1010,13 +1104,15 @@ class _CustomDropdownState extends State<_CustomDropdown> {
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: textColor ?? (selected ? AppColors.primary : colors.textPrimary),
+                  color: textColor ??
+                      (selected ? AppColors.primary : colors.textPrimary),
                   fontSize: 13,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
-            if (selected) const Icon(Icons.check, size: 15, color: AppColors.primary),
+            if (selected)
+              const Icon(Icons.check, size: 15, color: AppColors.primary),
           ],
         ),
       ),
@@ -1046,7 +1142,11 @@ class _CustomDropdownState extends State<_CustomDropdown> {
       children: [
         Text(
           widget.label.toUpperCase(),
-          style: TextStyle(color: colors.textMuted, fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.7),
+          style: TextStyle(
+              color: colors.textMuted,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.7),
         ),
         const SizedBox(height: 7),
         InkWell(
@@ -1058,7 +1158,8 @@ class _CustomDropdownState extends State<_CustomDropdown> {
             decoration: BoxDecoration(
               color: colors.surfaceVariant,
               borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: _open ? AppColors.primary : colors.border),
+              border:
+                  Border.all(color: _open ? AppColors.primary : colors.border),
             ),
             child: Row(
               children: [
@@ -1067,7 +1168,8 @@ class _CustomDropdownState extends State<_CustomDropdown> {
                     displayText,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: isPlaceholder ? colors.textMuted : colors.textPrimary,
+                      color:
+                          isPlaceholder ? colors.textMuted : colors.textPrimary,
                       fontSize: 13.5,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1076,7 +1178,8 @@ class _CustomDropdownState extends State<_CustomDropdown> {
                 AnimatedRotation(
                   duration: const Duration(milliseconds: 150),
                   turns: _open ? 0.5 : 0,
-                  child: Icon(Icons.keyboard_arrow_down_rounded, size: 19, color: colors.textMuted),
+                  child: Icon(Icons.keyboard_arrow_down_rounded,
+                      size: 19, color: colors.textMuted),
                 ),
               ],
             ),
@@ -1161,9 +1264,14 @@ class _OutlinePill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 11),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withOpacity(0.22) : Colors.transparent,
+          color: selected
+              ? AppColors.primary.withOpacity(0.22)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: selected ? AppColors.primary.withOpacity(0.7) : colors.border),
+          border: Border.all(
+              color: selected
+                  ? AppColors.primary.withOpacity(0.7)
+                  : colors.border),
         ),
         child: Text(
           label,
@@ -1222,13 +1330,16 @@ class _PillButton extends StatelessWidget {
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
                 )
               : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (icon != null) ...[
-                      Icon(icon, size: 16, color: outlined ? colors.textPrimary : Colors.white),
+                      Icon(icon,
+                          size: 16,
+                          color: outlined ? colors.textPrimary : Colors.white),
                       const SizedBox(width: 6),
                     ],
                     Text(
@@ -1274,7 +1385,9 @@ class _CircleIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg ?? Colors.black.withOpacity(0.45),
           shape: BoxShape.circle,
-          border: bg == null ? Border.all(color: Colors.white.withOpacity(0.12)) : null,
+          border: bg == null
+              ? Border.all(color: Colors.white.withOpacity(0.12))
+              : null,
         ),
         child: Icon(icon, size: size * 0.5, color: iconColor ?? Colors.white),
       ),
@@ -1291,7 +1404,8 @@ class _IngredientChip extends StatelessWidget {
   final AppColorScheme colors;
   final VoidCallback onRemove;
 
-  const _IngredientChip({required this.label, required this.colors, required this.onRemove});
+  const _IngredientChip(
+      {required this.label, required this.colors, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
@@ -1305,7 +1419,11 @@ class _IngredientChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: TextStyle(color: colors.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w500)),
+          Text(label,
+              style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500)),
           const SizedBox(width: 4),
           InkWell(
             onTap: onRemove,
@@ -1352,12 +1470,16 @@ class _CustomizationGroupCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     group.title,
-                    style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
+                    style: TextStyle(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13),
                   ),
                 ),
                 _tag(group.required ? 'REQUIRED' : 'OPTIONAL', group.required),
                 const SizedBox(width: 8),
-                Icon(Icons.settings_outlined, size: 16, color: colors.textMuted),
+                Icon(Icons.settings_outlined,
+                    size: 16, color: colors.textMuted),
               ],
             ),
           ),
@@ -1373,11 +1495,19 @@ class _CustomizationGroupCard extends StatelessWidget {
                             _CustomCheckbox(checked: opt.included),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: Text(opt.name, style: TextStyle(color: colors.textSecondary, fontSize: 12.5)),
+                              child: Text(opt.name,
+                                  style: TextStyle(
+                                      color: colors.textSecondary,
+                                      fontSize: 12.5)),
                             ),
                             Text(
-                              opt.included ? 'Included' : '+\$${opt.extraPrice.toStringAsFixed(2)}',
-                              style: TextStyle(color: colors.textMuted, fontSize: 11.5, fontWeight: FontWeight.w600),
+                              opt.included
+                                  ? 'Included'
+                                  : '+\$${opt.extraPrice.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                  color: colors.textMuted,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -1400,7 +1530,11 @@ class _CustomizationGroupCard extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontSize: 8.5, fontWeight: FontWeight.w700, letterSpacing: 0.3),
+        style: TextStyle(
+            color: color,
+            fontSize: 8.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3),
       ),
     );
   }
@@ -1420,9 +1554,13 @@ class _CustomCheckbox extends StatelessWidget {
       decoration: BoxDecoration(
         color: checked ? AppColors.primary : Colors.transparent,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: checked ? AppColors.primary : const Color(0xFF5A4245), width: 1.4),
+        border: Border.all(
+            color: checked ? AppColors.primary : const Color(0xFF5A4245),
+            width: 1.4),
       ),
-      child: checked ? const Icon(Icons.check, size: 12, color: Colors.white) : null,
+      child: checked
+          ? const Icon(Icons.check, size: 12, color: Colors.white)
+          : null,
     );
   }
 }

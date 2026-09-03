@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/responsive.dart';
 import '../../models/menu_item_model.dart';
 import '../../providers/menu_provider.dart';
 import '../../widgets/empty_state.dart';
@@ -43,7 +44,7 @@ class _MenuScreenState extends State<MenuScreen> {
       backgroundColor: colors.background,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
+          padding: Responsive.pagePadding(context, top: 14, bottom: 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -70,20 +71,10 @@ class _MenuScreenState extends State<MenuScreen> {
   // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildTopBar(BuildContext context, AppColorScheme colors) {
-    return Row(
-      children: [
-        Expanded(
-          child: RdxSearchBar(
-            height: 44,
-            hintText: 'Search menu items...',
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-            textColor: colors.textPrimary,
-            hintColor: colors.textMuted,
-            onChanged: (value) => context.read<MenuProvider>().setSearchQuery(value),
-          ),
-        ),
-        const SizedBox(width: 14),
+    return RdxSearchToolbar(
+      hintText: 'Search menu items...',
+      onChanged: (value) => context.read<MenuProvider>().setSearchQuery(value),
+      actions: [
         ElevatedButton.icon(
           onPressed: () async {
             await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
@@ -92,9 +83,8 @@ class _MenuScreenState extends State<MenuScreen> {
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Add New Item'),
         ),
-        const SizedBox(width: 14),
-        _iconBtn(colors, icon: Icons.notifications_outlined, badge: true, onTap: () {}),
-        const SizedBox(width: 10),
+        _iconBtn(colors,
+            icon: Icons.notifications_outlined, badge: true, onTap: () {}),
         CircleAvatar(
           radius: 18,
           backgroundColor: colors.surfaceVariant,
@@ -155,10 +145,16 @@ class _MenuScreenState extends State<MenuScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _categoryChip(colors, label: 'All', selected: provider.selectedCategory == 'All', onTap: () => provider.setCategory('All')),
+                _categoryChip(colors,
+                    label: 'All',
+                    selected: provider.selectedCategory == 'All',
+                    onTap: () => provider.setCategory('All')),
                 for (final c in categories) ...[
                   const SizedBox(width: 8),
-                  _categoryChip(colors, label: c, selected: provider.selectedCategory == c, onTap: () => provider.setCategory(c)),
+                  _categoryChip(colors,
+                      label: c,
+                      selected: provider.selectedCategory == c,
+                      onTap: () => provider.setCategory(c)),
                 ],
               ],
             ),
@@ -197,7 +193,8 @@ class _MenuScreenState extends State<MenuScreen> {
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : colors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? AppColors.primary : colors.border),
+          border:
+              Border.all(color: selected ? AppColors.primary : colors.border),
         ),
         child: Text(
           label,
@@ -215,7 +212,8 @@ class _MenuScreenState extends State<MenuScreen> {
   // GRID — item cards + trailing "Add New Menu Item" tile
   // ═══════════════════════════════════════════════════════════════════
 
-  Widget _buildGrid(BuildContext context, MenuProvider provider, AppColorScheme colors) {
+  Widget _buildGrid(
+      BuildContext context, MenuProvider provider, AppColorScheme colors) {
     final items = provider.filteredItems;
 
     return GridView.builder(
@@ -229,10 +227,12 @@ class _MenuScreenState extends State<MenuScreen> {
       itemCount: items.length + 1,
       itemBuilder: (context, index) {
         if (index == items.length) {
-          return _AddItemTile(colors: colors, onTap: () async {
-            await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
-            if (context.mounted) context.read<MenuProvider>().load();
-          });
+          return _AddItemTile(
+              colors: colors,
+              onTap: () async {
+                await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
+                if (context.mounted) context.read<MenuProvider>().load();
+              });
         }
         final item = items[index];
         return _MenuItemCard(
@@ -240,7 +240,8 @@ class _MenuScreenState extends State<MenuScreen> {
           colors: colors,
           onToggleAvailability: () => provider.toggleAvailability(item),
           onEdit: () async {
-            await Navigator.of(context).pushNamed(AppRoutes.editMenuItem, arguments: item.id);
+            await Navigator.of(context)
+                .pushNamed(AppRoutes.editMenuItem, arguments: item.id);
             if (context.mounted) context.read<MenuProvider>().load();
           },
           onDelete: () => provider.deleteItem(item.id),
@@ -292,21 +293,27 @@ class _MenuItemCard extends StatelessWidget {
                 Container(
                   width: double.infinity,
                   color: colors.surfaceVariant,
-                  child: Icon(Icons.fastfood_outlined, color: colors.textMuted, size: 30),
+                  child: Icon(Icons.fastfood_outlined,
+                      color: colors.textMuted, size: 30),
                 ),
                 if (item.category.isNotEmpty)
                   Positioned(
                     left: 8,
                     top: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.55),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         item.category.toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3),
                       ),
                     ),
                   ),
@@ -319,7 +326,8 @@ class _MenuItemCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: _dotColor,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withOpacity(0.8), width: 1.5),
+                      border: Border.all(
+                          color: Colors.white.withOpacity(0.8), width: 1.5),
                     ),
                   ),
                 ),
@@ -335,12 +343,18 @@ class _MenuItemCard extends StatelessWidget {
                   item.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13.5),
+                  style: TextStyle(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13.5),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   '\$${item.price.toStringAsFixed(2)}',
-                  style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -359,7 +373,9 @@ class _MenuItemCard extends StatelessWidget {
                         Text(
                           item.available ? 'Available' : 'Out of Stock',
                           style: TextStyle(
-                            color: item.available ? colors.textSecondary : colors.textMuted,
+                            color: item.available
+                                ? colors.textSecondary
+                                : colors.textMuted,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w500,
                           ),
@@ -373,7 +389,8 @@ class _MenuItemCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                           child: Padding(
                             padding: const EdgeInsets.all(4),
-                            child: Icon(Icons.edit_outlined, size: 15, color: colors.textSecondary),
+                            child: Icon(Icons.edit_outlined,
+                                size: 15, color: colors.textSecondary),
                           ),
                         ),
                         InkWell(
@@ -381,7 +398,8 @@ class _MenuItemCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                           child: const Padding(
                             padding: EdgeInsets.all(4),
-                            child: Icon(Icons.delete_outline, size: 15, color: AppColors.danger),
+                            child: Icon(Icons.delete_outline,
+                                size: 15, color: AppColors.danger),
                           ),
                         ),
                       ],
@@ -430,7 +448,10 @@ class _AddItemTile extends StatelessWidget {
               Text(
                 'Add New Menu Item',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: colors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500),
               ),
             ],
           ),

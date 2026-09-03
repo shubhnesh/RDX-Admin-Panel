@@ -58,7 +58,8 @@ class AppTextStyles {
       ),
       cardTheme: CardThemeData(
         color: scheme.surface,
-        elevation: 0,
+        elevation: isDark ? 2 : 0,
+        shadowColor: isDark ? AppColors.primary.withValues(alpha: 0.18) : null,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: scheme.border),
@@ -81,7 +82,8 @@ class AppTextStyles {
         ),
         hintStyle: TextStyle(color: scheme.textMuted),
         labelStyle: TextStyle(color: scheme.textSecondary),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

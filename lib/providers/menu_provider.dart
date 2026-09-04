@@ -13,12 +13,15 @@ class MenuProvider extends ChangeNotifier {
   String selectedCategory = 'All';
   String searchQuery = '';
 
-  List<String> get categories => ['All', ..._items.map((e) => e.category).toSet()];
+  List<String> get categories =>
+      ['All', ..._items.map((e) => e.category).toSet()];
 
   List<MenuItemModel> get filteredItems {
     return _items.where((item) {
-      final matchesCategory = selectedCategory == 'All' || item.category == selectedCategory;
-      final matchesSearch = item.name.toLowerCase().contains(searchQuery.toLowerCase());
+      final matchesCategory =
+          selectedCategory == 'All' || item.category == selectedCategory;
+      final matchesSearch =
+          item.name.toLowerCase().contains(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     }).toList();
   }

@@ -184,7 +184,8 @@ class MenuItemModel {
       available: json['available'] ?? true,
       isVeg: json['is_veg'] ?? false,
       customizations: (json['customizations'] as List? ?? [])
-          .map((e) => MenuItemCustomizationGroup.fromJson(Map<String, dynamic>.from(e)))
+          .map((e) =>
+              MenuItemCustomizationGroup.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       majorIngredients: (json['major_ingredients'] as List? ?? [])
           .map((e) => e.toString())
@@ -211,14 +212,17 @@ class MenuItemModel {
         'available': available,
         'is_veg': isVeg,
         'customizations': customizations.map((e) => e.toJson()).toList(),
-        'major_ingredients': majorIngredients.take(maxMajorIngredients).toList(),
+        'major_ingredients':
+            majorIngredients.take(maxMajorIngredients).toList(),
         'selected_size': selectedSize.name,
         'portion_quantities': {
           'small': portionQuantities[ItemSize.small] ?? '',
           'medium': portionQuantities[ItemSize.medium] ?? '',
           'large': portionQuantities[ItemSize.large] ?? '',
         },
-        'created_at': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+        'created_at': createdAt != null
+            ? Timestamp.fromDate(createdAt!)
+            : FieldValue.serverTimestamp(),
         'updated_at': FieldValue.serverTimestamp(),
       };
 

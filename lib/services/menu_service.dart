@@ -12,7 +12,8 @@ class MenuService {
 
   Stream<List<MenuItemModel>> streamMenuItems() {
     return _col.orderBy('name').snapshots().map(
-          (snap) => snap.docs.map((d) => MenuItemModel.fromFirestore(d)).toList(),
+          (snap) =>
+              snap.docs.map((d) => MenuItemModel.fromFirestore(d)).toList(),
         );
   }
 

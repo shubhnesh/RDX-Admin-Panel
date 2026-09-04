@@ -87,7 +87,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             style: AppTextStyles.bodyMuted)),
                     Expanded(
                         child: Text(_timeAgo(item.lastUpdated),
-                            style: AppTextStyles.caption)),
+                            style: AppTextStyles.label)),
                     Expanded(
                       child: Align(
                         alignment: Alignment.centerLeft,

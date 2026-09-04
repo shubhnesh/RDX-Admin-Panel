@@ -1,22 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../core/theme/app_colors.dart';
-import '../providers/theme_provider.dart';
 
 class SidebarItem {
   final String label;
   final IconData icon;
   final String route;
-  const SidebarItem({required this.label, required this.icon, required this.route});
+  const SidebarItem(
+      {required this.label, required this.icon, required this.route});
 }
 
 const List<SidebarItem> kPrimaryNavItems = [
-  SidebarItem(label: 'Dashboard', icon: Icons.dashboard_outlined, route: '/dashboard'),
-  SidebarItem(label: 'Live Orders', icon: Icons.receipt_long_outlined, route: '/live-orders'),
-  SidebarItem(label: 'Menu', icon: Icons.restaurant_menu_outlined, route: '/menu'),
-  SidebarItem(label: 'Coupons', icon: Icons.local_offer_outlined, route: '/coupons'),
-  SidebarItem(label: 'Notifications', icon: Icons.campaign_outlined, route: '/notifications'),
-  SidebarItem(label: 'Inventory', icon: Icons.inventory_2_outlined, route: '/inventory'),
+  SidebarItem(
+      label: 'Dashboard', icon: Icons.dashboard_outlined, route: '/dashboard'),
+  SidebarItem(
+      label: 'Live Orders',
+      icon: Icons.receipt_long_outlined,
+      route: '/live-orders'),
+  SidebarItem(
+      label: 'Menu', icon: Icons.restaurant_menu_outlined, route: '/menu'),
+  SidebarItem(
+      label: 'Coupons', icon: Icons.local_offer_outlined, route: '/coupons'),
+  SidebarItem(
+      label: 'Notifications',
+      icon: Icons.campaign_outlined,
+      route: '/notifications'),
+  SidebarItem(
+      label: 'Inventory',
+      icon: Icons.inventory_2_outlined,
+      route: '/inventory'),
 ];
 
 /// Professional collapsible side navigation rail.
@@ -46,11 +57,9 @@ class MainSideNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.watch<ThemeProvider>();
-    // Sidebar stays dark for brand consistency even in light mode.
-    const sidebarBg = AppColors.darkSidebar;
-    const textPrimary = AppColors.darkTextPrimary;
-    const textSecondary = AppColors.darkTextSecondary;
+    const sidebarBg = AppColors.lightSidebar;
+    const textPrimary = AppColors.lightTextPrimary;
+    const textSecondary = AppColors.lightTextSecondary;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -61,7 +70,8 @@ class MainSideNav extends StatelessWidget {
           width: expanded ? expandedWidth : collapsedWidth,
           decoration: const BoxDecoration(
             color: sidebarBg,
-            border: Border(right: BorderSide(color: AppColors.darkBorder, width: 1)),
+            border: Border(
+                right: BorderSide(color: AppColors.lightBorder, width: 1)),
           ),
           // Clip everything so nothing paints outside during the width animation.
           child: ClipRect(
@@ -74,7 +84,8 @@ class MainSideNav extends StatelessWidget {
                 // ── Primary nav ───────────────────────────────────────
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     children: [
                       for (final item in kPrimaryNavItems)
                         _NavTile(
@@ -136,7 +147,7 @@ class MainSideNav extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Divider(
-                    color: AppColors.darkDivider.withOpacity(0.8),
+                    color: AppColors.lightDivider.withOpacity(0.8),
                     height: 1,
                   ),
                 ),
@@ -145,14 +156,6 @@ class MainSideNav extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Column(
                     children: [
-                      _FooterTile(
-                        icon: theme.isDark
-                            ? Icons.light_mode_outlined
-                            : Icons.dark_mode_outlined,
-                        label: theme.isDark ? 'Light Mode' : 'Dark Mode',
-                        expanded: expanded,
-                        onTap: () => theme.toggle(),
-                      ),
                       _FooterTile(
                         icon: Icons.support_agent_outlined,
                         label: 'Support',
@@ -215,7 +218,8 @@ class MainSideNav extends StatelessWidget {
               color: AppColors.primary.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.restaurant, color: AppColors.primary, size: 20),
+            child: const Icon(Icons.restaurant,
+                color: AppColors.primary, size: 20),
           ),
           // Text fades + size-animates instead of being crushed.
           AnimatedSize(
@@ -300,10 +304,10 @@ class _EdgeToggleButtonState extends State<_EdgeToggleButton> {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: _hovering ? AppColors.primary : AppColors.darkSurface,
+                color: _hovering ? AppColors.primary : AppColors.lightSurface,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: _hovering ? AppColors.primary : AppColors.darkBorder,
+                  color: _hovering ? AppColors.primary : AppColors.lightBorder,
                   width: 1.5,
                 ),
                 boxShadow: [
@@ -320,7 +324,7 @@ class _EdgeToggleButtonState extends State<_EdgeToggleButton> {
                     ? Icons.keyboard_double_arrow_left_rounded
                     : Icons.keyboard_double_arrow_right_rounded,
                 size: 18,
-                color: _hovering ? Colors.white : AppColors.darkTextSecondary,
+                color: _hovering ? Colors.white : AppColors.lightTextSecondary,
               ),
             ),
           ),
@@ -350,9 +354,12 @@ class _NavTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = selected ? AppColors.primary.withOpacity(0.18) : Colors.transparent;
-    final iconColor = selected ? AppColors.primary : AppColors.darkTextSecondary;
-    final textColor = selected ? AppColors.darkTextPrimary : AppColors.darkTextSecondary;
+    final bg =
+        selected ? AppColors.primary.withOpacity(0.18) : Colors.transparent;
+    final iconColor =
+        selected ? AppColors.primary : AppColors.lightTextSecondary;
+    final textColor =
+        selected ? AppColors.lightTextPrimary : AppColors.lightTextSecondary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -393,8 +400,9 @@ class _NavTile extends StatelessWidget {
                               style: TextStyle(
                                 color: textColor,
                                 fontSize: 14,
-                                fontWeight:
-                                    selected ? FontWeight.w600 : FontWeight.w500,
+                                fontWeight: selected
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -438,8 +446,9 @@ class _FooterTile extends StatelessWidget {
         ? AppColors.danger.withOpacity(0.9)
         : selected
             ? AppColors.primary
-            : AppColors.darkTextSecondary;
-    final bg = selected ? AppColors.primary.withOpacity(0.15) : Colors.transparent;
+            : AppColors.lightTextSecondary;
+    final bg =
+        selected ? AppColors.primary.withOpacity(0.15) : Colors.transparent;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -474,8 +483,9 @@ class _FooterTile extends StatelessWidget {
                               style: TextStyle(
                                 color: color,
                                 fontSize: 13.5,
-                                fontWeight:
-                                    selected ? FontWeight.w600 : FontWeight.w500,
+                                fontWeight: selected
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

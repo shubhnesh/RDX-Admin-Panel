@@ -324,8 +324,7 @@ class _CouponCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text('Discount',
-                  style:
-                      AppTextStyles.caption.copyWith(color: colors.textMuted)),
+                  style: AppTextStyles.label.copyWith(color: colors.textMuted)),
               const Spacer(),
               Text(
                 coupon.discountType == DiscountType.percentage
@@ -356,13 +355,13 @@ class _CouponCard extends StatelessWidget {
             Row(
               children: [
                 Text('Usage',
-                    style: AppTextStyles.caption
-                        .copyWith(color: colors.textMuted)),
+                    style:
+                        AppTextStyles.label.copyWith(color: colors.textMuted)),
                 const Spacer(),
                 Text(
                   '${coupon.usageCount}/${coupon.usageLimit}',
-                  style: AppTextStyles.caption
-                      .copyWith(color: colors.textSecondary),
+                  style:
+                      AppTextStyles.label.copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
@@ -370,11 +369,11 @@ class _CouponCard extends StatelessWidget {
             Row(
               children: [
                 Text('Usage',
-                    style: AppTextStyles.caption
-                        .copyWith(color: colors.textMuted)),
+                    style:
+                        AppTextStyles.label.copyWith(color: colors.textMuted)),
                 const Spacer(),
                 Text('${coupon.usageCount} · No limit',
-                    style: AppTextStyles.caption
+                    style: AppTextStyles.label
                         .copyWith(color: colors.textSecondary)),
               ],
             ),
@@ -393,7 +392,7 @@ class _CouponCard extends StatelessWidget {
                     : isExpired
                         ? 'Ended ${Formatters.date(coupon.endDate)}'
                         : 'Expires ${Formatters.date(coupon.endDate)}',
-                style: AppTextStyles.caption.copyWith(color: colors.textMuted),
+                style: AppTextStyles.label.copyWith(color: colors.textMuted),
               ),
             ],
           ),

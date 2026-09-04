@@ -19,23 +19,15 @@ class MenuProvider extends ChangeNotifier {
   List<MenuItemModel> get items => List.unmodifiable(_items);
 
   List<String> get categories {
-    final result = <String>{'All'};
-
-    for (final item in _items) {
-      if (item.category.trim().isNotEmpty) {
-        result.add(item.category.trim());
-      }
-    }
-
-    return result.toList();
+    return ['All', ...MenuTaxonomy.categories.map((category) => category.name)];
   }
 
   List<MenuItemModel> get filteredItems {
     final query = searchQuery.trim().toLowerCase();
 
     return _items.where((item) {
-      final matchesCategory =
-          selectedCategory == 'All' || item.category == selectedCategory;
+      final matchesCategory = selectedCategory == 'All' ||
+          item.primaryCategoryId == _categoryId(selectedCategory);
 
       final matchesSearch = query.isEmpty ||
           item.name.toLowerCase().contains(query) ||
@@ -65,16 +57,17 @@ class MenuProvider extends ChangeNotifier {
   }
 
   List<String> subCategoriesFor(String category) {
-    final result = <String>{};
-
-    for (final item in _items) {
-      if (item.category == category && item.subCategory.trim().isNotEmpty) {
-        result.add(item.subCategory.trim());
-      }
-    }
-
-    return result.toList()..sort();
+    final parentId = _categoryId(category);
+    return MenuTaxonomy.categories
+        .where((item) => item.parentId == parentId)
+        .map((item) => item.name)
+        .toList();
   }
+
+  String _categoryId(String category) => MenuTaxonomy.categories
+      .firstWhere((item) => item.name == category,
+          orElse: () => MenuCategory(category, category))
+      .id;
 
   void setCategory(String category) {
     selectedCategory = category;

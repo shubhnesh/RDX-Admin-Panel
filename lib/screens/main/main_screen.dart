@@ -112,7 +112,7 @@ class _MainScreenState extends State<MainScreen> {
         key: _scaffoldKey,
         backgroundColor: colors.background,
         drawer: Drawer(
-          backgroundColor: AppColors.darkSidebar,
+          backgroundColor: AppColors.lightSidebar,
           width: MainSideNav.expandedWidth,
           child: sideNav,
         ),

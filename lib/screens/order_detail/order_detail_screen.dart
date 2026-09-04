@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/responsive.dart';
+import '../../core/theme/app_colors.dart';
 import '../../models/order_model.dart';
 import '../../providers/order_detail_provider.dart';
 import '../../services/order_service.dart';
@@ -37,7 +38,7 @@ class _OrderDetailBody extends StatelessWidget {
     final order = provider.order;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: AppColors.lightBackground,
       appBar: RdxHeader(
         title: order == null ? 'Order Detail' : 'Order #RDX-${order.id}',
         showBack: true,

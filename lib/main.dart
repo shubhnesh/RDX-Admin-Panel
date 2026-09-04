@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/text_styles.dart';
-import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/live_orders_provider.dart';
@@ -47,24 +46,25 @@ class RdxAdminApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => DashboardProvider(DashboardService())),
-        ChangeNotifierProvider(create: (_) => LiveOrdersProvider(OrderService())),
+        ChangeNotifierProvider(
+            create: (_) => DashboardProvider(DashboardService())),
+        ChangeNotifierProvider(
+            create: (_) => LiveOrdersProvider(OrderService())),
         ChangeNotifierProvider(create: (_) => MenuProvider(MenuService())),
         ChangeNotifierProvider(create: (_) => CouponProvider(CouponService())),
-        ChangeNotifierProvider(create: (_) => NotificationProvider(NotificationService())),
-        ChangeNotifierProvider(create: (_) => InventoryProvider(InventoryService())),
+        ChangeNotifierProvider(
+            create: (_) => NotificationProvider(NotificationService())),
+        ChangeNotifierProvider(
+            create: (_) => InventoryProvider(InventoryService())),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
-      child: Consumer2<ThemeProvider, AuthProvider>(
-        builder: (context, theme, auth, _) {
+      child: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
           return MaterialApp(
             title: 'RDX Admin',
             debugShowCheckedModeBanner: false,
-            theme: AppTextStyles.themeData(isDark: false),
-            darkTheme: AppTextStyles.themeData(isDark: true),
-            themeMode: theme.themeMode,
+            theme: AppTextStyles.themeData(),
             home: auth.isLoggedIn ? const MainScreen() : const LoginScreen(),
             onGenerateRoute: AppRoutes.generateRoute,
           );

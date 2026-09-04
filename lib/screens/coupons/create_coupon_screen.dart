@@ -164,7 +164,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                           const SizedBox(height: 4),
                           Text(
                             "Customers will enter this code at checkout.",
-                            style: AppTextStyles.caption
+                            style: AppTextStyles.label
                                 .copyWith(color: colors.textMuted),
                           ),
                           const SizedBox(height: 16),
@@ -539,7 +539,7 @@ class _LivePreviewCard extends StatelessWidget {
                     minOrder != null && minOrder! > 0
                         ? 'This preview shows how the coupon will appear to end-users. Minimum order: ${Formatters.currency(minOrder!)}.'
                         : 'This preview shows how the coupon will appear to end-users in the RDX delivery app.',
-                    style: AppTextStyles.caption
+                    style: AppTextStyles.label
                         .copyWith(color: colors.textSecondary, height: 1.4),
                   ),
                 ),

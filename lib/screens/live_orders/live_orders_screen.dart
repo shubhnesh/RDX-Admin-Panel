@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/widgets/rdx_search_bar.dart';
 import '../../core/router/app_router.dart';
+import '../../core/theme/app_colors.dart';
 import '../../models/order_model.dart';
 import '../../providers/live_orders_provider.dart';
 import '../../widgets/loading_indicator.dart';
@@ -29,7 +30,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
     final provider = context.watch<LiveOrdersProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0506),
+      backgroundColor: AppColors.lightBackground,
       // appBar: const RdxHeader(
       //   title: 'Live Orders',
       // ),

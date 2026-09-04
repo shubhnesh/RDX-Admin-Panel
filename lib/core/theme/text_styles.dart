@@ -1,49 +1,77 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
+class AppFonts {
+  AppFonts._();
+
+  static const String display = 'Georgia';
+  static const String body = 'Segoe UI';
+  static const String label = 'Segoe UI';
+}
+
 class AppTextStyles {
   AppTextStyles._();
 
+  // Keep all font choices here so screens only choose semantic styles.
+  static const String displayFont = AppFonts.display;
+  static const String bodyFont = AppFonts.body;
+  static const String labelFont = AppFonts.label;
+
+  static const TextStyle display = TextStyle(
+    fontFamily: displayFont,
+    color: AppColors.lightTextPrimary,
+    fontSize: 24,
+    fontWeight: FontWeight.w700,
+  );
+
+  static const TextStyle title = TextStyle(
+    fontFamily: bodyFont,
+    color: AppColors.lightTextPrimary,
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+  );
+
+  static const TextStyle body = TextStyle(
+    fontFamily: bodyFont,
+    color: AppColors.lightTextPrimary,
+    fontSize: 14,
+  );
+
+  static const TextStyle bodyMuted = TextStyle(
+    fontFamily: bodyFont,
+    color: AppColors.lightTextSecondary,
+    fontSize: 13,
+  );
+
+  static const TextStyle label = TextStyle(
+    fontFamily: labelFont,
+    color: AppColors.lightTextSecondary,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+  );
+
   static const TextStyle h1 = TextStyle(
-    color: AppColors.darkTextPrimary,
+    fontFamily: bodyFont,
+    color: AppColors.lightTextPrimary,
     fontSize: 22,
     fontWeight: FontWeight.bold,
   );
 
   static const TextStyle h2 = TextStyle(
-    color: AppColors.darkTextPrimary,
+    fontFamily: bodyFont,
+    color: AppColors.lightTextPrimary,
     fontSize: 16,
     fontWeight: FontWeight.w600,
   );
 
-  static const TextStyle body = TextStyle(
-    color: AppColors.darkTextPrimary,
-    fontSize: 14,
-  );
-
-  static const TextStyle bodyMuted = TextStyle(
-    color: AppColors.darkTextSecondary,
-    fontSize: 13,
-  );
-
-  static const TextStyle caption = TextStyle(
-    color: AppColors.darkTextMuted,
-    fontSize: 11,
-  );
-
-  static const TextStyle label = TextStyle(
-    color: AppColors.darkTextSecondary,
-    fontSize: 12,
-  );
-
-  /// Build full ThemeData for the given brightness.
-  static ThemeData themeData({required bool isDark}) {
-    final scheme = isDark ? AppColorScheme.dark() : AppColorScheme.light();
-    final brightness = isDark ? Brightness.dark : Brightness.light;
+  static ThemeData themeData() {
+    final scheme = AppColorScheme.light();
+    const brightness = Brightness.light;
 
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      fontFamily: bodyFont,
       scaffoldBackgroundColor: scheme.background,
       colorScheme: ColorScheme(
         brightness: brightness,
@@ -58,8 +86,8 @@ class AppTextStyles {
       ),
       cardTheme: CardThemeData(
         color: scheme.surface,
-        elevation: isDark ? 2 : 0,
-        shadowColor: isDark ? AppColors.primary.withValues(alpha: 0.18) : null,
+        elevation: 0,
+        shadowColor: AppColors.primary.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: scheme.border),
@@ -110,26 +138,44 @@ class AppTextStyles {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.primary.withOpacity(0.6);
+            return AppColors.primary.withValues(alpha: 0.6);
           }
           return scheme.border;
         }),
       ),
       textTheme: TextTheme(
         headlineLarge: TextStyle(
+          fontFamily: bodyFont,
           color: scheme.textPrimary,
           fontSize: 22,
           fontWeight: FontWeight.bold,
         ),
         headlineMedium: TextStyle(
+          fontFamily: bodyFont,
           color: scheme.textPrimary,
           fontSize: 16,
           fontWeight: FontWeight.w600,
         ),
-        bodyLarge: TextStyle(color: scheme.textPrimary, fontSize: 14),
-        bodyMedium: TextStyle(color: scheme.textSecondary, fontSize: 13),
-        bodySmall: TextStyle(color: scheme.textMuted, fontSize: 11),
-        labelMedium: TextStyle(color: scheme.textSecondary, fontSize: 12),
+        bodyLarge: TextStyle(
+            fontFamily: bodyFont, color: scheme.textPrimary, fontSize: 14),
+        bodyMedium: TextStyle(
+            fontFamily: bodyFont, color: scheme.textSecondary, fontSize: 13),
+        bodySmall: TextStyle(
+            fontFamily: labelFont, color: scheme.textMuted, fontSize: 12),
+        labelMedium: TextStyle(
+            fontFamily: labelFont, color: scheme.textSecondary, fontSize: 12),
+      ),
+      primaryTextTheme: TextTheme(
+        headlineLarge: display,
+        headlineMedium: h1,
+        titleLarge: title,
+        titleMedium: h2,
+        bodyLarge: body,
+        bodyMedium: bodyMuted,
+        bodySmall: label,
+        labelLarge: label,
+        labelMedium: label,
+        labelSmall: label,
       ),
     );
   }

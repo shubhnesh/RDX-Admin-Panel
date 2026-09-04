@@ -196,7 +196,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
               Text(
                 title,
                 style: const TextStyle(
-                  color: Color(0xFFD7D2D2),
+                  color: AppColors.lightTextPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.2,
@@ -213,17 +213,17 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                 ),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF252021),
+                  color: AppColors.lightSurface,
                   borderRadius: BorderRadius.circular(11),
                   border: Border.all(
-                    color: const Color(0xFF30292A),
+                    color: AppColors.lightBorder,
                     width: 1,
                   ),
                 ),
                 child: Text(
                   '$count',
                   style: const TextStyle(
-                    color: Color(0xFF999191),
+                    color: AppColors.lightTextSecondary,
                     fontSize: 9,
                     fontWeight: FontWeight.w600,
                   ),
@@ -242,12 +242,12 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
             width: double.infinity,
             height: 170,
             decoration: BoxDecoration(
-              color: const Color(0xFF0D0809),
+              color: AppColors.lightSurface,
               borderRadius: BorderRadius.circular(12),
             ),
             child: CustomPaint(
               painter: _DashedBorderPainter(
-                color: const Color(0xFF4A292F),
+                color: AppColors.lightBorder,
                 radius: 12,
               ),
               child: Center(
@@ -259,16 +259,16 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF171011),
+                          color: const Color(0xFFFFF1EA),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: const Color(0xFF302022),
+                            color: const Color(0xFFFFD8C5),
                           ),
                         ),
                         child: Icon(
                           emptyIcon,
                           size: 22,
-                          color: const Color(0xFF625658),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -276,10 +276,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                     Text(
                       emptyText ?? 'No orders',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF62595B),
+                      style: TextStyle(
+                        color: AppColors.lightTextMuted,
                         fontSize: 10,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

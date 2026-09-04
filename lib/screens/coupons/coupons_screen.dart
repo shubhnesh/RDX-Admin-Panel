@@ -146,7 +146,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
                               crossAxisCount: Responsive.gridColumns(context),
                               mainAxisSpacing: 16,
                               crossAxisSpacing: 16,
-                              childAspectRatio: 1.45,
+                              childAspectRatio: 1.18,
                             ),
                             itemCount: visibleCoupons.length,
                             itemBuilder: (context, index) {
@@ -252,31 +252,43 @@ class _CouponCard extends StatelessWidget {
     final colors = AppColors.of(context);
     final statusColor = _statusColor(context);
     final isExpired = coupon.status == CouponStatus.expired;
+    final discount = coupon.discountType == DiscountType.percentage
+        ? '${coupon.discountValue.toStringAsFixed(0)}% OFF'
+        : '${Formatters.currency(coupon.discountValue)} OFF';
+    final usageLabel = coupon.usageLimit == null
+        ? '${coupon.usageCount} used · No limit'
+        : '${coupon.usageCount} of ${coupon.usageLimit} used';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Status pill + overflow menu ─────────────────────────
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(
                   coupon.status.name.toUpperCase(),
                   style: TextStyle(
                       color: statusColor,
-                      fontSize: 9.5,
+                      fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.4),
                 ),
@@ -288,6 +300,8 @@ class _CouponCard extends StatelessWidget {
                 onSelected: (v) {
                   if (v == 'delete') onDelete();
                 },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                 itemBuilder: (context) => [
                   const PopupMenuItem(value: 'edit', child: Text('Edit')),
                   PopupMenuItem(
@@ -299,100 +313,110 @@ class _CouponCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
-
-          // ── Code + description ───────────────────────────────────
-          Text(
-            coupon.code,
-            style: TextStyle(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 17),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(coupon.code,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        letterSpacing: 0.3)),
+              ),
+              IconButton(
+                tooltip: 'Copy coupon code',
+                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Coupon code copied'))),
+                icon: Icon(Icons.copy_outlined,
+                    size: 15, color: colors.textMuted),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
           Text(
-            coupon.description.isEmpty ? 'No description' : coupon.description,
-            maxLines: 1,
+            coupon.description.isEmpty
+                ? 'No description added'
+                : coupon.description,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style:
                 AppTextStyles.bodyMuted.copyWith(color: colors.textSecondary),
           ),
-          const SizedBox(height: 12),
-
-          // ── Discount + value row ─────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('Discount',
-                  style: AppTextStyles.label.copyWith(color: colors.textMuted)),
-              const Spacer(),
-              Text(
-                coupon.discountType == DiscountType.percentage
-                    ? '${coupon.discountValue.toStringAsFixed(0)}% OFF'
-                    : '${Formatters.currency(coupon.discountValue)} FLAT',
-                style: const TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16),
-              ),
-            ],
-          ),
           const SizedBox(height: 10),
-
-          // ── Usage progress bar ────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            decoration: BoxDecoration(
+                color: const Color(0xFFFFF3EC),
+                borderRadius: BorderRadius.circular(7)),
+            child: Row(
+              children: [
+                const Icon(Icons.local_offer_outlined,
+                    size: 17, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(discount,
+                    style: const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16)),
+                const Spacer(),
+                if (coupon.minOrderValue != null)
+                  Text('Min. ${Formatters.currency(coupon.minOrderValue!)}',
+                      style: AppTextStyles.label
+                          .copyWith(color: colors.textSecondary)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 11),
           if (coupon.usageLimit != null) ...[
             ClipRRect(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: _usageProgress,
-                minHeight: 5,
+                minHeight: 6,
                 backgroundColor: colors.surfaceVariant,
                 valueColor: AlwaysStoppedAnimation(
                     isExpired ? colors.textMuted : AppColors.primary),
               ),
             ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Text('Usage',
-                    style:
-                        AppTextStyles.label.copyWith(color: colors.textMuted)),
-                const Spacer(),
-                Text(
-                  '${coupon.usageCount}/${coupon.usageLimit}',
-                  style:
-                      AppTextStyles.label.copyWith(color: colors.textSecondary),
-                ),
-              ],
-            ),
-          ] else
-            Row(
-              children: [
-                Text('Usage',
-                    style:
-                        AppTextStyles.label.copyWith(color: colors.textMuted)),
-                const Spacer(),
-                Text('${coupon.usageCount} · No limit',
-                    style: AppTextStyles.label
-                        .copyWith(color: colors.textSecondary)),
-              ],
-            ),
-
-          const Spacer(),
-          Divider(color: colors.divider, height: 20),
-
-          // ── Footer: expiry ─────────────────────────────────────────
+          ],
+          const SizedBox(height: 5),
           Row(
             children: [
-              Icon(Icons.event_outlined, size: 13, color: colors.textMuted),
-              const SizedBox(width: 4),
+              Icon(Icons.bar_chart_outlined, size: 14, color: colors.textMuted),
+              const SizedBox(width: 5),
+              Text(usageLabel,
+                  style: AppTextStyles.label
+                      .copyWith(color: colors.textSecondary)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Divider(color: colors.divider, height: 1),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.event_outlined, size: 14, color: colors.textMuted),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  '${Formatters.date(coupon.startDate)} - ${Formatters.date(coupon.endDate)}',
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.label.copyWith(color: colors.textMuted),
+                ),
+              ),
               Text(
-                coupon.status == CouponStatus.scheduled
-                    ? 'Starts ${Formatters.date(coupon.startDate)}'
-                    : isExpired
-                        ? 'Ended ${Formatters.date(coupon.endDate)}'
-                        : 'Expires ${Formatters.date(coupon.endDate)}',
-                style: AppTextStyles.label.copyWith(color: colors.textMuted),
+                isExpired
+                    ? 'Ended'
+                    : coupon.status == CouponStatus.scheduled
+                        ? 'Starts soon'
+                        : 'Active now',
+                style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700),
               ),
             ],
           ),

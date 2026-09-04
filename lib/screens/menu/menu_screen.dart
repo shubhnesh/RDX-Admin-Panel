@@ -218,11 +218,11 @@ class _MenuScreenState extends State<MenuScreen> {
 
     return GridView.builder(
       padding: const EdgeInsets.only(bottom: 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: Responsive.gridColumns(context),
         mainAxisSpacing: 18,
         crossAxisSpacing: 18,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.78,
       ),
       itemCount: items.length + 1,
       itemBuilder: (context, index) {
@@ -320,65 +320,74 @@ class _MenuItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final preparation = item.preparationStyle.name.replaceAll('_', ' ');
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  color: colors.surfaceVariant,
-                  child: Icon(Icons.fastfood_outlined,
-                      color: colors.textMuted, size: 30),
-                ),
-                if (item.category.isNotEmpty)
-                  Positioned(
-                    left: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.55),
-                        borderRadius: BorderRadius.circular(6),
+          AspectRatio(
+            aspectRatio: 1.45,
+            child: Stack(children: [
+              Positioned.fill(
+                child: item.imageUrl.trim().isEmpty
+                    ? Container(
+                        color: colors.surfaceVariant,
+                        child: Icon(Icons.restaurant_outlined,
+                            color: colors.textMuted, size: 34),
+                      )
+                    : Image.network(
+                        item.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: colors.surfaceVariant,
+                          child: Icon(Icons.restaurant_outlined,
+                              color: colors.textMuted, size: 34),
+                        ),
                       ),
-                      child: Text(
-                        item.category.toUpperCase(),
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3),
-                      ),
-                    ),
-                  ),
+              ),
+              Positioned(
+                left: 10,
+                top: 10,
+                child: _cardBadge(
+                    item.category, colors.surface, colors.textPrimary),
+              ),
+              if (item.featuredItem)
                 Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: _dotColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.8), width: 1.5),
-                    ),
+                  right: 10,
+                  top: 10,
+                  child:
+                      _cardBadge('Featured', AppColors.primary, Colors.white),
+                ),
+              Positioned(
+                right: 10,
+                bottom: 10,
+                child: Container(
+                  width: 11,
+                  height: 11,
+                  decoration: BoxDecoration(
+                    color: _dotColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ]),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -388,64 +397,95 @@ class _MenuItemCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                       color: colors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13.5),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
-                  '\$${item.price.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700),
+                  item.description.isEmpty
+                      ? 'No description added'
+                      : item.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: colors.textSecondary, fontSize: 11, height: 1.35),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  spacing: 5,
+                  runSpacing: 5,
                   children: [
-                    Row(
-                      children: [
-                        Transform.scale(
-                          scale: 0.8,
-                          child: Switch(
-                            value: item.available,
-                            onChanged: (_) => onToggleAvailability(),
-                            activeColor: AppColors.primary,
-                          ),
-                        ),
-                        Text(
-                          item.available ? 'Available' : 'Out of Stock',
-                          style: TextStyle(
-                            color: item.available
-                                ? colors.textSecondary
-                                : colors.textMuted,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    _detailChip(_dietaryLabel(item.dietaryType),
+                        item.isVeg ? AppColors.success : AppColors.primary),
+                    _detailChip(_titleCase(preparation), colors.textSecondary),
+                    for (final tag in item.tags.take(2))
+                      _detailChip(_titleCase(tag), colors.textMuted),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '₹${item.price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800),
                     ),
-                    Row(
-                      children: [
-                        InkWell(
-                          onTap: onEdit,
-                          borderRadius: BorderRadius.circular(6),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(Icons.edit_outlined,
-                                size: 15, color: colors.textSecondary),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: onDelete,
-                          borderRadius: BorderRadius.circular(6),
-                          child: const Padding(
-                            padding: EdgeInsets.all(4),
-                            child: Icon(Icons.delete_outline,
-                                size: 15, color: AppColors.danger),
-                          ),
-                        ),
-                      ],
+                    const Spacer(),
+                    Text(
+                      item.available ? 'Available' : 'Unavailable',
+                      style: TextStyle(
+                          color: item.available
+                              ? AppColors.success
+                              : colors.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    IconButton(
+                      onPressed: onToggleAvailability,
+                      tooltip: item.available
+                          ? 'Mark unavailable'
+                          : 'Mark available',
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.only(left: 4),
+                      constraints: const BoxConstraints(),
+                      icon: Icon(
+                        item.available
+                            ? Icons.toggle_on_outlined
+                            : Icons.toggle_off_outlined,
+                        size: 22,
+                        color: item.available
+                            ? AppColors.success
+                            : colors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Divider(height: 1, color: colors.divider),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    InkWell(
+                      onTap: onEdit,
+                      borderRadius: BorderRadius.circular(6),
+                      child: Padding(
+                        padding: const EdgeInsets.all(5),
+                        child: Icon(Icons.edit_outlined,
+                            size: 16, color: colors.textSecondary),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: onDelete,
+                      borderRadius: BorderRadius.circular(6),
+                      child: const Padding(
+                        padding: EdgeInsets.all(5),
+                        child: Icon(Icons.delete_outline,
+                            size: 16, color: AppColors.danger),
+                      ),
                     ),
                   ],
                 ),
@@ -456,6 +496,42 @@ class _MenuItemCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _cardBadge(String label, Color background, Color foreground) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: background.withValues(
+            alpha: background == AppColors.primary ? 1 : 0.92),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: foreground, fontSize: 9, fontWeight: FontWeight.w700)),
+    );
+  }
+
+  Widget _detailChip(String label, Color color) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(4)),
+        child: Text(label,
+            style: TextStyle(
+                color: color, fontSize: 9, fontWeight: FontWeight.w600)),
+      );
+
+  String _dietaryLabel(DietaryType type) => type == DietaryType.nonVeg
+      ? 'Non-Veg'
+      : type == DietaryType.egg
+          ? 'Egg'
+          : 'Veg';
+
+  String _titleCase(String value) => value
+      .split(' ')
+      .map((part) =>
+          part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }
 
 // ─── Trailing "Add New Menu Item" tile ─────────────────────────────────

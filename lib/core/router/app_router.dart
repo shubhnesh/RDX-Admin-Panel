@@ -3,6 +3,7 @@ import '../../screens/main/main_screen.dart';
 import '../../screens/order_detail/order_detail_screen.dart';
 import '../../screens/menu/edit_menu_item_screen.dart';
 import '../../screens/coupons/create_coupon_screen.dart';
+import '../../screens/settings/restaurant_profile_screen.dart';
 
 /// Simple centralized named-route table. No routing package needed for an
 /// app this size — Navigator + named routes keeps it easy to reason about.
@@ -16,6 +17,7 @@ class AppRoutes {
   static const String orderDetail = '/order-detail';
   static const String editMenuItem = '/edit-menu-item';
   static const String createCoupon = '/create-coupon';
+  static const String restaurantProfile = '/restaurant-profile';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -23,15 +25,22 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const MainScreen());
       case orderDetail:
         final orderId = settings.arguments as String;
-        return MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: orderId));
+        return MaterialPageRoute(
+            builder: (_) => OrderDetailScreen(orderId: orderId));
       case editMenuItem:
         final itemId = settings.arguments as String?;
-        return MaterialPageRoute(builder: (_) => EditMenuItemScreen(itemId: itemId));
+        return MaterialPageRoute(
+            builder: (_) => EditMenuItemScreen(itemId: itemId));
       case createCoupon:
         return MaterialPageRoute(builder: (_) => const CreateCouponScreen());
+      case restaurantProfile:
+        return MaterialPageRoute(
+          builder: (_) => const RestaurantProfileScreen(),
+        );
       default:
         return MaterialPageRoute(
-          builder: (_) => const Scaffold(body: Center(child: Text('Route not found'))),
+          builder: (_) =>
+              const Scaffold(body: Center(child: Text('Route not found'))),
         );
     }
   }

@@ -1,450 +1,347 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive.dart';
 import '../../providers/settings_provider.dart';
-import '../../widgets/custom_text_field.dart';
-import '../../widgets/rdx_header.dart';
 
-/// Settings Suite — Restaurant Profile, contact, operating hours.
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  late final TextEditingController nameController;
-  late final TextEditingController descriptionController;
-  late final TextEditingController addressController;
-  late final TextEditingController phoneController;
-  late final TextEditingController emailController;
-
-  final Map<String, bool> _dayOpen = {
-    'Monday': true,
-    'Tuesday': true,
-    'Wednesday': true,
-    'Thursday': true,
-    'Friday': true,
-    'Saturday': true,
-    'Sunday': false,
-  };
-  final Map<String, String> _openTime = {
-    for (final d in [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday'
-    ])
-      d: '09:00',
-  };
-  final Map<String, String> _closeTime = {
-    for (final d in [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday'
-    ])
-      d: '22:00',
-  };
-
-  @override
-  void initState() {
-    super.initState();
-    final settings = context.read<SettingsProvider>();
-    nameController = TextEditingController(text: settings.restaurantName);
-    descriptionController = TextEditingController(text: settings.description);
-    addressController = TextEditingController(text: settings.address);
-    phoneController = TextEditingController(text: settings.phone);
-    emailController = TextEditingController(text: settings.email);
-  }
-
-  @override
-  void dispose() {
-    nameController.dispose();
-    descriptionController.dispose();
-    addressController.dispose();
-    phoneController.dispose();
-    emailController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    final provider = context.read<SettingsProvider>();
-    final ok = await provider.save(
-      name: nameController.text,
-      desc: descriptionController.text,
-      addr: addressController.text,
-      ph: phoneController.text,
-      em: emailController.text,
-    );
-    if (ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved')),
-      );
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final provider = context.watch<SettingsProvider>();
     final colors = AppColors.of(context);
+    final provider = context.watch<SettingsProvider>();
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: RdxHeader(
-        title: 'Settings Suite',
-        actions: [
-          ElevatedButton(
-            onPressed: provider.isLoading ? null : _save,
-            child: provider.isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text('Save Changes'),
-          ),
-        ],
-      ),
       body: SingleChildScrollView(
-        padding: Responsive.pagePadding(context),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _sectionTitle(colors, 'Restaurant Profile'),
-              const SizedBox(height: 12),
-              _buildProfileCard(colors),
-              const SizedBox(height: 28),
-              _sectionTitle(colors, 'Basic Information'),
-              const SizedBox(height: 12),
-              _buildBasicInfo(colors),
-              const SizedBox(height: 28),
-              _sectionTitle(colors, 'Location & Contact'),
-              const SizedBox(height: 12),
-              _buildLocationContact(colors),
-              const SizedBox(height: 28),
-              _sectionTitle(colors, 'Operating Hours'),
-              const SizedBox(height: 12),
-              _buildOperatingHours(colors),
-              const SizedBox(height: 28),
-              _sectionTitle(colors, 'Operational Rules'),
-              const SizedBox(height: 12),
-              _buildOperationalRules(provider, colors),
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionTitle(AppColorScheme colors, String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        color: colors.textPrimary,
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-
-  Widget _buildProfileCard(AppColorScheme colors) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: colors.surfaceVariant,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: colors.border),
-            ),
-            child: const Icon(Icons.restaurant,
-                size: 32, color: AppColors.primary),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
+        padding: Responsive.pagePadding(context, top: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  nameController.text.isEmpty
-                      ? 'Restaurant Name'
-                      : nameController.text,
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('System Settings',
+                          style: TextStyle(
+                              color: colors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 4),
+                      Text(
+                          'Manage essential configuration for your restaurant operations.',
+                          style: TextStyle(
+                              color: colors.textSecondary, fontSize: 10)),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Upload a square logo for best results (min 256×256)',
-                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Logo upload coming soon')),
-                    );
-                  },
-                  icon: const Icon(Icons.upload_outlined, size: 16),
-                  label: const Text('Change Logo'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBasicInfo(AppColorScheme colors) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        children: [
-          CustomTextField(controller: nameController, label: 'Restaurant Name'),
-          const SizedBox(height: 16),
-          CustomTextField(
-            controller: descriptionController,
-            label: 'Description',
-            maxLines: 3,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLocationContact(AppColorScheme colors) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        children: [
-          CustomTextField(controller: addressController, label: 'Address'),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth < 480) {
-                return Column(
-                  children: [
-                    CustomTextField(
-                        controller: phoneController, label: 'Phone'),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                        controller: emailController, label: 'Email'),
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(
-                      child: CustomTextField(
-                          controller: phoneController, label: 'Phone')),
-                  const SizedBox(width: 16),
-                  Expanded(
-                      child: CustomTextField(
-                          controller: emailController, label: 'Email')),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOperatingHours(AppColorScheme colors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        children: _dayOpen.keys.map((day) {
-          final isOpen = _dayOpen[day]!;
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 100,
-                  child: Text(
-                    day,
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Switch(
-                  value: isOpen,
-                  onChanged: (v) => setState(() => _dayOpen[day] = v),
-                ),
+                OutlinedButton(onPressed: () {}, child: const Text('Discard')),
                 const SizedBox(width: 8),
-                if (isOpen) ...[
-                  _timeChip(colors, _openTime[day]!,
-                      (t) => setState(() => _openTime[day] = t)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text('–', style: TextStyle(color: colors.textMuted)),
-                  ),
-                  _timeChip(colors, _closeTime[day]!,
-                      (t) => setState(() => _closeTime[day] = t)),
-                ] else
-                  Text(
-                    'Closed',
-                    style: TextStyle(color: colors.textMuted, fontSize: 13),
-                  ),
+                ElevatedButton(
+                    onPressed: () {}, child: const Text('Save Changes')),
               ],
             ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _timeChip(
-      AppColorScheme colors, String time, ValueChanged<String> onChanged) {
-    return InkWell(
-      onTap: () async {
-        final parts = time.split(':');
-        final initial = TimeOfDay(
-          hour: int.tryParse(parts[0]) ?? 9,
-          minute: int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0,
-        );
-        final picked =
-            await showTimePicker(context: context, initialTime: initial);
-        if (picked != null) {
-          final h = picked.hour.toString().padLeft(2, '0');
-          final m = picked.minute.toString().padLeft(2, '0');
-          onChanged('$h:$m');
-        }
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: colors.surfaceVariant,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: colors.border),
-        ),
-        child: Text(
-          time,
-          style: TextStyle(
-              color: colors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w500),
+            const SizedBox(height: 18),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 760;
+                final identity = _IdentityCard(colors: colors);
+                final rules = _RulesCard(provider: provider, colors: colors);
+                final hours = _HoursCard(colors: colors);
+                if (compact) {
+                  return Column(children: [
+                    identity,
+                    const SizedBox(height: 14),
+                    hours,
+                    const SizedBox(height: 14),
+                    rules
+                  ]);
+                }
+                return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                          flex: 3,
+                          child: Column(children: [
+                            identity,
+                            const SizedBox(height: 14),
+                            rules
+                          ])),
+                      const SizedBox(width: 14),
+                      Expanded(child: hours)
+                    ]);
+              },
+            ),
+          ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildOperationalRules(
-      SettingsProvider provider, AppColorScheme colors) {
-    return Column(
-      children: [
-        _switchTile(
-          colors,
-          title: 'Auto-Accept Orders',
-          subtitle: 'Automatically accept new orders without manual review',
-          value: provider.autoAcceptOrders,
-          onChanged: provider.toggleAutoAccept,
-        ),
-        _switchTile(
-          colors,
-          title: 'Require Manager Approval for Refunds',
-          subtitle: 'Refunds above ₹500 require manager sign-off',
-          value: provider.requireManagerApprovalForRefunds,
-          onChanged: provider.toggleManagerApproval,
-        ),
-        _switchTile(
-          colors,
-          title: 'Keep Pricing Consistent',
-          subtitle: 'Sync in-app pricing with delivery partner pricing',
-          value: provider.keepPricingConsistent,
-          onChanged: provider.toggleKeepPricing,
-        ),
-      ],
-    );
-  }
+class _IdentityCard extends StatelessWidget {
+  final AppColorScheme colors;
+  const _IdentityCard({required this.colors});
 
-  Widget _switchTile(
-    AppColorScheme colors, {
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        children: [
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.read<SettingsProvider>();
+    return _SettingsCard(
+      title: 'Restaurant Identity',
+      icon: Icons.storefront_outlined,
+      colors: colors,
+      child: Column(children: [
+        _LabeledInput(
+            label: 'Restaurant Name',
+            value: settings.restaurantName,
+            colors: colors),
+        const SizedBox(height: 10),
+        _LabeledInput(
+            label: 'Primary Address', value: settings.address, colors: colors),
+        const SizedBox(height: 10),
+        Row(children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          Switch(value: value, onChanged: onChanged),
-        ],
-      ),
+              child: _LabeledInput(
+                  label: 'Support Email',
+                  value: settings.email,
+                  colors: colors)),
+          const SizedBox(width: 10),
+          Expanded(
+              child: _LabeledInput(
+                  label: 'Contact Phone',
+                  value: settings.phone,
+                  colors: colors))
+        ]),
+        const SizedBox(height: 10),
+        Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+                onPressed: () => Navigator.of(context)
+                    .pushNamed(AppRoutes.restaurantProfile),
+                icon: const Icon(Icons.open_in_new, size: 14),
+                label: const Text('Open Restaurant Profile'))),
+      ]),
     );
   }
+}
+
+class _HoursCard extends StatelessWidget {
+  final AppColorScheme colors;
+  const _HoursCard({required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return _SettingsCard(
+      title: 'Operating Hours',
+      icon: Icons.access_time,
+      colors: colors,
+      trailing: const Text('SYSTEM ONLINE',
+          style: TextStyle(color: AppColors.success, fontSize: 8)),
+      child: Column(children: [
+        for (final day in days)
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(children: [
+                SizedBox(
+                    width: 30,
+                    child: Text(day,
+                        style: TextStyle(
+                            color: colors.textSecondary, fontSize: 10))),
+                Switch(
+                    value: day != 'Sat' && day != 'Sun',
+                    onChanged: (_) {},
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                const SizedBox(width: 4),
+                Expanded(
+                    child: _TimeBox(
+                        text: day == 'Sat' || day == 'Sun'
+                            ? 'CLOSED'
+                            : '10:00 AM',
+                        colors: colors)),
+                const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    child: Text('to')),
+                Expanded(
+                    child: _TimeBox(
+                        text: day == 'Sat' || day == 'Sun'
+                            ? 'CLOSED'
+                            : '10:00 PM',
+                        colors: colors))
+              ]))
+      ]),
+    );
+  }
+}
+
+class _RulesCard extends StatelessWidget {
+  final SettingsProvider provider;
+  final AppColorScheme colors;
+  const _RulesCard({required this.provider, required this.colors});
+
+  @override
+  Widget build(BuildContext context) => _SettingsCard(
+      title: 'Core Operational Rules',
+      icon: Icons.tune,
+      colors: colors,
+      child: Column(children: [
+        _RuleTile(
+            title: 'Auto-Dispatch Orders',
+            subtitle:
+                'Automatically assign accepted orders to available riders within a 2km radius.',
+            value: provider.autoAcceptOrders,
+            onChanged: provider.toggleAutoAccept,
+            colors: colors),
+        _RuleTile(
+            title: 'Require Manager Approval for Refunds',
+            subtitle:
+                'Prevent auto-refunds on canceled orders exceeding \$50.00.',
+            value: provider.requireManagerApprovalForRefunds,
+            onChanged: provider.toggleManagerApproval,
+            colors: colors),
+        _RuleTile(
+            title: 'Source Pricing Automation',
+            subtitle: 'Enable dynamic pricing adjustments during peak hours.',
+            value: provider.keepPricingConsistent,
+            onChanged: provider.toggleKeepPricing,
+            colors: colors),
+      ]));
+}
+
+class _SettingsCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final AppColorScheme colors;
+  final Widget child;
+  final Widget? trailing;
+  const _SettingsCard(
+      {required this.title,
+      required this.icon,
+      required this.colors,
+      required this.child,
+      this.trailing});
+
+  @override
+  Widget build(BuildContext context) => Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+      decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: colors.border)),
+      child: Column(children: [
+        Row(children: [
+          Icon(icon, size: 15, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Text(title,
+              style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+          const Spacer(),
+          if (trailing != null) trailing!
+        ]),
+        const SizedBox(height: 10),
+        Divider(height: 1, color: colors.divider),
+        const SizedBox(height: 10),
+        child
+      ]));
+}
+
+class _RuleTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final AppColorScheme colors;
+  const _RuleTile(
+      {required this.title,
+      required this.subtitle,
+      required this.value,
+      required this.onChanged,
+      required this.colors});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(children: [
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title,
+              style: TextStyle(color: colors.textPrimary, fontSize: 10)),
+          const SizedBox(height: 3),
+          Text(subtitle,
+              style: TextStyle(color: colors.textSecondary, fontSize: 8))
+        ])),
+        Switch(
+            value: value,
+            onChanged: onChanged,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap)
+      ]));
+}
+
+class _LabeledInput extends StatelessWidget {
+  final String label;
+  final String value;
+  final AppColorScheme colors;
+  const _LabeledInput(
+      {required this.label, required this.value, required this.colors});
+  @override
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _FieldLabel(label, colors),
+        const SizedBox(height: 6),
+        _SettingsInput(value: value, colors: colors)
+      ]);
+}
+
+class _FieldLabel extends StatelessWidget {
+  final String label;
+  final AppColorScheme colors;
+  const _FieldLabel(this.label, this.colors);
+  @override
+  Widget build(BuildContext context) =>
+      Text(label, style: TextStyle(color: colors.textSecondary, fontSize: 8));
+}
+
+class _SettingsInput extends StatelessWidget {
+  final String value;
+  final AppColorScheme colors;
+  const _SettingsInput({required this.value, required this.colors});
+  @override
+  Widget build(BuildContext context) => Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: colors.border)),
+      child: Text(value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: colors.textSecondary, fontSize: 9)));
+}
+
+class _TimeBox extends StatelessWidget {
+  final String text;
+  final AppColorScheme colors;
+  const _TimeBox({required this.text, required this.colors});
+  @override
+  Widget build(BuildContext context) => Container(
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 3),
+      decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: colors.border)),
+      child: Text(text,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: colors.textSecondary, fontSize: 8)));
 }

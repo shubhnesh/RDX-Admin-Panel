@@ -43,6 +43,7 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
   String? errorMessage;
   List<MenuItemCustomizationGroup> customizations = [];
   List<String> majorIngredients = [];
+  String _existingImageUrl = '';
 
   bool get isEditing => widget.itemId != null;
 
@@ -62,23 +63,69 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
     if (isEditing) _loadExisting();
   }
 
+  // Future<void> _loadExisting() async {
+  //   setState(() => isLoading = true);
+  //   final item = await context.read<MenuProvider>().getItemById(widget.itemId!);
+  //   nameController.text = item.name;
+  //   descriptionController.text = item.description;
+  //   priceController.text = item.price.toString();
+  //   category = item.category.isEmpty ? 'Uncategorized' : item.category;
+  //   subCategory = item.subCategory.isEmpty ? null : item.subCategory;
+  //   available = item.available;
+  //   isVeg = item.isVeg;
+  //   customizations = item.customizations;
+  //   majorIngredients = List.from(item.majorIngredients);
+  //   selectedSize = item.selectedSize;
+  //   for (final size in ItemSize.values) {
+  //     _portionControllers[size]!.text = item.portionQuantities[size] ?? '';
+  //   }
+  //   setState(() => isLoading = false);
+  // }
+
   Future<void> _loadExisting() async {
-    setState(() => isLoading = true);
-    final item = await context.read<MenuProvider>().getItemById(widget.itemId!);
-    nameController.text = item.name;
-    descriptionController.text = item.description;
-    priceController.text = item.price.toString();
-    category = item.category.isEmpty ? 'Uncategorized' : item.category;
-    subCategory = item.subCategory.isEmpty ? null : item.subCategory;
-    available = item.available;
-    isVeg = item.isVeg;
-    customizations = item.customizations;
-    majorIngredients = List.from(item.majorIngredients);
-    selectedSize = item.selectedSize;
-    for (final size in ItemSize.values) {
-      _portionControllers[size]!.text = item.portionQuantities[size] ?? '';
+    if (!isEditing) return;
+
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final item =
+          await context.read<MenuProvider>().getItemById(widget.itemId!);
+
+      nameController.text = item.name;
+      descriptionController.text = item.description;
+      priceController.text = item.price.toString();
+
+      category = item.category.isEmpty ? 'Uncategorized' : item.category;
+
+      subCategory = item.subCategory.isEmpty ? null : item.subCategory;
+
+      available = item.available;
+      showOnMobileApp = item.showOnMobileApp;
+      featuredItem = item.featuredItem;
+      isVeg = item.isVeg;
+
+      customizations = List.from(item.customizations);
+      majorIngredients = List.from(item.majorIngredients);
+
+      selectedSize = item.selectedSize;
+
+      _existingImageUrl = item.imageUrl;
+
+      for (final size in ItemSize.values) {
+        _portionControllers[size]!.text = item.portionQuantities[size] ?? '';
+      }
+    } catch (e) {
+      errorMessage = 'Failed to load menu item.';
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
-    setState(() => isLoading = false);
   }
 
   void _addIngredient() {
@@ -106,27 +153,95 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
     setState(() => majorIngredients.remove(ingredient));
   }
 
+  // Future<void> _save() async {
+  //   if (nameController.text.trim().isEmpty ||
+  //       double.tryParse(priceController.text.trim()) == null) {
+  //     setState(
+  //         () => errorMessage = 'Please fill in item name and a valid price.');
+  //     return;
+  //   }
+
+  //   final item = MenuItemModel(
+  //     id: widget.itemId ?? 'm${DateTime.now().millisecondsSinceEpoch}',
+  //     name: nameController.text.trim(),
+  //     description: descriptionController.text.trim(),
+  //     price: double.parse(priceController.text.trim()),
+  //     category: category,
+  //     subCategory: subCategory ?? '',
+  //     imageUrl: '',
+  //     available: available,
+  //     isVeg: isVeg,
+  //     customizations: customizations,
+  //     majorIngredients: majorIngredients,
+  //     selectedSize: selectedSize,
+  //     portionQuantities: {
+  //       for (final size in ItemSize.values)
+  //         size: _portionControllers[size]!.text.trim(),
+  //     },
+  //   );
+
+  //   setState(() {
+  //     isLoading = true;
+  //     errorMessage = null;
+  //   });
+  //   final success = await context.read<MenuProvider>().saveItem(item);
+  //   if (!mounted) return;
+  //   setState(() => isLoading = false);
+  //   if (success) {
+  //     Navigator.of(context).pop();
+  //   } else {
+  //     setState(() => errorMessage = 'Failed to save item.');
+  //   }
+  // }
+
   Future<void> _save() async {
-    if (nameController.text.trim().isEmpty ||
-        double.tryParse(priceController.text.trim()) == null) {
-      setState(
-          () => errorMessage = 'Please fill in item name and a valid price.');
+    final name = nameController.text.trim();
+    final description = descriptionController.text.trim();
+    final price = double.tryParse(
+      priceController.text.trim(),
+    );
+
+    if (name.isEmpty) {
+      setState(() {
+        errorMessage = 'Please enter an item name.';
+      });
+      return;
+    }
+
+    if (price == null || price < 0) {
+      setState(() {
+        errorMessage = 'Please enter a valid price.';
+      });
       return;
     }
 
     final item = MenuItemModel(
-      id: widget.itemId ?? 'm${DateTime.now().millisecondsSinceEpoch}',
-      name: nameController.text.trim(),
-      description: descriptionController.text.trim(),
-      price: double.parse(priceController.text.trim()),
+      // IMPORTANT:
+      // Empty ID = create new Firestore document.
+      // Existing ID = update existing Firestore document.
+      id: widget.itemId ?? '',
+
+      name: name,
+      description: description,
+      price: price,
+
       category: category,
       subCategory: subCategory ?? '',
-      imageUrl: '',
+
+      // Preserve existing image until an actual upload
+      // changes it.
+      imageUrl: _existingImageUrl,
+
       available: available,
+      showOnMobileApp: showOnMobileApp,
+      featuredItem: featuredItem,
       isVeg: isVeg,
-      customizations: customizations,
-      majorIngredients: majorIngredients,
+
+      customizations: List.from(customizations),
+      majorIngredients: List.from(majorIngredients),
+
       selectedSize: selectedSize,
+
       portionQuantities: {
         for (final size in ItemSize.values)
           size: _portionControllers[size]!.text.trim(),
@@ -137,13 +252,19 @@ class _EditMenuItemScreenState extends State<EditMenuItemScreen> {
       isLoading = true;
       errorMessage = null;
     });
+
     final success = await context.read<MenuProvider>().saveItem(item);
+
     if (!mounted) return;
-    setState(() => isLoading = false);
+
     if (success) {
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     } else {
-      setState(() => errorMessage = 'Failed to save item.');
+      setState(() {
+        isLoading = false;
+        errorMessage = context.read<MenuProvider>().errorMessage ??
+            'Failed to save menu item.';
+      });
     }
   }
 

@@ -244,7 +244,50 @@ class _MenuScreenState extends State<MenuScreen> {
                 .pushNamed(AppRoutes.editMenuItem, arguments: item.id);
             if (context.mounted) context.read<MenuProvider>().load();
           },
-          onDelete: () => provider.deleteItem(item.id),
+          // onDelete: () => provider.deleteItem(item.id),
+          onDelete: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  title: const Text('Delete menu item?'),
+                  content: Text(
+                    'Are you sure you want to delete "${item.name}"?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context, false);
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.pop(context, true);
+                      },
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                );
+              },
+            );
+
+            if (confirmed != true) return;
+
+            final success = await provider.deleteItem(item.id);
+
+            if (!context.mounted) return;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  success
+                      ? 'Menu item deleted.'
+                      : 'Failed to delete menu item.',
+                ),
+              ),
+            );
+          },
         );
       },
     );

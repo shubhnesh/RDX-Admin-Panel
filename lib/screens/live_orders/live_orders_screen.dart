@@ -1,12 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:rdx_admin/widgets/rdx_search_bar.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/order_model.dart';
 import '../../providers/live_orders_provider.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/rdx_header.dart';
 
 class LiveOrdersScreen extends StatefulWidget {
   const LiveOrdersScreen({super.key});
@@ -31,21 +31,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
-      // appBar: const RdxHeader(
-      //   title: 'Live Orders',
-      // ),
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(64),
-        child: SafeArea(
-          bottom: false,
-          child: RdxSearchToolbar(
-            hintText: 'Search orders...',
-            onChanged: (value) {
-              // Search/filter logic here.
-            },
-          ),
-        ),
-      ),
+      appBar: const RdxHeader(title: 'Live Orders'),
       body:
           provider.isLoading ? const LoadingIndicator() : _buildBoard(provider),
     );

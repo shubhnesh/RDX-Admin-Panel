@@ -36,11 +36,11 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   @override
   void initState() {
     super.initState();
-    // Live preview should update as the user types.
     for (final c in [
       codeController,
       descriptionController,
-      discountValueController
+      discountValueController,
+      minOrderController,
     ]) {
       c.addListener(() => setState(() {}));
     }
@@ -96,230 +96,279 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final isDesktop = Responsive.isDesktop(context);
+    final narrow = MediaQuery.sizeOf(context).width < 900;
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: RdxHeader(
-        title: 'Create New Coupon',
-        showBack: true,
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel')),
-          const SizedBox(width: 8),
-          CustomButton(
-              label: 'Save Coupon',
-              icon: Icons.save_outlined,
-              isLoading: isLoading,
-              onPressed: _save),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: Responsive.pagePadding(context),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Configure discount parameters and usage rules.',
-              style:
-                  AppTextStyles.bodyMuted.copyWith(color: colors.textSecondary),
-            ),
-            const SizedBox(height: 20),
-            if (errorMessage != null) ...[
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.danger.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.danger.withOpacity(0.4)),
-                ),
-                child: Text(errorMessage!,
-                    style: const TextStyle(color: AppColors.danger)),
+      appBar: const RdxHeader(title: 'Create New Coupon'),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final form = _formContent(context, colors);
+          final preview = _LivePreviewCard(
+            code: codeController.text.trim().isEmpty
+                ? 'SUMMER50'
+                : codeController.text.trim().toUpperCase(),
+            discountType: discountType,
+            discountValue:
+                double.tryParse(discountValueController.text.trim()) ?? 50,
+            minOrder: double.tryParse(minOrderController.text.trim()),
+            isActive: !startDate.isAfter(DateTime.now()),
+          );
+
+          // ── Narrow (mobile / tablet) ───────────────────────────────
+          if (narrow) {
+            return SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                Responsive.pageHorizontal(context),
+                16,
+                Responsive.pageHorizontal(context),
+                28,
               ),
-              const SizedBox(height: 16),
-            ],
-            Flex(
-              direction: isDesktop ? Axis.horizontal : Axis.vertical,
-              crossAxisAlignment: isDesktop
-                  ? CrossAxisAlignment.start
-                  : CrossAxisAlignment.stretch,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  form,
+                  const SizedBox(height: 20),
+                  preview,
+                  const SizedBox(height: 20),
+                  _actionButtons(),
+                ],
+              ),
+            );
+          }
+
+          // ── Wide (desktop) ─────────────────────────────────────────
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              Responsive.pageHorizontal(context),
+              16,
+              Responsive.pageHorizontal(context),
+              24,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _sectionCard(
-                        context,
-                        icon: Icons.local_offer_outlined,
-                        title: 'Coupon Basics',
-                        children: [
-                          CustomTextField(
-                            controller: codeController,
-                            label: 'Coupon Code',
-                            hint: 'e.g. SUMMER50',
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Customers will enter this code at checkout.",
-                            style: AppTextStyles.label
-                                .copyWith(color: colors.textMuted),
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                              controller: descriptionController,
-                              label: 'Description',
-                              maxLines: 2),
-                          const SizedBox(height: 16),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: _discountTypeDropdown(colors)),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: CustomTextField(
-                                  controller: discountValueController,
-                                  label: 'Discount Value',
-                                  hint: discountType == DiscountType.percentage
-                                      ? '0-100'
-                                      : '0.00',
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      _sectionCard(
-                        context,
-                        icon: Icons.rule_folder_outlined,
-                        title: 'Usage Rules',
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: CustomTextField(
-                                  controller: minOrderController,
-                                  label: 'Min. Order Value (₹)',
-                                  hint: '0.00',
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: CustomTextField(
-                                  controller: usageLimitController,
-                                  label: 'Usage Limit',
-                                  hint: 'Unlimited',
-                                  keyboardType: TextInputType.number,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Start Date',
-                                        style: AppTextStyles.label.copyWith(
-                                            color: colors.textSecondary)),
-                                    const SizedBox(height: 6),
-                                    _datePickerField(startDate,
-                                        (d) => setState(() => startDate = d)),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Expiry Date',
-                                        style: AppTextStyles.label.copyWith(
-                                            color: colors.textSecondary)),
-                                    const SizedBox(height: 6),
-                                    _datePickerField(endDate,
-                                        (d) => setState(() => endDate = d)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Text('Applicable Categories',
-                              style: AppTextStyles.label
-                                  .copyWith(color: colors.textSecondary)),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: _categories.map((cat) {
-                              final selected =
-                                  _selectedCategories.contains(cat);
-                              return FilterChip(
-                                label: Text(cat),
-                                selected: selected,
-                                onSelected: (v) => setState(
-                                  () => v
-                                      ? _selectedCategories.add(cat)
-                                      : _selectedCategories.remove(cat),
-                                ),
-                                backgroundColor: colors.surfaceVariant,
-                                selectedColor:
-                                    AppColors.primary.withOpacity(0.2),
-                                checkmarkColor: AppColors.primary,
-                                labelStyle: TextStyle(
-                                  color: selected
-                                      ? AppColors.primary
-                                      : colors.textSecondary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                side: BorderSide(
-                                    color: selected
-                                        ? AppColors.primary
-                                        : colors.border),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ],
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(right: 22),
+                    child: form,
                   ),
                 ),
-                SizedBox(width: isDesktop ? 20 : 0, height: isDesktop ? 0 : 20),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: colors.border,
+                ),
+                SizedBox(
+                  width: 330,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        preview,
+                        const Spacer(),
+                        _actionButtons(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _formContent(BuildContext context, AppColorScheme colors) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (errorMessage != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.danger.withOpacity(0.4)),
+            ),
+            child: Text(
+              errorMessage!,
+              style: const TextStyle(color: AppColors.danger),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        _sectionCard(
+          context,
+          icon: Icons.local_offer_outlined,
+          title: 'Coupon Basics',
+          children: [
+            CustomTextField(
+              controller: codeController,
+              label: 'Coupon Code',
+              hint: 'e.g. SUMMER50',
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Customers will enter this code at checkout.',
+              style: AppTextStyles.label.copyWith(color: colors.textMuted),
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: descriptionController,
+              label: 'Description',
+              maxLines: 2,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _discountTypeDropdown(colors)),
+                const SizedBox(width: 16),
                 Expanded(
-                  flex: 1,
-                  child: _LivePreviewCard(
-                    code: codeController.text.trim().isEmpty
-                        ? 'SUMMER50'
-                        : codeController.text.trim().toUpperCase(),
-                    discountType: discountType,
-                    discountValue:
-                        double.tryParse(discountValueController.text.trim()) ??
-                            50,
-                    minOrder: double.tryParse(minOrderController.text.trim()),
-                    isActive: !startDate.isAfter(DateTime.now()),
+                  child: CustomTextField(
+                    controller: discountValueController,
+                    label: 'Discount Value',
+                    hint: discountType == DiscountType.percentage
+                        ? '0-100'
+                        : '0.00',
+                    keyboardType: TextInputType.number,
                   ),
                 ),
               ],
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 20),
+        _sectionCard(
+          context,
+          icon: Icons.rule_folder_outlined,
+          title: 'Usage Rules',
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: CustomTextField(
+                    controller: minOrderController,
+                    label: 'Min. Order Value (₹)',
+                    hint: '0.00',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: CustomTextField(
+                    controller: usageLimitController,
+                    label: 'Usage Limit',
+                    hint: 'Unlimited',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Start Date',
+                        style: AppTextStyles.label
+                            .copyWith(color: colors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      _datePickerField(
+                          startDate, (d) => setState(() => startDate = d)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Expiry Date',
+                        style: AppTextStyles.label
+                            .copyWith(color: colors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      _datePickerField(
+                          endDate, (d) => setState(() => endDate = d)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Applicable Categories',
+              style:
+                  AppTextStyles.label.copyWith(color: colors.textSecondary),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _categories.map((cat) {
+                final selected = _selectedCategories.contains(cat);
+                return FilterChip(
+                  label: Text(cat),
+                  selected: selected,
+                  onSelected: (v) => setState(() => v
+                      ? _selectedCategories.add(cat)
+                      : _selectedCategories.remove(cat)),
+                  backgroundColor: colors.surfaceVariant,
+                  selectedColor: AppColors.primary.withOpacity(0.2),
+                  checkmarkColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color:
+                        selected ? AppColors.primary : colors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  side: BorderSide(
+                    color: selected ? AppColors.primary : colors.border,
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _sectionCard(BuildContext context,
-      {required IconData icon,
-      required String title,
-      required List<Widget> children}) {
+  Widget _actionButtons() => Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+              child: const Text('Discard'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: CustomButton(
+              label: 'Save Coupon',
+              icon: Icons.save_outlined,
+              isLoading: isLoading,
+              onPressed: _save,
+            ),
+          ),
+        ],
+      );
+
+  Widget _sectionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) {
     final colors = AppColors.of(context);
     return Container(
       width: double.infinity,
@@ -336,8 +385,10 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
             children: [
               Icon(icon, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text(title,
-                  style: AppTextStyles.h2.copyWith(color: colors.textPrimary)),
+              Text(
+                title,
+                style: AppTextStyles.h2.copyWith(color: colors.textPrimary),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -351,8 +402,10 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Discount Type',
-            style: AppTextStyles.label.copyWith(color: colors.textSecondary)),
+        Text(
+          'Discount Type',
+          style: AppTextStyles.label.copyWith(color: colors.textSecondary),
+        ),
         const SizedBox(height: 6),
         DropdownButtonFormField<DiscountType>(
           value: discountType,
@@ -360,9 +413,13 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
           style: TextStyle(color: colors.textPrimary, fontSize: 14),
           items: const [
             DropdownMenuItem(
-                value: DiscountType.percentage, child: Text('Percentage (%)')),
+              value: DiscountType.percentage,
+              child: Text('Percentage (%)'),
+            ),
             DropdownMenuItem(
-                value: DiscountType.flat, child: Text('Flat Amount (₹)')),
+              value: DiscountType.flat,
+              child: Text('Flat Amount (₹)'),
+            ),
           ],
           onChanged: (v) {
             if (v != null) setState(() => discountType = v);
@@ -398,8 +455,10 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
               Icon(Icons.calendar_today_outlined,
                   size: 14, color: colors.textMuted),
               const SizedBox(width: 8),
-              Text(Formatters.date(date),
-                  style: TextStyle(color: colors.textPrimary, fontSize: 13)),
+              Text(
+                Formatters.date(date),
+                style: TextStyle(color: colors.textPrimary, fontSize: 13),
+              ),
             ],
           ),
         ),
@@ -408,8 +467,6 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   }
 }
 
-/// Right-hand "Live Preview" panel showing how the coupon will render
-/// to end-users in the delivery app, mirroring the reference design.
 class _LivePreviewCard extends StatelessWidget {
   final String code;
   final DiscountType discountType;
@@ -443,9 +500,11 @@ class _LivePreviewCard extends StatelessWidget {
               Icon(Icons.visibility_outlined,
                   size: 16, color: colors.textSecondary),
               const SizedBox(width: 6),
-              Text('Live Preview',
-                  style: AppTextStyles.h2
-                      .copyWith(color: colors.textPrimary, fontSize: 15)),
+              Text(
+                'Preview',
+                style: AppTextStyles.h2
+                    .copyWith(color: colors.textPrimary, fontSize: 15),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -475,9 +534,10 @@ class _LivePreviewCard extends StatelessWidget {
                       child: Text(
                         isActive ? 'ACTIVE' : 'SCHEDULED',
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700),
+                          color: Colors.white,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -488,14 +548,17 @@ class _LivePreviewCard extends StatelessWidget {
                       ? '${discountValue.toStringAsFixed(0)}%'
                       : Formatters.currency(discountValue),
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 34,
-                      fontWeight: FontWeight.bold,
-                      height: 1),
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    height: 1,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                const Text('Off your next order',
-                    style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const Text(
+                  'Off your next order',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
@@ -504,8 +567,8 @@ class _LivePreviewCard extends StatelessWidget {
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        style: BorderStyle.solid),
+                      color: Colors.white.withOpacity(0.3),
+                    ),
                   ),
                   child: Center(
                     child: Text(

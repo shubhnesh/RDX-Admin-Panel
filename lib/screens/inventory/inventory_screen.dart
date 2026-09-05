@@ -52,21 +52,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
       backgroundColor: AppColors.of(context).background,
       appBar: RdxHeader(
         title: 'Inventory Management',
-        actions: [
-          if (provider.lowStockCount + provider.outOfStockCount > 0)
-            Container(
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                  '${provider.lowStockCount + provider.outOfStockCount} items need attention',
-                  style:
-                      const TextStyle(color: AppColors.warning, fontSize: 12)),
-            ),
-        ],
       ),
       body: provider.isLoading
           ? const LoadingIndicator()

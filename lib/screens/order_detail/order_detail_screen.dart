@@ -41,7 +41,6 @@ class _OrderDetailBody extends StatelessWidget {
       backgroundColor: AppColors.lightBackground,
       appBar: RdxHeader(
         title: order == null ? 'Order Detail' : 'Order #RDX-${order.id}',
-        showBack: true,
       ),
       body: provider.isLoading || order == null
           ? const LoadingIndicator()

@@ -5,17 +5,14 @@ import '../core/utils/responsive.dart';
 /// Shared top bar used at the top of every admin screen's content area.
 class RdxHeader extends StatelessWidget implements PreferredSizeWidget {
   final String title;
-  final bool showBack;
-  final List<Widget>? actions;
 
-  const RdxHeader(
-      {super.key, required this.title, this.showBack = false, this.actions});
+  const RdxHeader({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     return Container(
-      height: 64,
+      height: 48,
       padding:
           EdgeInsets.symmetric(horizontal: Responsive.pageHorizontal(context)),
       decoration: BoxDecoration(
@@ -24,29 +21,20 @@ class RdxHeader extends StatelessWidget implements PreferredSizeWidget {
       ),
       child: Row(
         children: [
-          if (showBack) ...[
-            IconButton(
-              icon: Icon(Icons.arrow_back_ios_new,
-                  size: 18, color: colors.textPrimary),
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-            const SizedBox(width: 4),
-          ],
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.arrow_back_ios_new,
+                size: 17, color: colors.textPrimary),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          const SizedBox(width: 4),
           Text(
             title,
             style: TextStyle(
               color: colors.textPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
             ),
-          ),
-          const Spacer(),
-          ...?actions,
-          const SizedBox(width: 12),
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: colors.surfaceVariant,
-            child: Icon(Icons.person, size: 18, color: colors.textSecondary),
           ),
         ],
       ),
@@ -54,5 +42,5 @@ class RdxHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize => const Size.fromHeight(48);
 }

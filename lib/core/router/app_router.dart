@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../screens/main/main_screen.dart';
 import '../../screens/order_detail/order_detail_screen.dart';
-import '../../screens/menu/edit_menu_item_screen.dart';
+import '../../screens/menu/create_menu_screen.dart';
 import '../../screens/coupons/create_coupon_screen.dart';
 import '../../screens/settings/restaurant_profile_screen.dart';
 
@@ -30,7 +30,7 @@ class AppRoutes {
       case editMenuItem:
         final itemId = settings.arguments as String?;
         return MaterialPageRoute(
-            builder: (_) => EditMenuItemScreen(itemId: itemId));
+            builder: (_) => CreateMenuScreen(itemId: itemId));
       case createCoupon:
         return MaterialPageRoute(builder: (_) => const CreateCouponScreen());
       case restaurantProfile:

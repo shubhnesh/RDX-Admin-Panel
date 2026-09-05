@@ -10,6 +10,7 @@ import '../../models/activity_log_model.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/rdx_search_bar.dart';
+import '../../widgets/stat_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -118,7 +119,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         subtitle: '+${s.revenueChangePercent}% today',
         subtitleColor: AppColors.success,
         icon: Icons.attach_money_rounded,
-        iconBg: AppColors.primary.withOpacity(0.15),
+        iconBg: AppColors.primary.withValues(alpha: 0.15),
         iconColor: AppColors.primary,
       ),
       _StatCardData(
@@ -127,7 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         subtitle: '${s.preparingCount} preparing, ${s.enRouteCount} en route',
         subtitleColor: colors.textSecondary,
         icon: Icons.receipt_long_outlined,
-        iconBg: AppColors.info.withOpacity(0.15),
+        iconBg: AppColors.info.withValues(alpha: 0.15),
         iconColor: AppColors.info,
       ),
       _StatCardData(
@@ -136,7 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         subtitle: null,
         progress: s.tablesOccupiedPercent / 100,
         icon: Icons.table_restaurant_outlined,
-        iconBg: AppColors.warning.withOpacity(0.15),
+        iconBg: AppColors.warning.withValues(alpha: 0.15),
         iconColor: AppColors.warning,
       ),
       _StatCardData(
@@ -148,7 +149,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ? Icons.warning_amber_rounded
             : Icons.check_circle_outline,
         icon: Icons.delivery_dining_outlined,
-        iconBg: AppColors.success.withOpacity(0.15),
+        iconBg: AppColors.success.withValues(alpha: 0.15),
         iconColor: AppColors.success,
       ),
     ];
@@ -158,7 +159,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(height: 12),
-            _buildStatCard(cards[i], colors),
+            _statCard(cards[i]),
           ],
         ],
       );
@@ -168,93 +169,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         for (var i = 0; i < cards.length; i++) ...[
           if (i > 0) const SizedBox(width: 14),
-          Expanded(child: _buildStatCard(cards[i], colors)),
+          Expanded(child: _statCard(cards[i])),
         ],
       ],
     );
   }
 
-  Widget _buildStatCard(_StatCardData d, AppColorScheme colors) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  d.label,
-                  style: TextStyle(
-                    color: colors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: d.iconBg,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(d.icon, size: 20, color: d.iconColor),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            d.value,
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              height: 1.1,
-            ),
-          ),
-          if (d.progress != null) ...[
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: d.progress,
-                minHeight: 6,
-                backgroundColor: colors.surfaceVariant,
-                valueColor: const AlwaysStoppedAnimation(AppColors.warning),
-              ),
-            ),
-          ],
-          if (d.subtitle != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (d.subtitleIcon != null) ...[
-                  Icon(d.subtitleIcon, size: 14, color: d.subtitleColor),
-                  const SizedBox(width: 4),
-                ],
-                Flexible(
-                  child: Text(
-                    d.subtitle!,
-                    style: TextStyle(
-                      color: d.subtitleColor ?? colors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
+  Widget _statCard(_StatCardData d) {
+    return StatCard(
+      label: d.label,
+      value: d.value,
+      icon: d.icon,
+      accentColor: d.iconColor,
+      subtitle: d.subtitle,
+      subtitleColor: d.subtitleColor,
+      subtitleIcon: d.subtitleIcon,
+      progress: d.progress,
     );
   }
 

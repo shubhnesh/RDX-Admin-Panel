@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
 import '../core/utils/responsive.dart';
 
 class RdxSearchBar extends StatefulWidget {
@@ -152,11 +153,13 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
     }
 
     _controller.addListener(_controllerListener);
+    _focusNode.addListener(_focusListener);
   }
 
   @override
   void dispose() {
     _controller.removeListener(_controllerListener);
+    _focusNode.removeListener(_focusListener);
 
     if (_ownsController) {
       _internalController.dispose();
@@ -175,6 +178,10 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
     }
   }
 
+  void _focusListener() {
+    if (mounted) setState(() {});
+  }
+
   void _clear() {
     _controller.clear();
     widget.onClear?.call();
@@ -184,6 +191,8 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
   @override
   Widget build(BuildContext context) {
     final bool hasText = _controller.text.isNotEmpty;
+    final colors = AppColors.of(context);
+    final focused = _focusNode.hasFocus;
 
     return Container(
       width: widget.width,
@@ -194,14 +203,24 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
             horizontal: 13,
           ),
       decoration: BoxDecoration(
-        color: widget.backgroundColor ?? Colors.transparent,
+        color: widget.backgroundColor ?? colors.surface,
         borderRadius: BorderRadius.circular(
           widget.borderRadius,
         ),
         border: Border.all(
-          color: widget.borderColor ?? const Color(0xFF302B2B),
-          width: widget.borderWidth,
+          color: widget.borderColor ??
+              (focused ? AppColors.primary : colors.border),
+          width: focused ? 1.4 : widget.borderWidth,
         ),
+        boxShadow: focused
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  blurRadius: 0,
+                  spreadRadius: 3,
+                ),
+              ]
+            : null,
       ),
       child: Row(
         children: [
@@ -209,7 +228,7 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
               Icon(
                 Icons.search_rounded,
                 size: 19,
-                color: widget.hintColor ?? const Color(0xFFE5BDBB),
+                color: widget.hintColor ?? colors.textMuted,
               ),
           const SizedBox(width: 9),
           Expanded(
@@ -225,7 +244,7 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
               onSubmitted: widget.onSubmitted,
               style: widget.textStyle ??
                   TextStyle(
-                    color: widget.textColor ?? const Color(0xFFE5BDBB),
+                    color: widget.textColor ?? colors.textPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
                   ),
@@ -233,7 +252,7 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
                 hintText: widget.hintText,
                 hintStyle: widget.hintStyle ??
                     TextStyle(
-                      color: widget.hintColor ?? const Color(0xFFE5BDBB),
+                      color: widget.hintColor ?? colors.textMuted,
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
                     ),
@@ -255,14 +274,14 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
           if (widget.showClearButton && hasText)
             GestureDetector(
               onTap: _clear,
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.only(
                   left: 8,
                 ),
                 child: Icon(
                   Icons.close_rounded,
                   size: 16,
-                  color: Color(0xFF777070),
+                  color: colors.textMuted,
                 ),
               ),
             ),

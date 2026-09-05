@@ -17,22 +17,101 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
-  /// Tabs shown even before any items exist for that category, so the
-  /// filter row matches the reference design from the first load.
-  static const List<String> _pinnedCategories = [
-    'Starters',
-    'Grills',
-    'Mains',
-    'Biryani',
-    'Seafood',
-    'Desserts',
-    'Drinks',
-  ];
+  final Set<String> _appliedCategories = {};
+  Set<String>? _stagedCategories;
+  bool _hasAppliedCategories = false;
+  bool _categoryPickerOpen = false;
+  final GlobalKey _categoryButtonKey = GlobalKey();
+  OverlayEntry? _categoryOverlay;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() => context.read<MenuProvider>().load());
+  }
+
+  void _openCategoryPicker(MenuProvider provider) {
+    if (_categoryPickerOpen) {
+      _closeCategoryPicker();
+      return;
+    }
+
+    _stagedCategories = !_hasAppliedCategories
+        ? MenuTaxonomy.mainCategories.map((category) => category.name).toSet()
+        : Set<String>.from(_appliedCategories);
+
+    // Hardcoded panel dimensions/position — no dynamic layout math.
+    const panelWidth = 330.0;
+    const left = 950.0;
+    const top = 150.0;
+
+    _categoryOverlay = OverlayEntry(
+      builder: (_) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _closeCategoryPicker,
+            ),
+          ),
+          Positioned(
+            left: left,
+            top: top,
+            width: panelWidth,
+            child: Material(
+              color: Colors.transparent,
+              child: _categoryPickerPanel(
+                AppColors.of(context),
+                provider,
+                panelWidth: panelWidth,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    Overlay.of(context).insert(_categoryOverlay!);
+    setState(() => _categoryPickerOpen = true);
+  }
+
+  void _closeCategoryPicker() {
+    _categoryOverlay?.remove();
+    _categoryOverlay = null;
+    if (mounted) {
+      setState(() {
+        _categoryPickerOpen = false;
+        _stagedCategories = null;
+      });
+    }
+  }
+
+  void _toggleStagedCategory(String name, bool selected) {
+    final staged = _stagedCategories ?? <String>{};
+    if (selected) {
+      staged.add(name);
+    } else {
+      staged.remove(name);
+    }
+    _stagedCategories = staged;
+    _categoryOverlay?.markNeedsBuild();
+  }
+
+  void _applyCategories(MenuProvider provider) {
+    final next = Set<String>.from(_stagedCategories ?? {});
+    _appliedCategories
+      ..clear()
+      ..addAll(next);
+    _hasAppliedCategories = true;
+    final selectedIsVisible = provider.selectedCategory == 'All' ||
+        _appliedCategories.contains(provider.selectedCategory);
+    _closeCategoryPicker();
+    if (!selectedIsVisible) provider.setCategory('All');
+  }
+
+  @override
+  void dispose() {
+    _categoryOverlay?.remove();
+    super.dispose();
   }
 
   @override
@@ -133,48 +212,191 @@ class _MenuScreenState extends State<MenuScreen> {
   // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildCategoryTabs(MenuProvider provider, AppColorScheme colors) {
-    final categories = <String>{
-      ..._pinnedCategories,
-      ...provider.categories.where((c) => c != 'All'),
-    }.toList();
+    final categories = !_hasAppliedCategories
+        ? MenuTaxonomy.mainCategories.map((category) => category.name).toList()
+        : _appliedCategories.toList();
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _categoryChip(colors,
-                    label: 'All',
-                    selected: provider.selectedCategory == 'All',
-                    onTap: () => provider.setCategory('All')),
-                for (final c in categories) ...[
-                  const SizedBox(width: 8),
-                  _categoryChip(colors,
-                      label: c,
-                      selected: provider.selectedCategory == c,
-                      onTap: () => provider.setCategory(c)),
-                ],
-              ],
+        Row(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _categoryChip(colors,
+                        label: 'All',
+                        selected: provider.selectedCategory == 'All',
+                        onTap: () => provider.setCategory('All')),
+                    for (final c in categories) ...[
+                      const SizedBox(width: 8),
+                      _categoryChip(colors,
+                          label: c,
+                          selected: provider.selectedCategory == c,
+                          onTap: () => provider.setCategory(c)),
+                    ],
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        TextButton.icon(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Manage Categories coming soon')),
-            );
-          },
-          icon: const Icon(Icons.tune, size: 16),
-          label: const Text('Manage Categories'),
-          style: TextButton.styleFrom(
-            foregroundColor: colors.textSecondary,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-          ),
+            const SizedBox(width: 12),
+            _manageCategoriesButton(colors, provider),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _manageCategoriesButton(AppColorScheme colors, MenuProvider provider) {
+    return InkWell(
+      key: _categoryButtonKey,
+      onTap: () => _openCategoryPicker(provider),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+        decoration: BoxDecoration(
+          color: _categoryPickerOpen
+              ? AppColors.primary.withValues(alpha: 0.08)
+              : colors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: _categoryPickerOpen ? AppColors.primary : colors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.tune, size: 16, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Text('Manage Categories',
+                style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(width: 4),
+            Icon(
+              _categoryPickerOpen
+                  ? Icons.keyboard_arrow_up
+                  : Icons.keyboard_arrow_down,
+              size: 17,
+              color: colors.textMuted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _categoryPickerPanel(
+    AppColorScheme colors,
+    MenuProvider provider, {
+    required double panelWidth,
+  }) {
+    final staged = _stagedCategories ?? <String>{};
+    return Container(
+      width: panelWidth, // constrained width – never overflows horizontally
+      padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Filter categories',
+                    style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700)),
+              ),
+              Text('${staged.length} selected',
+                  style: TextStyle(
+                      color: colors.textMuted,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('Choose which categories appear in the filter row.',
+              style: TextStyle(color: colors.textSecondary, fontSize: 10.5)),
+          const SizedBox(height: 10),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 270),
+            decoration: BoxDecoration(
+                color: colors.surfaceVariant,
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(color: colors.border)),
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                itemCount: MenuTaxonomy.mainCategories.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, indent: 48, color: colors.divider),
+                itemBuilder: (context, index) {
+                  final category = MenuTaxonomy.mainCategories[index];
+                  final selected = staged.contains(category.name);
+                  return InkWell(
+                    onTap: () =>
+                        _toggleStagedCategory(category.name, !selected),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 2, 8, 2),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: selected,
+                            onChanged: (value) => _toggleStagedCategory(
+                                category.name, value == true),
+                            activeColor: AppColors.primary,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          Expanded(
+                            child: Text(category.name,
+                                style: TextStyle(
+                                    color: colors.textPrimary,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                  onPressed: _closeCategoryPicker, child: const Text('Cancel')),
+              const SizedBox(width: 6),
+              ElevatedButton(
+                onPressed: () => _applyCategories(provider),
+                style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 9)),
+                child: const Text('Apply'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -209,7 +431,7 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // GRID — item cards + trailing "Add New Menu Item" tile
+  // GRID — leading "Add New Menu Item" tile + item cards
   // ═══════════════════════════════════════════════════════════════════
 
   Widget _buildGrid(
@@ -226,7 +448,7 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
       itemCount: items.length + 1,
       itemBuilder: (context, index) {
-        if (index == items.length) {
+        if (index == 0) {
           return _AddItemTile(
               colors: colors,
               onTap: () async {
@@ -234,7 +456,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 if (context.mounted) context.read<MenuProvider>().load();
               });
         }
-        final item = items[index];
+        final item = items[index - 1];
         return _MenuItemCard(
           item: item,
           colors: colors,
@@ -244,7 +466,6 @@ class _MenuScreenState extends State<MenuScreen> {
                 .pushNamed(AppRoutes.editMenuItem, arguments: item.id);
             if (context.mounted) context.read<MenuProvider>().load();
           },
-          // onDelete: () => provider.deleteItem(item.id),
           onDelete: () async {
             final confirmed = await showDialog<bool>(
               context: context,
@@ -396,28 +617,40 @@ class _MenuItemCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14),
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 4),
+
+                // ── Ingredients (comma-separated) ───────────────────
                 Text(
-                  item.description.isEmpty
-                      ? 'No description added'
-                      : item.description,
+                  item.ingredients.isEmpty
+                      ? 'No ingredients added'
+                      : item.ingredients.join(', '),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      color: colors.textSecondary, fontSize: 11, height: 1.35),
+                    color: colors.textSecondary,
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
                 ),
+
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 5,
                   runSpacing: 5,
                   children: [
-                    _detailChip(_dietaryLabel(item.dietaryType),
-                        item.isVeg ? AppColors.success : AppColors.primary),
-                    _detailChip(_titleCase(preparation), colors.textSecondary),
+                    _detailChip(
+                      _dietaryLabel(item.dietaryType),
+                      item.isVeg ? AppColors.success : AppColors.primary,
+                    ),
+                    _detailChip(
+                      _titleCase(preparation),
+                      colors.textSecondary,
+                    ),
                     for (final tag in item.tags.take(2))
                       _detailChip(_titleCase(tag), colors.textMuted),
                   ],
@@ -429,19 +662,21 @@ class _MenuItemCard extends StatelessWidget {
                     Text(
                       '₹${item.price.toStringAsFixed(2)}',
                       style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800),
+                        color: AppColors.primary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const Spacer(),
                     Text(
                       item.available ? 'Available' : 'Unavailable',
                       style: TextStyle(
-                          color: item.available
-                              ? AppColors.success
-                              : colors.textMuted,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600),
+                        color: item.available
+                            ? AppColors.success
+                            : colors.textMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     IconButton(
                       onPressed: onToggleAvailability,
@@ -505,20 +740,31 @@ class _MenuItemCard extends StatelessWidget {
             alpha: background == AppColors.primary ? 1 : 0.92),
         borderRadius: BorderRadius.circular(5),
       ),
-      child: Text(label,
-          style: TextStyle(
-              color: foreground, fontSize: 9, fontWeight: FontWeight.w700)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 
   Widget _detailChip(String label, Color color) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4)),
-        child: Text(label,
-            style: TextStyle(
-                color: color, fontSize: 9, fontWeight: FontWeight.w600)),
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       );
 
   String _dietaryLabel(DietaryType type) => type == DietaryType.nonVeg

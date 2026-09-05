@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-
 import '../models/menu_item_model.dart';
 import '../services/menu_service.dart';
 
@@ -26,8 +25,10 @@ class MenuProvider extends ChangeNotifier {
     final query = searchQuery.trim().toLowerCase();
 
     return _items.where((item) {
+      final selectedId = _categoryId(selectedCategory);
       final matchesCategory = selectedCategory == 'All' ||
-          item.primaryCategoryId == _categoryId(selectedCategory);
+          MenuTaxonomy.descendantsOf(selectedId)
+              .contains(item.primaryCategoryId);
 
       final matchesSearch = query.isEmpty ||
           item.name.toLowerCase().contains(query) ||

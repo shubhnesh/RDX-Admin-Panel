@@ -30,6 +30,50 @@ class _MenuScreenState extends State<MenuScreen> {
     Future.microtask(() => context.read<MenuProvider>().load());
   }
 
+  // void _openCategoryPicker(MenuProvider provider) {
+  //   if (_categoryPickerOpen) {
+  //     _closeCategoryPicker();
+  //     return;
+  //   }
+
+  //   _stagedCategories = !_hasAppliedCategories
+  //       ? MenuTaxonomy.mainCategories.map((category) => category.name).toSet()
+  //       : Set<String>.from(_appliedCategories);
+
+  //   // Hardcoded panel dimensions/position — no dynamic layout math.
+  //   const panelWidth = 330.0;
+  //   const left = 950.0;
+  //   const top = 150.0;
+
+  //   _categoryOverlay = OverlayEntry(
+  //     builder: (_) => Stack(
+  //       children: [
+  //         Positioned.fill(
+  //           child: GestureDetector(
+  //             behavior: HitTestBehavior.translucent,
+  //             onTap: _closeCategoryPicker,
+  //           ),
+  //         ),
+  //         Positioned(
+  //           left: left,
+  //           top: top,
+  //           width: panelWidth,
+  //           child: Material(
+  //             color: Colors.transparent,
+  //             child: _categoryPickerPanel(
+  //               AppColors.of(context),
+  //               provider,
+  //               panelWidth: panelWidth,
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //   Overlay.of(context).insert(_categoryOverlay!);
+  //   setState(() => _categoryPickerOpen = true);
+  // }
+
   void _openCategoryPicker(MenuProvider provider) {
     if (_categoryPickerOpen) {
       _closeCategoryPicker();
@@ -40,49 +84,134 @@ class _MenuScreenState extends State<MenuScreen> {
         ? MenuTaxonomy.mainCategories.map((category) => category.name).toSet()
         : Set<String>.from(_appliedCategories);
 
-    // Hardcoded panel dimensions/position — no dynamic layout math.
+    final buttonContext = _categoryButtonKey.currentContext;
+
+    if (buttonContext == null) return;
+
+    final renderBox = buttonContext.findRenderObject();
+
+    if (renderBox is! RenderBox) return;
+
+    final buttonOffset = renderBox.localToGlobal(Offset.zero);
+    final buttonSize = renderBox.size;
+
+    final mediaQuery = MediaQuery.of(context);
+    final screenSize = mediaQuery.size;
+
     const panelWidth = 330.0;
-    const left = 950.0;
-    const top = 150.0;
+    const horizontalMargin = 16.0;
+    const verticalGap = 8.0;
+
+    // Calculate the maximum usable height.
+    final availableBelow = screenSize.height -
+        (buttonOffset.dy + buttonSize.height) -
+        mediaQuery.padding.bottom -
+        horizontalMargin;
+
+    final availableAbove =
+        buttonOffset.dy - mediaQuery.padding.top - horizontalMargin;
+
+    // The panel's actual height is approximately:
+    // header + description + list + buttons.
+    // We keep enough room for it without allowing it to leave the screen.
+    const estimatedPanelHeight = 430.0;
+
+    final showBelow = availableBelow >= estimatedPanelHeight ||
+        availableBelow >= availableAbove;
+
+    double top;
+
+    if (showBelow) {
+      top = buttonOffset.dy + buttonSize.height + verticalGap;
+    } else {
+      top = buttonOffset.dy - estimatedPanelHeight - verticalGap;
+    }
+
+    // Keep the popup inside the visible screen vertically.
+    final maxTop = screenSize.height - estimatedPanelHeight - horizontalMargin;
+
+    top = top.clamp(
+      mediaQuery.padding.top + horizontalMargin,
+      maxTop > mediaQuery.padding.top
+          ? maxTop
+          : mediaQuery.padding.top + horizontalMargin,
+    );
+
+    // Align the right edge of the popup with the right edge
+    // of the Manage Categories button.
+    double left = buttonOffset.dx + buttonSize.width - panelWidth;
+
+    // Prevent the popup from going outside the left edge.
+    left = left.clamp(
+      horizontalMargin,
+      screenSize.width - panelWidth - horizontalMargin,
+    );
 
     _categoryOverlay = OverlayEntry(
-      builder: (_) => Stack(
-        children: [
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: _closeCategoryPicker,
-            ),
-          ),
-          Positioned(
-            left: left,
-            top: top,
-            width: panelWidth,
-            child: Material(
-              color: Colors.transparent,
-              child: _categoryPickerPanel(
-                AppColors.of(context),
-                provider,
-                panelWidth: panelWidth,
+      builder: (_) {
+        return Stack(
+          children: [
+            // Full-screen transparent barrier.
+            // Any click outside the panel closes it immediately.
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _closeCategoryPicker,
+                child: const SizedBox.expand(),
               ),
             ),
-          ),
-        ],
-      ),
+
+            Positioned(
+              left: left,
+              top: top,
+              width: panelWidth,
+              child: Material(
+                color: Colors.transparent,
+                child: _categoryPickerPanel(
+                  AppColors.of(context),
+                  provider,
+                  panelWidth: panelWidth,
+                  maxHeight: showBelow ? availableBelow : availableAbove,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
-    Overlay.of(context).insert(_categoryOverlay!);
-    setState(() => _categoryPickerOpen = true);
+
+    Overlay.of(context, rootOverlay: true).insert(_categoryOverlay!);
+
+    setState(() {
+      _categoryPickerOpen = true;
+    });
   }
 
+  // void _closeCategoryPicker() {
+  //   _categoryOverlay?.remove();
+  //   _categoryOverlay = null;
+  //   if (mounted) {
+  //     setState(() {
+  //       _categoryPickerOpen = false;
+  //       _stagedCategories = null;
+  //     });
+  //   }
+  // }
   void _closeCategoryPicker() {
-    _categoryOverlay?.remove();
+    final overlay = _categoryOverlay;
+
     _categoryOverlay = null;
-    if (mounted) {
-      setState(() {
-        _categoryPickerOpen = false;
-        _stagedCategories = null;
-      });
+
+    if (overlay != null) {
+      overlay.remove();
     }
+
+    if (!mounted) return;
+
+    setState(() {
+      _categoryPickerOpen = false;
+      _stagedCategories = null;
+    });
   }
 
   void _toggleStagedCategory(String name, bool selected) {
@@ -108,9 +237,16 @@ class _MenuScreenState extends State<MenuScreen> {
     if (!selectedIsVisible) provider.setCategory('All');
   }
 
+  // @override
+  // void dispose() {
+  //   _categoryOverlay?.remove();
+  //   super.dispose();
+  // }
+
   @override
   void dispose() {
     _categoryOverlay?.remove();
+    _categoryOverlay = null;
     super.dispose();
   }
 
@@ -211,40 +347,88 @@ class _MenuScreenState extends State<MenuScreen> {
   // CATEGORY TABS
   // ═══════════════════════════════════════════════════════════════════
 
-  Widget _buildCategoryTabs(MenuProvider provider, AppColorScheme colors) {
+  // Widget _buildCategoryTabs(MenuProvider provider, AppColorScheme colors) {
+  //   final categories = !_hasAppliedCategories
+  //       ? MenuTaxonomy.mainCategories.map((category) => category.name).toList()
+  //       : _appliedCategories.toList();
+
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.end,
+  //     children: [
+  //       Row(
+  //         children: [
+  //           Expanded(
+  //             child: SingleChildScrollView(
+  //               scrollDirection: Axis.horizontal,
+  //               child: Row(
+  //                 children: [
+  //                   _categoryChip(colors,
+  //                       label: 'All',
+  //                       selected: provider.selectedCategory == 'All',
+  //                       onTap: () => provider.setCategory('All')),
+  //                   for (final c in categories) ...[
+  //                     const SizedBox(width: 8),
+  //                     _categoryChip(colors,
+  //                         label: c,
+  //                         selected: provider.selectedCategory == c,
+  //                         onTap: () => provider.setCategory(c)),
+  //                   ],
+  //                 ],
+  //               ),
+  //             ),
+  //           ),
+  //           const SizedBox(width: 12),
+  //           _manageCategoriesButton(colors, provider),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
+  Widget _buildCategoryTabs(
+    MenuProvider provider,
+    AppColorScheme colors,
+  ) {
     final categories = !_hasAppliedCategories
         ? MenuTaxonomy.mainCategories.map((category) => category.name).toList()
         : _appliedCategories.toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _categoryChip(colors,
-                        label: 'All',
-                        selected: provider.selectedCategory == 'All',
-                        onTap: () => provider.setCategory('All')),
-                    for (final c in categories) ...[
-                      const SizedBox(width: 8),
-                      _categoryChip(colors,
-                          label: c,
-                          selected: provider.selectedCategory == c,
-                          onTap: () => provider.setCategory(c)),
-                    ],
+        Expanded(
+          child: ClipRect(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _categoryChip(
+                    colors,
+                    label: 'All',
+                    selected: provider.selectedCategory == 'All',
+                    onTap: () => provider.setCategory('All'),
+                  ),
+                  for (final category in categories) ...[
+                    const SizedBox(width: 8),
+                    _categoryChip(
+                      colors,
+                      label: category,
+                      selected: provider.selectedCategory == category,
+                      onTap: () => provider.setCategory(category),
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            _manageCategoriesButton(colors, provider),
-          ],
+          ),
         ),
+
+        const SizedBox(width: 12),
+
+        // This stays fixed and NEVER participates
+        // in the horizontal category scrolling.
+        _manageCategoriesButton(colors, provider),
       ],
     );
   }
@@ -288,14 +472,130 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
+  // Widget _categoryPickerPanel(
+  //   AppColorScheme colors,
+  //   MenuProvider provider, {
+  //   required double panelWidth,
+  // }) {
+  //   final staged = _stagedCategories ?? <String>{};
+  //   return Container(
+  //     width: panelWidth, // constrained width – never overflows horizontally
+  //     padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+  //     decoration: BoxDecoration(
+  //       color: colors.surface,
+  //       borderRadius: BorderRadius.circular(10),
+  //       border: Border.all(color: colors.border),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withValues(alpha: 0.1),
+  //           blurRadius: 18,
+  //           offset: const Offset(0, 7),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Column(
+  //       mainAxisSize: MainAxisSize.min,
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Row(
+  //           children: [
+  //             Expanded(
+  //               child: Text('Filter categories',
+  //                   style: TextStyle(
+  //                       color: colors.textPrimary,
+  //                       fontSize: 13,
+  //                       fontWeight: FontWeight.w700)),
+  //             ),
+  //             Text('${staged.length} selected',
+  //                 style: TextStyle(
+  //                     color: colors.textMuted,
+  //                     fontSize: 10.5,
+  //                     fontWeight: FontWeight.w600)),
+  //           ],
+  //         ),
+  //         const SizedBox(height: 4),
+  //         Text('Choose which categories appear in the filter row.',
+  //             style: TextStyle(color: colors.textSecondary, fontSize: 10.5)),
+  //         const SizedBox(height: 10),
+  //         Container(
+  //           constraints: const BoxConstraints(maxHeight: 270),
+  //           decoration: BoxDecoration(
+  //               color: colors.surfaceVariant,
+  //               borderRadius: BorderRadius.circular(7),
+  //               border: Border.all(color: colors.border)),
+  //           child: Scrollbar(
+  //             thumbVisibility: true,
+  //             child: ListView.separated(
+  //               shrinkWrap: true,
+  //               padding: const EdgeInsets.symmetric(vertical: 5),
+  //               itemCount: MenuTaxonomy.mainCategories.length,
+  //               separatorBuilder: (_, __) =>
+  //                   Divider(height: 1, indent: 48, color: colors.divider),
+  //               itemBuilder: (context, index) {
+  //                 final category = MenuTaxonomy.mainCategories[index];
+  //                 final selected = staged.contains(category.name);
+  //                 return InkWell(
+  //                   onTap: () =>
+  //                       _toggleStagedCategory(category.name, !selected),
+  //                   child: Padding(
+  //                     padding: const EdgeInsets.fromLTRB(10, 2, 8, 2),
+  //                     child: Row(
+  //                       children: [
+  //                         Checkbox(
+  //                           value: selected,
+  //                           onChanged: (value) => _toggleStagedCategory(
+  //                               category.name, value == true),
+  //                           activeColor: AppColors.primary,
+  //                           visualDensity: VisualDensity.compact,
+  //                         ),
+  //                         Expanded(
+  //                           child: Text(category.name,
+  //                               style: TextStyle(
+  //                                   color: colors.textPrimary,
+  //                                   fontSize: 11.5,
+  //                                   fontWeight: FontWeight.w600)),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                   ),
+  //                 );
+  //               },
+  //             ),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 10),
+  //         Row(
+  //           mainAxisAlignment: MainAxisAlignment.end,
+  //           children: [
+  //             TextButton(
+  //                 onPressed: _closeCategoryPicker, child: const Text('Cancel')),
+  //             const SizedBox(width: 6),
+  //             ElevatedButton(
+  //               onPressed: () => _applyCategories(provider),
+  //               style: ElevatedButton.styleFrom(
+  //                   padding: const EdgeInsets.symmetric(
+  //                       horizontal: 14, vertical: 9)),
+  //               child: const Text('Apply'),
+  //             ),
+  //           ],
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
   Widget _categoryPickerPanel(
     AppColorScheme colors,
     MenuProvider provider, {
     required double panelWidth,
+    required double maxHeight,
   }) {
     final staged = _stagedCategories ?? <String>{};
+
+    final listHeight = (maxHeight - 170).clamp(140.0, 270.0);
+
     return Container(
-      width: panelWidth, // constrained width – never overflows horizontally
+      width: panelWidth,
       padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
       decoration: BoxDecoration(
         color: colors.surface,
@@ -316,60 +616,84 @@ class _MenuScreenState extends State<MenuScreen> {
           Row(
             children: [
               Expanded(
-                child: Text('Filter categories',
-                    style: TextStyle(
-                        color: colors.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700)),
-              ),
-              Text('${staged.length} selected',
+                child: Text(
+                  'Filter categories',
                   style: TextStyle(
-                      color: colors.textMuted,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600)),
+                    color: colors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                '${staged.length} selected',
+                style: TextStyle(
+                  color: colors.textMuted,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
-          Text('Choose which categories appear in the filter row.',
-              style: TextStyle(color: colors.textSecondary, fontSize: 10.5)),
+          Text(
+            'Choose which categories appear in the filter row.',
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: 10.5,
+            ),
+          ),
           const SizedBox(height: 10),
           Container(
-            constraints: const BoxConstraints(maxHeight: 270),
+            height: listHeight,
             decoration: BoxDecoration(
-                color: colors.surfaceVariant,
-                borderRadius: BorderRadius.circular(7),
-                border: Border.all(color: colors.border)),
+              color: colors.surfaceVariant,
+              borderRadius: BorderRadius.circular(7),
+              border: Border.all(color: colors.border),
+            ),
             child: Scrollbar(
               thumbVisibility: true,
               child: ListView.separated(
-                shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 itemCount: MenuTaxonomy.mainCategories.length,
-                separatorBuilder: (_, __) =>
-                    Divider(height: 1, indent: 48, color: colors.divider),
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  indent: 48,
+                  color: colors.divider,
+                ),
                 itemBuilder: (context, index) {
                   final category = MenuTaxonomy.mainCategories[index];
                   final selected = staged.contains(category.name);
+
                   return InkWell(
-                    onTap: () =>
-                        _toggleStagedCategory(category.name, !selected),
+                    onTap: () => _toggleStagedCategory(
+                      category.name,
+                      !selected,
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(10, 2, 8, 2),
                       child: Row(
                         children: [
                           Checkbox(
                             value: selected,
-                            onChanged: (value) => _toggleStagedCategory(
-                                category.name, value == true),
+                            onChanged: (value) {
+                              _toggleStagedCategory(
+                                category.name,
+                                value == true,
+                              );
+                            },
                             activeColor: AppColors.primary,
                             visualDensity: VisualDensity.compact,
                           ),
                           Expanded(
-                            child: Text(category.name,
-                                style: TextStyle(
-                                    color: colors.textPrimary,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600)),
+                            child: Text(
+                              category.name,
+                              style: TextStyle(
+                                color: colors.textPrimary,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -384,13 +708,18 @@ class _MenuScreenState extends State<MenuScreen> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(
-                  onPressed: _closeCategoryPicker, child: const Text('Cancel')),
+                onPressed: _closeCategoryPicker,
+                child: const Text('Cancel'),
+              ),
               const SizedBox(width: 6),
               ElevatedButton(
                 onPressed: () => _applyCategories(provider),
                 style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 9)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 9,
+                  ),
+                ),
                 child: const Text('Apply'),
               ),
             ],

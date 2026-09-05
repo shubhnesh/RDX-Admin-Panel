@@ -81,7 +81,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Coupons & Offers',
-                                style: AppTextStyles.h1
+                                style: AppTextStyles.sectionTitle
                                     .copyWith(color: colors.textPrimary)),
                             const SizedBox(height: 4),
                             Text(

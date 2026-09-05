@@ -307,8 +307,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
             const SizedBox(height: 16),
             Text(
               'Applicable Categories',
-              style:
-                  AppTextStyles.label.copyWith(color: colors.textSecondary),
+              style: AppTextStyles.label.copyWith(color: colors.textSecondary),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -326,8 +325,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                   selectedColor: AppColors.primary.withOpacity(0.2),
                   checkmarkColor: AppColors.primary,
                   labelStyle: TextStyle(
-                    color:
-                        selected ? AppColors.primary : colors.textSecondary,
+                    color: selected ? AppColors.primary : colors.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -387,7 +385,8 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: AppTextStyles.h2.copyWith(color: colors.textPrimary),
+                style:
+                    AppTextStyles.cardTitle.copyWith(color: colors.textPrimary),
               ),
             ],
           ),
@@ -502,7 +501,7 @@ class _LivePreviewCard extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 'Preview',
-                style: AppTextStyles.h2
+                style: AppTextStyles.cardTitle
                     .copyWith(color: colors.textPrimary, fontSize: 15),
               ),
             ],

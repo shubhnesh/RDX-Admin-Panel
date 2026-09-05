@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/responsive.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/loading_indicator.dart';
 import 'notification_history_screen.dart';
@@ -56,30 +57,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(
-                      isMobile ? 16 : 24,
-                      isMobile ? 18 : 20,
-                      isMobile ? 16 : 24,
-                      32,
+                      isMobile ? context.w(16) : context.w(24),
+                      isMobile ? context.h(18) : context.h(20),
+                      isMobile ? context.w(16) : context.w(24),
+                      context.h(32),
                     ),
                     children: [
                       _buildPageHeader(
                         colors,
                         isMobile: isMobile,
                       ),
-                      const SizedBox(height: 22),
+                      SizedBox(height: context.h(22)),
                       _buildStats(
                         provider,
                         colors,
                         isMobile: isMobile,
                       ),
-                      const SizedBox(height: 22),
+                      SizedBox(height: context.h(22)),
                       _buildMainContent(
                         provider,
                         colors,
                         isMobile: isMobile,
                         isTablet: isTablet,
                       ),
-                      const SizedBox(height: 20),
+                      SizedBox(height: context.h(20)),
                       _buildHistoryNavigation(
                         colors,
                         isMobile: isMobile,

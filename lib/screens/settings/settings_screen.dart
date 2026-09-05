@@ -17,7 +17,7 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: colors.background,
       body: SingleChildScrollView(
-        padding: Responsive.pagePadding(context, top: 16),
+        padding: Responsive.pagePadding(context, top: context.h(16)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -31,23 +31,24 @@ class SettingsScreen extends StatelessWidget {
                       Text('System Settings',
                           style: TextStyle(
                               color: colors.textPrimary,
-                              fontSize: 18,
+                              fontSize: context.h(18),
                               fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 4),
+                      SizedBox(height: context.h(4)),
                       Text(
                           'Manage essential configuration for your restaurant operations.',
                           style: TextStyle(
-                              color: colors.textSecondary, fontSize: 10)),
+                              color: colors.textSecondary,
+                              fontSize: context.h(10))),
                     ],
                   ),
                 ),
                 OutlinedButton(onPressed: () {}, child: const Text('Discard')),
-                const SizedBox(width: 8),
+                SizedBox(width: context.w(8)),
                 ElevatedButton(
                     onPressed: () {}, child: const Text('Save Changes')),
               ],
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: context.h(18)),
             LayoutBuilder(
               builder: (context, constraints) {
                 final compact = constraints.maxWidth < 760;
@@ -57,9 +58,9 @@ class SettingsScreen extends StatelessWidget {
                 if (compact) {
                   return Column(children: [
                     identity,
-                    const SizedBox(height: 14),
+                    SizedBox(height: context.h(14)),
                     hours,
-                    const SizedBox(height: 14),
+                    SizedBox(height: context.h(14)),
                     rules
                   ]);
                 }
@@ -70,10 +71,10 @@ class SettingsScreen extends StatelessWidget {
                           flex: 3,
                           child: Column(children: [
                             identity,
-                            const SizedBox(height: 14),
+                            SizedBox(height: context.h(14)),
                             rules
                           ])),
-                      const SizedBox(width: 14),
+                      SizedBox(width: context.w(14)),
                       Expanded(child: hours)
                     ]);
               },
@@ -101,30 +102,30 @@ class _IdentityCard extends StatelessWidget {
             label: 'Restaurant Name',
             value: settings.restaurantName,
             colors: colors),
-        const SizedBox(height: 10),
+        SizedBox(height: context.h(10)),
         _LabeledInput(
             label: 'Primary Address', value: settings.address, colors: colors),
-        const SizedBox(height: 10),
+        SizedBox(height: context.h(10)),
         Row(children: [
           Expanded(
               child: _LabeledInput(
                   label: 'Support Email',
                   value: settings.email,
                   colors: colors)),
-          const SizedBox(width: 10),
+          SizedBox(width: context.w(10)),
           Expanded(
               child: _LabeledInput(
                   label: 'Contact Phone',
                   value: settings.phone,
                   colors: colors))
         ]),
-        const SizedBox(height: 10),
+        SizedBox(height: context.h(10)),
         Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
                 onPressed: () => Navigator.of(context)
                     .pushNamed(AppRoutes.restaurantProfile),
-                icon: const Icon(Icons.open_in_new, size: 14),
+                icon: Icon(Icons.open_in_new, size: context.h(14)),
                 label: const Text('Open Restaurant Profile'))),
       ]),
     );
@@ -142,31 +143,32 @@ class _HoursCard extends StatelessWidget {
       title: 'Operating Hours',
       icon: Icons.access_time,
       colors: colors,
-      trailing: const Text('SYSTEM ONLINE',
-          style: TextStyle(color: AppColors.success, fontSize: 8)),
+      trailing: Text('SYSTEM ONLINE',
+          style: TextStyle(color: AppColors.success, fontSize: context.h(8))),
       child: Column(children: [
         for (final day in days)
           Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5),
+              padding: EdgeInsets.symmetric(vertical: context.h(5)),
               child: Row(children: [
                 SizedBox(
-                    width: 30,
+                    width: context.w(30),
                     child: Text(day,
                         style: TextStyle(
-                            color: colors.textSecondary, fontSize: 10))),
+                            color: colors.textSecondary,
+                            fontSize: context.h(10)))),
                 Switch(
                     value: day != 'Sat' && day != 'Sun',
                     onChanged: (_) {},
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                const SizedBox(width: 4),
+                SizedBox(width: context.w(4)),
                 Expanded(
                     child: _TimeBox(
                         text: day == 'Sat' || day == 'Sun'
                             ? 'CLOSED'
                             : '10:00 AM',
                         colors: colors)),
-                const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
+                Padding(
+                    padding: EdgeInsets.symmetric(horizontal: context.w(4)),
                     child: Text('to')),
                 Expanded(
                     child: _TimeBox(
@@ -230,26 +232,31 @@ class _SettingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+      padding: EdgeInsets.fromLTRB(
+        context.w(12),
+        context.h(12),
+        context.w(12),
+        context.h(14),
+      ),
       decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(context.h(8)),
           border: Border.all(color: colors.border)),
       child: Column(children: [
         Row(children: [
-          Icon(icon, size: 15, color: AppColors.primary),
-          const SizedBox(width: 8),
+          Icon(icon, size: context.h(15), color: AppColors.primary),
+          SizedBox(width: context.w(8)),
           Text(title,
               style: TextStyle(
                   color: colors.textPrimary,
-                  fontSize: 12,
+                  fontSize: context.h(12),
                   fontWeight: FontWeight.w600)),
           const Spacer(),
           if (trailing != null) trailing!
         ]),
-        const SizedBox(height: 10),
-        Divider(height: 1, color: colors.divider),
-        const SizedBox(height: 10),
+        SizedBox(height: context.h(10)),
+        Divider(height: context.h(1), color: colors.divider),
+        SizedBox(height: context.h(10)),
         child
       ]));
 }
@@ -269,16 +276,18 @@ class _RuleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: context.h(8)),
       child: Row(children: [
         Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title,
-              style: TextStyle(color: colors.textPrimary, fontSize: 10)),
-          const SizedBox(height: 3),
+              style: TextStyle(
+                  color: colors.textPrimary, fontSize: context.h(10))),
+          SizedBox(height: context.h(3)),
           Text(subtitle,
-              style: TextStyle(color: colors.textSecondary, fontSize: 8))
+              style: TextStyle(
+                  color: colors.textSecondary, fontSize: context.h(8)))
         ])),
         Switch(
             value: value,
@@ -297,7 +306,7 @@ class _LabeledInput extends StatelessWidget {
   Widget build(BuildContext context) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _FieldLabel(label, colors),
-        const SizedBox(height: 6),
+        SizedBox(height: context.h(6)),
         _SettingsInput(value: value, colors: colors)
       ]);
 }
@@ -307,8 +316,8 @@ class _FieldLabel extends StatelessWidget {
   final AppColorScheme colors;
   const _FieldLabel(this.label, this.colors);
   @override
-  Widget build(BuildContext context) =>
-      Text(label, style: TextStyle(color: colors.textSecondary, fontSize: 8));
+  Widget build(BuildContext context) => Text(label,
+      style: TextStyle(color: colors.textSecondary, fontSize: context.h(8)));
 }
 
 class _SettingsInput extends StatelessWidget {
@@ -317,16 +326,26 @@ class _SettingsInput extends StatelessWidget {
   const _SettingsInput({required this.value, required this.colors});
   @override
   Widget build(BuildContext context) => Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: BoxDecoration(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: context.w(10),
+          vertical: context.h(9),
+        ),
+        decoration: BoxDecoration(
           color: colors.background,
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: colors.border)),
-      child: Text(value,
+          borderRadius: BorderRadius.circular(context.h(5)),
+          border: Border.all(color: colors.border),
+        ),
+        child: Text(
+          value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: colors.textSecondary, fontSize: 9)));
+          style: TextStyle(
+            color: colors.textSecondary,
+            fontSize: context.h(9),
+          ),
+        ),
+      );
 }
 
 class _TimeBox extends StatelessWidget {
@@ -335,13 +354,23 @@ class _TimeBox extends StatelessWidget {
   const _TimeBox({required this.text, required this.colors});
   @override
   Widget build(BuildContext context) => Container(
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 3),
-      decoration: BoxDecoration(
+        alignment: Alignment.center,
+        padding: EdgeInsets.symmetric(
+          vertical: context.h(6),
+          horizontal: context.w(3),
+        ),
+        decoration: BoxDecoration(
           color: colors.background,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: colors.border)),
-      child: Text(text,
+          borderRadius: BorderRadius.circular(context.h(4)),
+          border: Border.all(color: colors.border),
+        ),
+        child: Text(
+          text,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: colors.textSecondary, fontSize: 8)));
+          style: TextStyle(
+            color: colors.textSecondary,
+            fontSize: context.h(8),
+          ),
+        ),
+      );
 }

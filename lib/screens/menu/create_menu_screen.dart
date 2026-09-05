@@ -128,9 +128,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       preparationStyle: _preparationStyle,
       price: price,
       primaryCategoryId: _primaryCategory,
-      tags: _tags
-          .map((tag) => tag.toLowerCase().replaceAll(' ', '_'))
-          .toList(),
+      tags: _tags.map((tag) => tag.toLowerCase().replaceAll(' ', '_')).toList(),
       ingredients: List<String>.from(_ingredients),
     );
     final success = await context.read<MenuProvider>().saveItem(item);
@@ -174,58 +172,59 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               child: narrow
                   ? SingleChildScrollView(
                       padding: EdgeInsets.fromLTRB(
-                        Responsive.pageHorizontal(context),
-                        16,
-                        Responsive.pageHorizontal(context),
-                        28,
+                        context.w(20),
+                        context.h(16),
+                        context.w(20),
+                        context.h(28),
                       ),
                       child: Column(
                         children: [
-                          if (_error != null) _errorBanner(colors),
-                          _mainColumn(colors),
-                          const SizedBox(height: 16),
-                          _preview(colors),
-                          const SizedBox(height: 14),
-                          _actionButtons(colors),
+                          if (_error != null) _errorBanner(context, colors),
+                          _mainColumn(context, colors),
+                          SizedBox(height: context.h(16)),
+                          _preview(context, colors),
+                          SizedBox(height: context.h(14)),
+                          _actionButtons(context, colors),
                         ],
                       ),
                     )
                   : Padding(
                       padding: EdgeInsets.fromLTRB(
-                        Responsive.pageHorizontal(context),
-                        16,
-                        Responsive.pageHorizontal(context),
-                        24,
+                        context.w(20),
+                        context.h(16),
+                        context.w(20),
+                        context.h(24),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(
                             child: SingleChildScrollView(
-                              padding: const EdgeInsets.only(right: 22),
+                              padding: EdgeInsets.only(right: context.w(22)),
                               child: Column(
                                 children: [
-                                  if (_error != null) _errorBanner(colors),
-                                  _mainColumn(colors),
+                                  if (_error != null)
+                                    _errorBanner(context, colors),
+                                  _mainColumn(context, colors),
                                 ],
                               ),
                             ),
                           ),
                           VerticalDivider(
-                            width: 1,
-                            thickness: 1,
+                            width: context.w(1),
+                            thickness: context.h(1),
                             color: colors.border,
                           ),
                           SizedBox(
-                            width: 300,
+                            width: context.w(300),
                             child: Padding(
-                              padding: const EdgeInsets.only(left: 22),
+                              padding: EdgeInsets.only(left: context.w(22)),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  _preview(colors),
+                                  _preview(context, colors),
                                   const Spacer(),
-                                  _actionButtons(colors),
+                                  _actionButtons(context, colors),
                                 ],
                               ),
                             ),
@@ -237,7 +236,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
     );
   }
 
-  Widget _actionButtons(AppColorScheme colors) => Row(
+  Widget _actionButtons(BuildContext context, AppColorScheme colors) => Row(
         children: [
           Expanded(
             child: OutlinedButton(
@@ -245,7 +244,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               child: const Text('Discard'),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: context.w(10)),
           Expanded(
             child: ElevatedButton(
               onPressed: _loading ? null : _save,
@@ -255,9 +254,10 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
         ],
       );
 
-  Widget _mainColumn(AppColorScheme colors) => Column(
+  Widget _mainColumn(BuildContext context, AppColorScheme colors) => Column(
         children: [
-          _panel(colors, 'Basic Information', Icons.description_outlined, [
+          _panel(context, colors, 'Basic Information',
+              Icons.description_outlined, [
             Row(children: [
               Expanded(
                 child: _field(
@@ -267,9 +267,9 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   hint: 'e.g. Paneer Tikka Masala',
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: context.w(14)),
               SizedBox(
-                width: 130,
+                width: context.w(130),
                 child: _field(
                   'Price',
                   _price,
@@ -281,16 +281,19 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                 ),
               ),
             ]),
-            const SizedBox(height: 15),
+            SizedBox(height: context.h(15)),
 
             // ── Ingredients (max 10) ────────────────────────────────
-            Text('Ingredients', style: _labelStyle(colors)),
-            const SizedBox(height: 4),
+            Text('Ingredients', style: _labelStyle(context, colors)),
+            SizedBox(height: context.h(4)),
             Text(
               'Add up to 10 major ingredients. These appear on the menu card.',
-              style: TextStyle(color: colors.textSecondary, fontSize: 10),
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: context.h(10),
+              ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: context.h(8)),
             Row(
               children: [
                 Expanded(
@@ -303,48 +306,48 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                     onSubmitted: (_) => _addIngredient(),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: context.w(8)),
                 ElevatedButton(
-                  onPressed:
-                      _ingredients.length >= 10 ? null : _addIngredient,
+                  onPressed: _ingredients.length >= 10 ? null : _addIngredient,
                   child: const Text('Add'),
                 ),
               ],
             ),
             if (_ingredients.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              SizedBox(height: context.h(10)),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: context.w(8),
+                runSpacing: context.h(8),
                 children: [
                   for (final ing in _ingredients)
                     Chip(
-                      label: Text(ing, style: const TextStyle(fontSize: 11)),
-                      deleteIcon: const Icon(Icons.close, size: 14),
-                      onDeleted: () =>
-                          setState(() => _ingredients.remove(ing)),
+                      label:
+                          Text(ing, style: TextStyle(fontSize: context.h(11))),
+                      deleteIcon: Icon(Icons.close, size: context.h(14)),
+                      onDeleted: () => setState(() => _ingredients.remove(ing)),
                     ),
                 ],
               ),
             ],
-            const SizedBox(height: 4),
+            SizedBox(height: context.h(4)),
             Text(
               '${_ingredients.length}/10 ingredients',
-              style: TextStyle(color: colors.textMuted, fontSize: 10),
+              style:
+                  TextStyle(color: colors.textMuted, fontSize: context.h(10)),
             ),
 
-            const SizedBox(height: 15),
+            SizedBox(height: context.h(15)),
             _field(
               'Description',
               _description,
               maxLines: 3,
               hint: 'Optional longer description...',
             ),
-            const SizedBox(height: 15),
+            SizedBox(height: context.h(15)),
             _field('Image URL', _image, hint: 'Paste an image URL'),
           ]),
-          const SizedBox(height: 16),
-          _panel(colors, 'Item Details', Icons.assignment_outlined, [
+          SizedBox(height: context.h(16)),
+          _panel(context, colors, 'Item Details', Icons.assignment_outlined, [
             Row(children: [
               Expanded(
                 child: _dropdown(
@@ -355,7 +358,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   (value) => _titleCase(value.name),
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: context.w(14)),
               Expanded(
                 child: _dropdown(
                   'Preparation Style',
@@ -366,7 +369,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                 ),
               ),
             ]),
-            const SizedBox(height: 15),
+            SizedBox(height: context.h(15)),
             Row(children: [
               Expanded(
                 child: _dropdown(
@@ -377,7 +380,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   (value) => value,
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: context.w(14)),
               Expanded(
                 child: _dropdown(
                   'Serving Size',
@@ -389,8 +392,8 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               ),
             ]),
           ]),
-          const SizedBox(height: 16),
-          _panel(colors, 'Organization', Icons.account_tree_outlined, [
+          SizedBox(height: context.h(16)),
+          _panel(context, colors, 'Organization', Icons.account_tree_outlined, [
             Row(children: [
               Expanded(
                 child: _dropdown(
@@ -408,7 +411,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   required: true,
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: context.w(14)),
               Expanded(
                 child: _dropdown(
                   'Subcategory',
@@ -420,22 +423,24 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                 ),
               ),
             ]),
-            const SizedBox(height: 15),
-            Text('Tags', style: _labelStyle(colors)),
-            const SizedBox(height: 7),
+            SizedBox(height: context.h(15)),
+            Text('Tags', style: _labelStyle(context, colors)),
+            SizedBox(height: context.h(7)),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: context.w(8),
+              runSpacing: context.h(8),
               children: [
-                for (final tag in _tagOptions) _tagChip(colors, tag),
+                for (final tag in _tagOptions) _tagChip(context, colors, tag),
               ],
             ),
           ]),
-          const SizedBox(height: 16),
-          _panel(colors, 'Display Settings', Icons.desktop_windows_outlined, [
+          SizedBox(height: context.h(16)),
+          _panel(context, colors, 'Display Settings',
+              Icons.desktop_windows_outlined, [
             Row(children: [
               Expanded(
                 child: _switch(
+                  context,
                   colors,
                   'Available on Menu',
                   'Make this item available for ordering',
@@ -443,9 +448,10 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   (value) => setState(() => _available = value),
                 ),
               ),
-              const SizedBox(width: 22),
+              SizedBox(width: context.w(22)),
               Expanded(
                 child: _switch(
+                  context,
                   colors,
                   'Featured Item',
                   'Highlight this item in the menu',
@@ -455,23 +461,29 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               ),
             ]),
           ]),
-          const SizedBox(height: 12),
+          SizedBox(height: context.h(12)),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            padding: EdgeInsets.symmetric(
+              horizontal: context.w(14),
+              vertical: context.h(11),
+            ),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF1EA),
-              borderRadius: BorderRadius.circular(7),
+              borderRadius: BorderRadius.circular(context.h(7)),
             ),
-            child: const Row(
+            child: Row(
               children: [
                 Icon(Icons.lightbulb_outline,
-                    size: 16, color: AppColors.primary),
-                SizedBox(width: 8),
+                    size: context.h(16), color: AppColors.primary),
+                SizedBox(width: context.w(8)),
                 Expanded(
                   child: Text(
                     'Tip: Add high quality images and detailed descriptions to attract more customers.',
-                    style: TextStyle(color: Color(0xFF9B5B3A), fontSize: 11),
+                    style: TextStyle(
+                      color: Color(0xFF9B5B3A),
+                      fontSize: context.h(11),
+                    ),
                   ),
                 ),
               ],
@@ -480,41 +492,42 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
         ],
       );
 
-  Widget _preview(AppColorScheme colors) => _panel(
+  Widget _preview(BuildContext context, AppColorScheme colors) => _panel(
+        context,
         colors,
         'Preview',
         Icons.visibility_outlined,
         [
           Container(
-            height: 170,
+            height: context.h(170),
             width: double.infinity,
             decoration: BoxDecoration(
               color: const Color(0xFFFFF1EA),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(context.h(12)),
             ),
             child: _image.text.trim().isEmpty
-                ? const Icon(Icons.restaurant,
-                    size: 48, color: Color(0xFFFFD4BF))
+                ? Icon(Icons.restaurant,
+                    size: context.h(48), color: Color(0xFFFFD4BF))
                 : Image.network(
                     _image.text.trim(),
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
+                    errorBuilder: (_, __, ___) => Icon(
                       Icons.restaurant,
-                      size: 48,
+                      size: context.h(48),
                       color: Color(0xFFFFD4BF),
                     ),
                   ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: context.h(14)),
           Text(
             _name.text.trim().isEmpty ? 'Item Name' : _name.text.trim(),
             style: TextStyle(
               color: colors.textPrimary,
-              fontSize: 14,
+              fontSize: context.h(14),
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: context.h(8)),
           Text(
             _ingredients.isEmpty
                 ? 'Ingredients will appear here as comma separated.'
@@ -523,25 +536,26 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: colors.textSecondary,
-              fontSize: 11,
-              height: 1.4,
+              fontSize: context.h(11),
+              height: context.h(1.4),
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: context.h(10)),
           Text(
             '₹${_price.text.trim().isEmpty ? '0.00' : _price.text.trim()}',
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.primary,
-              fontSize: 15,
+              fontSize: context.h(15),
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 10),
-          _dietaryBadge(colors),
+          SizedBox(height: context.h(10)),
+          _dietaryBadge(context, colors),
         ],
       );
 
   Widget _panel(
+    BuildContext context,
     AppColorScheme colors,
     String title,
     IconData icon,
@@ -549,10 +563,10 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
   ) =>
       Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(context.h(14)),
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(context.h(8)),
           border: Border.all(color: colors.border),
         ),
         child: Column(
@@ -560,19 +574,19 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
           children: [
             Row(
               children: [
-                Icon(icon, size: 15, color: colors.textSecondary),
-                const SizedBox(width: 8),
+                Icon(icon, size: context.h(15), color: colors.textSecondary),
+                SizedBox(width: context.w(8)),
                 Text(
                   title,
                   style: TextStyle(
                     color: colors.textPrimary,
-                    fontSize: 12,
+                    fontSize: context.h(12),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: context.h(16)),
             ...children,
           ],
         ),
@@ -596,8 +610,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
           labelText: required ? '$label *' : label,
           hintText: hint,
           prefixText: prefix,
-          counterText:
-              maxLines > 1 ? '${controller.text.length}/250' : null,
+          counterText: maxLines > 1 ? '${controller.text.length}/250' : null,
         ),
         validator: required
             ? (value) =>
@@ -616,17 +629,16 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
   }) =>
       DropdownButtonFormField<T>(
         value: values.contains(value) ? value : null,
-        decoration:
-            InputDecoration(labelText: required ? '$label *' : label),
+        decoration: InputDecoration(labelText: required ? '$label *' : label),
         hint: Text(hint ?? 'Select $label'.toLowerCase()),
         items: values
-            .map((v) =>
-                DropdownMenuItem(value: v, child: Text(labelFor(v))))
+            .map((v) => DropdownMenuItem(value: v, child: Text(labelFor(v))))
             .toList(),
         onChanged: onChanged,
       );
 
   Widget _switch(
+    BuildContext context,
     AppColorScheme colors,
     String title,
     String subtitle,
@@ -643,15 +655,17 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   title,
                   style: TextStyle(
                     color: colors.textPrimary,
-                    fontSize: 11,
+                    fontSize: context.h(11),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 3),
+                SizedBox(height: context.h(3)),
                 Text(
                   subtitle,
-                  style:
-                      TextStyle(color: colors.textSecondary, fontSize: 10),
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: context.h(10),
+                  ),
                 ),
               ],
             ),
@@ -660,8 +674,9 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
         ],
       );
 
-  Widget _tagChip(AppColorScheme colors, String tag) => FilterChip(
-        label: Text(tag, style: const TextStyle(fontSize: 10)),
+  Widget _tagChip(BuildContext context, AppColorScheme colors, String tag) =>
+      FilterChip(
+        label: Text(tag, style: TextStyle(fontSize: context.h(10))),
         selected: _tags.contains(tag),
         onSelected: (selected) => setState(() {
           if (selected) {
@@ -672,22 +687,26 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
         }),
       );
 
-  Widget _dietaryBadge(AppColorScheme colors) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+  Widget _dietaryBadge(BuildContext context, AppColorScheme colors) =>
+      Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: context.w(9),
+          vertical: context.h(5),
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFFEFFAF2),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(context.h(6)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.circle, size: 8, color: Colors.green),
-            const SizedBox(width: 5),
+            Icon(Icons.circle, size: context.h(8), color: Colors.green),
+            SizedBox(width: context.w(5)),
             Text(
               _titleCase(_dietaryType.name),
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.green,
-                fontSize: 10,
+                fontSize: context.h(10),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -695,20 +714,21 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
         ),
       );
 
-  Widget _errorBanner(AppColorScheme colors) => Container(
+  Widget _errorBanner(BuildContext context, AppColorScheme colors) => Container(
         width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
+        margin: EdgeInsets.only(bottom: context.h(12)),
+        padding: EdgeInsets.all(context.h(12)),
         color: const Color(0xFFFFEDEA),
         child: Text(
           _error!,
-          style: const TextStyle(color: AppColors.danger, fontSize: 12),
+          style: TextStyle(color: AppColors.danger, fontSize: context.h(12)),
         ),
       );
 
-  TextStyle _labelStyle(AppColorScheme colors) => TextStyle(
+  TextStyle _labelStyle(BuildContext context, AppColorScheme colors) =>
+      TextStyle(
         color: colors.textPrimary,
-        fontSize: 11,
+        fontSize: context.h(11),
         fontWeight: FontWeight.w600,
       );
 
@@ -717,8 +737,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
   String _titleCase(String value) => value
       .replaceAll('_', ' ')
       .split(' ')
-      .map((part) => part.isEmpty
-          ? part
-          : '${part[0].toUpperCase()}${part.substring(1)}')
+      .map((part) =>
+          part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
       .join(' ');
 }

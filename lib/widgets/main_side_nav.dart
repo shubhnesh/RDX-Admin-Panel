@@ -21,10 +21,6 @@ const List<SidebarItem> kPrimaryNavItems = [
   SidebarItem(
       label: 'Coupons', icon: Icons.local_offer_outlined, route: '/coupons'),
   SidebarItem(
-      label: 'Notifications',
-      icon: Icons.campaign_outlined,
-      route: '/notifications'),
-  SidebarItem(
       label: 'Inventory',
       icon: Icons.inventory_2_outlined,
       route: '/inventory'),
@@ -157,18 +153,25 @@ class MainSideNav extends StatelessWidget {
                   child: Column(
                     children: [
                       _FooterTile(
-                        icon: Icons.support_agent_outlined,
-                        label: 'Support',
-                        expanded: expanded,
-                        selected: currentRoute == '/support',
-                        onTap: () => onNavigate('/support'),
-                      ),
-                      _FooterTile(
                         icon: Icons.settings_outlined,
                         label: 'Settings',
                         expanded: expanded,
                         selected: currentRoute == '/settings',
                         onTap: () => onNavigate('/settings'),
+                      ),
+                      _FooterTile(
+                        icon: Icons.notifications_outlined,
+                        label: 'Notifications',
+                        expanded: expanded,
+                        selected: currentRoute == '/notifications',
+                        onTap: () => onNavigate('/notifications'),
+                      ),
+                      _FooterTile(
+                        icon: Icons.support_agent_outlined,
+                        label: 'Support',
+                        expanded: expanded,
+                        selected: currentRoute == '/support',
+                        onTap: () => onNavigate('/support'),
                       ),
                       _FooterTile(
                         icon: Icons.logout_rounded,
@@ -355,11 +358,8 @@ class _NavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg =
-        selected ? AppColors.primary.withOpacity(0.18) : Colors.transparent;
-    final iconColor =
-        selected ? AppColors.primary : AppColors.lightTextSecondary;
-    final textColor =
-        selected ? AppColors.lightTextPrimary : AppColors.lightTextSecondary;
+        selected ? AppColors.primary.withOpacity(0.15) : Colors.transparent;
+    final color = selected ? AppColors.primary : AppColors.lightTextSecondary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -369,40 +369,34 @@ class _NavTile extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),
-          child: AnimatedContainer(
-            duration: _d,
-            curve: _c,
-            height: 44,
-            padding: EdgeInsets.symmetric(horizontal: expanded ? 12 : 0),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: selected
-                  ? Border.all(color: AppColors.primary.withOpacity(0.45))
-                  : null,
-            ),
+          child: SizedBox(
+            height: 42,
             child: Row(
               mainAxisAlignment:
                   expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
               children: [
-                Icon(item.icon, size: expanded ? 20 : 22, color: iconColor),
+                Padding(
+                  padding: EdgeInsets.only(left: expanded ? 12 : 0),
+                  child: Icon(item.icon, size: 20, color: color),
+                ),
                 AnimatedSize(
                   duration: _d,
                   curve: _c,
                   alignment: Alignment.centerLeft,
                   child: expanded
                       ? Padding(
-                          padding: const EdgeInsets.only(left: 12),
+                          padding: const EdgeInsets.only(left: 12, right: 8),
                           child: AnimatedOpacity(
                             duration: const Duration(milliseconds: 180),
                             opacity: expanded ? 1.0 : 0.0,
                             child: Text(
                               item.label,
                               style: TextStyle(
-                                color: textColor,
-                                fontSize: 14,
-                                fontWeight: selected
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
+                                color: selected
+                                    ? AppColors.lightTextPrimary
+                                    : AppColors.lightTextSecondary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'responsive_size.dart';
+export 'responsive_size.dart';
 
 /// Simple responsive helpers for the admin panel (primarily desktop/tablet,
 /// but should degrade sensibly on smaller screens).
@@ -53,28 +55,5 @@ class Responsive {
     if (isDesktop(context)) return 4;
     if (isTablet(context)) return 3;
     return 2;
-  }
-}
-
-/// Extension so you can write:
-///   context.h(10)  → responsive vertical value
-///   context.w(40)  → responsive horizontal value
-extension ResponsiveContext on BuildContext {
-  /// Vertical scale based on design height (812).
-  /// Example: context.h(10) ≈ 10 logical pixels on a 812-tall design.
-  double h(double value) {
-    final height = MediaQuery.sizeOf(this).height;
-    return value * (height / 812);
-  }
-
-  /// Horizontal scale based on design width (375 for mobile baseline).
-  /// Example: context.w(40) ≈ 40 logical pixels on a 375-wide design.
-  double w(double value) {
-    final width = MediaQuery.sizeOf(this).width;
-    // Clamp so desktop doesn't get huge side padding
-    final scaled = value * (width / 375);
-    if (width >= 1100) return value.clamp(16, 40); // keep desktop sides reasonable
-    if (width >= 700) return scaled.clamp(16, 32);
-    return scaled.clamp(12, 24);
   }
 }

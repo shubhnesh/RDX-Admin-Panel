@@ -52,7 +52,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                 return SingleChildScrollView(
                   padding: Responsive.pagePadding(
                     context,
-                    top: isMobile ? 18 : 24,
+                    top: isMobile ? context.h(18) : context.h(24),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,7 +62,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                         isMobile,
                       ),
                       SizedBox(
-                        height: isMobile ? 20 : 24,
+                        height: isMobile ? context.h(20) : context.h(24),
                       ),
                       _buildFilters(
                         colors,
@@ -71,7 +71,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                         provider,
                       ),
                       SizedBox(
-                        height: isMobile ? 14 : 18,
+                        height: isMobile ? context.h(14) : context.h(18),
                       ),
                       _buildTable(
                         colors,

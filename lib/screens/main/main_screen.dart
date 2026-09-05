@@ -29,16 +29,22 @@ class _MainScreenState extends State<MainScreen> {
   final ValueNotifier<String> _currentRouteNotifier =
       ValueNotifier<String>('/dashboard');
 
-  static const _screens = <String, Widget>{
-    '/dashboard': DashboardScreen(),
-    '/live-orders': LiveOrdersScreen(),
-    '/menu': MenuScreen(),
-    '/coupons': CouponsScreen(),
-    '/notifications': NotificationsScreen(),
-    '/inventory': InventoryScreen(),
-    '/settings': SettingsScreen(),
-    '/support': SupportScreen(),
-  };
+  late final Map<String, Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = {
+      '/dashboard': DashboardScreen(onNavigate: _navigate),
+      '/live-orders': const LiveOrdersScreen(),
+      '/menu': const MenuScreen(),
+      '/coupons': const CouponsScreen(),
+      '/notifications': const NotificationsScreen(),
+      '/inventory': const InventoryScreen(),
+      '/settings': const SettingsScreen(),
+      '/support': const SupportScreen(),
+    };
+  }
 
   void _navigate(String route) {
     _contentNavigatorKey.currentState?.popUntil((route) => route.isFirst);

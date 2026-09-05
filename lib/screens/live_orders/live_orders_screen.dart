@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/responsive.dart';
 import '../../models/order_model.dart';
 import '../../providers/live_orders_provider.dart';
 import '../../widgets/loading_indicator.dart';
@@ -60,6 +61,15 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
   // ===========================================================================
 
   Widget _buildBoard(LiveOrdersProvider provider) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final horizontalPadding = context.w(44);
+    final sectionGap = context.w(18);
+    final availableSectionWidth =
+        (screenWidth - horizontalPadding - sectionGap * 3) / 4;
+    final sectionWidth = availableSectionWidth.clamp(
+      context.w(220),
+      context.w(320),
+    );
     final List<Widget> sections = [
       _buildSection(
         title: 'NEW ORDERS',
@@ -105,21 +115,21 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          22,
-          18,
-          22,
-          24,
+        padding: EdgeInsets.fromLTRB(
+          context.w(22),
+          context.h(18),
+          context.w(22),
+          context.h(24),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (int i = 0; i < sections.length; i++) ...[
               SizedBox(
-                width: 320,
+                width: sectionWidth,
                 child: sections[i],
               ),
-              if (i != sections.length - 1) const SizedBox(width: 18),
+              if (i != sections.length - 1) SizedBox(width: sectionGap),
             ],
           ],
         ),
@@ -163,54 +173,54 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         // =====================================================================
 
         Padding(
-          padding: const EdgeInsets.only(
-            left: 3,
-            right: 3,
-            bottom: 12,
+          padding: EdgeInsets.only(
+            left: context.w(3),
+            right: context.w(3),
+            bottom: context.h(12),
           ),
           child: Row(
             children: [
               Container(
-                width: 7,
-                height: 7,
+                width: context.w(7),
+                height: context.h(7),
                 decoration: BoxDecoration(
                   color: color,
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 9),
+              SizedBox(width: context.w(9)),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.lightTextPrimary,
-                  fontSize: 12,
+                  fontSize: context.h(12),
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.2,
                 ),
               ),
               const Spacer(),
               Container(
-                constraints: const BoxConstraints(
-                  minWidth: 21,
-                  minHeight: 21,
+                constraints: BoxConstraints(
+                  minWidth: context.w(21),
+                  minHeight: context.h(21),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.w(6),
                 ),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: AppColors.lightSurface,
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(context.h(11)),
                   border: Border.all(
                     color: AppColors.lightBorder,
-                    width: 1,
+                    width: context.h(1),
                   ),
                 ),
                 child: Text(
                   '$count',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.lightTextSecondary,
-                    fontSize: 9,
+                    fontSize: context.h(9),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -226,10 +236,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         if (isEmpty)
           Container(
             width: double.infinity,
-            height: 170,
+            height: context.h(170),
             decoration: BoxDecoration(
               color: AppColors.lightSurface,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(context.h(12)),
             ),
             child: CustomPaint(
               painter: _DashedBorderPainter(

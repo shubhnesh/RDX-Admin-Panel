@@ -13,7 +13,9 @@ import '../../widgets/rdx_search_bar.dart';
 import '../../widgets/stat_card.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final ValueChanged<String> onNavigate;
+
+  const DashboardScreen({super.key, required this.onNavigate});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -69,8 +71,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       hintText: 'Search orders, items...',
       actions: [
         _plainIconBtn(colors,
-            icon: Icons.notifications_outlined, badge: true, onTap: () {}),
-        _plainIconBtn(colors, icon: Icons.settings_outlined, onTap: () {}),
+            icon: Icons.notifications_outlined,
+            badge: true,
+            onTap: () => widget.onNavigate('/notifications')),
+        _plainIconBtn(
+          colors,
+          icon: Icons.settings_outlined,
+          onTap: () => widget.onNavigate('/settings'),
+        ),
       ],
     );
   }

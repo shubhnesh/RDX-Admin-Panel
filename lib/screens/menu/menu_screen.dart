@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/router/app_router.dart';
@@ -17,6 +18,7 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
+  final ScrollController _categoryScrollController = ScrollController();
   final Set<String> _appliedCategories = {};
   Set<String>? _stagedCategories;
   bool _hasAppliedCategories = false;
@@ -29,50 +31,6 @@ class _MenuScreenState extends State<MenuScreen> {
     super.initState();
     Future.microtask(() => context.read<MenuProvider>().load());
   }
-
-  // void _openCategoryPicker(MenuProvider provider) {
-  //   if (_categoryPickerOpen) {
-  //     _closeCategoryPicker();
-  //     return;
-  //   }
-
-  //   _stagedCategories = !_hasAppliedCategories
-  //       ? MenuTaxonomy.mainCategories.map((category) => category.name).toSet()
-  //       : Set<String>.from(_appliedCategories);
-
-  //   // Hardcoded panel dimensions/position — no dynamic layout math.
-  //   const panelWidth = 330.0;
-  //   const left = 950.0;
-  //   const top = 150.0;
-
-  //   _categoryOverlay = OverlayEntry(
-  //     builder: (_) => Stack(
-  //       children: [
-  //         Positioned.fill(
-  //           child: GestureDetector(
-  //             behavior: HitTestBehavior.translucent,
-  //             onTap: _closeCategoryPicker,
-  //           ),
-  //         ),
-  //         Positioned(
-  //           left: left,
-  //           top: top,
-  //           width: panelWidth,
-  //           child: Material(
-  //             color: Colors.transparent,
-  //             child: _categoryPickerPanel(
-  //               AppColors.of(context),
-  //               provider,
-  //               panelWidth: panelWidth,
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  //   Overlay.of(context).insert(_categoryOverlay!);
-  //   setState(() => _categoryPickerOpen = true);
-  // }
 
   void _openCategoryPicker(MenuProvider provider) {
     if (_categoryPickerOpen) {
@@ -98,11 +56,10 @@ class _MenuScreenState extends State<MenuScreen> {
     final mediaQuery = MediaQuery.of(context);
     final screenSize = mediaQuery.size;
 
-    const panelWidth = 330.0;
-    const horizontalMargin = 16.0;
-    const verticalGap = 8.0;
+    final panelWidth = context.w(330);
+    final horizontalMargin = context.w(16);
+    final verticalGap = context.h(8);
 
-    // Calculate the maximum usable height.
     final availableBelow = screenSize.height -
         (buttonOffset.dy + buttonSize.height) -
         mediaQuery.padding.bottom -
@@ -111,10 +68,7 @@ class _MenuScreenState extends State<MenuScreen> {
     final availableAbove =
         buttonOffset.dy - mediaQuery.padding.top - horizontalMargin;
 
-    // The panel's actual height is approximately:
-    // header + description + list + buttons.
-    // We keep enough room for it without allowing it to leave the screen.
-    const estimatedPanelHeight = 430.0;
+    final estimatedPanelHeight = context.h(430);
 
     final showBelow = availableBelow >= estimatedPanelHeight ||
         availableBelow >= availableAbove;
@@ -127,7 +81,6 @@ class _MenuScreenState extends State<MenuScreen> {
       top = buttonOffset.dy - estimatedPanelHeight - verticalGap;
     }
 
-    // Keep the popup inside the visible screen vertically.
     final maxTop = screenSize.height - estimatedPanelHeight - horizontalMargin;
 
     top = top.clamp(
@@ -137,11 +90,8 @@ class _MenuScreenState extends State<MenuScreen> {
           : mediaQuery.padding.top + horizontalMargin,
     );
 
-    // Align the right edge of the popup with the right edge
-    // of the Manage Categories button.
     double left = buttonOffset.dx + buttonSize.width - panelWidth;
 
-    // Prevent the popup from going outside the left edge.
     left = left.clamp(
       horizontalMargin,
       screenSize.width - panelWidth - horizontalMargin,
@@ -151,8 +101,6 @@ class _MenuScreenState extends State<MenuScreen> {
       builder: (_) {
         return Stack(
           children: [
-            // Full-screen transparent barrier.
-            // Any click outside the panel closes it immediately.
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
@@ -160,7 +108,6 @@ class _MenuScreenState extends State<MenuScreen> {
                 child: const SizedBox.expand(),
               ),
             ),
-
             Positioned(
               left: left,
               top: top,
@@ -187,16 +134,6 @@ class _MenuScreenState extends State<MenuScreen> {
     });
   }
 
-  // void _closeCategoryPicker() {
-  //   _categoryOverlay?.remove();
-  //   _categoryOverlay = null;
-  //   if (mounted) {
-  //     setState(() {
-  //       _categoryPickerOpen = false;
-  //       _stagedCategories = null;
-  //     });
-  //   }
-  // }
   void _closeCategoryPicker() {
     final overlay = _categoryOverlay;
 
@@ -237,14 +174,9 @@ class _MenuScreenState extends State<MenuScreen> {
     if (!selectedIsVisible) provider.setCategory('All');
   }
 
-  // @override
-  // void dispose() {
-  //   _categoryOverlay?.remove();
-  //   super.dispose();
-  // }
-
   @override
   void dispose() {
+    _categoryScrollController.dispose();
     _categoryOverlay?.remove();
     _categoryOverlay = null;
     super.dispose();
@@ -259,14 +191,28 @@ class _MenuScreenState extends State<MenuScreen> {
       backgroundColor: colors.background,
       body: SafeArea(
         child: Padding(
-          padding: Responsive.pagePadding(context, top: 14, bottom: 0),
+          padding: Responsive.pagePadding(
+            context,
+            top: context.h(14),
+            bottom: context.h(0),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildTopBar(context, colors),
-              const SizedBox(height: 16),
-              _buildCategoryTabs(provider, colors),
-              const SizedBox(height: 18),
+              SizedBox(height: context.h(16)),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(vertical: context.h(10)),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: colors.divider),
+                    bottom: BorderSide(color: colors.divider),
+                  ),
+                ),
+                child: _buildCategoryTabs(provider, colors),
+              ),
+              SizedBox(height: context.h(18)),
               Expanded(
                 child: provider.isLoading
                     ? const LoadingIndicator()
@@ -295,95 +241,17 @@ class _MenuScreenState extends State<MenuScreen> {
             await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
             if (context.mounted) context.read<MenuProvider>().load();
           },
-          icon: const Icon(Icons.add, size: 18),
+          icon: Icon(Icons.add, size: context.h(18)),
           label: const Text('Add New Item'),
-        ),
-        _iconBtn(colors,
-            icon: Icons.notifications_outlined, badge: true, onTap: () {}),
-        CircleAvatar(
-          radius: 18,
-          backgroundColor: colors.surfaceVariant,
-          child: Icon(Icons.person, size: 18, color: colors.textSecondary),
         ),
       ],
     );
   }
 
-  Widget _iconBtn(
-    AppColorScheme colors, {
-    required IconData icon,
-    bool badge = false,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(icon, size: 21, color: colors.textSecondary),
-            if (badge)
-              Positioned(
-                top: -1,
-                right: -1,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ═══════════════════════════════════════════════════════════════════
-  // CATEGORY TABS
+  // CATEGORY TABS (Horizontally Scrollable)
   // ═══════════════════════════════════════════════════════════════════
 
-  // Widget _buildCategoryTabs(MenuProvider provider, AppColorScheme colors) {
-  //   final categories = !_hasAppliedCategories
-  //       ? MenuTaxonomy.mainCategories.map((category) => category.name).toList()
-  //       : _appliedCategories.toList();
-
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.end,
-  //     children: [
-  //       Row(
-  //         children: [
-  //           Expanded(
-  //             child: SingleChildScrollView(
-  //               scrollDirection: Axis.horizontal,
-  //               child: Row(
-  //                 children: [
-  //                   _categoryChip(colors,
-  //                       label: 'All',
-  //                       selected: provider.selectedCategory == 'All',
-  //                       onTap: () => provider.setCategory('All')),
-  //                   for (final c in categories) ...[
-  //                     const SizedBox(width: 8),
-  //                     _categoryChip(colors,
-  //                         label: c,
-  //                         selected: provider.selectedCategory == c,
-  //                         onTap: () => provider.setCategory(c)),
-  //                   ],
-  //                 ],
-  //               ),
-  //             ),
-  //           ),
-  //           const SizedBox(width: 12),
-  //           _manageCategoriesButton(colors, provider),
-  //         ],
-  //       ),
-  //     ],
-  //   );
-  // }
   Widget _buildCategoryTabs(
     MenuProvider provider,
     AppColorScheme colors,
@@ -396,38 +264,56 @@ class _MenuScreenState extends State<MenuScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: ClipRect(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const ClampingScrollPhysics(),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _categoryChip(
-                    colors,
-                    label: 'All',
-                    selected: provider.selectedCategory == 'All',
-                    onTap: () => provider.setCategory('All'),
+          child: Listener(
+            onPointerSignal: (event) {
+              if (event is PointerScrollEvent &&
+                  _categoryScrollController.hasClients) {
+                final position = _categoryScrollController.position;
+                final offset = (position.pixels + event.scrollDelta.dy)
+                    .clamp(0.0, position.maxScrollExtent);
+                _categoryScrollController.jumpTo(offset);
+              }
+            },
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                },
+              ),
+              child: ClipRect(
+                child: SingleChildScrollView(
+                  controller: _categoryScrollController,
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _categoryChip(
+                        colors,
+                        label: 'All',
+                        selected: provider.selectedCategory == 'All',
+                        onTap: () => provider.setCategory('All'),
+                      ),
+                      for (final category in categories) ...[
+                        SizedBox(width: context.w(8)),
+                        _categoryChip(
+                          colors,
+                          label: category,
+                          selected: provider.selectedCategory == category,
+                          onTap: () => provider.setCategory(category),
+                        ),
+                      ],
+                    ],
                   ),
-                  for (final category in categories) ...[
-                    const SizedBox(width: 8),
-                    _categoryChip(
-                      colors,
-                      label: category,
-                      selected: provider.selectedCategory == category,
-                      onTap: () => provider.setCategory(category),
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
           ),
         ),
-
-        const SizedBox(width: 12),
-
-        // This stays fixed and NEVER participates
-        // in the horizontal category scrolling.
+        SizedBox(width: context.w(12)),
+        // This button stays fixed and never scrolls with the chips
         _manageCategoriesButton(colors, provider),
       ],
     );
@@ -437,33 +323,36 @@ class _MenuScreenState extends State<MenuScreen> {
     return InkWell(
       key: _categoryButtonKey,
       onTap: () => _openCategoryPicker(provider),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(context.h(8)),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.w(11),
+          vertical: context.h(9),
+        ),
         decoration: BoxDecoration(
           color: _categoryPickerOpen
               ? AppColors.primary.withValues(alpha: 0.08)
               : colors.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(context.h(8)),
           border: Border.all(
               color: _categoryPickerOpen ? AppColors.primary : colors.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.tune, size: 16, color: AppColors.primary),
-            const SizedBox(width: 6),
-            Text('Manage Categories',
-                style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(width: 4),
+            Icon(Icons.tune, size: context.h(16), color: AppColors.primary),
+            // SizedBox(width: context.w(6)),
+            // Text('Manage Categories',
+            //     style: TextStyle(
+            //         color: colors.textSecondary,
+            //         fontSize: context.h(11.5),
+            //         fontWeight: FontWeight.w600)),
+            SizedBox(width: context.w(4)),
             Icon(
               _categoryPickerOpen
                   ? Icons.keyboard_arrow_up
                   : Icons.keyboard_arrow_down,
-              size: 17,
+              size: context.h(17),
               color: colors.textMuted,
             ),
           ],
@@ -471,118 +360,6 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
     );
   }
-
-  // Widget _categoryPickerPanel(
-  //   AppColorScheme colors,
-  //   MenuProvider provider, {
-  //   required double panelWidth,
-  // }) {
-  //   final staged = _stagedCategories ?? <String>{};
-  //   return Container(
-  //     width: panelWidth, // constrained width – never overflows horizontally
-  //     padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
-  //     decoration: BoxDecoration(
-  //       color: colors.surface,
-  //       borderRadius: BorderRadius.circular(10),
-  //       border: Border.all(color: colors.border),
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: Colors.black.withValues(alpha: 0.1),
-  //           blurRadius: 18,
-  //           offset: const Offset(0, 7),
-  //         ),
-  //       ],
-  //     ),
-  //     child: Column(
-  //       mainAxisSize: MainAxisSize.min,
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         Row(
-  //           children: [
-  //             Expanded(
-  //               child: Text('Filter categories',
-  //                   style: TextStyle(
-  //                       color: colors.textPrimary,
-  //                       fontSize: 13,
-  //                       fontWeight: FontWeight.w700)),
-  //             ),
-  //             Text('${staged.length} selected',
-  //                 style: TextStyle(
-  //                     color: colors.textMuted,
-  //                     fontSize: 10.5,
-  //                     fontWeight: FontWeight.w600)),
-  //           ],
-  //         ),
-  //         const SizedBox(height: 4),
-  //         Text('Choose which categories appear in the filter row.',
-  //             style: TextStyle(color: colors.textSecondary, fontSize: 10.5)),
-  //         const SizedBox(height: 10),
-  //         Container(
-  //           constraints: const BoxConstraints(maxHeight: 270),
-  //           decoration: BoxDecoration(
-  //               color: colors.surfaceVariant,
-  //               borderRadius: BorderRadius.circular(7),
-  //               border: Border.all(color: colors.border)),
-  //           child: Scrollbar(
-  //             thumbVisibility: true,
-  //             child: ListView.separated(
-  //               shrinkWrap: true,
-  //               padding: const EdgeInsets.symmetric(vertical: 5),
-  //               itemCount: MenuTaxonomy.mainCategories.length,
-  //               separatorBuilder: (_, __) =>
-  //                   Divider(height: 1, indent: 48, color: colors.divider),
-  //               itemBuilder: (context, index) {
-  //                 final category = MenuTaxonomy.mainCategories[index];
-  //                 final selected = staged.contains(category.name);
-  //                 return InkWell(
-  //                   onTap: () =>
-  //                       _toggleStagedCategory(category.name, !selected),
-  //                   child: Padding(
-  //                     padding: const EdgeInsets.fromLTRB(10, 2, 8, 2),
-  //                     child: Row(
-  //                       children: [
-  //                         Checkbox(
-  //                           value: selected,
-  //                           onChanged: (value) => _toggleStagedCategory(
-  //                               category.name, value == true),
-  //                           activeColor: AppColors.primary,
-  //                           visualDensity: VisualDensity.compact,
-  //                         ),
-  //                         Expanded(
-  //                           child: Text(category.name,
-  //                               style: TextStyle(
-  //                                   color: colors.textPrimary,
-  //                                   fontSize: 11.5,
-  //                                   fontWeight: FontWeight.w600)),
-  //                         ),
-  //                       ],
-  //                     ),
-  //                   ),
-  //                 );
-  //               },
-  //             ),
-  //           ),
-  //         ),
-  //         const SizedBox(height: 10),
-  //         Row(
-  //           mainAxisAlignment: MainAxisAlignment.end,
-  //           children: [
-  //             TextButton(
-  //                 onPressed: _closeCategoryPicker, child: const Text('Cancel')),
-  //             const SizedBox(width: 6),
-  //             ElevatedButton(
-  //               onPressed: () => _applyCategories(provider),
-  //               style: ElevatedButton.styleFrom(
-  //                   padding: const EdgeInsets.symmetric(
-  //                       horizontal: 14, vertical: 9)),
-  //               child: const Text('Apply'),
-  //             ),
-  //           ],
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 
   Widget _categoryPickerPanel(
     AppColorScheme colors,
@@ -592,20 +369,26 @@ class _MenuScreenState extends State<MenuScreen> {
   }) {
     final staged = _stagedCategories ?? <String>{};
 
-    final listHeight = (maxHeight - 170).clamp(140.0, 270.0);
+    final listHeight =
+        (maxHeight - context.h(170)).clamp(context.h(140), context.h(270));
 
     return Container(
       width: panelWidth,
-      padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+      padding: EdgeInsets.fromLTRB(
+        context.w(14),
+        context.h(13),
+        context.w(14),
+        context.h(12),
+      ),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(context.h(10)),
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 18,
-            offset: const Offset(0, 7),
+            blurRadius: context.h(18),
+            offset: Offset(0, context.h(7)),
           ),
         ],
       ),
@@ -620,7 +403,7 @@ class _MenuScreenState extends State<MenuScreen> {
                   'Filter categories',
                   style: TextStyle(
                     color: colors.textPrimary,
-                    fontSize: 13,
+                    fontSize: context.h(13),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -629,36 +412,36 @@ class _MenuScreenState extends State<MenuScreen> {
                 '${staged.length} selected',
                 style: TextStyle(
                   color: colors.textMuted,
-                  fontSize: 10.5,
+                  fontSize: context.h(10.5),
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: context.h(4)),
           Text(
             'Choose which categories appear in the filter row.',
             style: TextStyle(
               color: colors.textSecondary,
-              fontSize: 10.5,
+              fontSize: context.h(10.5),
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: context.h(10)),
           Container(
             height: listHeight,
             decoration: BoxDecoration(
               color: colors.surfaceVariant,
-              borderRadius: BorderRadius.circular(7),
+              borderRadius: BorderRadius.circular(context.h(7)),
               border: Border.all(color: colors.border),
             ),
             child: Scrollbar(
               thumbVisibility: true,
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(vertical: 5),
+                padding: EdgeInsets.symmetric(vertical: context.h(5)),
                 itemCount: MenuTaxonomy.mainCategories.length,
                 separatorBuilder: (_, __) => Divider(
-                  height: 1,
-                  indent: 48,
+                  height: context.h(1),
+                  indent: context.w(48),
                   color: colors.divider,
                 ),
                 itemBuilder: (context, index) {
@@ -671,7 +454,12 @@ class _MenuScreenState extends State<MenuScreen> {
                       !selected,
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 2, 8, 2),
+                      padding: EdgeInsets.fromLTRB(
+                        context.w(10),
+                        context.h(2),
+                        context.w(8),
+                        context.h(2),
+                      ),
                       child: Row(
                         children: [
                           Checkbox(
@@ -690,7 +478,7 @@ class _MenuScreenState extends State<MenuScreen> {
                               category.name,
                               style: TextStyle(
                                 color: colors.textPrimary,
-                                fontSize: 11.5,
+                                fontSize: context.h(11.5),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -703,7 +491,7 @@ class _MenuScreenState extends State<MenuScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: context.h(10)),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -711,13 +499,13 @@ class _MenuScreenState extends State<MenuScreen> {
                 onPressed: _closeCategoryPicker,
                 child: const Text('Cancel'),
               ),
-              const SizedBox(width: 6),
+              SizedBox(width: context.w(6)),
               ElevatedButton(
                 onPressed: () => _applyCategories(provider),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 9,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.w(14),
+                    vertical: context.h(9),
                   ),
                 ),
                 child: const Text('Apply'),
@@ -737,13 +525,16 @@ class _MenuScreenState extends State<MenuScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(context.h(20)),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.w(16),
+          vertical: context.h(9),
+        ),
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : colors.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(context.h(20)),
           border:
               Border.all(color: selected ? AppColors.primary : colors.border),
         ),
@@ -751,7 +542,7 @@ class _MenuScreenState extends State<MenuScreen> {
           label,
           style: TextStyle(
             color: selected ? Colors.white : colors.textSecondary,
-            fontSize: 12.5,
+            fontSize: context.h(12.5),
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
@@ -766,18 +557,19 @@ class _MenuScreenState extends State<MenuScreen> {
   Widget _buildGrid(
       BuildContext context, MenuProvider provider, AppColorScheme colors) {
     final items = provider.filteredItems;
+    final showAddItemTile = provider.selectedCategory == 'All';
 
     return GridView.builder(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.only(bottom: context.h(24)),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: Responsive.gridColumns(context),
-        mainAxisSpacing: 18,
-        crossAxisSpacing: 18,
+        mainAxisSpacing: context.h(18),
+        crossAxisSpacing: context.w(18),
         childAspectRatio: 0.78,
       ),
-      itemCount: items.length + 1,
+      itemCount: items.length + (showAddItemTile ? 1 : 0),
       itemBuilder: (context, index) {
-        if (index == 0) {
+        if (showAddItemTile && index == 0) {
           return _AddItemTile(
               colors: colors,
               onTap: () async {
@@ -785,7 +577,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 if (context.mounted) context.read<MenuProvider>().load();
               });
         }
-        final item = items[index - 1];
+        final item = items[showAddItemTile ? index - 1 : index];
         return _MenuItemCard(
           item: item,
           colors: colors,
@@ -874,13 +666,13 @@ class _MenuItemCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(context.h(10)),
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: context.h(10),
+            offset: Offset(0, context.h(3)),
           ),
         ],
       ),
@@ -896,7 +688,7 @@ class _MenuItemCard extends StatelessWidget {
                     ? Container(
                         color: colors.surfaceVariant,
                         child: Icon(Icons.restaurant_outlined,
-                            color: colors.textMuted, size: 34),
+                            color: colors.textMuted, size: context.h(34)),
                       )
                     : Image.network(
                         item.imageUrl,
@@ -904,40 +696,48 @@ class _MenuItemCard extends StatelessWidget {
                         errorBuilder: (_, __, ___) => Container(
                           color: colors.surfaceVariant,
                           child: Icon(Icons.restaurant_outlined,
-                              color: colors.textMuted, size: 34),
+                              color: colors.textMuted, size: context.h(34)),
                         ),
                       ),
               ),
               Positioned(
-                left: 10,
-                top: 10,
+                left: context.w(10),
+                top: context.h(10),
                 child: _cardBadge(
-                    item.category, colors.surface, colors.textPrimary),
+                    context, item.category, colors.surface, colors.textPrimary),
               ),
               if (item.featuredItem)
                 Positioned(
-                  right: 10,
-                  top: 10,
-                  child:
-                      _cardBadge('Featured', AppColors.primary, Colors.white),
+                  right: context.w(10),
+                  top: context.h(10),
+                  child: _cardBadge(
+                      context, 'Featured', AppColors.primary, Colors.white),
                 ),
               Positioned(
-                right: 10,
-                bottom: 10,
+                right: context.w(10),
+                bottom: context.h(10),
                 child: Container(
-                  width: 11,
-                  height: 11,
+                  width: context.w(11),
+                  height: context.h(11),
                   decoration: BoxDecoration(
                     color: _dotColor,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(
+                      color: Colors.white,
+                      width: context.h(2),
+                    ),
                   ),
                 ),
               ),
             ]),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
+            padding: EdgeInsets.fromLTRB(
+              context.w(12),
+              context.h(11),
+              context.w(12),
+              context.h(12),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -948,10 +748,10 @@ class _MenuItemCard extends StatelessWidget {
                   style: TextStyle(
                     color: colors.textPrimary,
                     fontWeight: FontWeight.w700,
-                    fontSize: 14,
+                    fontSize: context.h(14),
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: context.h(4)),
 
                 // ── Ingredients (comma-separated) ───────────────────
                 Text(
@@ -962,37 +762,39 @@ class _MenuItemCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: colors.textSecondary,
-                    fontSize: 11,
-                    height: 1.35,
+                    fontSize: context.h(11),
+                    height: context.h(1.35),
                   ),
                 ),
 
-                const SizedBox(height: 8),
+                SizedBox(height: context.h(8)),
                 Wrap(
-                  spacing: 5,
-                  runSpacing: 5,
+                  spacing: context.w(5),
+                  runSpacing: context.h(5),
                   children: [
                     _detailChip(
+                      context,
                       _dietaryLabel(item.dietaryType),
                       item.isVeg ? AppColors.success : AppColors.primary,
                     ),
                     _detailChip(
+                      context,
                       _titleCase(preparation),
                       colors.textSecondary,
                     ),
                     for (final tag in item.tags.take(2))
-                      _detailChip(_titleCase(tag), colors.textMuted),
+                      _detailChip(context, _titleCase(tag), colors.textMuted),
                   ],
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: context.h(10)),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       '₹${item.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.primary,
-                        fontSize: 15,
+                        fontSize: context.h(15),
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1003,7 +805,7 @@ class _MenuItemCard extends StatelessWidget {
                         color: item.available
                             ? AppColors.success
                             : colors.textMuted,
-                        fontSize: 10,
+                        fontSize: context.h(10),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1013,13 +815,13 @@ class _MenuItemCard extends StatelessWidget {
                           ? 'Mark unavailable'
                           : 'Mark available',
                       visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.only(left: 4),
+                      padding: EdgeInsets.only(left: context.w(4)),
                       constraints: const BoxConstraints(),
                       icon: Icon(
                         item.available
                             ? Icons.toggle_on_outlined
                             : Icons.toggle_off_outlined,
-                        size: 22,
+                        size: context.h(22),
                         color: item.available
                             ? AppColors.success
                             : colors.textMuted,
@@ -1027,28 +829,28 @@ class _MenuItemCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Divider(height: 1, color: colors.divider),
-                const SizedBox(height: 6),
+                SizedBox(height: context.h(8)),
+                Divider(height: context.h(1), color: colors.divider),
+                SizedBox(height: context.h(6)),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     InkWell(
                       onTap: onEdit,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(context.h(6)),
                       child: Padding(
-                        padding: const EdgeInsets.all(5),
+                        padding: EdgeInsets.all(context.h(5)),
                         child: Icon(Icons.edit_outlined,
-                            size: 16, color: colors.textSecondary),
+                            size: context.h(16), color: colors.textSecondary),
                       ),
                     ),
                     InkWell(
                       onTap: onDelete,
-                      borderRadius: BorderRadius.circular(6),
-                      child: const Padding(
-                        padding: EdgeInsets.all(5),
+                      borderRadius: BorderRadius.circular(context.h(6)),
+                      child: Padding(
+                        padding: EdgeInsets.all(context.h(5)),
                         child: Icon(Icons.delete_outline,
-                            size: 16, color: AppColors.danger),
+                            size: context.h(16), color: AppColors.danger),
                       ),
                     ),
                   ],
@@ -1061,36 +863,44 @@ class _MenuItemCard extends StatelessWidget {
     );
   }
 
-  Widget _cardBadge(String label, Color background, Color foreground) {
+  Widget _cardBadge(
+      BuildContext context, String label, Color background, Color foreground) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.w(7),
+        vertical: context.h(4),
+      ),
       decoration: BoxDecoration(
         color: background.withValues(
             alpha: background == AppColors.primary ? 1 : 0.92),
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(context.h(5)),
       ),
       child: Text(
         label,
         style: TextStyle(
           color: foreground,
-          fontSize: 9,
+          fontSize: context.h(9),
           fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 
-  Widget _detailChip(String label, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+  Widget _detailChip(BuildContext context, String label, Color color) =>
+      Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: context.w(6),
+          vertical: context.h(3),
+        ),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(context.h(4)),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: color,
-            fontSize: 9,
+            fontSize: context.h(9),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -1121,30 +931,34 @@ class _AddItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(context.h(14)),
       child: DottedBorderContainer(
         color: colors.border,
-        radius: 14,
+        radius: context.h(14),
+        dashLength: context.h(6),
+        gapLength: context.h(5),
+        strokeWidth: context.h(1.2),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: context.w(36),
+                height: context.h(36),
                 decoration: BoxDecoration(
                   color: colors.surfaceVariant,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.add, color: colors.textSecondary, size: 20),
+                child: Icon(Icons.add,
+                    color: colors.textSecondary, size: context.h(20)),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: context.h(10)),
               Text(
-                'Add New Menu Item',
+                'Add New Item',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: colors.textSecondary,
-                    fontSize: 12,
+                    fontSize: context.h(12),
                     fontWeight: FontWeight.w500),
               ),
             ],
@@ -1160,19 +974,31 @@ class _AddItemTile extends StatelessWidget {
 class DottedBorderContainer extends StatelessWidget {
   final Color color;
   final double radius;
+  final double dashLength;
+  final double gapLength;
+  final double strokeWidth;
   final Widget child;
 
   const DottedBorderContainer({
     super.key,
     required this.color,
     required this.radius,
+    required this.dashLength,
+    required this.gapLength,
+    required this.strokeWidth,
     required this.child,
   });
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: _DashedRRectPainter(color: color, radius: radius),
+      painter: _DashedRRectPainter(
+        color: color,
+        radius: radius,
+        dashLength: dashLength,
+        gapLength: gapLength,
+        strokeWidth: strokeWidth,
+      ),
       child: child,
     );
   }
@@ -1181,14 +1007,23 @@ class DottedBorderContainer extends StatelessWidget {
 class _DashedRRectPainter extends CustomPainter {
   final Color color;
   final double radius;
+  final double dashLength;
+  final double gapLength;
+  final double strokeWidth;
 
-  _DashedRRectPainter({required this.color, required this.radius});
+  _DashedRRectPainter({
+    required this.color,
+    required this.radius,
+    required this.dashLength,
+    required this.gapLength,
+    required this.strokeWidth,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 1.2
+      ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
 
     final rrect = RRect.fromRectAndRadius(
@@ -1197,8 +1032,6 @@ class _DashedRRectPainter extends CustomPainter {
     );
     final path = Path()..addRRect(rrect);
 
-    const dashLength = 6.0;
-    const gapLength = 5.0;
     for (final metric in path.computeMetrics()) {
       double distance = 0;
       while (distance < metric.length) {
@@ -1211,5 +1044,9 @@ class _DashedRRectPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DashedRRectPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.radius != radius;
+      oldDelegate.color != color ||
+      oldDelegate.radius != radius ||
+      oldDelegate.dashLength != dashLength ||
+      oldDelegate.gapLength != gapLength ||
+      oldDelegate.strokeWidth != strokeWidth;
 }

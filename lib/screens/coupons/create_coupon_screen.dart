@@ -26,8 +26,8 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   final usageLimitController = TextEditingController();
 
   DiscountType discountType = DiscountType.percentage;
-  DateTime startDate = DateTime.now();
-  DateTime endDate = DateTime.now().add(const Duration(days: 30));
+  DateTime? startDate;
+  DateTime? endDate;
   bool isLoading = false;
   String? errorMessage;
 
@@ -49,9 +49,16 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
 
   Future<void> _save() async {
     if (codeController.text.trim().isEmpty ||
-        double.tryParse(discountValueController.text.trim()) == null) {
+        double.tryParse(discountValueController.text.trim()) == null ||
+        startDate == null ||
+        endDate == null) {
       setState(() => errorMessage =
-          'Please enter a coupon code and a valid discount value.');
+          'Please enter a coupon code, valid discount value, start date, and expiry date.');
+      return;
+    }
+    if (endDate!.isBefore(startDate!)) {
+      setState(
+          () => errorMessage = 'Expiry date must be after the start date.');
       return;
     }
 
@@ -63,9 +70,9 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
       discountValue: double.parse(discountValueController.text.trim()),
       minOrderValue: double.tryParse(minOrderController.text.trim()),
       usageLimit: int.tryParse(usageLimitController.text.trim()),
-      startDate: startDate,
-      endDate: endDate,
-      status: startDate.isAfter(DateTime.now())
+      startDate: startDate!,
+      endDate: endDate!,
+      status: startDate!.isAfter(DateTime.now())
           ? CouponStatus.scheduled
           : CouponStatus.active,
     );
@@ -113,7 +120,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
             discountValue:
                 double.tryParse(discountValueController.text.trim()) ?? 50,
             minOrder: double.tryParse(minOrderController.text.trim()),
-            isActive: !startDate.isAfter(DateTime.now()),
+            isActive: startDate != null && !startDate!.isAfter(DateTime.now()),
           );
 
           // ── Narrow (mobile / tablet) ───────────────────────────────
@@ -215,7 +222,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
             RdxTextField(
               controller: codeController,
               label: 'Coupon Code',
-              hint: 'e.g. SUMMER50',
+              hint: 'Create coupon code',
             ),
             SizedBox(height: context.h(4)),
             Text(
@@ -230,7 +237,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
               controller: descriptionController,
               label: 'Description',
               maxLines: 3,
-              hint: 'Optional longer description...',
+              hint: 'Enter coupon description',
             ),
             SizedBox(height: context.h(16)),
             Row(
@@ -243,8 +250,8 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                     controller: discountValueController,
                     label: 'Discount Value',
                     hint: discountType == DiscountType.percentage
-                        ? '0-100'
-                        : '0.00',
+                        ? 'Enter Discount Percentage'
+                        : 'Enter Discount Amount',
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -263,8 +270,8 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                 Expanded(
                   child: RdxTextField(
                     controller: minOrderController,
-                    label: 'Min. Order Value (₹)',
-                    hint: '0.00',
+                    label: 'Minimum Order Value (₹)',
+                    hint: 'Enter Amount',
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -273,7 +280,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                   child: RdxTextField(
                     controller: usageLimitController,
                     label: 'Usage Limit',
-                    hint: 'Unlimited',
+                    hint: 'Enter usage limit of coupon',
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -340,23 +347,31 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                 return FilterChip(
                   label: Text(
                     cat,
-                    style: TextStyle(fontSize: context.h(12)),
+                    style: TextStyle(
+                      color: selected ? AppColors.primary : colors.textPrimary,
+                      fontSize: context.h(10),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   selected: selected,
+                  showCheckmark: true,
+                  checkmarkColor: AppColors.primary,
                   onSelected: (v) => setState(() => v
                       ? _selectedCategories.add(cat)
                       : _selectedCategories.remove(cat)),
                   backgroundColor: colors.surfaceVariant,
-                  selectedColor: AppColors.primary.withOpacity(0.2),
-                  checkmarkColor: AppColors.primary,
-                  labelStyle: TextStyle(
-                    color: selected ? AppColors.primary : colors.textSecondary,
-                    fontSize: context.h(12),
-                    fontWeight: FontWeight.w600,
-                  ),
+                  selectedColor: Colors.white,
                   side: BorderSide(
                     color: selected ? AppColors.primary : colors.border,
                   ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(context.h(8)),
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.w(9),
+                    vertical: context.h(5),
+                  ),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 );
               }).toList(),
             ),
@@ -427,16 +442,15 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
       label: 'Discount Type',
       value: discountType,
       items: const [DiscountType.percentage, DiscountType.flat],
-      labelBuilder: (v) => v == DiscountType.percentage
-          ? 'Percentage (%)'
-          : 'Flat Amount (₹)',
+      labelBuilder: (v) =>
+          v == DiscountType.percentage ? 'Percentage (%)' : 'Flat Amount (₹)',
       onChanged: (v) {
         if (v != null) setState(() => discountType = v);
       },
     );
   }
 
-  Widget _datePickerField(DateTime date, ValueChanged<DateTime> onPick) {
+  Widget _datePickerField(DateTime? date, ValueChanged<DateTime> onPick) {
     return Builder(builder: (context) {
       final colors = AppColors.of(context);
       return InkWell(
@@ -444,7 +458,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
         onTap: () async {
           final picked = await showDatePicker(
             context: context,
-            initialDate: date,
+            initialDate: date ?? DateTime.now(),
             firstDate: DateTime(2024),
             lastDate: DateTime(2030),
           );
@@ -469,9 +483,9 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
               ),
               SizedBox(width: context.w(8)),
               Text(
-                Formatters.date(date),
+                date == null ? 'Select date' : Formatters.date(date),
                 style: TextStyle(
-                  color: colors.textPrimary,
+                  color: date == null ? colors.textMuted : colors.textPrimary,
                   fontSize: context.h(13),
                 ),
               ),

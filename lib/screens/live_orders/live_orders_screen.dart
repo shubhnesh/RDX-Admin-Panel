@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/responsive.dart';
+import '../../core/utils/responsive_size.dart';
 import '../../models/order_model.dart';
 import '../../providers/live_orders_provider.dart';
 import '../../widgets/loading_indicator.dart';

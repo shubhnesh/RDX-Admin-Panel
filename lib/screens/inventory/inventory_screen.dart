@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rdx_admin/core/utils/responsive_size.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
-import '../../core/utils/responsive.dart';
 import '../../models/inventory_item_model.dart';
 import '../../providers/inventory_provider.dart';
 import '../../widgets/loading_indicator.dart';
@@ -56,47 +56,47 @@ class _InventoryScreenState extends State<InventoryScreen> {
       body: provider.isLoading
           ? const LoadingIndicator()
           : ListView.separated(
-              padding: Responsive.pagePadding(context),
+              padding: context.defaultScreenPadding(),
               itemCount: provider.items.length,
               separatorBuilder: (_, __) => const Divider(height: 24),
               itemBuilder: (context, index) {
                 final item = provider.items[index];
                 return Row(
                   children: [
-                    Expanded(
-                        flex: 2,
-                        child: Text(item.name, style: AppTextStyles.body)),
-                    Expanded(
-                        child: Text(
-                            '${item.quantity.toStringAsFixed(1)} ${item.unit}',
-                            style: AppTextStyles.bodyMuted)),
-                    Expanded(
-                        child: Text(_timeAgo(item.lastUpdated),
-                            style: AppTextStyles.label)),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _statusColor(item.status).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(_statusLabel(item.status),
-                              style: TextStyle(
-                                  color: _statusColor(item.status),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600)),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 16),
-                      color: AppColors.textSecondary,
-                      onPressed: () =>
-                          _showUpdateDialog(context, provider, item),
-                    ),
+                    // Expanded(
+                    //     flex: 2,
+                    //     child: Text(item.name, style: AppTextStyles.body)),
+                    // Expanded(
+                    //     child: Text(
+                    //         '${item.quantity.toStringAsFixed(1)} ${item.unit}',
+                    //         style: AppTextStyles.bodyMuted)),
+                    // Expanded(
+                    //     child: Text(_timeAgo(item.lastUpdated),
+                    //         style: AppTextStyles.label)),
+                    // Expanded(
+                    //   child: Align(
+                    //     alignment: Alignment.centerLeft,
+                    //     child: Container(
+                    //       padding: const EdgeInsets.symmetric(
+                    //           horizontal: 10, vertical: 4),
+                    //       decoration: BoxDecoration(
+                    //         color: _statusColor(item.status).withOpacity(0.15),
+                    //         borderRadius: BorderRadius.circular(20),
+                    //       ),
+                    //       child: Text(_statusLabel(item.status),
+                    //           style: TextStyle(
+                    //               color: _statusColor(item.status),
+                    //               fontSize: 11,
+                    //               fontWeight: FontWeight.w600)),
+                    //     ),
+                    //   ),
+                    // ),
+                    // IconButton(
+                    //   icon: const Icon(Icons.edit_outlined, size: 16),
+                    //   color: AppColors.textSecondary,
+                    //   onPressed: () =>
+                    //       _showUpdateDialog(context, provider, item),
+                    // ),
                   ],
                 );
               },

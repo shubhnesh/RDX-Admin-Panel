@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_colors.dart';
+import 'rdx_text_field.dart';
 
+/// Deprecated alias — prefer [RdxTextField].
+/// Kept so older imports keep compiling.
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String? label;
@@ -25,30 +27,15 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (label != null) ...[
-          Text(
-            label!,
-            style: TextStyle(color: colors.textSecondary, fontSize: 12),
-          ),
-          const SizedBox(height: 6),
-        ],
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          obscureText: obscureText,
-          style: TextStyle(color: colors.textPrimary, fontSize: 14),
-          decoration: InputDecoration(
-            hintText: hint,
-            suffixIcon: suffixIcon,
-            prefixIcon: prefixIcon,
-          ),
-        ),
-      ],
+    return RdxTextField(
+      controller: controller,
+      label: label,
+      hint: hint,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      suffixIcon: suffixIcon,
+      prefixIcon: prefixIcon,
     );
   }
 }

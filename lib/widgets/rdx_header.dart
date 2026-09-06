@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
-import '../core/utils/responsive.dart';
+import '../core/utils/responsive_size.dart';
 
 /// Shared top bar used at the top of every admin screen's content area.
 class RdxHeader extends StatelessWidget implements PreferredSizeWidget {

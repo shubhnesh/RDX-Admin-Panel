@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/responsive.dart';
+import '../../core/utils/responsive_size.dart';
 import '../../models/menu_item_model.dart';
 import '../../providers/menu_provider.dart';
 import '../../widgets/rdx_header.dart';
+import '../../widgets/form_action_button.dart';
+import '../../widgets/rdx_dropdown.dart';
+import '../../widgets/rdx_text_field.dart';
 
 class CreateMenuScreen extends StatefulWidget {
   final String? itemId;
@@ -25,8 +28,8 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
 
   String _primaryCategory = MenuTaxonomy.categories.first.id;
   String? _subcategory;
-  DietaryType _dietaryType = DietaryType.veg;
-  PreparationStyle _preparationStyle = PreparationStyle.other;
+  DietaryType? _dietaryType;
+  PreparationStyle? _preparationStyle;
   String? _spiceLevel;
   String? _servingSize;
   final Set<String> _tags = {};
@@ -107,6 +110,11 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_dietaryType == null || _preparationStyle == null) {
+      setState(
+          () => _error = 'Please select a dietary type and preparation style.');
+      return;
+    }
     final price = double.tryParse(_price.text.trim());
     if (price == null || price < 0) {
       setState(() => _error = 'Please enter a valid price.');
@@ -125,7 +133,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       isFeatured: _featured,
       sortOrder: int.tryParse(_sortOrder.text) ?? 0,
       dietaryType: _dietaryType,
-      preparationStyle: _preparationStyle,
+      preparationStyle: _preparationStyle!,
       price: price,
       primaryCategoryId: _primaryCategory,
       tags: _tags.map((tag) => tag.toLowerCase().replaceAll(' ', '_')).toList(),
@@ -239,16 +247,15 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
   Widget _actionButtons(BuildContext context, AppColorScheme colors) => Row(
         children: [
           Expanded(
-            child: OutlinedButton(
-              onPressed: _loading ? null : () => Navigator.pop(context),
-              child: const Text('Discard'),
+            child: FormActionButton.save(
+              isLoading: _loading,
+              onPressed: _save,
             ),
           ),
           SizedBox(width: context.w(10)),
           Expanded(
-            child: ElevatedButton(
-              onPressed: _loading ? null : _save,
-              child: Text(_editing ? 'Save Changes' : 'Save Item'),
+            child: FormActionButton.discard(
+              onPressed: _loading ? null : () => Navigator.pop(context),
             ),
           ),
         ],
@@ -260,24 +267,28 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               Icons.description_outlined, [
             Row(children: [
               Expanded(
-                child: _field(
-                  'Item Name',
-                  _name,
-                  required: true,
-                  hint: 'e.g. Paneer Tikka Masala',
+                child: RdxTextField(
+                  controller: _name,
+                  label: 'Item Name *',
+                  hint: 'Enter item name',
+                  onChanged: (_) => setState(() {}),
+                  validator: (value) =>
+                      value == null || value.trim().isEmpty ? 'Required' : null,
                 ),
               ),
               SizedBox(width: context.w(14)),
               SizedBox(
                 width: context.w(130),
-                child: _field(
-                  'Price',
-                  _price,
-                  required: true,
-                  hint: '0.00',
-                  keyboard:
+                child: RdxTextField(
+                  controller: _price,
+                  label: 'Price *',
+                  hint: 'Enter price',
+                  keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  prefix: '₹',
+                  prefixText: '₹',
+                  onChanged: (_) => setState(() {}),
+                  validator: (value) =>
+                      value == null || value.trim().isEmpty ? 'Required' : null,
                 ),
               ),
             ]),
@@ -286,23 +297,26 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
             // ── Ingredients (max 10) ────────────────────────────────
             Text('Ingredients', style: _labelStyle(context, colors)),
             SizedBox(height: context.h(4)),
+            // Text(
+            //   'Add up to 10 major ingredients. These appear on the menu card.',
+            //   style: TextStyle(
+            //     color: colors.textSecondary,
+            //     fontSize: context.h(10),
+            //   ),
+            // ),
+            SizedBox(height: context.h(4)),
             Text(
-              'Add up to 10 major ingredients. These appear on the menu card.',
-              style: TextStyle(
-                color: colors.textSecondary,
-                fontSize: context.h(10),
-              ),
+              '${_ingredients.length}/10 ingredients',
+              style:
+                  TextStyle(color: colors.textMuted, fontSize: context.h(10)),
             ),
             SizedBox(height: context.h(8)),
             Row(
               children: [
                 Expanded(
-                  child: TextField(
+                  child: RdxTextField(
                     controller: _ingredientInput,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g. Paneer, Onion, Capsicum',
-                      isDense: true,
-                    ),
+                    hint: 'Add an ingredient and press add',
                     onSubmitted: (_) => _addIngredient(),
                   ),
                 ),
@@ -314,37 +328,57 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               ],
             ),
             if (_ingredients.isNotEmpty) ...[
-              SizedBox(height: context.h(10)),
               Wrap(
                 spacing: context.w(8),
                 runSpacing: context.h(8),
                 children: [
                   for (final ing in _ingredients)
                     Chip(
-                      label:
-                          Text(ing, style: TextStyle(fontSize: context.h(11))),
-                      deleteIcon: Icon(Icons.close, size: context.h(14)),
+                      label: Text(
+                        ing,
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontSize: context.h(10),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      deleteIcon: Icon(
+                        Icons.close_rounded,
+                        size: context.h(14),
+                        color: colors.textMuted,
+                      ),
+                      backgroundColor: colors.surfaceVariant,
+                      side: BorderSide(color: colors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(context.h(8)),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.w(9),
+                        vertical: context.h(5),
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       onDeleted: () => setState(() => _ingredients.remove(ing)),
                     ),
                 ],
               ),
             ],
-            SizedBox(height: context.h(4)),
-            Text(
-              '${_ingredients.length}/10 ingredients',
-              style:
-                  TextStyle(color: colors.textMuted, fontSize: context.h(10)),
-            ),
 
             SizedBox(height: context.h(15)),
-            _field(
-              'Description',
-              _description,
+            RdxTextField(
+              controller: _description,
+              label: 'Description',
               maxLines: 3,
-              hint: 'Optional longer description...',
+              hint: 'Add item description',
+              counterText: '${_description.text.length}/250',
+              onChanged: (_) => setState(() {}),
             ),
             SizedBox(height: context.h(15)),
-            _field('Image URL', _image, hint: 'Paste an image URL'),
+            RdxTextField(
+              controller: _image,
+              label: 'Item Image',
+              hint: 'Enter image URL',
+              onChanged: (_) => setState(() {}),
+            ),
           ]),
           SizedBox(height: context.h(16)),
           _panel(context, colors, 'Item Details', Icons.assignment_outlined, [
@@ -354,7 +388,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   'Dietary Type',
                   _dietaryType,
                   DietaryType.values,
-                  (value) => setState(() => _dietaryType = value!),
+                  (value) => setState(() => _dietaryType = value),
                   (value) => _titleCase(value.name),
                 ),
               ),
@@ -364,7 +398,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   'Preparation Style',
                   _preparationStyle,
                   PreparationStyle.values,
-                  (value) => setState(() => _preparationStyle = value!),
+                  (value) => setState(() => _preparationStyle = value),
                   (value) => _titleCase(value.name),
                 ),
               ),
@@ -419,7 +453,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   _subcategories.map((item) => item.id).toList(),
                   (value) => setState(() => _subcategory = value),
                   _categoryLabel,
-                  hint: 'Select subcategory (optional)',
+                  hint: 'Select subcategory',
                 ),
               ),
             ]),
@@ -592,32 +626,6 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
         ),
       );
 
-  Widget _field(
-    String label,
-    TextEditingController controller, {
-    bool required = false,
-    int maxLines = 1,
-    String? hint,
-    TextInputType? keyboard,
-    String? prefix,
-  }) =>
-      TextFormField(
-        controller: controller,
-        maxLines: maxLines,
-        keyboardType: keyboard,
-        onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(
-          labelText: required ? '$label *' : label,
-          hintText: hint,
-          prefixText: prefix,
-          counterText: maxLines > 1 ? '${controller.text.length}/250' : null,
-        ),
-        validator: required
-            ? (value) =>
-                value == null || value.trim().isEmpty ? 'Required' : null
-            : null,
-      );
-
   Widget _dropdown<T>(
     String label,
     T? value,
@@ -627,13 +635,12 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
     String? hint,
     bool required = false,
   }) =>
-      DropdownButtonFormField<T>(
+      RdxDropdown<T>(
+        label: required ? '$label *' : label,
         value: values.contains(value) ? value : null,
-        decoration: InputDecoration(labelText: required ? '$label *' : label),
-        hint: Text(hint ?? 'Select $label'.toLowerCase()),
-        items: values
-            .map((v) => DropdownMenuItem(value: v, child: Text(labelFor(v))))
-            .toList(),
+        items: values,
+        labelBuilder: labelFor,
+        hint: hint ?? 'Select $label',
         onChanged: onChanged,
       );
 
@@ -676,8 +683,30 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
 
   Widget _tagChip(BuildContext context, AppColorScheme colors, String tag) =>
       FilterChip(
-        label: Text(tag, style: TextStyle(fontSize: context.h(10))),
+        label: Text(
+          tag,
+          style: TextStyle(
+            color: _tags.contains(tag) ? AppColors.primary : colors.textPrimary,
+            fontSize: context.h(10),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         selected: _tags.contains(tag),
+        showCheckmark: true,
+        checkmarkColor: AppColors.primary,
+        backgroundColor: colors.surfaceVariant,
+        selectedColor: Colors.white,
+        side: BorderSide(
+          color: _tags.contains(tag) ? AppColors.primary : colors.border,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(context.h(8)),
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.w(9),
+          vertical: context.h(5),
+        ),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         onSelected: (selected) => setState(() {
           if (selected) {
             _tags.add(tag);
@@ -703,7 +732,9 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
             Icon(Icons.circle, size: context.h(8), color: Colors.green),
             SizedBox(width: context.w(5)),
             Text(
-              _titleCase(_dietaryType.name),
+              _dietaryType == null
+                  ? 'Dietary type not selected'
+                  : _titleCase(_dietaryType!.name),
               style: TextStyle(
                 color: Colors.green,
                 fontSize: context.h(10),

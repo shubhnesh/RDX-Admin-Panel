@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/responsive.dart';
+import '../../core/utils/responsive_size.dart';
 import '../../models/notification_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/rdx_dropdown.dart';
 
 class NotificationHistoryScreen extends StatefulWidget {
   const NotificationHistoryScreen({
@@ -293,55 +294,21 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
   Widget _statusDropdown(
     AppColorScheme colors,
   ) {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(
-          color: colors.border,
-        ),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _statusFilter,
-          isDense: true,
-          dropdownColor: colors.surface,
-          icon: Icon(
-            Icons.keyboard_arrow_down,
-            size: 17,
-            color: colors.textSecondary,
-          ),
-          style: TextStyle(
-            color: colors.textSecondary,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
-          items: const [
-            'All Statuses',
-            'Sent',
-            'Scheduled',
-          ].map(
-            (value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(value),
-              );
-            },
-          ).toList(),
-          onChanged: (value) {
-            if (value == null) {
-              return;
-            }
-
-            setState(() {
-              _statusFilter = value;
-            });
-          },
-        ),
+    return SizedBox(
+      width: 160,
+      child: RdxDropdown<String>(
+        value: _statusFilter,
+        isDense: true,
+        items: const [
+          'All Statuses',
+          'Sent',
+          'Scheduled',
+        ],
+        labelBuilder: (v) => v,
+        onChanged: (value) {
+          if (value == null) return;
+          setState(() => _statusFilter = value);
+        },
       ),
     );
   }

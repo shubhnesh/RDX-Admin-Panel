@@ -3,11 +3,12 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/formatters.dart';
-import '../../core/utils/responsive.dart';
+import '../../core/utils/responsive_size.dart';
 import '../../models/coupon_model.dart';
 import '../../providers/coupon_provider.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../widgets/form_action_button.dart';
+import '../../widgets/rdx_dropdown.dart';
+import '../../widgets/rdx_text_field.dart';
 import '../../widgets/rdx_header.dart';
 
 class CreateCouponScreen extends StatefulWidget {
@@ -120,18 +121,18 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
             return SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(
                 Responsive.pageHorizontal(context),
-                16,
+                context.h(16),
                 Responsive.pageHorizontal(context),
-                28,
+                context.h(28),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   form,
-                  const SizedBox(height: 20),
+                  SizedBox(height: context.h(20)),
                   preview,
-                  const SizedBox(height: 20),
-                  _actionButtons(),
+                  SizedBox(height: context.h(20)),
+                  _actionButtons(context),
                 ],
               ),
             );
@@ -141,34 +142,34 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
           return Padding(
             padding: EdgeInsets.fromLTRB(
               Responsive.pageHorizontal(context),
-              16,
+              context.h(16),
               Responsive.pageHorizontal(context),
-              24,
+              context.h(24),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(right: 22),
+                    padding: EdgeInsets.only(right: context.w(22)),
                     child: form,
                   ),
                 ),
                 VerticalDivider(
-                  width: 1,
-                  thickness: 1,
+                  width: context.w(1),
+                  thickness: context.h(1),
                   color: colors.border,
                 ),
                 SizedBox(
-                  width: 330,
+                  width: context.w(330),
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 22),
+                    padding: EdgeInsets.only(left: context.w(22)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         preview,
                         const Spacer(),
-                        _actionButtons(),
+                        _actionButtons(context),
                       ],
                     ),
                   ),
@@ -187,48 +188,58 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
       children: [
         if (errorMessage != null) ...[
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: EdgeInsets.symmetric(
+              horizontal: context.w(12),
+              vertical: context.h(10),
+            ),
             decoration: BoxDecoration(
               color: AppColors.danger.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(context.h(8)),
               border: Border.all(color: AppColors.danger.withOpacity(0.4)),
             ),
             child: Text(
               errorMessage!,
-              style: const TextStyle(color: AppColors.danger),
+              style: TextStyle(
+                color: AppColors.danger,
+                fontSize: context.h(13),
+              ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: context.h(16)),
         ],
         _sectionCard(
           context,
           icon: Icons.local_offer_outlined,
           title: 'Coupon Basics',
           children: [
-            CustomTextField(
+            RdxTextField(
               controller: codeController,
               label: 'Coupon Code',
               hint: 'e.g. SUMMER50',
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: context.h(4)),
             Text(
               'Customers will enter this code at checkout.',
-              style: AppTextStyles.label.copyWith(color: colors.textMuted),
+              style: AppTextStyles.label(context).copyWith(
+                color: colors.textMuted,
+                fontSize: context.h(11),
+              ),
             ),
-            const SizedBox(height: 16),
-            CustomTextField(
+            SizedBox(height: context.h(16)),
+            RdxTextField(
               controller: descriptionController,
               label: 'Description',
-              maxLines: 2,
+              maxLines: 3,
+              hint: 'Optional longer description...',
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: context.h(16)),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _discountTypeDropdown(colors)),
-                const SizedBox(width: 16),
+                Expanded(child: _discountTypeDropdown(context, colors)),
+                SizedBox(width: context.w(16)),
                 Expanded(
-                  child: CustomTextField(
+                  child: RdxTextField(
                     controller: discountValueController,
                     label: 'Discount Value',
                     hint: discountType == DiscountType.percentage
@@ -241,7 +252,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        SizedBox(height: context.h(20)),
         _sectionCard(
           context,
           icon: Icons.rule_folder_outlined,
@@ -250,16 +261,16 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
             Row(
               children: [
                 Expanded(
-                  child: CustomTextField(
+                  child: RdxTextField(
                     controller: minOrderController,
                     label: 'Min. Order Value (₹)',
                     hint: '0.00',
                     keyboardType: TextInputType.number,
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: context.w(16)),
                 Expanded(
-                  child: CustomTextField(
+                  child: RdxTextField(
                     controller: usageLimitController,
                     label: 'Usage Limit',
                     hint: 'Unlimited',
@@ -268,7 +279,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: context.h(16)),
             Row(
               children: [
                 Expanded(
@@ -277,46 +288,60 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                     children: [
                       Text(
                         'Start Date',
-                        style: AppTextStyles.label
-                            .copyWith(color: colors.textSecondary),
+                        style: AppTextStyles.label(context).copyWith(
+                          color: colors.textSecondary,
+                          fontSize: context.h(12),
+                        ),
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: context.h(6)),
                       _datePickerField(
-                          startDate, (d) => setState(() => startDate = d)),
+                        startDate,
+                        (d) => setState(() => startDate = d),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: context.w(16)),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Expiry Date',
-                        style: AppTextStyles.label
-                            .copyWith(color: colors.textSecondary),
+                        style: AppTextStyles.label(context).copyWith(
+                          color: colors.textSecondary,
+                          fontSize: context.h(12),
+                        ),
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: context.h(6)),
                       _datePickerField(
-                          endDate, (d) => setState(() => endDate = d)),
+                        endDate,
+                        (d) => setState(() => endDate = d),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: context.h(16)),
             Text(
               'Applicable Categories',
-              style: AppTextStyles.label.copyWith(color: colors.textSecondary),
+              style: AppTextStyles.label(context).copyWith(
+                color: colors.textSecondary,
+                fontSize: context.h(12),
+              ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: context.h(8)),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: context.w(8),
+              runSpacing: context.h(8),
               children: _categories.map((cat) {
                 final selected = _selectedCategories.contains(cat);
                 return FilterChip(
-                  label: Text(cat),
+                  label: Text(
+                    cat,
+                    style: TextStyle(fontSize: context.h(12)),
+                  ),
                   selected: selected,
                   onSelected: (v) => setState(() => v
                       ? _selectedCategories.add(cat)
@@ -326,7 +351,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                   checkmarkColor: AppColors.primary,
                   labelStyle: TextStyle(
                     color: selected ? AppColors.primary : colors.textSecondary,
-                    fontSize: 12,
+                    fontSize: context.h(12),
                     fontWeight: FontWeight.w600,
                   ),
                   side: BorderSide(
@@ -341,21 +366,18 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     );
   }
 
-  Widget _actionButtons() => Row(
+  Widget _actionButtons(BuildContext context) => Row(
         children: [
           Expanded(
-            child: OutlinedButton(
-              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
-              child: const Text('Discard'),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: CustomButton(
-              label: 'Save Coupon',
-              icon: Icons.save_outlined,
+            child: FormActionButton.save(
               isLoading: isLoading,
               onPressed: _save,
+            ),
+          ),
+          SizedBox(width: context.w(10)),
+          Expanded(
+            child: FormActionButton.discard(
+              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
             ),
           ),
         ],
@@ -370,10 +392,10 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     final colors = AppColors.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(context.h(20)),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(context.h(14)),
         border: Border.all(color: colors.border),
       ),
       child: Column(
@@ -381,50 +403,36 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.primary),
-              const SizedBox(width: 8),
+              Icon(icon, size: context.h(18), color: AppColors.primary),
+              SizedBox(width: context.w(8)),
               Text(
                 title,
-                style:
-                    AppTextStyles.cardTitle.copyWith(color: colors.textPrimary),
+                style: AppTextStyles.body(context).copyWith(
+                  color: colors.textPrimary,
+                  fontSize: context.h(14),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: context.h(16)),
           ...children,
         ],
       ),
     );
   }
 
-  Widget _discountTypeDropdown(AppColorScheme colors) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Discount Type',
-          style: AppTextStyles.label.copyWith(color: colors.textSecondary),
-        ),
-        const SizedBox(height: 6),
-        DropdownButtonFormField<DiscountType>(
-          value: discountType,
-          dropdownColor: colors.surface,
-          style: TextStyle(color: colors.textPrimary, fontSize: 14),
-          items: const [
-            DropdownMenuItem(
-              value: DiscountType.percentage,
-              child: Text('Percentage (%)'),
-            ),
-            DropdownMenuItem(
-              value: DiscountType.flat,
-              child: Text('Flat Amount (₹)'),
-            ),
-          ],
-          onChanged: (v) {
-            if (v != null) setState(() => discountType = v);
-          },
-        ),
-      ],
+  Widget _discountTypeDropdown(BuildContext context, AppColorScheme colors) {
+    return RdxDropdown<DiscountType>(
+      label: 'Discount Type',
+      value: discountType,
+      items: const [DiscountType.percentage, DiscountType.flat],
+      labelBuilder: (v) => v == DiscountType.percentage
+          ? 'Percentage (%)'
+          : 'Flat Amount (₹)',
+      onChanged: (v) {
+        if (v != null) setState(() => discountType = v);
+      },
     );
   }
 
@@ -432,7 +440,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     return Builder(builder: (context) {
       final colors = AppColors.of(context);
       return InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(context.h(8)),
         onTap: () async {
           final picked = await showDatePicker(
             context: context,
@@ -443,20 +451,29 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
           if (picked != null) onPick(picked);
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          padding: EdgeInsets.symmetric(
+            horizontal: context.w(12),
+            vertical: context.h(14),
+          ),
           decoration: BoxDecoration(
             color: colors.surfaceVariant,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(context.h(8)),
             border: Border.all(color: colors.border),
           ),
           child: Row(
             children: [
-              Icon(Icons.calendar_today_outlined,
-                  size: 14, color: colors.textMuted),
-              const SizedBox(width: 8),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: context.h(14),
+                color: colors.textMuted,
+              ),
+              SizedBox(width: context.w(8)),
               Text(
                 Formatters.date(date),
-                style: TextStyle(color: colors.textPrimary, fontSize: 13),
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: context.h(13),
+                ),
               ),
             ],
           ),
@@ -485,10 +502,10 @@ class _LivePreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(context.h(20)),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(context.h(14)),
         border: Border.all(color: colors.border),
       ),
       child: Column(
@@ -496,27 +513,32 @@ class _LivePreviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.visibility_outlined,
-                  size: 16, color: colors.textSecondary),
-              const SizedBox(width: 6),
+              Icon(
+                Icons.visibility_outlined,
+                size: context.h(16),
+                color: colors.textSecondary,
+              ),
+              SizedBox(width: context.w(6)),
               Text(
                 'Preview',
-                style: AppTextStyles.cardTitle
-                    .copyWith(color: colors.textPrimary, fontSize: 15),
+                style: AppTextStyles.body(context).copyWith(
+                  color: colors.textPrimary,
+                  fontSize: context.h(15),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: context.h(16)),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(18),
+            padding: EdgeInsets.all(context.h(18)),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [AppColors.primary, AppColors.primaryDark],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(context.h(14)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -524,47 +546,52 @@ class _LivePreviewCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.w(8),
+                        vertical: context.h(3),
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(context.h(20)),
                       ),
                       child: Text(
                         isActive ? 'ACTIVE' : 'SCHEDULED',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 9.5,
+                          fontSize: context.h(9.5),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: context.h(14)),
                 Text(
                   discountType == DiscountType.percentage
                       ? '${discountValue.toStringAsFixed(0)}%'
                       : Formatters.currency(discountValue),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 34,
+                    fontSize: context.h(34),
                     fontWeight: FontWeight.bold,
                     height: 1,
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
+                SizedBox(height: context.h(4)),
+                Text(
                   'Off your next order',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: context.h(13),
+                  ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: context.h(16)),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: EdgeInsets.symmetric(vertical: context.h(10)),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(context.h(8)),
                     border: Border.all(
                       color: Colors.white.withOpacity(0.3),
                     ),
@@ -572,9 +599,9 @@ class _LivePreviewCard extends StatelessWidget {
                   child: Center(
                     child: Text(
                       code,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: context.h(15),
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.5,
                       ),
@@ -584,25 +611,32 @@ class _LivePreviewCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: context.h(16)),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(context.h(12)),
             decoration: BoxDecoration(
               color: colors.surfaceVariant,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(context.h(10)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.info_outline, size: 15, color: colors.textMuted),
-                const SizedBox(width: 8),
+                Icon(
+                  Icons.info_outline,
+                  size: context.h(15),
+                  color: colors.textMuted,
+                ),
+                SizedBox(width: context.w(8)),
                 Expanded(
                   child: Text(
                     minOrder != null && minOrder! > 0
                         ? 'This preview shows how the coupon will appear to end-users. Minimum order: ${Formatters.currency(minOrder!)}.'
                         : 'This preview shows how the coupon will appear to end-users in the RDX delivery app.',
-                    style: AppTextStyles.label
-                        .copyWith(color: colors.textSecondary, height: 1.4),
+                    style: AppTextStyles.label(context).copyWith(
+                      color: colors.textSecondary,
+                      height: 1.4,
+                      fontSize: context.h(11),
+                    ),
                   ),
                 ),
               ],

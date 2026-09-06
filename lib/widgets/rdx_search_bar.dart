@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
-import '../core/utils/responsive.dart';
+import '../core/utils/responsive_size.dart';
 
 class RdxSearchBar extends StatefulWidget {
   final String hintText;

@@ -64,7 +64,7 @@ class RdxAdminApp extends StatelessWidget {
           return MaterialApp(
             title: 'RDX Admin',
             debugShowCheckedModeBanner: false,
-            theme: AppTextStyles.themeData(),
+            theme: AppTextStyles.themeData(context),
             home: auth.isLoggedIn ? const MainScreen() : const LoginScreen(),
             onGenerateRoute: AppRoutes.generateRoute,
           );

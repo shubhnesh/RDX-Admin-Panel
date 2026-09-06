@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/responsive.dart';
+import '../../core/utils/responsive_size.dart';
 import '../../widgets/rdx_header.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../widgets/rdx_text_field.dart';
 
 /// Contact Technical Support — matches the provided design.
 class SupportScreen extends StatefulWidget {
@@ -205,13 +205,13 @@ class _SupportScreenState extends State<SupportScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CustomTextField(
+          RdxTextField(
             controller: _subjectController,
             label: 'Subject',
             hint: 'Brief summary of the issue',
           ),
           SizedBox(height: context.h(16)),
-          CustomTextField(
+          RdxTextField(
             controller: _messageController,
             label: 'Describe the issue',
             hint: 'Provide as much detail as possible…',

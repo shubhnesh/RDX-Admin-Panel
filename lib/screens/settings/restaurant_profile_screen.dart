@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/responsive.dart';
+import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../widgets/rdx_text_field.dart';
+import '../../widgets/form_action_button.dart';
 
 class RestaurantProfileScreen extends StatefulWidget {
   const RestaurantProfileScreen({super.key});
@@ -84,9 +85,13 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                             fontSize: 18,
                             fontWeight: FontWeight.w700)),
                     const Spacer(),
-                    ElevatedButton(
-                      onPressed: provider.isLoading ? null : _save,
-                      child: const Text('Save Changes'),
+                    FormActionButton.save(
+                      isLoading: provider.isLoading,
+                      onPressed: _save,
+                    ),
+                    SizedBox(width: context.w(10)),
+                    FormActionButton.discard(
+                      onPressed: () => Navigator.of(context).maybePop(),
                     ),
                   ],
                 ),
@@ -130,28 +135,28 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                   title: 'Basic Information',
                   colors: colors,
                   child: Column(children: [
-                    CustomTextField(
+                    RdxTextField(
                         controller: nameController, label: 'Restaurant Name'),
                     const SizedBox(height: 12),
-                    CustomTextField(
+                    RdxTextField(
                         controller: descriptionController,
                         label: 'Brief Description',
-                        maxLines: 2)
+                        maxLines: 3)
                   ]),
                 ),
                 _ProfileSection(
                   title: 'Location & Contact',
                   colors: colors,
                   child: Column(children: [
-                    CustomTextField(
+                    RdxTextField(
                         controller: addressController,
                         label: 'Primary Address'),
                     const SizedBox(height: 12),
                     LayoutBuilder(builder: (context, constraints) {
                       final narrow = constraints.maxWidth < 480;
-                      final phone = CustomTextField(
+                      final phone = RdxTextField(
                           controller: phoneController, label: 'Support Phone');
-                      final email = CustomTextField(
+                      final email = RdxTextField(
                           controller: emailController, label: 'Support Email');
                       return narrow
                           ? Column(children: [

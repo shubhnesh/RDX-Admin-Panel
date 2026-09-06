@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/utils/responsive.dart';
+import '../../core/utils/responsive_size.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/order_model.dart';
 import '../../providers/order_detail_provider.dart';

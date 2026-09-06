@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/responsive.dart';
+import '../../core/utils/responsive_size.dart';
 import '../../widgets/main_side_nav.dart';
 import '../../core/router/app_router.dart';
 import '../dashboard/dashboard_screen.dart';

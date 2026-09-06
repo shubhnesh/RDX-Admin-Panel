@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/responsive.dart';
+import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
+import '../../widgets/form_action_button.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -42,10 +43,6 @@ class SettingsScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                OutlinedButton(onPressed: () {}, child: const Text('Discard')),
-                SizedBox(width: context.w(8)),
-                ElevatedButton(
-                    onPressed: () {}, child: const Text('Save Changes')),
               ],
             ),
             SizedBox(height: context.h(18)),
@@ -61,22 +58,60 @@ class SettingsScreen extends StatelessWidget {
                     SizedBox(height: context.h(14)),
                     hours,
                     SizedBox(height: context.h(14)),
-                    rules
+                    rules,
+                    SizedBox(height: context.h(20)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FormActionButton.save(
+                            onPressed: () {},
+                          ),
+                        ),
+                        SizedBox(width: context.w(10)),
+                        Expanded(
+                          child: FormActionButton.discard(
+                            onPressed: () {},
+                          ),
+                        ),
+                      ],
+                    ),
                   ]);
                 }
-                return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
+                return Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
                           flex: 3,
                           child: Column(children: [
                             identity,
                             SizedBox(height: context.h(14)),
-                            rules
-                          ])),
-                      SizedBox(width: context.w(14)),
-                      Expanded(child: hours)
-                    ]);
+                            rules,
+                          ]),
+                        ),
+                        SizedBox(width: context.w(14)),
+                        Expanded(child: hours),
+                      ],
+                    ),
+                    SizedBox(height: context.h(20)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FormActionButton.save(
+                            onPressed: () {},
+                          ),
+                        ),
+                        SizedBox(width: context.w(10)),
+                        Expanded(
+                          child: FormActionButton.discard(
+                            onPressed: () {},
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
               },
             ),
           ],

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/responsive.dart';
+import '../../core/utils/responsive_size.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/rdx_text_field.dart';
 import 'notification_history_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -411,9 +412,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'NOTIFICATION TITLE',
           ),
           const SizedBox(height: 8),
-          _buildTextField(
+          RdxTextField(
             controller: _titleController,
-            colors: colors,
             hint: 'e.g. System Update',
             maxLines: 1,
           ),
@@ -441,13 +441,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          _buildTextField(
+          RdxTextField(
             controller: _messageController,
-            colors: colors,
             hint: 'Type your message here...',
             maxLines: isMobile ? 7 : 8,
             maxLength: 500,
-            minHeight: isMobile ? 155 : 170,
           ),
           const SizedBox(height: 21),
           _buildActionButtons(
@@ -1057,66 +1055,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.55,
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required AppColorScheme colors,
-    required String hint,
-    required int maxLines,
-    int? maxLength,
-    double? minHeight,
-  }) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        minHeight: minHeight ?? 46,
-      ),
-      child: TextField(
-        controller: controller,
-        maxLines: maxLines,
-        maxLength: maxLength,
-        style: TextStyle(
-          color: colors.textPrimary,
-          fontSize: 14,
-          height: 1.35,
-        ),
-        cursorColor: AppColors.primary,
-        textAlignVertical: TextAlignVertical.top,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: colors.textMuted,
-            fontSize: 13,
-          ),
-          counterText: '',
-          filled: true,
-          fillColor: colors.surfaceVariant,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 13,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(
-              color: colors.border,
-            ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(
-              color: colors.border,
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(
-              color: AppColors.primary,
-              width: 1.2,
-            ),
-          ),
-        ),
       ),
     );
   }

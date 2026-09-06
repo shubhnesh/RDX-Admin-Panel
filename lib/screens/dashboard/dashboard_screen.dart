@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../core/utils/formatters.dart';
@@ -124,34 +125,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildStatCards(DashboardStatsModel s, AppColorScheme colors) {
     final isNarrow = Responsive.isMobile(context);
     final cards = [
-      _StatCardData(
+      StatCard(
         label: 'TOTAL REVENUE',
         value: Formatters.currency(s.totalRevenue, symbol: '\$'),
         subtitle: '+${s.revenueChangePercent}% today',
         subtitleColor: AppColors.success,
         icon: Icons.attach_money_rounded,
-        iconBg: AppColors.primary.withValues(alpha: 0.15),
-        iconColor: AppColors.primary,
+        // iconBg: AppColors.primary.withValues(alpha: 0.15),
+        // iconColor: AppColors.primary,
       ),
-      _StatCardData(
+      StatCard(
         label: 'ACTIVE ORDERS',
         value: '${s.activeOrders}',
         subtitle: '${s.preparingCount} preparing, ${s.enRouteCount} en route',
         subtitleColor: colors.textSecondary,
         icon: Icons.receipt_long_outlined,
-        iconBg: AppColors.info.withValues(alpha: 0.15),
-        iconColor: AppColors.info,
+        // iconBg: AppColors.info.withValues(alpha: 0.15),
+        // iconColor: AppColors.info,
       ),
-      _StatCardData(
+      StatCard(
         label: 'TABLES OCCUPIED',
         value: '${s.tablesOccupiedPercent.toStringAsFixed(0)}%',
         subtitle: null,
         progress: s.tablesOccupiedPercent / 100,
         icon: Icons.table_restaurant_outlined,
-        iconBg: AppColors.warning.withValues(alpha: 0.15),
-        iconColor: AppColors.warning,
+        // iconBg: AppColors.warning.withValues(alpha: 0.15),
+        // iconColor: AppColors.warning,
       ),
-      _StatCardData(
+      StatCard(
         label: 'AVAILABLE RIDERS',
         value: '${s.availableRiders}/${s.totalRiders}',
         subtitle: s.highDemand ? 'High demand' : 'Normal',
@@ -160,8 +161,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ? Icons.warning_amber_rounded
             : Icons.check_circle_outline,
         icon: Icons.delivery_dining_outlined,
-        iconBg: AppColors.success.withValues(alpha: 0.15),
-        iconColor: AppColors.success,
+        // iconBg: AppColors.success.withValues(alpha: 0.15),
+        // iconColor: AppColors.success,
       ),
     ];
 
@@ -180,18 +181,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         for (var i = 0; i < cards.length; i++) ...[
           if (i > 0) SizedBox(width: context.w(14)),
-          Expanded(child: _statCard(cards[i])),
+          Expanded(child: (cards[i])),
         ],
       ],
     );
   }
 
-  Widget _statCard(_StatCardData d) {
+  Widget _statCard(StatCard d) {
     return StatCard(
       label: d.label,
       value: d.value,
       icon: d.icon,
-      accentColor: d.iconColor,
+      // accentColor: d.iconColor,
       subtitle: d.subtitle,
       subtitleColor: d.subtitleColor,
       subtitleIcon: d.subtitleIcon,
@@ -233,21 +234,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Text(
+                    //   'Analytics Performance',
+                    //   style: TextStyle(
+                    //     color: colors.textPrimary,
+                    //     fontSize: context.h(16),
+                    //     fontWeight: FontWeight.w600,
+                    //   ),
+                    // ),
                     Text(
                       'Analytics Performance',
-                      style: TextStyle(
-                        color: colors.textPrimary,
-                        fontSize: context.h(16),
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: AppTextStyles.heading(context),
                     ),
-                    SizedBox(height: context.h(4)),
+                    // SizedBox(height: context.h(4)),
+                    // Text(
+                    //   "Real-time insight into your restaurant's ecosystem.",
+                    //   style: TextStyle(
+                    //     color: colors.textSecondary,
+                    //     fontSize: context.h(12),
+                    //   ),
                     Text(
                       "Real-time insight into your restaurant's ecosystem.",
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: context.h(12),
-                      ),
+                      style: AppTextStyles.bodySecondary(context),
                     ),
                   ],
                 ),
@@ -291,7 +299,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             days[i],
                             style: TextStyle(
                                 color: colors.textMuted,
-                                fontSize: context.h(11)),
+                                fontSize: context.h(13)),
                           ),
                         );
                       },
@@ -390,8 +398,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 p,
                 style: TextStyle(
                   color: selected ? Colors.white : colors.textSecondary,
-                  fontSize: context.h(12),
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  fontSize: context.h(16),
+                  fontWeight: selected ? FontWeight.w400 : FontWeight.w300,
                 ),
               ),
             ),
@@ -451,13 +459,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Row(
             children: [
+              // Text(
+              //   'Volume Trend',
+              //   style: TextStyle(
+              //     color: colors.textPrimary,
+              //     fontSize: context.h(15),
+              //     fontWeight: FontWeight.w600,
+              //   ),
+              // ),
               Text(
                 'Volume Trend',
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: context.h(15),
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppTextStyles.heading(context),
               ),
               const Spacer(),
               Container(
@@ -473,12 +485,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Text(
+                    //   'Today',
+                    //   style: TextStyle(
+                    //     color: colors.textSecondary,
+                    //     fontSize: context.h(12),
+                    //   ),
+                    // ),
                     Text(
                       'Today',
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: context.h(12),
-                      ),
+                      style: AppTextStyles.bodySecondary(context),
                     ),
                     SizedBox(width: context.w(4)),
                     Icon(Icons.keyboard_arrow_down,
@@ -526,7 +542,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             labels[i],
                             style: TextStyle(
                                 color: colors.textMuted,
-                                fontSize: context.h(10)),
+                                fontSize: context.h(13)),
                           ),
                         );
                       },
@@ -591,13 +607,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Text(
+          //   'Top Selling Items',
+          //   style: TextStyle(
+          //     color: colors.textPrimary,
+          //     fontSize: context.h(15),
+          //     fontWeight: FontWeight.w600,
+          //   ),
+          // ),
           Text(
             'Top Selling Items',
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontSize: context.h(15),
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppTextStyles.heading(context),
           ),
           SizedBox(height: context.h(14)),
           for (final item in s.topSellingItems) ...[
@@ -691,13 +711,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Row(
             children: [
+              // Text(
+              //   'Recent Activity',
+              //   style: TextStyle(
+              //     color: colors.textPrimary,
+              //     fontSize: context.h(15),
+              //     fontWeight: FontWeight.w600,
+              //   ),
+              // ),
               Text(
                 'Recent Activity',
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: context.h(15),
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppTextStyles.heading(context),
               ),
               const Spacer(),
               TextButton(
@@ -708,12 +732,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: Text(
+                child:
+                    // Text(
+                    //   'VIEW ALL',
+                    //   style: TextStyle(
+                    //       fontSize: context.h(12),
+                    //       fontWeight: FontWeight.w600,
+                    //       letterSpacing: 0.5),
+                    // ),
+                    Text(
                   'VIEW ALL',
-                  style: TextStyle(
-                      fontSize: context.h(12),
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5),
+                  style: AppTextStyles.label(context),
                 ),
               ),
             ],
@@ -746,8 +775,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         text,
         style: TextStyle(
           color: colors.textMuted,
-          fontSize: context.h(11),
-          fontWeight: FontWeight.w600,
+          fontSize: context.h(16),
+          fontWeight: FontWeight.w400,
           letterSpacing: 0.5,
         ),
       ),
@@ -869,26 +898,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 // ─── Local data holder for stat cards ───────────────────────────────
 
-class _StatCardData {
-  final String label;
-  final String value;
-  final String? subtitle;
-  final Color? subtitleColor;
-  final IconData? subtitleIcon;
-  final double? progress;
-  final IconData icon;
-  final Color iconBg;
-  final Color iconColor;
+// class _StatCardData {
+//   final String label;
+//   final String value;
+//   final String? subtitle;
+//   final Color? subtitleColor;
+//   final IconData? subtitleIcon;
+//   final double? progress;
+//   final IconData icon;
+//   final Color iconBg;
+//   final Color iconColor;
 
-  const _StatCardData({
-    required this.label,
-    required this.value,
-    this.subtitle,
-    this.subtitleColor,
-    this.subtitleIcon,
-    this.progress,
-    required this.icon,
-    required this.iconBg,
-    required this.iconColor,
-  });
-}
+//   const _StatCardData({
+//     required this.label,
+//     required this.value,
+//     this.subtitle,
+//     this.subtitleColor,
+//     this.subtitleIcon,
+//     this.progress,
+//     required this.icon,
+//     required this.iconBg,
+//     required this.iconColor,
+//   });
+// }

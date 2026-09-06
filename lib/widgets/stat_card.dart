@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../core/theme/app_colors.dart';
 
 class StatCard extends StatelessWidget {
@@ -48,14 +49,18 @@ class StatCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: colors.textMuted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5)),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  // style: TextStyle(
+                  //     color: colors.textMuted,
+                  //     fontSize: 11,
+                  //     fontWeight: FontWeight.w700,
+                  //     letterSpacing: 0.5),
+                  style: AppTextStyles.heading(context)
+                      .copyWith(color: AppColors.lightTextSecondary),
+                ),
               ),
               Container(
                 width: 36,

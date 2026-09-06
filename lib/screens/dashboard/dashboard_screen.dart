@@ -45,16 +45,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: AppColors.primary,
                   onRefresh: provider.load,
                   child: ListView(
-                    padding: Responsive.pagePadding(context),
+                    padding: context.defaultScreenPadding(),
                     children: [
                       _buildTopBar(colors),
-                      const SizedBox(height: 20),
+                      SizedBox(height: context.h(20)),
                       _buildStatCards(provider.stats!, colors),
-                      const SizedBox(height: 20),
+                      SizedBox(height: context.h(20)),
                       _buildAnalyticsCard(provider.stats!, colors),
-                      const SizedBox(height: 20),
+                      SizedBox(height: context.h(20)),
                       _buildMiddleRow(provider.stats!, colors),
-                      const SizedBox(height: 20),
+                      SizedBox(height: context.h(20)),
                       _buildRecentActivity(provider.recentActivity, colors),
                     ],
                   ),
@@ -68,7 +68,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildTopBar(AppColorScheme colors) {
     return RdxSearchToolbar(
-      hintText: 'Search orders, items...',
+      hintText: 'Search orders, items..',
       actions: [
         _plainIconBtn(colors,
             icon: Icons.notifications_outlined,
@@ -93,22 +93,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Padding(
-        padding: const EdgeInsets.all(6),
+        padding: EdgeInsets.all(context.h(6)),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Icon(icon, size: 21, color: colors.textSecondary),
+            Icon(icon, size: context.h(21), color: colors.textSecondary),
             if (badge)
               Positioned(
                 top: -1,
                 right: -1,
                 child: Container(
-                  width: 7,
-                  height: 7,
+                  width: context.w(7),
+                  height: context.h(7),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     shape: BoxShape.circle,
-                    border: Border.all(color: colors.background, width: 1),
+                    border: Border.all(
+                      color: colors.background,
+                      width: context.w(1),
+                    ),
                   ),
                 ),
               ),
@@ -166,7 +169,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return Column(
         children: [
           for (var i = 0; i < cards.length; i++) ...[
-            if (i > 0) const SizedBox(height: 12),
+            if (i > 0) SizedBox(height: context.h(12)),
             _statCard(cards[i]),
           ],
         ],
@@ -176,7 +179,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       children: [
         for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: 14),
+          if (i > 0) SizedBox(width: context.w(14)),
           Expanded(child: _statCard(cards[i])),
         ],
       ],
@@ -209,7 +212,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .toList();
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+      padding: EdgeInsets.fromLTRB(
+        context.w(20),
+        context.h(18),
+        context.w(20),
+        context.h(16),
+      ),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(14),
@@ -229,15 +237,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       'Analytics Performance',
                       style: TextStyle(
                         color: colors.textPrimary,
-                        fontSize: 16,
+                        fontSize: context.h(16),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: context.h(4)),
                     Text(
                       "Real-time insight into your restaurant's ecosystem.",
-                      style:
-                          TextStyle(color: colors.textSecondary, fontSize: 12),
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: context.h(12),
+                      ),
                     ),
                   ],
                 ),
@@ -245,9 +255,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _periodTabs(colors),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: context.h(20)),
           SizedBox(
-            height: 200,
+            height: context.h(200),
             child: LineChart(
               LineChartData(
                 minY: 0,
@@ -257,7 +267,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   horizontalInterval: 15,
                   getDrawingHorizontalLine: (v) => FlLine(
                     color: colors.border.withOpacity(0.6),
-                    strokeWidth: 1,
+                    strokeWidth: context.w(1),
                   ),
                 ),
                 titlesData: FlTitlesData(
@@ -270,17 +280,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: context.h(28),
                       interval: 1,
                       getTitlesWidget: (value, meta) {
                         final i = value.toInt();
                         if (i < 0 || i >= days.length) return const SizedBox();
                         return Padding(
-                          padding: const EdgeInsets.only(top: 8),
+                          padding: EdgeInsets.only(top: context.h(8)),
                           child: Text(
                             days[i],
                             style: TextStyle(
-                                color: colors.textMuted, fontSize: 11),
+                                color: colors.textMuted,
+                                fontSize: context.h(11)),
                           ),
                         );
                       },
@@ -298,7 +309,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             TextStyle(
                               color: colors.textPrimary,
                               fontWeight: FontWeight.w600,
-                              fontSize: 12,
+                              fontSize: context.h(12),
                             ),
                           ),
                         )
@@ -311,16 +322,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     isCurved: true,
                     curveSmoothness: 0.35,
                     color: AppColors.primary,
-                    barWidth: 3,
+                    barWidth: context.w(3),
                     isStrokeCapRound: true,
                     dotData: FlDotData(
                       show: true,
                       getDotPainter: (spot, percent, bar, index) {
                         if (index == spots.length - 1) {
                           return FlDotCirclePainter(
-                            radius: 5,
+                            radius: context.w(5),
                             color: AppColors.primary,
-                            strokeWidth: 3,
+                            strokeWidth: context.w(3),
                             strokeColor: colors.surface,
                           );
                         }
@@ -354,7 +365,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _periodTabs(AppColorScheme colors) {
     const periods = ['Daily', 'Weekly', 'Monthly'];
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: EdgeInsets.all(context.w(3)),
       decoration: BoxDecoration(
         color: colors.surfaceVariant,
         borderRadius: BorderRadius.circular(8),
@@ -367,7 +378,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onTap: () => setState(() => _chartPeriod = p),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 160),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: EdgeInsets.symmetric(
+                horizontal: context.w(12),
+                vertical: context.h(6),
+              ),
               decoration: BoxDecoration(
                 color: selected ? AppColors.primary : Colors.transparent,
                 borderRadius: BorderRadius.circular(6),
@@ -376,7 +390,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 p,
                 style: TextStyle(
                   color: selected ? Colors.white : colors.textSecondary,
-                  fontSize: 12,
+                  fontSize: context.h(12),
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
@@ -398,7 +412,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return Column(
         children: [
           _buildVolumeTrend(s, colors),
-          const SizedBox(height: 16),
+          SizedBox(height: context.h(16)),
           _buildTopSelling(s, colors),
         ],
       );
@@ -408,7 +422,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(flex: 3, child: _buildVolumeTrend(s, colors)),
-        const SizedBox(width: 16),
+        SizedBox(width: context.w(16)),
         Expanded(flex: 2, child: _buildTopSelling(s, colors)),
       ],
     );
@@ -421,7 +435,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final peakIndex = s.hourlyVolume.indexOf(peakValue);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+      padding: EdgeInsets.fromLTRB(
+        context.w(20),
+        context.h(18),
+        context.w(20),
+        context.h(16),
+      ),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(14),
@@ -436,14 +455,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Volume Trend',
                 style: TextStyle(
                   color: colors.textPrimary,
-                  fontSize: 15,
+                  fontSize: context.h(15),
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.w(10),
+                  vertical: context.h(5),
+                ),
                 decoration: BoxDecoration(
                   color: colors.surfaceVariant,
                   borderRadius: BorderRadius.circular(6),
@@ -454,10 +475,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Text(
                       'Today',
-                      style:
-                          TextStyle(color: colors.textSecondary, fontSize: 12),
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: context.h(12),
+                      ),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: context.w(4)),
                     Icon(Icons.keyboard_arrow_down,
                         size: 16, color: colors.textMuted),
                   ],
@@ -465,9 +488,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: context.h(16)),
           SizedBox(
-            height: 160,
+            height: context.h(160),
             child: BarChart(
               BarChartData(
                 maxY: maxY,
@@ -477,7 +500,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   horizontalInterval: maxY / 3,
                   getDrawingHorizontalLine: (_) => FlLine(
                     color: colors.border.withOpacity(0.55),
-                    strokeWidth: 1,
+                    strokeWidth: context.w(1),
                   ),
                 ),
                 borderData: FlBorderData(show: false),
@@ -491,18 +514,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 24,
+                      reservedSize: context.h(24),
                       getTitlesWidget: (value, meta) {
                         final i = value.toInt();
                         if (i < 0 || i >= labels.length) {
                           return const SizedBox();
                         }
                         return Padding(
-                          padding: const EdgeInsets.only(top: 6),
+                          padding: EdgeInsets.only(top: context.h(6)),
                           child: Text(
                             labels[i],
                             style: TextStyle(
-                                color: colors.textMuted, fontSize: 10),
+                                color: colors.textMuted,
+                                fontSize: context.h(10)),
                           ),
                         );
                       },
@@ -518,7 +542,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         TextStyle(
                           color: colors.textPrimary,
                           fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                          fontSize: context.h(12),
                         ),
                       );
                     },
@@ -531,9 +555,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     barRods: [
                       BarChartRodData(
                         toY: e.value,
-                        width: 30,
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(3)),
+                        width: context.w(30),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(context.w(3)),
+                        ),
                         color: isPeak
                             ? AppColors.primary
                             : AppColors.primary.withOpacity(0.45),
@@ -552,7 +577,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildTopSelling(DashboardStatsModel s, AppColorScheme colors) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+      padding: EdgeInsets.fromLTRB(
+        context.w(20),
+        context.h(18),
+        context.w(20),
+        context.h(12),
+      ),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(14),
@@ -565,15 +595,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             'Top Selling Items',
             style: TextStyle(
               color: colors.textPrimary,
-              fontSize: 15,
+              fontSize: context.h(15),
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: context.h(14)),
           for (final item in s.topSellingItems) ...[
             _topItemRow(item, colors),
             if (item != s.topSellingItems.last)
-              Divider(height: 20, color: colors.divider),
+              Divider(height: context.h(20), color: colors.divider),
           ],
         ],
       ),
@@ -584,8 +614,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       children: [
         Container(
-          width: 28,
-          height: 28,
+          width: context.w(28),
+          height: context.h(28),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: item.rank == 1
@@ -597,12 +627,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             '${item.rank}',
             style: TextStyle(
               color: item.rank == 1 ? AppColors.primary : colors.textSecondary,
-              fontSize: 13,
+              fontSize: context.h(13),
               fontWeight: FontWeight.w700,
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: context.w(12)),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -611,14 +641,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 item.name,
                 style: TextStyle(
                   color: colors.textPrimary,
-                  fontSize: 13,
+                  fontSize: context.h(13),
                   fontWeight: FontWeight.w600,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
                 '${item.orders} Orders',
-                style: TextStyle(color: colors.textMuted, fontSize: 11),
+                style: TextStyle(
+                  color: colors.textMuted,
+                  fontSize: context.h(11),
+                ),
               ),
             ],
           ),
@@ -627,7 +660,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           '\$${item.revenue.toStringAsFixed(0)}',
           style: TextStyle(
             color: colors.textPrimary,
-            fontSize: 13,
+            fontSize: context.h(13),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -642,7 +675,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildRecentActivity(
       List<ActivityLogModel> logs, AppColorScheme colors) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+      padding: EdgeInsets.fromLTRB(
+        context.w(20),
+        context.h(18),
+        context.w(20),
+        context.h(8),
+      ),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(14),
@@ -657,7 +695,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Recent Activity',
                 style: TextStyle(
                   color: colors.textPrimary,
-                  fontSize: 15,
+                  fontSize: context.h(15),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -666,31 +704,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onPressed: () {},
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: EdgeInsets.symmetric(horizontal: context.w(8)),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text(
+                child: Text(
                   'VIEW ALL',
                   style: TextStyle(
-                      fontSize: 12,
+                      fontSize: context.h(12),
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: context.h(8)),
           // Header row
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.symmetric(vertical: context.h(8)),
             child: Row(
               children: [
                 _colHeader(colors, 'ID', flex: 2),
                 _colHeader(colors, 'TIME', flex: 2),
                 _colHeader(colors, 'EVENT', flex: 4),
                 _colHeader(colors, 'STATUS/ROLE', flex: 2),
-                const SizedBox(width: 36),
+                SizedBox(width: context.w(36)),
               ],
             ),
           ),
@@ -708,7 +746,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         text,
         style: TextStyle(
           color: colors.textMuted,
-          fontSize: 11,
+          fontSize: context.h(11),
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
         ),
@@ -746,7 +784,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: EdgeInsets.symmetric(vertical: context.h(12)),
       decoration: BoxDecoration(
         border:
             Border(bottom: BorderSide(color: colors.divider.withOpacity(0.6))),
@@ -759,7 +797,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               '#${log.id}',
               style: TextStyle(
                 color: colors.textPrimary,
-                fontSize: 13,
+                fontSize: context.h(13),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -768,14 +806,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             flex: 2,
             child: Text(
               Formatters.timeAgo(log.timestamp),
-              style: TextStyle(color: colors.textSecondary, fontSize: 12),
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: context.h(12),
+              ),
             ),
           ),
           Expanded(
             flex: 4,
             child: Text(
               log.action,
-              style: TextStyle(color: colors.textPrimary, fontSize: 13),
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: context.h(13),
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -784,7 +828,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.w(8),
+                  vertical: context.h(4),
+                ),
                 decoration: BoxDecoration(
                   color: badgeBg,
                   borderRadius: BorderRadius.circular(6),
@@ -793,7 +840,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   status,
                   style: TextStyle(
                     color: badgeFg,
-                    fontSize: 10,
+                    fontSize: context.h(10),
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.3,
                   ),
@@ -802,10 +849,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           SizedBox(
-            width: 36,
+            width: context.w(36),
             child: IconButton(
               onPressed: () {},
-              icon: Icon(Icons.more_vert, size: 18, color: colors.textMuted),
+              icon: Icon(
+                Icons.more_vert,
+                size: context.h(18),
+                color: colors.textMuted,
+              ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),

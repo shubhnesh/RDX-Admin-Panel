@@ -61,15 +61,6 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
   // ===========================================================================
 
   Widget _buildBoard(LiveOrdersProvider provider) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final horizontalPadding = context.w(44);
-    final sectionGap = context.w(18);
-    final availableSectionWidth =
-        (screenWidth - horizontalPadding - sectionGap * 3) / 4;
-    final sectionWidth = availableSectionWidth.clamp(
-      context.w(220),
-      context.w(320),
-    );
     final List<Widget> sections = [
       _buildSection(
         title: 'NEW ORDERS',
@@ -107,33 +98,39 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
       ),
     ];
 
-    return Scrollbar(
-      thumbVisibility: true,
-      notificationPredicate: (notification) {
-        return notification.depth == 0;
-      },
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          context.w(22),
-          context.h(18),
-          context.w(22),
-          context.h(24),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (int i = 0; i < sections.length; i++) ...[
-              SizedBox(
-                width: sectionWidth,
-                child: sections[i],
-              ),
-              if (i != sections.length - 1) SizedBox(width: sectionGap),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = context.w(44);
+        final sectionGap = context.w(18);
+        final sectionWidth = ((constraints.maxWidth -
+                    horizontalPadding -
+                    sectionGap * (sections.length - 1)) /
+                sections.length)
+            .clamp(0.0, context.w(320));
+
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            context.w(22),
+            context.h(18),
+            context.w(22),
+            context.h(24),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < sections.length; i++) ...[
+                Expanded(
+                  child: SizedBox(
+                    width: sectionWidth,
+                    child: sections[i],
+                  ),
+                ),
+                if (i != sections.length - 1) SizedBox(width: sectionGap),
+              ],
             ],
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

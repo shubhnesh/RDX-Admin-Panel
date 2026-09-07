@@ -437,13 +437,6 @@ class _FooterTile extends StatelessWidget {
                             opacity: expanded ? 1.0 : 0.0,
                             child: Text(
                               label,
-                              // style: TextStyle(
-                              //   color: color,
-                              //   fontSize: 13.5,
-                              //   fontWeight: selected
-                              //       ? FontWeight.w600
-                              //       : FontWeight.w500,
-                              // ),
                               style: AppTextStyles.section(context)
                                   .copyWith(color: color),
                               maxLines: 1,

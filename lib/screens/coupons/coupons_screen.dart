@@ -262,11 +262,6 @@ class _StatusFilterCard extends StatelessWidget {
           ),
           child: Text(
             label,
-            // style: TextStyle(
-            //   color: selected ? Colors.white : colors.textSecondary,
-            //   fontSize: context.h(12),
-            //   fontWeight: FontWeight.w600,
-            // ),
             style: selected
                 ? AppTextStyles.section(context).copyWith(color: Colors.white)
                 : AppTextStyles.bodySecondary(context)
@@ -354,12 +349,6 @@ class _CouponCard extends StatelessWidget {
                     coupon.status.name.toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    // style: TextStyle(
-                    //   color: statusColor,
-                    //   fontSize: context.h(10),
-                    //   fontWeight: FontWeight.w700,
-                    //   letterSpacing: 0.4,
-                    // ),
                     style: AppTextStyles.label(context)
                         .copyWith(color: statusColor),
                   ),
@@ -405,12 +394,6 @@ class _CouponCard extends StatelessWidget {
                   coupon.code,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  // style: TextStyle(
-                  //   color: colors.textPrimary,
-                  //   fontWeight: FontWeight.w800,
-                  //   fontSize: context.h(17),
-                  //   letterSpacing: 0.3,
-                  // ),
                   style: AppTextStyles.heading(context),
                 ),
               ),
@@ -444,10 +427,6 @@ class _CouponCard extends StatelessWidget {
                 : coupon.description,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            // style: AppTextStyles.body(context).copyWith(
-            //   color: colors.textSecondary,
-            //   fontSize: context.h(12),
-            // ),
             style: AppTextStyles.bodySecondary(context),
           ),
 
@@ -477,11 +456,6 @@ class _CouponCard extends StatelessWidget {
                     discount,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    // style: TextStyle(
-                    //   color: AppColors.primary,
-                    //   fontWeight: FontWeight.w800,
-                    //   fontSize: context.h(16),
-                    // ),
                     style: AppTextStyles.section(context)
                         .copyWith(color: AppColors.primary),
                   ),
@@ -494,10 +468,6 @@ class _CouponCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
-                      // style: AppTextStyles.label(context).copyWith(
-                      //   color: colors.textSecondary,
-                      //   fontSize: context.h(11),
-                      // ),
                       style: AppTextStyles.label(context),
                     ),
                   ),
@@ -538,10 +508,6 @@ class _CouponCard extends StatelessWidget {
                   usageLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  // style: AppTextStyles.label(context).copyWith(
-                  //   color: colors.textSecondary,
-                  //   fontSize: context.h(11),
-                  // ),
                   style: AppTextStyles.label(context),
                 ),
               ),
@@ -568,10 +534,6 @@ class _CouponCard extends StatelessWidget {
                   '${Formatters.date(coupon.startDate)} - ${Formatters.date(coupon.endDate)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  // style: AppTextStyles.label(context).copyWith(
-                  //   color: colors.textMuted,
-                  //   fontSize: context.h(11),
-                  // ),
                   style: AppTextStyles.label(context)
                       .copyWith(color: colors.textMuted),
                 ),

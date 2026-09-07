@@ -146,32 +146,15 @@ class _RdxTextFieldState extends State<RdxTextField> {
         focusNode: _focusNode,
         textAlignVertical:
             isMultiline ? TextAlignVertical.top : TextAlignVertical.center,
-        // style: TextStyle(
-        //   color: colors.textPrimary,
-        //   fontSize: fs,
-        //   fontWeight: FontWeight.w400,
-        //   height: lineHeightFactor,
-        // ),
         style: AppTextStyles.body(context),
         cursorColor: AppColors.primary,
         decoration: InputDecoration(
           hintText: widget.hint,
-          // hintStyle: TextStyle(
-          //   color: colors.textMuted,
-          //   fontSize: fs,
-          //   fontWeight: FontWeight.w400,
-          //   height: lineHeightFactor,
-          // ),
           hintStyle:
               AppTextStyles.body(context).copyWith(color: colors.textMuted),
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
           prefixText: widget.prefixText,
-          // prefixStyle: TextStyle(
-          //   color: colors.textPrimary,
-          //   fontSize: fs,
-          //   height: lineHeightFactor,
-          // ),
           prefixStyle: AppTextStyles.body(context),
           counterText: widget.counterText ?? '',
           filled: true,
@@ -208,11 +191,6 @@ class _RdxTextFieldState extends State<RdxTextField> {
       children: [
         Text(
           widget.label!,
-          // style: TextStyle(
-          //   color: colors.textSecondary,
-          //   fontSize: context.h(12),
-          //   fontWeight: FontWeight.w500,
-          // ),
           style: AppTextStyles.bodySecondary(context)
               .copyWith(color: colors.textSecondary),
         ),

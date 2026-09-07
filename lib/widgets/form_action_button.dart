@@ -67,10 +67,6 @@ class FormActionButton extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            // style: TextStyle(
-            //   fontSize: context.h(13),
-            //   fontWeight: FontWeight.w600,
-            // ),
             style: isPrimary
                 ? AppTextStyles.label(context).copyWith(color: Colors.white)
                 : AppTextStyles.label(context)

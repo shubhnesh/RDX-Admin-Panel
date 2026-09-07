@@ -234,25 +234,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Text(
-                    //   'Analytics Performance',
-                    //   style: TextStyle(
-                    //     color: colors.textPrimary,
-                    //     fontSize: context.h(16),
-                    //     fontWeight: FontWeight.w600,
-                    //   ),
-                    // ),
                     Text(
                       'Analytics Performance',
                       style: AppTextStyles.heading(context),
                     ),
-                    // SizedBox(height: context.h(4)),
-                    // Text(
-                    //   "Real-time insight into your restaurant's ecosystem.",
-                    //   style: TextStyle(
-                    //     color: colors.textSecondary,
-                    //     fontSize: context.h(12),
-                    //   ),
                     Text(
                       "Real-time insight into your restaurant's ecosystem.",
                       style: AppTextStyles.bodySecondary(context),
@@ -297,9 +282,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           padding: EdgeInsets.only(top: context.h(8)),
                           child: Text(
                             days[i],
-                            // style: TextStyle(
-                            //     color: colors.textMuted,
-                            //     fontSize: context.h(13)),
                             style: AppTextStyles.bodySecondary(context)
                                 .copyWith(color: colors.textMuted),
                           ),
@@ -398,11 +380,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Text(
                 p,
-                // style: TextStyle(
-                //   color: selected ? Colors.white : colors.textSecondary,
-                //   fontSize: context.h(16),
-                //   fontWeight: selected ? FontWeight.w400 : FontWeight.w300,
-                // ),
                 style: selected
                     ? AppTextStyles.label(context).copyWith(color: Colors.white)
                     : AppTextStyles.bodySecondary(context),
@@ -464,14 +441,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Row(
             children: [
-              // Text(
-              //   'Volume Trend',
-              //   style: TextStyle(
-              //     color: colors.textPrimary,
-              //     fontSize: context.h(15),
-              //     fontWeight: FontWeight.w600,
-              //   ),
-              // ),
               Text(
                 'Volume Trend',
                 style: AppTextStyles.heading(context),
@@ -490,13 +459,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Text(
-                    //   'Today',
-                    //   style: TextStyle(
-                    //     color: colors.textSecondary,
-                    //     fontSize: context.h(12),
-                    //   ),
-                    // ),
                     Text(
                       'Today',
                       style: AppTextStyles.bodySecondary(context),
@@ -560,11 +522,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       return BarTooltipItem(
                         rod.toY.toStringAsFixed(0),
-                        // TextStyle(
-                        //   color: colors.textPrimary,
-                        //   fontWeight: FontWeight.w600,
-                        //   fontSize: context.h(12),
-                        // ),
                         AppTextStyles.label(context)
                             .copyWith(color: colors.textPrimary),
                       );
@@ -614,14 +571,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Text(
-          //   'Top Selling Items',
-          //   style: TextStyle(
-          //     color: colors.textPrimary,
-          //     fontSize: context.h(15),
-          //     fontWeight: FontWeight.w600,
-          //   ),
-          // ),
           Text(
             'Top Selling Items',
             style: AppTextStyles.heading(context),
@@ -652,11 +601,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: Text(
             '${item.rank}',
-            // style: TextStyle(
-            //   color: item.rank == 1 ? AppColors.primary : colors.textSecondary,
-            //   fontSize: context.h(13),
-            //   fontWeight: FontWeight.w700,
-            // ),
             style: AppTextStyles.label(context).copyWith(
               color: item.rank == 1 ? AppColors.primary : colors.textSecondary,
             ),
@@ -669,21 +613,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Text(
                 item.name,
-                // style: TextStyle(
-                //   color: colors.textPrimary,
-                //   fontSize: context.h(13),
-                //   fontWeight: FontWeight.w600,
-                // ),
                 style: AppTextStyles.label(context)
                     .copyWith(color: colors.textPrimary),
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
                 '${item.orders} Orders',
-                // style: TextStyle(
-                //   color: colors.textMuted,
-                //   fontSize: context.h(11),
-                // ),
                 style: AppTextStyles.caption(context),
               ),
             ],
@@ -691,11 +626,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         Text(
           '\$${item.revenue.toStringAsFixed(0)}',
-          // style: TextStyle(
-          //   color: colors.textPrimary,
-          //   fontSize: context.h(13),
-          //   fontWeight: FontWeight.w600,
-          // ),
           style:
               AppTextStyles.label(context).copyWith(color: colors.textPrimary),
         ),
@@ -726,14 +656,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Row(
             children: [
-              // Text(
-              //   'Recent Activity',
-              //   style: TextStyle(
-              //     color: colors.textPrimary,
-              //     fontSize: context.h(15),
-              //     fontWeight: FontWeight.w600,
-              //   ),
-              // ),
               Text(
                 'Recent Activity',
                 style: AppTextStyles.heading(context),
@@ -747,15 +669,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child:
-                    // Text(
-                    //   'VIEW ALL',
-                    //   style: TextStyle(
-                    //       fontSize: context.h(12),
-                    //       fontWeight: FontWeight.w600,
-                    //       letterSpacing: 0.5),
-                    // ),
-                    Text(
+                child: Text(
                   'VIEW ALL',
                   style: AppTextStyles.label(context),
                 ),
@@ -788,12 +702,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       flex: flex,
       child: Text(
         text,
-        // style: TextStyle(
-        //   color: colors.textMuted,
-        //   fontSize: context.h(16),
-        //   fontWeight: FontWeight.w400,
-        //   letterSpacing: 0.5,
-        // ),
         style: AppTextStyles.bodySecondary(context)
             .copyWith(color: colors.textMuted),
       ),
@@ -841,11 +749,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             flex: 2,
             child: Text(
               '#${log.id}',
-              // style: TextStyle(
-              //   color: colors.textPrimary,
-              //   fontSize: context.h(13),
-              //   fontWeight: FontWeight.w600,
-              // ),
               style: AppTextStyles.body(context)
                   .copyWith(color: colors.textPrimary),
             ),
@@ -854,10 +757,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             flex: 2,
             child: Text(
               Formatters.timeAgo(log.timestamp),
-              // style: TextStyle(
-              //   color: colors.textSecondary,
-              //   fontSize: context.h(12),
-              // ),
               style: AppTextStyles.body(context)
                   .copyWith(color: colors.textSecondary),
             ),
@@ -866,10 +765,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             flex: 4,
             child: Text(
               log.action,
-              // style: TextStyle(
-              //   color: colors.textPrimary,
-              //   fontSize: context.h(13),
-              // ),
               style: AppTextStyles.body(context),
               overflow: TextOverflow.ellipsis,
             ),
@@ -889,12 +784,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Text(
                   status,
-                  // style: TextStyle(
-                  //   color: badgeFg,
-                  //   fontSize: context.h(10),
-                  //   fontWeight: FontWeight.w700,
-                  //   letterSpacing: 0.3,
-                  // ),
                   style: AppTextStyles.body(context).copyWith(color: badgeFg),
                 ),
               ),
@@ -918,29 +807,3 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 }
-
-// ─── Local data holder for stat cards ───────────────────────────────
-
-// class _StatCardData {
-//   final String label;
-//   final String value;
-//   final String? subtitle;
-//   final Color? subtitleColor;
-//   final IconData? subtitleIcon;
-//   final double? progress;
-//   final IconData icon;
-//   final Color iconBg;
-//   final Color iconColor;
-
-//   const _StatCardData({
-//     required this.label,
-//     required this.value,
-//     this.subtitle,
-//     this.subtitleColor,
-//     this.subtitleIcon,
-//     this.progress,
-//     required this.icon,
-//     required this.iconBg,
-//     required this.iconColor,
-//   });
-// }

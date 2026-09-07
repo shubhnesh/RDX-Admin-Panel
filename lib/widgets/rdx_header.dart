@@ -31,11 +31,6 @@ class RdxHeader extends StatelessWidget implements PreferredSizeWidget {
           const SizedBox(width: 4),
           Text(
             title,
-            // style: TextStyle(
-            //   color: colors.textPrimary,
-            //   fontSize: 17,
-            //   fontWeight: FontWeight.w700,
-            // ),
             style: AppTextStyles.heading(context),
           ),
         ],

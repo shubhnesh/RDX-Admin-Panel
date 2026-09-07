@@ -244,22 +244,12 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
               style: widget.textStyle ??
-                  // TextStyle(
-                  //   color: widget.textColor ?? colors.textPrimary,
-                  //   fontSize: 15,
-                  //   fontWeight: FontWeight.w400,
-                  // ),
                   AppTextStyles.bodySecondary(context).copyWith(
                     color: widget.textColor ?? colors.textPrimary,
                   ),
               decoration: InputDecoration(
                 hintText: widget.hintText,
                 hintStyle: widget.hintStyle ??
-                    // TextStyle(
-                    //   color: widget.hintColor ?? colors.textMuted,
-                    //   fontSize: 15,
-                    //   fontWeight: FontWeight.w400,
-                    // ),
                     AppTextStyles.bodySecondary(context).copyWith(
                       color: widget.hintColor ?? colors.textMuted,
                     ),

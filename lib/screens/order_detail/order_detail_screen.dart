@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/order_model.dart';
@@ -168,14 +169,9 @@ class _OrderHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text(
-                    'Order #RDX-${order.id}',
-                    style: const TextStyle(
-                      color: Color(0xFFE8E8E8),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  Text('Order #RDX-${order.id}',
+                      style: AppTextStyles.label(context)
+                          .copyWith(color: const Color(0xFFE8E8E8))),
                   const SizedBox(width: 7),
                   _SmallStatusBadge(
                     status: order.status,
@@ -183,13 +179,9 @@ class _OrderHeader extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              Text(
-                'Placed at ${_formatTime(order.createdAt)} • Delivery order',
-                style: const TextStyle(
-                  color: Color(0xFF666666),
-                  fontSize: 8,
-                ),
-              ),
+              Text('Placed at ${_formatTime(order.createdAt)} • Delivery order',
+                  style: AppTextStyles.caption(context)
+                      .copyWith(color: const Color(0xFF666666))),
             ],
           ),
         ),
@@ -251,13 +243,9 @@ class _HeaderButton extends StatelessWidget {
               color: const Color(0xFFB8B8B8),
             ),
             const SizedBox(width: 5),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFFB8B8B8),
-                fontSize: 8,
-              ),
-            ),
+            Text(label,
+                style: AppTextStyles.caption(context)
+                    .copyWith(color: const Color(0xFFB8B8B8))),
           ],
         ),
       ),
@@ -305,22 +293,13 @@ class _CustomerCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      order.customerName,
-                      style: const TextStyle(
-                        color: Color(0xFFE2E2E2),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Text(order.customerName,
+                        style: AppTextStyles.label(context)
+                            .copyWith(color: const Color(0xFFE2E2E2))),
                     const SizedBox(height: 3),
-                    Text(
-                      order.customerPhone,
-                      style: const TextStyle(
-                        color: Color(0xFF777777),
-                        fontSize: 8,
-                      ),
-                    ),
+                    Text(order.customerPhone,
+                        style: AppTextStyles.caption(context)
+                            .copyWith(color: const Color(0xFF777777))),
                   ],
                 ),
               ),
@@ -359,14 +338,9 @@ class _AddressRow extends StatelessWidget {
         ),
         const SizedBox(width: 7),
         Expanded(
-          child: Text(
-            address,
-            style: const TextStyle(
-              color: Color(0xFF929292),
-              fontSize: 8,
-              height: 1.45,
-            ),
-          ),
+          child: Text(address,
+              style: AppTextStyles.caption(context)
+                  .copyWith(color: const Color(0xFF929292))),
         ),
       ],
     );
@@ -447,14 +421,9 @@ class _OrderItemsCard extends StatelessWidget {
                       color: const Color(0xFF202020),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text(
-                      '${item.quantity}x',
-                      style: const TextStyle(
-                        color: Color(0xFFBBBBBB),
-                        fontSize: 7,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: Text('${item.quantity}x',
+                        style: AppTextStyles.caption(context)
+                            .copyWith(color: const Color(0xFFBBBBBB))),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -462,19 +431,13 @@ class _OrderItemsCard extends StatelessWidget {
                       item.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFFD2D2D2),
-                        fontSize: 9,
-                      ),
+                      style: AppTextStyles.caption(context)
+                          .copyWith(color: const Color(0xFFD2D2D2)),
                     ),
                   ),
-                  Text(
-                    '₹${(item.price * item.quantity).toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      color: Color(0xFFBDBDBD),
-                      fontSize: 8,
-                    ),
-                  ),
+                  Text('₹${(item.price * item.quantity).toStringAsFixed(2)}',
+                      style: AppTextStyles.caption(context)
+                          .copyWith(color: const Color(0xFFBDBDBD))),
                 ],
               ),
             ),
@@ -521,21 +484,16 @@ class _PriceRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: strong ? const Color(0xFFD7D7D7) : const Color(0xFF777777),
-              fontSize: strong ? 9 : 8,
-              fontWeight: strong ? FontWeight.w500 : FontWeight.w400,
-            ),
-          ),
+          child: Text(label,
+              style: AppTextStyles.caption(context).copyWith(
+                color:
+                    strong ? const Color(0xFFD7D7D7) : const Color(0xFF777777),
+              )),
         ),
         Text(
           value,
-          style: TextStyle(
+          style: AppTextStyles.caption(context).copyWith(
             color: strong ? const Color(0xFFE5E5E5) : const Color(0xFF999999),
-            fontSize: strong ? 10 : 8,
-            fontWeight: strong ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
       ],
@@ -588,14 +546,9 @@ class _DeliveryCard extends StatelessWidget {
                   color: const Color(0xFF292929),
                 ),
               ),
-              child: const Text(
-                'DELIVERY LOCATION',
-                style: TextStyle(
-                  color: Color(0xFF777777),
-                  fontSize: 7,
-                  letterSpacing: .5,
-                ),
-              ),
+              child: Text('DELIVERY LOCATION',
+                  style: AppTextStyles.caption(context)
+                      .copyWith(color: const Color(0xFF777777))),
             ),
           ),
           Positioned(
@@ -650,27 +603,17 @@ class _DeliveryCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 9),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'RIDER ASSIGNED',
-                          style: TextStyle(
-                            color: Color(0xFF6B6B6B),
-                            fontSize: 6.5,
-                            letterSpacing: .4,
-                          ),
-                        ),
+                        Text('RIDER ASSIGNED',
+                            style: AppTextStyles.caption(context)
+                                .copyWith(color: const Color(0xFF6B6B6B))),
                         SizedBox(height: 3),
-                        Text(
-                          'Marcus T.  (3.2 mi away)',
-                          style: TextStyle(
-                            color: Color(0xFFD7D7D7),
-                            fontSize: 8,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                        Text('Marcus T.  (3.2 mi away)',
+                            style: AppTextStyles.caption(context)
+                                .copyWith(color: const Color(0xFFD7D7D7))),
                       ],
                     ),
                   ),
@@ -833,26 +776,19 @@ class _TimelineStep extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: active || completed
-                        ? const Color(0xFFDADADA)
-                        : const Color(0xFF707070),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text(title,
+                    style: AppTextStyles.caption(context).copyWith(
+                      color: active || completed
+                          ? const Color(0xFFDADADA)
+                          : const Color(0xFF707070),
+                    )),
                 const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: active
-                        ? const Color(0xFFB8B8B8)
-                        : const Color(0xFF5E5E5E),
-                    fontSize: 7,
-                  ),
-                ),
+                Text(subtitle,
+                    style: AppTextStyles.caption(context).copyWith(
+                      backgroundColor: active
+                          ? const Color(0xFFB8B8B8)
+                          : const Color(0xFF5E5E5E),
+                    )),
               ],
             ),
           ),
@@ -915,13 +851,9 @@ class _StatusCard extends StatelessWidget {
               padding: EdgeInsets.zero,
               minimumSize: const Size(0, 25),
             ),
-            child: const Text(
-              'Cancel Order',
-              style: TextStyle(
-                color: Color(0xFFCE3048),
-                fontSize: 8,
-              ),
-            ),
+            child: Text('Cancel Order',
+                style: AppTextStyles.caption(context)
+                    .copyWith(color: const Color(0xFFCE3048))),
           ),
         ],
       ),
@@ -958,14 +890,10 @@ class _StatusButton extends StatelessWidget {
             color: active ? const Color(0xFFB51A35) : const Color(0xFF353535),
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? Colors.white : const Color(0xFF9A9A9A),
-            fontSize: 7.5,
-            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
+        child: Text(label,
+            style: AppTextStyles.caption(context).copyWith(
+              color: active ? Colors.white : const Color(0xFF9A9A9A),
+            )),
       ),
     );
   }
@@ -1001,15 +929,9 @@ class _BottomActionBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Text(
-            'QUICK ACTIONS',
-            style: TextStyle(
-              color: Color(0xFF656565),
-              fontSize: 6.5,
-              fontWeight: FontWeight.w600,
-              letterSpacing: .45,
-            ),
-          ),
+          Text('QUICK ACTIONS',
+              style: AppTextStyles.caption(context)
+                  .copyWith(color: const Color(0xFF656565))),
           const SizedBox(width: 14),
           _QuickAction(
             icon: Icons.schedule_outlined,
@@ -1099,20 +1021,12 @@ class _QuickAction extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFFB0B0B0),
-                    fontSize: 6.5,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF666666),
-                    fontSize: 6,
-                  ),
-                ),
+                Text(title,
+                    style: AppTextStyles.caption(context)
+                        .copyWith(color: const Color(0xFFB0B0B0))),
+                Text(subtitle,
+                    style: AppTextStyles.caption(context)
+                        .copyWith(color: const Color(0xFF666666))),
               ],
             ),
           ],
@@ -1160,14 +1074,10 @@ class _BottomButton extends StatelessWidget {
               color: primary ? Colors.white : const Color(0xFFAAAAAA),
             ),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: primary ? Colors.white : const Color(0xFFBDBDBD),
-                fontSize: 7.5,
-                fontWeight: primary ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
+            Text(label,
+                style: AppTextStyles.caption(context).copyWith(
+                  color: primary ? Colors.white : const Color(0xFFBDBDBD),
+                )),
           ],
         ),
       ),
@@ -1208,24 +1118,14 @@ class _DarkCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFF777777),
-                    fontSize: 7,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: .4,
-                  ),
-                ),
+                child: Text(title,
+                    style: AppTextStyles.caption(context)
+                        .copyWith(color: const Color(0xFF777777))),
               ),
               if (trailing != null)
-                Text(
-                  trailing!,
-                  style: const TextStyle(
-                    color: Color(0xFF666666),
-                    fontSize: 6.5,
-                  ),
-                ),
+                Text(trailing!,
+                    style: AppTextStyles.caption(context)
+                        .copyWith(color: const Color(0xFF666666))),
             ],
           ),
           const SizedBox(height: 11),
@@ -1293,15 +1193,9 @@ class _SmallStatusBadge extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          Text(
-            status.label.toUpperCase(),
-            style: TextStyle(
-              color: color,
-              fontSize: 6,
-              fontWeight: FontWeight.w600,
-              letterSpacing: .25,
-            ),
-          ),
+          Text(status.label.toUpperCase(),
+              style: AppTextStyles.caption(context)
+                  .copyWith(color: const Color(0xFF656565))),
         ],
       ),
     );

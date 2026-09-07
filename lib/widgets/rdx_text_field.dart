@@ -192,7 +192,7 @@ class _RdxTextFieldState extends State<RdxTextField> {
         Text(
           widget.label!,
           style: AppTextStyles.bodySecondary(context)
-              .copyWith(color: colors.textSecondary),
+              .copyWith(color: colors.textMuted),
         ),
         SizedBox(height: context.h(6)),
         field,

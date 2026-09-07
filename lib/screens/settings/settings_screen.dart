@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
@@ -30,16 +30,11 @@ class SettingsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('System Settings',
-                          style: TextStyle(
-                              color: colors.textPrimary,
-                              fontSize: context.h(18),
-                              fontWeight: FontWeight.w700)),
+                          style: AppTextStyles.heading(context)),
                       SizedBox(height: context.h(4)),
                       Text(
                           'Manage essential configuration for your restaurant operations.',
-                          style: TextStyle(
-                              color: colors.textSecondary,
-                              fontSize: context.h(10))),
+                          style: AppTextStyles.bodySecondary(context)),
                     ],
                   ),
                 ),
@@ -51,12 +46,9 @@ class SettingsScreen extends StatelessWidget {
                 final compact = constraints.maxWidth < 760;
                 final identity = _IdentityCard(colors: colors);
                 final rules = _RulesCard(provider: provider, colors: colors);
-                final hours = _HoursCard(colors: colors);
                 if (compact) {
                   return Column(children: [
                     identity,
-                    SizedBox(height: context.h(14)),
-                    hours,
                     SizedBox(height: context.h(14)),
                     rules,
                     SizedBox(height: context.h(20)),
@@ -90,8 +82,6 @@ class SettingsScreen extends StatelessWidget {
                             rules,
                           ]),
                         ),
-                        SizedBox(width: context.w(14)),
-                        Expanded(child: hours),
                       ],
                     ),
                     SizedBox(height: context.h(20)),
@@ -160,58 +150,10 @@ class _IdentityCard extends StatelessWidget {
             child: TextButton.icon(
                 onPressed: () => Navigator.of(context)
                     .pushNamed(AppRoutes.restaurantProfile),
-                icon: Icon(Icons.open_in_new, size: context.h(14)),
-                label: const Text('Open Restaurant Profile'))),
-      ]),
-    );
-  }
-}
-
-class _HoursCard extends StatelessWidget {
-  final AppColorScheme colors;
-  const _HoursCard({required this.colors});
-
-  @override
-  Widget build(BuildContext context) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return _SettingsCard(
-      title: 'Operating Hours',
-      icon: Icons.access_time,
-      colors: colors,
-      trailing: Text('SYSTEM ONLINE',
-          style: TextStyle(color: AppColors.success, fontSize: context.h(8))),
-      child: Column(children: [
-        for (final day in days)
-          Padding(
-              padding: EdgeInsets.symmetric(vertical: context.h(5)),
-              child: Row(children: [
-                SizedBox(
-                    width: context.w(30),
-                    child: Text(day,
-                        style: TextStyle(
-                            color: colors.textSecondary,
-                            fontSize: context.h(10)))),
-                Switch(
-                    value: day != 'Sat' && day != 'Sun',
-                    onChanged: (_) {},
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                SizedBox(width: context.w(4)),
-                Expanded(
-                    child: _TimeBox(
-                        text: day == 'Sat' || day == 'Sun'
-                            ? 'CLOSED'
-                            : '10:00 AM',
-                        colors: colors)),
-                Padding(
-                    padding: EdgeInsets.symmetric(horizontal: context.w(4)),
-                    child: Text('to')),
-                Expanded(
-                    child: _TimeBox(
-                        text: day == 'Sat' || day == 'Sun'
-                            ? 'CLOSED'
-                            : '10:00 PM',
-                        colors: colors))
-              ]))
+                icon: Icon(Icons.open_in_new, size: context.h(20)),
+                label: Text('Open Restaurant Profile',
+                    style: AppTextStyles.section(context)
+                        .copyWith(color: colors.primary)))),
       ]),
     );
   }
@@ -282,10 +224,8 @@ class _SettingsCard extends StatelessWidget {
           Icon(icon, size: context.h(15), color: AppColors.primary),
           SizedBox(width: context.w(8)),
           Text(title,
-              style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: context.h(12),
-                  fontWeight: FontWeight.w600)),
+              style: AppTextStyles.section(context)
+                  .copyWith(color: colors.textPrimary)),
           const Spacer(),
           if (trailing != null) trailing!
         ]),
@@ -316,13 +256,17 @@ class _RuleTile extends StatelessWidget {
         Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style: TextStyle(
-                  color: colors.textPrimary, fontSize: context.h(10))),
+          Text(
+            title,
+            style: AppTextStyles.bodySecondary(context)
+                .copyWith(color: colors.textPrimary),
+          ),
           SizedBox(height: context.h(3)),
-          Text(subtitle,
-              style: TextStyle(
-                  color: colors.textSecondary, fontSize: context.h(8)))
+          Text(
+            subtitle,
+            style: AppTextStyles.body(context)
+                .copyWith(color: colors.textSecondary),
+          )
         ])),
         Switch(
             value: value,
@@ -352,7 +296,8 @@ class _FieldLabel extends StatelessWidget {
   const _FieldLabel(this.label, this.colors);
   @override
   Widget build(BuildContext context) => Text(label,
-      style: TextStyle(color: colors.textSecondary, fontSize: context.h(8)));
+      style: AppTextStyles.bodySecondary(context)
+          .copyWith(color: colors.textSecondary));
 }
 
 class _SettingsInput extends StatelessWidget {
@@ -371,15 +316,11 @@ class _SettingsInput extends StatelessWidget {
           borderRadius: BorderRadius.circular(context.h(5)),
           border: Border.all(color: colors.border),
         ),
-        child: Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: colors.textSecondary,
-            fontSize: context.h(9),
-          ),
-        ),
+        child: Text(value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.body(context)
+                .copyWith(color: colors.textSecondary)),
       );
 }
 
@@ -399,13 +340,9 @@ class _TimeBox extends StatelessWidget {
           borderRadius: BorderRadius.circular(context.h(4)),
           border: Border.all(color: colors.border),
         ),
-        child: Text(
-          text,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: colors.textSecondary,
-            fontSize: context.h(8),
-          ),
-        ),
+        child: Text(text,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.label(context)
+                .copyWith(color: colors.textSecondary)),
       );
 }

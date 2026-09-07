@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
@@ -54,7 +55,12 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-          content: Text(ok ? 'Settings saved' : 'Failed to save settings')),
+        content: Text(
+          ok ? 'Settings saved' : 'Failed to save settings',
+          style: AppTextStyles.bodySecondary(context)
+              .copyWith(color: Colors.white),
+        ),
+      ),
     );
   }
 
@@ -79,11 +85,11 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                       onPressed: () => Navigator.of(context).maybePop(),
                       icon: const Icon(Icons.arrow_back),
                     ),
-                    Text('Restaurant Profile',
-                        style: TextStyle(
-                            color: colors.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700)),
+                    Text(
+                      'Restaurant Profile',
+                      style: AppTextStyles.heading(context)
+                          .copyWith(color: colors.textPrimary),
+                    ),
                     const Spacer(),
                     FormActionButton.save(
                       isLoading: provider.isLoading,
@@ -96,8 +102,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                   ],
                 ),
                 Text('Configure RDX Admin platform details.',
-                    style:
-                        TextStyle(color: colors.textSecondary, fontSize: 10)),
+                    style: AppTextStyles.bodySecondary(context)
+                        .copyWith(color: colors.textSecondary)),
                 const SizedBox(height: 18),
                 _ProfileSection(
                   title: 'Brand Identity',
@@ -118,15 +124,21 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                            const Text('Brand Identity',
-                                style: TextStyle(fontWeight: FontWeight.w600)),
+                            Text(
+                              'Brand Identity',
+                              style: AppTextStyles.bodySecondary(context),
+                            ),
                             Text('Recommended size: 512x512px. Max 2MB.',
-                                style: TextStyle(
-                                    color: colors.textSecondary, fontSize: 9)),
+                                style: AppTextStyles.body(context)),
                             const SizedBox(height: 8),
                             OutlinedButton(
-                                onPressed: () {},
-                                child: const Text('Upload New'))
+                              onPressed: () {},
+                              child: Text(
+                                'Upload New',
+                                style: AppTextStyles.section(context)
+                                    .copyWith(color: colors.primary),
+                              ),
+                            ),
                           ])),
                     ],
                   ),
@@ -181,10 +193,10 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 5),
                           child: Row(children: [
                             Expanded(
-                                child: Text(day,
-                                    style: TextStyle(
-                                        color: colors.textSecondary,
-                                        fontSize: 10))),
+                              child: Text(day,
+                                  style: AppTextStyles.bodySecondary(context)
+                                      .copyWith(color: colors.textSecondary)),
+                            ),
                             Expanded(
                                 child: _ProfileTime(
                                     text: day == 'Weekdays'
@@ -232,10 +244,8 @@ class _ProfileSection extends StatelessWidget {
           border: Border.all(color: colors.border)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(title,
-            style: TextStyle(
-                color: colors.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600)),
+            style: AppTextStyles.section(context)
+                .copyWith(color: colors.textPrimary)),
         const SizedBox(height: 12),
         child
       ]));
@@ -247,12 +257,14 @@ class _ProfileTime extends StatelessWidget {
   const _ProfileTime({required this.text, required this.colors});
   @override
   Widget build(BuildContext context) => Container(
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      decoration: BoxDecoration(
-          color: colors.background,
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: colors.border)),
-      child: Text(text,
-          style: TextStyle(color: colors.textSecondary, fontSize: 9)));
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+            color: colors.background,
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(color: colors.border)),
+        child: Text(text,
+            style: AppTextStyles.section(context)
+                .copyWith(color: colors.textSecondary)),
+      );
 }

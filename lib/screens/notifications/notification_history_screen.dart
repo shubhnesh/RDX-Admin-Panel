@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'package:rdx_admin/core/theme/text_styles.dart';
+import 'package:rdx_admin/widgets/rdx_header.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/notification_model.dart';
@@ -40,6 +41,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     );
 
     return Scaffold(
+      appBar: const RdxHeader(title: 'Notification History'),
       backgroundColor: colors.background,
       body: provider.isLoading && provider.history.isEmpty
           ? const LoadingIndicator()
@@ -58,10 +60,6 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildHeader(
-                        colors,
-                        isMobile,
-                      ),
                       SizedBox(
                         height: isMobile ? context.h(20) : context.h(24),
                       ),
@@ -86,79 +84,6 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                 );
               },
             ),
-    );
-  }
-
-  // ============================================================
-  // HEADER
-  // ============================================================
-
-  Widget _buildHeader(
-    AppColorScheme colors,
-    bool isMobile,
-  ) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _backButton(colors),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Notification History',
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: isMobile ? 21 : 25,
-                  fontWeight: FontWeight.w700,
-                  height: 1.2,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'View and manage all sent and scheduled notifications.',
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _backButton(
-    AppColorScheme colors,
-  ) {
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(7),
-      child: InkWell(
-        onTap: () => Navigator.pop(context),
-        borderRadius: BorderRadius.circular(7),
-        child: Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(7),
-            border: Border.all(
-              color: colors.border,
-            ),
-          ),
-          child: Icon(
-            Icons.arrow_back,
-            size: 18,
-            color: colors.textSecondary,
-          ),
-        ),
-      ),
     );
   }
 
@@ -260,14 +185,9 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
           size: 15,
           color: colors.textSecondary,
         ),
-        label: Text(
-          text,
-          style: TextStyle(
-            color: colors.textSecondary,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        label: Text(text,
+            style: AppTextStyles.body(context)
+                .copyWith(color: colors.textSecondary)),
         style: OutlinedButton.styleFrom(
           foregroundColor: colors.textSecondary,
           backgroundColor: colors.surface,
@@ -342,15 +262,11 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
               )
             : const Icon(
                 Icons.refresh,
-                size: 16,
+                size: 18,
               ),
-        label: const Text(
-          'Refresh',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        label: Text('Refresh',
+            style:
+                AppTextStyles.section(context).copyWith(color: Colors.white)),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
@@ -501,23 +417,12 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
             ),
           ),
           const SizedBox(height: 15),
-          Text(
-            'No notifications found',
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text('No notifications found', style: AppTextStyles.section(context)),
           const SizedBox(height: 5),
           Text(
             'Sent and scheduled notifications will appear here.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: colors.textMuted,
-              fontSize: 11,
-              height: 1.4,
-            ),
+            style: AppTextStyles.section(context),
           ),
         ],
       ),
@@ -574,17 +479,11 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
   }) {
     return SizedBox(
       width: width,
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: colors.textMuted,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
-      ),
+      child: Text(text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style:
+              AppTextStyles.section(context).copyWith(color: colors.textMuted)),
     );
   }
 
@@ -631,16 +530,11 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                 ),
                 const SizedBox(width: 8),
                 Flexible(
-                  child: Text(
-                    status,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  child: Text(status,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodySecondary(context)
+                          .copyWith(color: colors.textPrimary)),
                 ),
               ],
             ),
@@ -657,12 +551,8 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                 item.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  height: 1.35,
-                ),
+                style: AppTextStyles.bodySecondary(context)
+                    .copyWith(color: colors.textPrimary),
               ),
             ),
           ),
@@ -674,26 +564,17 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _formatDate(date),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
+                Text(_formatDate(date),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySecondary(context)
+                        .copyWith(color: colors.textPrimary)),
                 const SizedBox(height: 3),
-                Text(
-                  _formatTime(date),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.textMuted,
-                    fontSize: 11,
-                  ),
-                ),
+                Text(_formatTime(date),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySecondary(context)
+                        .copyWith(color: colors.textMuted)),
               ],
             ),
           ),
@@ -815,16 +696,11 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              'Showing 1-$count of $count notifications',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: colors.textMuted,
-                fontSize: 10,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
+            child: Text('Showing 1-$count of $count notifications',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.label(context)
+                    .copyWith(color: colors.textMuted)),
           ),
           Align(
             alignment: Alignment.centerRight,
@@ -872,14 +748,10 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
           color: colors.border,
         ),
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: enabled ? colors.textSecondary : colors.textMuted,
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
+      child: Text(text,
+          style: AppTextStyles.label(context).copyWith(
+            color: enabled ? colors.textSecondary : colors.textMuted,
+          )),
     );
   }
 

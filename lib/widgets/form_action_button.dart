@@ -68,9 +68,10 @@ class FormActionButton extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: isPrimary
-                ? AppTextStyles.label(context).copyWith(color: Colors.white)
-                : AppTextStyles.label(context)
-                    .copyWith(color: colors.textPrimary),
+                ? AppTextStyles.bodySecondary(context)
+                    .copyWith(color: Colors.white)
+                : AppTextStyles.bodySecondary(context)
+                    .copyWith(color: colors.textSecondary),
           );
 
     final shape = RoundedRectangleBorder(

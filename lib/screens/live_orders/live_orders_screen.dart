@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
@@ -186,15 +187,9 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                 ),
               ),
               SizedBox(width: context.w(9)),
-              Text(
-                title,
-                style: TextStyle(
-                  color: AppColors.lightTextPrimary,
-                  fontSize: context.h(12),
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
-                ),
-              ),
+              Text(title,
+                  style: AppTextStyles.section(context)
+                      .copyWith(color: AppColors.lightTextPrimary)),
               const Spacer(),
               Container(
                 constraints: BoxConstraints(
@@ -207,20 +202,14 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: AppColors.lightSurface,
-                  borderRadius: BorderRadius.circular(context.h(11)),
+                  borderRadius: BorderRadius.circular(context.h(15)),
                   border: Border.all(
                     color: AppColors.lightBorder,
-                    width: context.h(1),
+                    width: context.h(3),
                   ),
                 ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    color: AppColors.lightTextSecondary,
-                    fontSize: context.h(9),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child:
+                    Text('$count', style: AppTextStyles.bodySecondary(context)),
               ),
             ],
           ),
@@ -266,15 +255,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                       ),
                       const SizedBox(height: 12),
                     ],
-                    Text(
-                      emptyText ?? 'No orders',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.lightTextMuted,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Text(emptyText ?? 'No orders',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.bodySecondary(context)
+                            .copyWith(color: AppColors.textMuted)),
                   ],
                 ),
               ),
@@ -336,12 +320,6 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
-          // onTap: () {
-          //   Navigator.of(context).pushNamed(
-          //     AppRoutes.orderDetail,
-          //     arguments: order.id,
-          //   );
-          // },
           onTap: () => Navigator.of(context).pushNamed(
             AppRoutes.orderDetail,
             arguments: order,
@@ -364,16 +342,11 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
-                      child: Text(
-                        '#RDX-${order.id}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFFE0DCDC),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: Text('#RDX-${order.id}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption(context)
+                              .copyWith(color: const Color(0xFFE0DCDC))),
                     ),
                     const Icon(
                       Icons.schedule_outlined,
@@ -381,14 +354,9 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                       color: Color(0xFF777070),
                     ),
                     const SizedBox(width: 5),
-                    Text(
-                      _formatOrderTime(order.createdAt),
-                      style: const TextStyle(
-                        color: Color(0xFF888080),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
+                    Text(_formatOrderTime(order.createdAt),
+                        style: AppTextStyles.caption(context)
+                            .copyWith(color: const Color(0xFF888080))),
                   ],
                 ),
 
@@ -399,22 +367,17 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                 // =============================================================
 
                 Text(
-                  order.items.isEmpty
-                      ? 'Order'
-                      : order.items
-                          .map(
-                            (item) => '${item.quantity}x ${item.name}',
-                          )
-                          .join(', '),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFD7D1D1),
-                    fontSize: 11,
-                    height: 1.45,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
+                    order.items.isEmpty
+                        ? 'Order'
+                        : order.items
+                            .map(
+                              (item) => '${item.quantity}x ${item.name}',
+                            )
+                            .join(', '),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption(context)
+                        .copyWith(color: const Color(0xFFD7D1D1))),
 
                 const SizedBox(height: 6),
 
@@ -422,16 +385,11 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                 // CUSTOMER
                 // =============================================================
 
-                Text(
-                  'Customer: ${order.customerName}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF858080),
-                    fontSize: 10,
-                    height: 1.3,
-                  ),
-                ),
+                Text('Customer: ${order.customerName}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption(context)
+                        .copyWith(color: const Color(0xFF858080))),
 
                 const SizedBox(height: 12),
 
@@ -466,14 +424,10 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                         ),
                       ),
                       child: Text(
-                        '${order.items.length} '
-                        '${order.items.length == 1 ? 'Item' : 'Items'}',
-                        style: const TextStyle(
-                          color: Color(0xFFA69D9D),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                          '${order.items.length} '
+                          '${order.items.length == 1 ? 'Item' : 'Items'}',
+                          style: AppTextStyles.caption(context)
+                              .copyWith(color: const Color(0xFFA69D9D))),
                     ),
                     const Spacer(),
                     if (actionText != null)
@@ -494,14 +448,9 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                               borderRadius: BorderRadius.circular(5),
                             ),
                             alignment: Alignment.center,
-                            child: Text(
-                              actionText,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            child: Text(actionText,
+                                style: AppTextStyles.caption(context)
+                                    .copyWith(color: Colors.white)),
                           ),
                         ),
                       ),

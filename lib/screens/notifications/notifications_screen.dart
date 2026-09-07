@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/notification_provider.dart';
@@ -119,33 +120,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   const SizedBox(width: 7),
                   Text(
                     'COMMUNICATION HUB',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.9,
-                    ),
+                    style: AppTextStyles.section(context)
+                        .copyWith(color: AppColors.primary),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
               Text(
                 'Broadcast System',
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: isMobile ? 22 : 25,
-                  fontWeight: FontWeight.bold,
-                  height: 1.1,
-                ),
+                style: AppTextStyles.heading(context),
               ),
               const SizedBox(height: 6),
               Text(
                 'Send important updates and announcements to your customer app users.',
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  fontSize: 12,
-                  height: 1.4,
-                ),
+                style: AppTextStyles.bodySecondary(context),
               ),
             ],
           ),
@@ -158,9 +146,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               Icons.history_outlined,
               size: 16,
             ),
-            label: const Text(
-              'Notification History',
-            ),
+            label: Text('Notification History',
+                style: AppTextStyles.bodySecondary(context)
+                    .copyWith(color: colors.textPrimary)),
             style: OutlinedButton.styleFrom(
               foregroundColor: colors.textPrimary,
               side: BorderSide(
@@ -285,30 +273,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               children: [
                 Text(
                   stat.label,
-                  style: TextStyle(
+                  style: AppTextStyles.section(context).copyWith(
                     color: colors.textMuted,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.7,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   stat.value,
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 23,
-                    fontWeight: FontWeight.bold,
-                    height: 1,
-                  ),
+                  style: AppTextStyles.heading(context),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   stat.subtitle,
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: 10,
-                  ),
+                  style: AppTextStyles.bodySecondary(context),
                 ),
               ],
             ),
@@ -396,24 +373,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              Text(
-                'Compose Notification',
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text('Compose Notification',
+                  style: AppTextStyles.section(context)),
             ],
           ),
           const SizedBox(height: 23),
-          _fieldLabel(
-            colors,
-            'NOTIFICATION TITLE',
-          ),
-          const SizedBox(height: 8),
           RdxTextField(
             controller: _titleController,
+            label: 'NOTIFICATION TITLE',
             hint: 'e.g. System Update',
             maxLines: 1,
           ),
@@ -429,13 +396,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ValueListenableBuilder<TextEditingValue>(
                 valueListenable: _messageController,
                 builder: (_, value, __) {
-                  return Text(
-                    '${value.text.length}/500',
-                    style: TextStyle(
-                      color: colors.textMuted,
-                      fontSize: 10,
-                    ),
-                  );
+                  return Text('${value.text.length}/500',
+                      style: AppTextStyles.body(context));
                 },
               ),
             ],
@@ -485,7 +447,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         Icons.calendar_month_outlined,
         size: 17,
       ),
-      label: const Text('Schedule'),
+      label: Text(
+        'Schedule',
+        style: AppTextStyles.label(context).copyWith(color: colors.textPrimary),
+      ),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(double.infinity, 46),
         foregroundColor: colors.textPrimary,
@@ -513,7 +478,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               Icons.send_outlined,
               size: 17,
             ),
-      label: const Text('Send Now'),
+      label: Text(
+        'Send Now',
+        style: AppTextStyles.label(context).copyWith(color: Colors.white),
+      ),
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(double.infinity, 46),
         backgroundColor: AppColors.primary,
@@ -618,11 +586,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             Expanded(
                               child: Text(
                                 'Schedule Notification',
-                                style: TextStyle(
-                                  color: colors.textPrimary,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: AppTextStyles.section(context),
                               ),
                             ),
                             IconButton(
@@ -799,8 +763,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   horizontal: 18,
                                 ),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Cancel',
+                                style: AppTextStyles.label(context)
+                                    .copyWith(color: colors.textPrimary),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -838,9 +804,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         ScaffoldMessenger.of(
                                           this.context,
                                         ).showSnackBar(
-                                          const SnackBar(
+                                          SnackBar(
                                             content: Text(
                                               'Notification scheduled successfully.',
+                                              style: AppTextStyles.body(context)
+                                                  .copyWith(
+                                                      color: Colors.white),
                                             ),
                                             behavior: SnackBarBehavior.floating,
                                           ),
@@ -860,8 +829,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       Icons.send_outlined,
                                       size: 15,
                                     ),
-                              label: const Text(
+                              label: Text(
                                 'Schedule Now',
+                                style: AppTextStyles.body(context).copyWith(
+                                  color: selectedDate == null ||
+                                          selectedTime == null
+                                      ? colors.textMuted
+                                      : Colors.white,
+                                ),
                               ),
                               style: ElevatedButton.styleFrom(
                                 minimumSize: const Size(
@@ -901,11 +876,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   ) {
     return Text(
       text,
-      style: TextStyle(
-        color: colors.textSecondary,
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-      ),
+      style: AppTextStyles.bodySecondary(context)
+          .copyWith(color: colors.textMuted),
     );
   }
 
@@ -943,12 +915,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             Expanded(
               child: Text(
                 value ?? hint,
-                style: TextStyle(
+                style: AppTextStyles.body(context).copyWith(
                   color: value == null
                       ? const Color(0xFFF1A6B0)
                       : const Color(0xFF333333),
-                  fontSize: 12,
-                  fontWeight: value == null ? FontWeight.w400 : FontWeight.w500,
                 ),
               ),
             ),
@@ -1002,21 +972,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Notification History',
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  Text('Notification History',
+                      style: AppTextStyles.section(context)
+                          .copyWith(color: colors.textPrimary)),
                   const SizedBox(height: 3),
                   Text(
                     'View sent and scheduled notifications',
-                    style: TextStyle(
-                      color: colors.textMuted,
-                      fontSize: 11,
-                    ),
+                    style: AppTextStyles.bodySecondary(context),
                   ),
                 ],
               ),
@@ -1050,12 +1012,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   ) {
     return Text(
       text,
-      style: TextStyle(
-        color: colors.textMuted,
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.55,
-      ),
+      style: AppTextStyles.bodySecondary(context)
+          .copyWith(color: colors.textMuted),
     );
   }
 
@@ -1089,13 +1047,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                color: AppColors.danger,
-                fontSize: 11,
-              ),
-            ),
+            child: Text(message,
+                style: AppTextStyles.body(context)
+                    .copyWith(color: AppColors.danger)),
           ),
         ],
       ),
@@ -1122,9 +1076,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _messageController.clear();
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
           'Notification sent successfully.',
+          style: AppTextStyles.body(context).copyWith(color: Colors.white),
         ),
         behavior: SnackBarBehavior.floating,
       ),

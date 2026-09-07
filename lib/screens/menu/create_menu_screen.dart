@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/menu_item_model.dart';
@@ -8,6 +9,7 @@ import '../../widgets/rdx_header.dart';
 import '../../widgets/form_action_button.dart';
 import '../../widgets/rdx_dropdown.dart';
 import '../../widgets/rdx_text_field.dart';
+import '../../widgets/rdx_toggle_button.dart';
 
 class CreateMenuScreen extends StatefulWidget {
   final String? itemId;
@@ -30,31 +32,18 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
   String? _subcategory;
   DietaryType? _dietaryType;
   PreparationStyle? _preparationStyle;
-  String? _spiceLevel;
-  String? _servingSize;
   final Set<String> _tags = {};
   final List<String> _ingredients = [];
   bool _available = true;
-  bool _featured = false;
   bool _loading = false;
   String? _error;
 
   static const _tagOptions = [
+    'Featured',
     'Bestseller',
-    'Spicy',
-    'Crispy',
     'New',
     'Popular',
-    'Chef Special'
   ];
-  static const _spiceOptions = ['Mild', 'Medium', 'Hot', 'Extra Hot'];
-  static const _servingOptions = [
-    'Single serving',
-    'Regular',
-    'Large',
-    'Family size'
-  ];
-
   bool get _editing => widget.itemId != null;
 
   List<MenuCategory> get _subcategories => MenuTaxonomy.categories
@@ -80,14 +69,15 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       _primaryCategory = item.primaryCategoryId;
       _dietaryType = item.dietaryType;
       _preparationStyle = item.preparationStyle;
+      final loadedTags = item.tags.map(_titleCase).toList();
+      if (item.isFeatured) loadedTags.insert(0, 'Featured');
       _tags
         ..clear()
-        ..addAll(item.tags.map(_titleCase));
+        ..addAll(loadedTags.take(4));
       _ingredients
         ..clear()
         ..addAll(item.ingredients);
       _available = item.isAvailable;
-      _featured = item.isFeatured;
     } catch (_) {
       _error = 'Failed to load menu item.';
     }
@@ -130,13 +120,16 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       description: _description.text.trim(),
       image: _image.text.trim(),
       isAvailable: _available,
-      isFeatured: _featured,
+      isFeatured: _tags.contains('Featured'),
       sortOrder: int.tryParse(_sortOrder.text) ?? 0,
       dietaryType: _dietaryType,
       preparationStyle: _preparationStyle!,
       price: price,
       primaryCategoryId: _primaryCategory,
-      tags: _tags.map((tag) => tag.toLowerCase().replaceAll(' ', '_')).toList(),
+      tags: _tags
+          .where((tag) => tag != 'Featured')
+          .map((tag) => tag.toLowerCase().replaceAll(' ', '_'))
+          .toList(),
       ingredients: List<String>.from(_ingredients),
     );
     final success = await context.read<MenuProvider>().saveItem(item);
@@ -321,9 +314,14 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   ),
                 ),
                 SizedBox(width: context.w(8)),
-                ElevatedButton(
+                FormActionButton(
+                  label: 'Add',
                   onPressed: _ingredients.length >= 10 ? null : _addIngredient,
-                  child: const Text('Add'),
+                  isPrimary: true,
+                  // Optional: make it more compact to match the image
+                  height: context
+                      .h(35), // or whatever height matches your text field
+                  minWidth: context.w(60), // adjust as needed
                 ),
               ],
             ),
@@ -333,30 +331,9 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                 runSpacing: context.h(8),
                 children: [
                   for (final ing in _ingredients)
-                    Chip(
-                      label: Text(
-                        ing,
-                        style: TextStyle(
-                          color: colors.textPrimary,
-                          fontSize: context.h(10),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      deleteIcon: Icon(
-                        Icons.close_rounded,
-                        size: context.h(14),
-                        color: colors.textMuted,
-                      ),
-                      backgroundColor: colors.surfaceVariant,
-                      side: BorderSide(color: colors.border),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(context.h(8)),
-                      ),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: context.w(9),
-                        vertical: context.h(5),
-                      ),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    _IngredientChip(
+                      label: ing,
+                      colors: colors,
                       onDeleted: () => setState(() => _ingredients.remove(ing)),
                     ),
                 ],
@@ -367,7 +344,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
             RdxTextField(
               controller: _description,
               label: 'Description',
-              maxLines: 3,
+              maxLines: 5,
               hint: 'Add item description',
               counterText: '${_description.text.length}/250',
               onChanged: (_) => setState(() {}),
@@ -382,52 +359,6 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
           ]),
           SizedBox(height: context.h(16)),
           _panel(context, colors, 'Item Details', Icons.assignment_outlined, [
-            Row(children: [
-              Expanded(
-                child: _dropdown(
-                  'Dietary Type',
-                  _dietaryType,
-                  DietaryType.values,
-                  (value) => setState(() => _dietaryType = value),
-                  (value) => _titleCase(value.name),
-                ),
-              ),
-              SizedBox(width: context.w(14)),
-              Expanded(
-                child: _dropdown(
-                  'Preparation Style',
-                  _preparationStyle,
-                  PreparationStyle.values,
-                  (value) => setState(() => _preparationStyle = value),
-                  (value) => _titleCase(value.name),
-                ),
-              ),
-            ]),
-            SizedBox(height: context.h(15)),
-            Row(children: [
-              Expanded(
-                child: _dropdown(
-                  'Spice Level',
-                  _spiceLevel,
-                  _spiceOptions,
-                  (value) => setState(() => _spiceLevel = value),
-                  (value) => value,
-                ),
-              ),
-              SizedBox(width: context.w(14)),
-              Expanded(
-                child: _dropdown(
-                  'Serving Size',
-                  _servingSize,
-                  _servingOptions,
-                  (value) => setState(() => _servingSize = value),
-                  (value) => value,
-                ),
-              ),
-            ]),
-          ]),
-          SizedBox(height: context.h(16)),
-          _panel(context, colors, 'Organization', Icons.account_tree_outlined, [
             Row(children: [
               Expanded(
                 child: _dropdown(
@@ -458,6 +389,28 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               ),
             ]),
             SizedBox(height: context.h(15)),
+            Row(children: [
+              Expanded(
+                child: _dropdown(
+                  'Dietary Type',
+                  _dietaryType,
+                  DietaryType.values,
+                  (value) => setState(() => _dietaryType = value),
+                  (value) => _titleCase(value.name),
+                ),
+              ),
+              SizedBox(width: context.w(14)),
+              Expanded(
+                child: _dropdown(
+                  'Preparation Style',
+                  _preparationStyle,
+                  PreparationStyle.values,
+                  (value) => setState(() => _preparationStyle = value),
+                  (value) => _titleCase(value.name),
+                ),
+              ),
+            ]),
+            SizedBox(height: context.h(15)),
             Text('Tags', style: _labelStyle(context, colors)),
             SizedBox(height: context.h(7)),
             Wrap(
@@ -480,17 +433,6 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   'Make this item available for ordering',
                   _available,
                   (value) => setState(() => _available = value),
-                ),
-              ),
-              SizedBox(width: context.w(22)),
-              Expanded(
-                child: _switch(
-                  context,
-                  colors,
-                  'Featured Item',
-                  'Highlight this item in the menu',
-                  _featured,
-                  (value) => setState(() => _featured = value),
                 ),
               ),
             ]),
@@ -532,27 +474,66 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
         'Preview',
         Icons.visibility_outlined,
         [
-          Container(
-            height: context.h(170),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF1EA),
-              borderRadius: BorderRadius.circular(context.h(12)),
-            ),
-            child: _image.text.trim().isEmpty
-                ? Icon(Icons.restaurant,
-                    size: context.h(48), color: Color(0xFFFFD4BF))
-                : Image.network(
-                    _image.text.trim(),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Icon(
-                      Icons.restaurant,
-                      size: context.h(48),
-                      color: Color(0xFFFFD4BF),
+          Padding(
+            padding: EdgeInsets.all(context.h(6)),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(context.h(8)),
+              child: SizedBox(
+                height: context.h(170),
+                width: double.infinity,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        color: const Color(0xFFFFF1EA),
+                        child: _image.text.trim().isEmpty
+                            ? Icon(Icons.restaurant,
+                                size: context.h(48), color: Color(0xFFFFD4BF))
+                            : Image.network(
+                                _image.text.trim(),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Icon(
+                                  Icons.restaurant,
+                                  size: context.h(48),
+                                  color: Color(0xFFFFD4BF),
+                                ),
+                              ),
+                      ),
                     ),
-                  ),
+                    if (_tags.contains('Featured'))
+                      Positioned(
+                        left: context.w(10),
+                        top: context.h(10),
+                        child: _previewCardBadge(
+                          context,
+                          'Featured',
+                          AppColors.primary,
+                          Colors.white,
+                        ),
+                      ),
+                    if (_dietaryType != null)
+                      Positioned(
+                        right: context.w(10),
+                        bottom: context.h(10),
+                        child: _dietaryBadge(context, colors),
+                      ),
+                  ],
+                ),
+              ),
+            ),
           ),
-          SizedBox(height: context.h(14)),
+          SizedBox(height: context.h(5)),
+          Text(
+            _categoryLabel(_primaryCategory),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppColors.primary,
+              fontSize: context.h(9),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: context.h(3)),
           Text(
             _name.text.trim().isEmpty ? 'Item Name' : _name.text.trim(),
             style: TextStyle(
@@ -561,18 +542,30 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               fontWeight: FontWeight.w700,
             ),
           ),
+          SizedBox(height: context.h(4)),
+          SizedBox(
+            height: context.h(16),
+            child: _ingredients.isEmpty
+                ? null
+                : Text(
+                    _ingredients.join(', '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: context.h(11),
+                      height: context.h(1.4),
+                    ),
+                  ),
+          ),
           SizedBox(height: context.h(8)),
-          Text(
-            _ingredients.isEmpty
-                ? 'Ingredients will appear here as comma separated.'
-                : _ingredients.join(', '),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: colors.textSecondary,
-              fontSize: context.h(11),
-              height: context.h(1.4),
-            ),
+          Wrap(
+            spacing: context.w(5),
+            runSpacing: context.h(5),
+            children: [
+              for (final tag in _tags.where((tag) => tag != 'Featured'))
+                _previewDetailChip(context, tag, colors.textSecondary),
+            ],
           ),
           SizedBox(height: context.h(10)),
           Text(
@@ -583,8 +576,25 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               fontWeight: FontWeight.w700,
             ),
           ),
-          SizedBox(height: context.h(10)),
-          _dietaryBadge(context, colors),
+          SizedBox(height: context.h(8)),
+          Divider(height: context.h(1), color: colors.divider),
+          SizedBox(height: context.h(6)),
+          Row(
+            children: [
+              RdxToggleButton(
+                value: _available,
+                activeColor: AppColors.primary,
+                onChanged: (value) => setState(() => _available = value),
+              ),
+              SizedBox(width: context.w(5)),
+              Text(
+                _available ? 'Available' : 'Sold Out',
+                style: AppTextStyles.label(context).copyWith(
+                  color: _available ? AppColors.primary : colors.textMuted,
+                ),
+              ),
+            ],
+          ),
         ],
       );
 
@@ -677,7 +687,10 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               ],
             ),
           ),
-          Switch(value: value, onChanged: onChanged),
+          RdxToggleButton(
+            value: value,
+            onChanged: onChanged,
+          ),
         ],
       );
 
@@ -707,13 +720,65 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
           vertical: context.h(5),
         ),
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        onSelected: (selected) => setState(() {
-          if (selected) {
-            _tags.add(tag);
-          } else {
-            _tags.remove(tag);
-          }
-        }),
+        onSelected: _tags.length >= 4 && !_tags.contains(tag)
+            ? null
+            : (selected) => setState(() {
+                  if (selected) {
+                    _tags.add(tag);
+                  } else {
+                    _tags.remove(tag);
+                  }
+                }),
+      );
+
+  Widget _previewCardBadge(
+    BuildContext context,
+    String label,
+    Color background,
+    Color foreground,
+  ) =>
+      Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: context.w(7),
+          vertical: context.h(4),
+        ),
+        decoration: BoxDecoration(
+          color: background.withValues(
+              alpha: background == AppColors.primary ? 1 : 0.92),
+          borderRadius: BorderRadius.circular(context.h(5)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: foreground,
+            fontSize: context.h(9),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+
+  Widget _previewDetailChip(
+    BuildContext context,
+    String label,
+    Color color,
+  ) =>
+      Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: context.w(6),
+          vertical: context.h(3),
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(context.h(4)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: context.h(9),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       );
 
   Widget _dietaryBadge(BuildContext context, AppColorScheme colors) =>
@@ -723,20 +788,18 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
           vertical: context.h(5),
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFEFFAF2),
+          color: Colors.white.withValues(alpha: 0.94),
           borderRadius: BorderRadius.circular(context.h(6)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.circle, size: context.h(8), color: Colors.green),
+            Icon(Icons.circle, size: context.h(8), color: _dietaryColor),
             SizedBox(width: context.w(5)),
             Text(
-              _dietaryType == null
-                  ? 'Dietary type not selected'
-                  : _titleCase(_dietaryType!.name),
+              _dietaryLabel,
               style: TextStyle(
-                color: Colors.green,
+                color: _dietaryColor,
                 fontSize: context.h(10),
                 fontWeight: FontWeight.w600,
               ),
@@ -744,6 +807,17 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
           ],
         ),
       );
+
+  Color get _dietaryColor =>
+      _dietaryType == DietaryType.veg ? AppColors.success : AppColors.danger;
+
+  String get _dietaryLabel => _dietaryType == null
+      ? 'Dietary type not selected'
+      : _dietaryType == DietaryType.veg
+          ? 'Veg'
+          : _dietaryType == DietaryType.egg
+              ? 'Contains Egg'
+              : 'Non-Veg';
 
   Widget _errorBanner(BuildContext context, AppColorScheme colors) => Container(
         width: double.infinity,
@@ -771,4 +845,59 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       .map((part) =>
           part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
       .join(' ');
+}
+
+class _IngredientChip extends StatelessWidget {
+  final String label;
+  final AppColorScheme colors;
+  final VoidCallback onDeleted;
+
+  const _IngredientChip({
+    required this.label,
+    required this.colors,
+    required this.onDeleted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: context.w(9),
+        right: context.w(4),
+        top: context.h(5),
+        bottom: context.h(5),
+      ),
+      decoration: BoxDecoration(
+        color: colors.surfaceVariant,
+        borderRadius: BorderRadius.circular(context.h(8)),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: context.h(10),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(width: context.w(4)),
+          InkWell(
+            onTap: onDeleted,
+            borderRadius: BorderRadius.circular(context.h(10)),
+            child: Padding(
+              padding: EdgeInsets.all(context.h(2)),
+              child: Icon(
+                Icons.close_rounded,
+                size: context.h(14),
+                color: colors.textMuted,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

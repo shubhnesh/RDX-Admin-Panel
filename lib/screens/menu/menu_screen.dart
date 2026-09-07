@@ -1,13 +1,16 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/menu_item_model.dart';
 import '../../providers/menu_provider.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/form_action_button.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../widgets/rdx_toggle_button.dart';
 import '../../widgets/rdx_search_bar.dart';
 
 class MenuScreen extends StatefulWidget {
@@ -233,16 +236,15 @@ class _MenuScreenState extends State<MenuScreen> {
 
   Widget _buildTopBar(BuildContext context, AppColorScheme colors) {
     return RdxSearchToolbar(
-      hintText: 'Search menu items...',
+      hintText: 'Search menu items',
       onChanged: (value) => context.read<MenuProvider>().setSearchQuery(value),
       actions: [
-        ElevatedButton.icon(
+        FormActionButton(
+          label: 'Add Item',
           onPressed: () async {
             await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
             if (context.mounted) context.read<MenuProvider>().load();
           },
-          icon: Icon(Icons.add, size: context.h(18)),
-          label: const Text('Add New Item'),
         ),
       ],
     );
@@ -561,31 +563,40 @@ class _MenuScreenState extends State<MenuScreen> {
 
     return GridView.builder(
       padding: EdgeInsets.only(bottom: context.h(24)),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: Responsive.gridColumns(context),
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: context.w(225),
+        mainAxisExtent: context.h(375),
         mainAxisSpacing: context.h(18),
         crossAxisSpacing: context.w(18),
-        childAspectRatio: 0.78,
       ),
       itemCount: items.length + (showAddItemTile ? 1 : 0),
       itemBuilder: (context, index) {
         if (showAddItemTile && index == 0) {
           return _AddItemTile(
-              colors: colors,
-              onTap: () async {
-                await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
-                if (context.mounted) context.read<MenuProvider>().load();
-              });
+            colors: colors,
+            onTap: () async {
+              await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
+              if (context.mounted) {
+                context.read<MenuProvider>().load();
+              }
+            },
+          );
         }
+
         final item = items[showAddItemTile ? index - 1 : index];
+
         return _MenuItemCard(
           item: item,
           colors: colors,
           onToggleAvailability: () => provider.toggleAvailability(item),
           onEdit: () async {
-            await Navigator.of(context)
-                .pushNamed(AppRoutes.editMenuItem, arguments: item.id);
-            if (context.mounted) context.read<MenuProvider>().load();
+            await Navigator.of(context).pushNamed(
+              AppRoutes.editMenuItem,
+              arguments: item.id,
+            );
+            if (context.mounted) {
+              context.read<MenuProvider>().load();
+            }
           },
           onDelete: () async {
             final confirmed = await showDialog<bool>(
@@ -598,15 +609,11 @@ class _MenuScreenState extends State<MenuScreen> {
                   ),
                   actions: [
                     TextButton(
-                      onPressed: () {
-                        Navigator.pop(context, false);
-                      },
+                      onPressed: () => Navigator.pop(context, false),
                       child: const Text('Cancel'),
                     ),
                     FilledButton(
-                      onPressed: () {
-                        Navigator.pop(context, true);
-                      },
+                      onPressed: () => Navigator.pop(context, true),
                       child: const Text('Delete'),
                     ),
                   ],
@@ -633,6 +640,7 @@ class _MenuScreenState extends State<MenuScreen> {
         );
       },
     );
+    ;
   }
 }
 
@@ -652,13 +660,6 @@ class _MenuItemCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
   });
-
-  /// Dot logic: grey when unavailable, otherwise green for veg / red (brand)
-  /// for non-veg — matches the reference card design.
-  Color get _dotColor {
-    if (!item.available) return colors.textMuted;
-    return item.isVeg ? AppColors.success : AppColors.primary;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -682,65 +683,65 @@ class _MenuItemCard extends StatelessWidget {
         children: [
           AspectRatio(
             aspectRatio: 1.45,
-            child: Stack(children: [
-              Positioned.fill(
-                child: item.imageUrl.trim().isEmpty
-                    ? Container(
-                        color: colors.surfaceVariant,
-                        child: Icon(Icons.restaurant_outlined,
-                            color: colors.textMuted, size: context.h(34)),
-                      )
-                    : Image.network(
-                        item.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: colors.surfaceVariant,
-                          child: Icon(Icons.restaurant_outlined,
-                              color: colors.textMuted, size: context.h(34)),
-                        ),
-                      ),
-              ),
-              Positioned(
-                left: context.w(10),
-                top: context.h(10),
-                child: _cardBadge(
-                    context, item.category, colors.surface, colors.textPrimary),
-              ),
-              if (item.featuredItem)
-                Positioned(
-                  right: context.w(10),
-                  top: context.h(10),
-                  child: _cardBadge(
-                      context, 'Featured', AppColors.primary, Colors.white),
-                ),
-              Positioned(
-                right: context.w(10),
-                bottom: context.h(10),
-                child: Container(
-                  width: context.w(11),
-                  height: context.h(11),
-                  decoration: BoxDecoration(
-                    color: _dotColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: context.h(2),
-                    ),
+            child: Padding(
+              padding: EdgeInsets.all(context.h(6)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(context.h(8)),
+                child: Stack(children: [
+                  Positioned.fill(
+                    child: item.imageUrl.trim().isEmpty
+                        ? Container(
+                            color: colors.surfaceVariant,
+                            child: Icon(Icons.restaurant_outlined,
+                                color: colors.textMuted, size: context.h(34)),
+                          )
+                        : Image.network(
+                            item.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: colors.surfaceVariant,
+                              child: Icon(Icons.restaurant_outlined,
+                                  color: colors.textMuted, size: context.h(34)),
+                            ),
+                          ),
                   ),
-                ),
+                  if (item.featuredItem)
+                    Positioned(
+                      left: context.w(10),
+                      top: context.h(10),
+                      child: _cardBadge(
+                          context, 'Featured', AppColors.primary, Colors.white),
+                    ),
+                  Positioned(
+                    right: context.w(10),
+                    bottom: context.h(10),
+                    child: _dietaryBadge(context),
+                  ),
+                ]),
               ),
-            ]),
+            ),
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(
               context.w(12),
-              context.h(11),
+              context.h(6),
               context.w(12),
               context.h(12),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  item.category,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: context.h(9),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: context.h(3)),
                 Text(
                   item.name,
                   maxLines: 1,
@@ -752,21 +753,20 @@ class _MenuItemCard extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: context.h(4)),
-
-                // ── Ingredients (comma-separated) ───────────────────
-                Text(
-                  item.ingredients.isEmpty
-                      ? 'No ingredients added'
-                      : item.ingredients.join(', '),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: context.h(11),
-                    height: context.h(1.35),
-                  ),
+                SizedBox(
+                  height: context.h(14),
+                  child: item.ingredients.isEmpty
+                      ? null
+                      : Text(
+                          item.ingredients.join(', '),
+                          style: TextStyle(
+                            color: colors.textSecondary,
+                            fontSize: context.h(10),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                 ),
-
                 SizedBox(height: context.h(8)),
                 Wrap(
                   spacing: context.w(5),
@@ -774,16 +774,14 @@ class _MenuItemCard extends StatelessWidget {
                   children: [
                     _detailChip(
                       context,
-                      _dietaryLabel(item.dietaryType),
-                      item.isVeg ? AppColors.success : AppColors.primary,
-                    ),
-                    _detailChip(
-                      context,
                       _titleCase(preparation),
                       colors.textSecondary,
                     ),
-                    for (final tag in item.tags.take(2))
-                      _detailChip(context, _titleCase(tag), colors.textMuted),
+                    for (final tag in item.tags
+                        .where((tag) => tag.toLowerCase() != 'featured')
+                        .take(item.featuredItem ? 3 : 4))
+                      _detailChip(
+                          context, _titleCase(tag), colors.textSecondary),
                   ],
                 ),
                 SizedBox(height: context.h(10)),
@@ -798,61 +796,44 @@ class _MenuItemCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const Spacer(),
-                    Text(
-                      item.available ? 'Available' : 'Unavailable',
-                      style: TextStyle(
-                        color: item.available
-                            ? AppColors.success
-                            : colors.textMuted,
-                        fontSize: context.h(10),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: onToggleAvailability,
-                      tooltip: item.available
-                          ? 'Mark unavailable'
-                          : 'Mark available',
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.only(left: context.w(4)),
-                      constraints: const BoxConstraints(),
-                      icon: Icon(
-                        item.available
-                            ? Icons.toggle_on_outlined
-                            : Icons.toggle_off_outlined,
-                        size: context.h(22),
-                        color: item.available
-                            ? AppColors.success
-                            : colors.textMuted,
-                      ),
-                    ),
                   ],
                 ),
                 SizedBox(height: context.h(8)),
                 Divider(height: context.h(1), color: colors.divider),
                 SizedBox(height: context.h(6)),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    RdxToggleButton(
+                      value: item.available,
+                      activeColor: AppColors.primary,
+                      onChanged: (_) => onToggleAvailability(),
+                    ),
+                    SizedBox(width: context.w(5)),
+                    Text(item.available ? 'Available' : 'Sold Out',
+                        style: AppTextStyles.label(context).copyWith(
+                          color: item.available
+                              ? AppColors.success
+                              : colors.textMuted,
+                        )),
+                    const Spacer(),
                     InkWell(
                       onTap: onEdit,
                       borderRadius: BorderRadius.circular(context.h(6)),
                       child: Padding(
                         padding: EdgeInsets.all(context.h(5)),
                         child: Icon(Icons.edit_outlined,
-                            size: context.h(16), color: colors.textSecondary),
+                            size: context.h(20), color: colors.textSecondary),
                       ),
                     ),
-                    InkWell(
-                      onTap: onDelete,
-                      borderRadius: BorderRadius.circular(context.h(6)),
-                      child: Padding(
-                        padding: EdgeInsets.all(context.h(5)),
-                        child: Icon(Icons.delete_outline,
-                            size: context.h(16), color: AppColors.danger),
-                      ),
-                    ),
+                    // InkWell(
+                    //   onTap: onDelete,
+                    //   borderRadius: BorderRadius.circular(context.h(6)),
+                    //   child: Padding(
+                    //     padding: EdgeInsets.all(context.h(5)),
+                    //     child: Icon(Icons.delete_outline,
+                    //         size: context.h(16), color: AppColors.danger),
+                    //   ),
+                    // ),
                   ],
                 ),
               ],
@@ -906,11 +887,40 @@ class _MenuItemCard extends StatelessWidget {
         ),
       );
 
-  String _dietaryLabel(DietaryType type) => type == DietaryType.nonVeg
-      ? 'Non-Veg'
+  Widget _dietaryBadge(BuildContext context) {
+    final color = item.isVeg ? AppColors.success : AppColors.danger;
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: context.w(7),
+        vertical: context.h(4),
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(context.h(5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, size: context.h(8), color: color),
+          SizedBox(width: context.w(5)),
+          Text(
+            _dietaryLabel(item.dietaryType),
+            style: TextStyle(
+              color: color,
+              fontSize: context.h(9),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _dietaryLabel(DietaryType type) => type == DietaryType.veg
+      ? 'Veg'
       : type == DietaryType.egg
-          ? 'Egg'
-          : 'Veg';
+          ? 'Contains Egg'
+          : 'Non-Veg';
 
   String _titleCase(String value) => value
       .split(' ')
@@ -954,7 +964,7 @@ class _AddItemTile extends StatelessWidget {
               ),
               SizedBox(height: context.h(10)),
               Text(
-                'Add New Item',
+                'Add Item',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: colors.textSecondary,

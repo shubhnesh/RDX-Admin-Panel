@@ -57,7 +57,7 @@ class RdxTextField extends StatefulWidget {
         assert(minLines == null || minLines <= maxLines);
 
   /// Shared sizing constants with [RdxDropdown] trigger.
-  static double verticalPad(BuildContext context) => context.h(20);
+  static double verticalPad(BuildContext context) => context.h(17);
 
   static double horizontalPad(BuildContext context) => context.w(12);
 

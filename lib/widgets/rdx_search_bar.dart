@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/responsive_size.dart';
+import 'rdx_text_field.dart';
 
 class RdxSearchBar extends StatefulWidget {
   final String hintText;
@@ -106,7 +107,7 @@ class RdxSearchToolbar extends StatelessWidget implements PreferredSizeWidget {
           children: [
             Expanded(
               child: RdxSearchBar(
-                height: 44,
+                height: RdxTextField.singleLineHeight(context),
                 hintText: hintText,
                 controller: controller,
                 onChanged: onChanged,
@@ -193,35 +194,22 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
   Widget build(BuildContext context) {
     final bool hasText = _controller.text.isNotEmpty;
     final colors = AppColors.of(context);
-    final focused = _focusNode.hasFocus;
 
     return Container(
       width: widget.width,
       height: widget.height,
       margin: widget.margin,
       padding: widget.padding ??
-          const EdgeInsets.symmetric(
-            horizontal: 13,
+          EdgeInsets.symmetric(
+            horizontal: RdxTextField.horizontalPad(context),
           ),
       decoration: BoxDecoration(
-        color: widget.backgroundColor ?? colors.surface,
-        borderRadius: BorderRadius.circular(
-          widget.borderRadius,
-        ),
+        color: widget.backgroundColor ?? Colors.white,
+        borderRadius: BorderRadius.circular(context.h(8)),
         border: Border.all(
-          color: widget.borderColor ??
-              (focused ? AppColors.primary : colors.border),
-          width: focused ? 1.4 : widget.borderWidth,
+          color: widget.borderColor ?? colors.border,
+          width: widget.borderWidth,
         ),
-        boxShadow: focused
-            ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  blurRadius: 0,
-                  spreadRadius: 3,
-                ),
-              ]
-            : null,
       ),
       child: Row(
         children: [
@@ -244,13 +232,13 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
               style: widget.textStyle ??
-                  AppTextStyles.bodySecondary(context).copyWith(
+                  AppTextStyles.body(context).copyWith(
                     color: widget.textColor ?? colors.textPrimary,
                   ),
               decoration: InputDecoration(
                 hintText: widget.hintText,
                 hintStyle: widget.hintStyle ??
-                    AppTextStyles.bodySecondary(context).copyWith(
+                    AppTextStyles.body(context).copyWith(
                       color: widget.hintColor ?? colors.textMuted,
                     ),
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/responsive_size.dart';
 
@@ -243,18 +244,24 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
               style: widget.textStyle ??
-                  TextStyle(
+                  // TextStyle(
+                  //   color: widget.textColor ?? colors.textPrimary,
+                  //   fontSize: 15,
+                  //   fontWeight: FontWeight.w400,
+                  // ),
+                  AppTextStyles.bodySecondary(context).copyWith(
                     color: widget.textColor ?? colors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
                   ),
               decoration: InputDecoration(
                 hintText: widget.hintText,
                 hintStyle: widget.hintStyle ??
-                    TextStyle(
+                    // TextStyle(
+                    //   color: widget.hintColor ?? colors.textMuted,
+                    //   fontSize: 15,
+                    //   fontWeight: FontWeight.w400,
+                    // ),
+                    AppTextStyles.bodySecondary(context).copyWith(
                       color: widget.hintColor ?? colors.textMuted,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
                     ),
 
                 // No background inside the TextField.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../core/theme/app_colors.dart';
 
 class SidebarItem {
@@ -75,7 +76,7 @@ class MainSideNav extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // ── Header / brand ────────────────────────────────────
-                _buildHeader(textPrimary, textSecondary),
+                _buildHeader(context, textPrimary, textSecondary),
                 const SizedBox(height: 8),
                 // ── Primary nav ───────────────────────────────────────
                 Expanded(
@@ -93,52 +94,6 @@ class MainSideNav extends StatelessWidget {
                     ],
                   ),
                 ),
-                // // ── Add Order CTA ─────────────────────────────────────
-                // Padding(
-                //   padding: EdgeInsets.symmetric(
-                //     horizontal: expanded ? 14 : 10,
-                //     vertical: 4,
-                //   ),
-                //   child: SizedBox(
-                //     width: double.infinity,
-                //     height: 44,
-                //     child: ElevatedButton(
-                //       onPressed: onAddOrder ?? () => onNavigate('/live-orders'),
-                //       style: ElevatedButton.styleFrom(
-                //         backgroundColor: AppColors.primary,
-                //         foregroundColor: Colors.white,
-                //         padding: EdgeInsets.zero,
-                //         elevation: 0,
-                //         shape: RoundedRectangleBorder(
-                //           borderRadius: BorderRadius.circular(10),
-                //         ),
-                //       ),
-                //       child: Row(
-                //         mainAxisAlignment: MainAxisAlignment.center,
-                //         children: [
-                //           const Icon(Icons.add_rounded, size: 20),
-                //           AnimatedSize(
-                //             duration: _animDuration,
-                //             curve: _animCurve,
-                //             child: expanded
-                //                 ? const Padding(
-                //                     padding: EdgeInsets.only(left: 8),
-                //                     child: Text(
-                //                       'Add Order',
-                //                       style: TextStyle(
-                //                         fontWeight: FontWeight.w600,
-                //                         fontSize: 14,
-                //                       ),
-                //                     ),
-                //                   )
-                //                 : const SizedBox.shrink(),
-                //           ),
-                //         ],
-                //       ),
-                //     ),
-                //   ),
-                // ),
-                // const SizedBox(height: 10),
                 // ── Footer actions ────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -203,7 +158,8 @@ class MainSideNav extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(Color textPrimary, Color textSecondary) {
+  Widget _buildHeader(
+      BuildContext context, Color textPrimary, Color textSecondary) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         expanded ? 16 : 12,
@@ -241,25 +197,27 @@ class MainSideNav extends StatelessWidget {
                         children: [
                           Text(
                             'RDX Admin',
-                            style: TextStyle(
-                              color: textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.2,
-                              height: 1.1,
-                            ),
+                            // style: TextStyle(
+                            //   color: textPrimary,
+                            //   fontSize: 17,
+                            //   fontWeight: FontWeight.bold,
+                            //   letterSpacing: 0.2,
+                            //   height: 1.1,
+                            // ),
+                            style: AppTextStyles.heading(context),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             'MANAGEMENT HUB',
-                            style: TextStyle(
-                              color: textSecondary,
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.0,
-                              height: 1.4,
-                            ),
+                            // style: TextStyle(
+                            //   color: textSecondary,
+                            //   fontSize: 9.5,
+                            //   fontWeight: FontWeight.w600,
+                            //   letterSpacing: 1.0,
+                            //   height: 1.4,
+                            // ),
+                            style: AppTextStyles.body(context),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -391,12 +349,17 @@ class _NavTile extends StatelessWidget {
                             opacity: expanded ? 1.0 : 0.0,
                             child: Text(
                               item.label,
-                              style: TextStyle(
+                              // style: TextStyle(
+                              //   color: selected
+                              //       ? AppColors.lightTextPrimary
+                              //       : AppColors.lightTextSecondary,
+                              //   fontSize: 13,
+                              //   fontWeight: FontWeight.w500,
+                              // ),
+                              style: AppTextStyles.section(context).copyWith(
                                 color: selected
-                                    ? AppColors.lightTextPrimary
+                                    ? AppColors.primary
                                     : AppColors.lightTextSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -474,13 +437,15 @@ class _FooterTile extends StatelessWidget {
                             opacity: expanded ? 1.0 : 0.0,
                             child: Text(
                               label,
-                              style: TextStyle(
-                                color: color,
-                                fontSize: 13.5,
-                                fontWeight: selected
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                              ),
+                              // style: TextStyle(
+                              //   color: color,
+                              //   fontSize: 13.5,
+                              //   fontWeight: selected
+                              //       ? FontWeight.w600
+                              //       : FontWeight.w500,
+                              // ),
+                              style: AppTextStyles.section(context)
+                                  .copyWith(color: color),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),

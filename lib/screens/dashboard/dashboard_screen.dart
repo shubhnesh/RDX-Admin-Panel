@@ -297,9 +297,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           padding: EdgeInsets.only(top: context.h(8)),
                           child: Text(
                             days[i],
-                            style: TextStyle(
-                                color: colors.textMuted,
-                                fontSize: context.h(13)),
+                            // style: TextStyle(
+                            //     color: colors.textMuted,
+                            //     fontSize: context.h(13)),
+                            style: AppTextStyles.bodySecondary(context)
+                                .copyWith(color: colors.textMuted),
                           ),
                         );
                       },
@@ -396,11 +398,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Text(
                 p,
-                style: TextStyle(
-                  color: selected ? Colors.white : colors.textSecondary,
-                  fontSize: context.h(16),
-                  fontWeight: selected ? FontWeight.w400 : FontWeight.w300,
-                ),
+                // style: TextStyle(
+                //   color: selected ? Colors.white : colors.textSecondary,
+                //   fontSize: context.h(16),
+                //   fontWeight: selected ? FontWeight.w400 : FontWeight.w300,
+                // ),
+                style: selected
+                    ? AppTextStyles.label(context).copyWith(color: Colors.white)
+                    : AppTextStyles.bodySecondary(context),
               ),
             ),
           );
@@ -555,11 +560,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       return BarTooltipItem(
                         rod.toY.toStringAsFixed(0),
-                        TextStyle(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: context.h(12),
-                        ),
+                        // TextStyle(
+                        //   color: colors.textPrimary,
+                        //   fontWeight: FontWeight.w600,
+                        //   fontSize: context.h(12),
+                        // ),
+                        AppTextStyles.label(context)
+                            .copyWith(color: colors.textPrimary),
                       );
                     },
                   ),
@@ -645,10 +652,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: Text(
             '${item.rank}',
-            style: TextStyle(
+            // style: TextStyle(
+            //   color: item.rank == 1 ? AppColors.primary : colors.textSecondary,
+            //   fontSize: context.h(13),
+            //   fontWeight: FontWeight.w700,
+            // ),
+            style: AppTextStyles.label(context).copyWith(
               color: item.rank == 1 ? AppColors.primary : colors.textSecondary,
-              fontSize: context.h(13),
-              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -659,30 +669,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Text(
                 item.name,
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: context.h(13),
-                  fontWeight: FontWeight.w600,
-                ),
+                // style: TextStyle(
+                //   color: colors.textPrimary,
+                //   fontSize: context.h(13),
+                //   fontWeight: FontWeight.w600,
+                // ),
+                style: AppTextStyles.label(context)
+                    .copyWith(color: colors.textPrimary),
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
                 '${item.orders} Orders',
-                style: TextStyle(
-                  color: colors.textMuted,
-                  fontSize: context.h(11),
-                ),
+                // style: TextStyle(
+                //   color: colors.textMuted,
+                //   fontSize: context.h(11),
+                // ),
+                style: AppTextStyles.caption(context),
               ),
             ],
           ),
         ),
         Text(
           '\$${item.revenue.toStringAsFixed(0)}',
-          style: TextStyle(
-            color: colors.textPrimary,
-            fontSize: context.h(13),
-            fontWeight: FontWeight.w600,
-          ),
+          // style: TextStyle(
+          //   color: colors.textPrimary,
+          //   fontSize: context.h(13),
+          //   fontWeight: FontWeight.w600,
+          // ),
+          style:
+              AppTextStyles.label(context).copyWith(color: colors.textPrimary),
         ),
       ],
     );
@@ -773,12 +788,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       flex: flex,
       child: Text(
         text,
-        style: TextStyle(
-          color: colors.textMuted,
-          fontSize: context.h(16),
-          fontWeight: FontWeight.w400,
-          letterSpacing: 0.5,
-        ),
+        // style: TextStyle(
+        //   color: colors.textMuted,
+        //   fontSize: context.h(16),
+        //   fontWeight: FontWeight.w400,
+        //   letterSpacing: 0.5,
+        // ),
+        style: AppTextStyles.bodySecondary(context)
+            .copyWith(color: colors.textMuted),
       ),
     );
   }
@@ -824,31 +841,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
             flex: 2,
             child: Text(
               '#${log.id}',
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontSize: context.h(13),
-                fontWeight: FontWeight.w600,
-              ),
+              // style: TextStyle(
+              //   color: colors.textPrimary,
+              //   fontSize: context.h(13),
+              //   fontWeight: FontWeight.w600,
+              // ),
+              style: AppTextStyles.body(context)
+                  .copyWith(color: colors.textPrimary),
             ),
           ),
           Expanded(
             flex: 2,
             child: Text(
               Formatters.timeAgo(log.timestamp),
-              style: TextStyle(
-                color: colors.textSecondary,
-                fontSize: context.h(12),
-              ),
+              // style: TextStyle(
+              //   color: colors.textSecondary,
+              //   fontSize: context.h(12),
+              // ),
+              style: AppTextStyles.body(context)
+                  .copyWith(color: colors.textSecondary),
             ),
           ),
           Expanded(
             flex: 4,
             child: Text(
               log.action,
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontSize: context.h(13),
-              ),
+              // style: TextStyle(
+              //   color: colors.textPrimary,
+              //   fontSize: context.h(13),
+              // ),
+              style: AppTextStyles.body(context),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -867,12 +889,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Text(
                   status,
-                  style: TextStyle(
-                    color: badgeFg,
-                    fontSize: context.h(10),
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                  ),
+                  // style: TextStyle(
+                  //   color: badgeFg,
+                  //   fontSize: context.h(10),
+                  //   fontWeight: FontWeight.w700,
+                  //   letterSpacing: 0.3,
+                  // ),
+                  style: AppTextStyles.body(context).copyWith(color: badgeFg),
                 ),
               ),
             ),

@@ -206,10 +206,12 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
             ),
             child: Text(
               errorMessage!,
-              style: TextStyle(
-                color: AppColors.danger,
-                fontSize: context.h(13),
-              ),
+              // style: TextStyle(
+              //   color: AppColors.danger,
+              //   fontSize: context.h(13),
+              // ),
+              style:
+                  AppTextStyles.body(context).copyWith(color: AppColors.danger),
             ),
           ),
           SizedBox(height: context.h(16)),
@@ -227,10 +229,11 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
             SizedBox(height: context.h(4)),
             Text(
               'Customers will enter this code at checkout.',
-              style: AppTextStyles.label(context).copyWith(
-                color: colors.textMuted,
-                fontSize: context.h(11),
-              ),
+              // style: AppTextStyles.label(context).copyWith(
+              //   color: colors.textMuted,
+              //   fontSize: context.h(11),
+              // ),
+              style: AppTextStyles.caption(context),
             ),
             SizedBox(height: context.h(16)),
             RdxTextField(
@@ -295,10 +298,12 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                     children: [
                       Text(
                         'Start Date',
-                        style: AppTextStyles.label(context).copyWith(
-                          color: colors.textSecondary,
-                          fontSize: context.h(12),
-                        ),
+                        // style: AppTextStyles.label(context).copyWith(
+                        //   color: colors.textSecondary,
+                        //   fontSize: context.h(12),
+                        // ),
+                        style: AppTextStyles.bodySecondary(context)
+                            .copyWith(color: colors.textSecondary),
                       ),
                       SizedBox(height: context.h(6)),
                       _datePickerField(
@@ -315,10 +320,12 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                     children: [
                       Text(
                         'Expiry Date',
-                        style: AppTextStyles.label(context).copyWith(
-                          color: colors.textSecondary,
-                          fontSize: context.h(12),
-                        ),
+                        // style: AppTextStyles.label(context).copyWith(
+                        //   color: colors.textSecondary,
+                        //   fontSize: context.h(12),
+                        // ),
+                        style: AppTextStyles.bodySecondary(context)
+                            .copyWith(color: colors.textSecondary),
                       ),
                       SizedBox(height: context.h(6)),
                       _datePickerField(
@@ -333,9 +340,8 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
             SizedBox(height: context.h(16)),
             Text(
               'Applicable Categories',
-              style: AppTextStyles.label(context).copyWith(
+              style: AppTextStyles.bodySecondary(context).copyWith(
                 color: colors.textSecondary,
-                fontSize: context.h(12),
               ),
             ),
             SizedBox(height: context.h(8)),
@@ -347,10 +353,13 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                 return FilterChip(
                   label: Text(
                     cat,
-                    style: TextStyle(
+                    // style: TextStyle(
+                    //   color: selected ? AppColors.primary : colors.textPrimary,
+                    //   fontSize: context.h(10),
+                    //   fontWeight: FontWeight.w600,
+                    // ),
+                    style: AppTextStyles.body(context).copyWith(
                       color: selected ? AppColors.primary : colors.textPrimary,
-                      fontSize: context.h(10),
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   selected: selected,
@@ -422,11 +431,12 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
               SizedBox(width: context.w(8)),
               Text(
                 title,
-                style: AppTextStyles.body(context).copyWith(
-                  color: colors.textPrimary,
-                  fontSize: context.h(14),
-                  fontWeight: FontWeight.w600,
-                ),
+                // style: AppTextStyles.body(context).copyWith(
+                //   color: colors.textPrimary,
+                //   fontSize: context.h(14),
+                //   fontWeight: FontWeight.w600,
+                // ),
+                style: AppTextStyles.section(context),
               ),
             ],
           ),
@@ -484,9 +494,12 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
               SizedBox(width: context.w(8)),
               Text(
                 date == null ? 'Select date' : Formatters.date(date),
-                style: TextStyle(
+                // style: TextStyle(
+                //   color: date == null ? colors.textMuted : colors.textPrimary,
+                //   fontSize: context.h(13),
+                // ),
+                style: AppTextStyles.body(context).copyWith(
                   color: date == null ? colors.textMuted : colors.textPrimary,
-                  fontSize: context.h(13),
                 ),
               ),
             ],
@@ -535,10 +548,11 @@ class _LivePreviewCard extends StatelessWidget {
               SizedBox(width: context.w(6)),
               Text(
                 'Preview',
-                style: AppTextStyles.body(context).copyWith(
-                  color: colors.textPrimary,
-                  fontSize: context.h(15),
-                ),
+                // style: AppTextStyles.body(context).copyWith(
+                //   color: colors.textPrimary,
+                //   fontSize: context.h(15),
+                // ),
+                style: AppTextStyles.section(context),
               ),
             ],
           ),
@@ -570,11 +584,13 @@ class _LivePreviewCard extends StatelessWidget {
                       ),
                       child: Text(
                         isActive ? 'ACTIVE' : 'SCHEDULED',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: context.h(9.5),
-                          fontWeight: FontWeight.w700,
-                        ),
+                        // style: TextStyle(
+                        //   color: Colors.white,
+                        //   fontSize: context.h(9.5),
+                        //   fontWeight: FontWeight.w700,
+                        // ),
+                        style: AppTextStyles.label(context)
+                            .copyWith(color: Colors.white),
                       ),
                     ),
                   ],
@@ -584,20 +600,24 @@ class _LivePreviewCard extends StatelessWidget {
                   discountType == DiscountType.percentage
                       ? '${discountValue.toStringAsFixed(0)}%'
                       : Formatters.currency(discountValue),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: context.h(34),
-                    fontWeight: FontWeight.bold,
-                    height: 1,
-                  ),
+                  // style: TextStyle(
+                  //   color: Colors.white,
+                  //   fontSize: context.h(34),
+                  //   fontWeight: FontWeight.bold,
+                  //   height: 1,
+                  // ),
+                  style: AppTextStyles.heading(context)
+                      .copyWith(color: Colors.white),
                 ),
                 SizedBox(height: context.h(4)),
                 Text(
                   'Off your next order',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: context.h(13),
-                  ),
+                  // style: TextStyle(
+                  //   color: Colors.white70,
+                  //   fontSize: context.h(13),
+                  // ),
+                  style: AppTextStyles.bodySecondary(context)
+                      .copyWith(color: Colors.white70),
                 ),
                 SizedBox(height: context.h(16)),
                 Container(
@@ -613,12 +633,14 @@ class _LivePreviewCard extends StatelessWidget {
                   child: Center(
                     child: Text(
                       code,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: context.h(15),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
-                      ),
+                      // style: TextStyle(
+                      //   color: Colors.white,
+                      //   fontSize: context.h(15),
+                      //   fontWeight: FontWeight.bold,
+                      //   letterSpacing: 1.5,
+                      // ),
+                      style: AppTextStyles.section(context)
+                          .copyWith(color: Colors.white),
                     ),
                   ),
                 ),
@@ -646,11 +668,12 @@ class _LivePreviewCard extends StatelessWidget {
                     minOrder != null && minOrder! > 0
                         ? 'This preview shows how the coupon will appear to end-users. Minimum order: ${Formatters.currency(minOrder!)}.'
                         : 'This preview shows how the coupon will appear to end-users in the RDX delivery app.',
-                    style: AppTextStyles.label(context).copyWith(
-                      color: colors.textSecondary,
-                      height: 1.4,
-                      fontSize: context.h(11),
-                    ),
+                    // style: AppTextStyles.label(context).copyWith(
+                    //   color: colors.textSecondary,
+                    //   height: 1.4,
+                    //   fontSize: context.h(11),
+                    // ),
+                    style: AppTextStyles.label(context),
                   ),
                 ),
               ],

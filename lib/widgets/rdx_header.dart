@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/responsive_size.dart';
 
@@ -30,11 +31,12 @@ class RdxHeader extends StatelessWidget implements PreferredSizeWidget {
           const SizedBox(width: 4),
           Text(
             title,
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-            ),
+            // style: TextStyle(
+            //   color: colors.textPrimary,
+            //   fontSize: 17,
+            //   fontWeight: FontWeight.w700,
+            // ),
+            style: AppTextStyles.heading(context),
           ),
         ],
       ),

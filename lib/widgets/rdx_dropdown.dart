@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/responsive_size.dart';
 
@@ -174,13 +175,17 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
                     display,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: hasValue ? colors.textPrimary : colors.textMuted,
-                      fontSize: context.h(widget.isDense ? 12 : 14),
-                      fontWeight: hasValue ? FontWeight.w500 : FontWeight.w400,
-                      height:
-                          1.2, // matches RdxTextField line-height for identical metrics
-                    ),
+                    // style: TextStyle(
+                    //   color: hasValue ? colors.textPrimary : colors.textMuted,
+                    //   fontSize: context.h(widget.isDense ? 12 : 14),
+                    //   fontWeight: hasValue ? FontWeight.w500 : FontWeight.w400,
+                    //   height:
+                    //       1.2, // matches RdxTextField line-height for identical metrics
+                    // ),
+                    style: hasValue
+                        ? AppTextStyles.body(context)
+                        : AppTextStyles.body(context)
+                            .copyWith(color: colors.textMuted),
                   ),
                 ),
                 SizedBox(width: context.w(6)),
@@ -215,11 +220,13 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
         children: [
           Text(
             widget.label!,
-            style: TextStyle(
-              color: colors.textSecondary,
-              fontSize: context.h(12),
-              fontWeight: FontWeight.w500,
-            ),
+            // style: TextStyle(
+            //   color: colors.textSecondary,
+            //   fontSize: context.h(12),
+            //   fontWeight: FontWeight.w500,
+            // ),
+            style: AppTextStyles.label(context)
+                .copyWith(color: colors.textSecondary),
           ),
           SizedBox(height: context.h(6)),
           field,
@@ -268,10 +275,11 @@ class _DropdownMenuPanel<T> extends StatelessWidget {
               padding: EdgeInsets.all(context.h(14)),
               child: Text(
                 'No options',
-                style: TextStyle(
-                  color: colors.textMuted,
-                  fontSize: context.h(13),
-                ),
+                // style: TextStyle(
+                //   color: colors.textMuted,
+                //   fontSize: context.h(13),
+                // ),
+                style: AppTextStyles.caption(context),
               ),
             )
           : ListView.separated(
@@ -306,15 +314,19 @@ class _DropdownMenuPanel<T> extends StatelessWidget {
                               labelBuilder(item),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: selected
-                                    ? AppColors.primary
-                                    : colors.textPrimary,
-                                fontSize: context.h(13),
-                                fontWeight: selected
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                              ),
+                              // style: TextStyle(
+                              //   color: selected
+                              //       ? AppColors.primary
+                              //       : colors.textPrimary,
+                              //   fontSize: context.h(13),
+                              //   fontWeight: selected
+                              //       ? FontWeight.w600
+                              //       : FontWeight.w500,
+                              // ),
+                              style: selected
+                                  ? AppTextStyles.label(context)
+                                      .copyWith(color: AppColors.primary)
+                                  : AppTextStyles.body(context),
                             ),
                           ),
                           if (selected)

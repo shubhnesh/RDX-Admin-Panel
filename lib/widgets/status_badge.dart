@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../core/theme/app_colors.dart';
 import '../models/order_model.dart';
 
@@ -32,8 +33,9 @@ class StatusBadge extends StatelessWidget {
       ),
       child: Text(
         status.label,
-        style:
-            TextStyle(color: _color, fontSize: 12, fontWeight: FontWeight.w600),
+        //   style:
+        //       TextStyle(color: _color, fontSize: 12, fontWeight: FontWeight.w600),
+        style: AppTextStyles.caption(context).copyWith(color: _color),
       ),
     );
   }

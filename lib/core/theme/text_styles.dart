@@ -47,7 +47,7 @@ class AppTextStyles {
 
   /// Buttons, navigation items and important labels.
   static TextStyle label(BuildContext context) => TextStyle(
-        color: AppColors.primary,
+        color: AppColors.textSecondary,
         fontSize: context.h(13),
         fontWeight: FontWeight.w600,
       );

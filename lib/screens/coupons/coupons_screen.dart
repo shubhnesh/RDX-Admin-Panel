@@ -79,18 +79,15 @@ class _CouponsScreenState extends State<CouponsScreen> {
                           children: [
                             Text(
                               'Coupons & Offers',
-                              style: AppTextStyles.body(context).copyWith(
-                                color: colors.textPrimary,
-                                fontSize: context.h(16),
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: AppTextStyles.heading(context).copyWith(),
                             ),
                             SizedBox(height: context.h(4)),
                             Text(
                               'Manage active promotions and discount codes.',
-                              style: AppTextStyles.body(context).copyWith(
+                              style:
+                                  AppTextStyles.bodySecondary(context).copyWith(
                                 color: colors.textSecondary,
-                                fontSize: context.h(12),
+                                // fontSize: context.h(12),
                               ),
                             ),
                           ],
@@ -105,8 +102,13 @@ class _CouponsScreenState extends State<CouponsScreen> {
                             context.read<CouponProvider>().load();
                           }
                         },
-                        icon: Icon(Icons.add, size: context.h(18)),
-                        label: const Text('Create New Coupon'),
+                        icon: Icon(Icons.add, size: context.h(24)),
+                        label: Text(
+                          'Create New Coupon',
+                          style: AppTextStyles.section(context).copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -215,9 +217,9 @@ class _StatusFilterCard extends StatelessWidget {
         children: [
           Text(
             'Filter by Status',
-            style: AppTextStyles.label(context).copyWith(
-              color: colors.textSecondary,
-              fontSize: context.h(12),
+            style: AppTextStyles.section(context).copyWith(
+              color: colors.textMuted,
+              // fontSize: context.h(12),
             ),
           ),
           SizedBox(height: context.h(10)),
@@ -260,11 +262,15 @@ class _StatusFilterCard extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: TextStyle(
-              color: selected ? Colors.white : colors.textSecondary,
-              fontSize: context.h(12),
-              fontWeight: FontWeight.w600,
-            ),
+            // style: TextStyle(
+            //   color: selected ? Colors.white : colors.textSecondary,
+            //   fontSize: context.h(12),
+            //   fontWeight: FontWeight.w600,
+            // ),
+            style: selected
+                ? AppTextStyles.section(context).copyWith(color: Colors.white)
+                : AppTextStyles.bodySecondary(context)
+                    .copyWith(color: colors.textSecondary),
           ),
         ),
       ),
@@ -348,12 +354,14 @@ class _CouponCard extends StatelessWidget {
                     coupon.status.name.toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: context.h(10),
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.4,
-                    ),
+                    // style: TextStyle(
+                    //   color: statusColor,
+                    //   fontSize: context.h(10),
+                    //   fontWeight: FontWeight.w700,
+                    //   letterSpacing: 0.4,
+                    // ),
+                    style: AppTextStyles.label(context)
+                        .copyWith(color: statusColor),
                   ),
                 ),
               ),
@@ -397,12 +405,13 @@ class _CouponCard extends StatelessWidget {
                   coupon.code,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: context.h(17),
-                    letterSpacing: 0.3,
-                  ),
+                  // style: TextStyle(
+                  //   color: colors.textPrimary,
+                  //   fontWeight: FontWeight.w800,
+                  //   fontSize: context.h(17),
+                  //   letterSpacing: 0.3,
+                  // ),
+                  style: AppTextStyles.heading(context),
                 ),
               ),
               SizedBox(width: context.w(4)),
@@ -435,10 +444,11 @@ class _CouponCard extends StatelessWidget {
                 : coupon.description,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.body(context).copyWith(
-              color: colors.textSecondary,
-              fontSize: context.h(12),
-            ),
+            // style: AppTextStyles.body(context).copyWith(
+            //   color: colors.textSecondary,
+            //   fontSize: context.h(12),
+            // ),
+            style: AppTextStyles.bodySecondary(context),
           ),
 
           SizedBox(height: context.h(10)),
@@ -467,11 +477,13 @@ class _CouponCard extends StatelessWidget {
                     discount,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w800,
-                      fontSize: context.h(16),
-                    ),
+                    // style: TextStyle(
+                    //   color: AppColors.primary,
+                    //   fontWeight: FontWeight.w800,
+                    //   fontSize: context.h(16),
+                    // ),
+                    style: AppTextStyles.section(context)
+                        .copyWith(color: AppColors.primary),
                   ),
                 ),
                 if (coupon.minOrderValue != null) ...[
@@ -482,10 +494,11 @@ class _CouponCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
-                      style: AppTextStyles.label(context).copyWith(
-                        color: colors.textSecondary,
-                        fontSize: context.h(11),
-                      ),
+                      // style: AppTextStyles.label(context).copyWith(
+                      //   color: colors.textSecondary,
+                      //   fontSize: context.h(11),
+                      // ),
+                      style: AppTextStyles.label(context),
                     ),
                   ),
                 ],
@@ -525,10 +538,11 @@ class _CouponCard extends StatelessWidget {
                   usageLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.label(context).copyWith(
-                    color: colors.textSecondary,
-                    fontSize: context.h(11),
-                  ),
+                  // style: AppTextStyles.label(context).copyWith(
+                  //   color: colors.textSecondary,
+                  //   fontSize: context.h(11),
+                  // ),
+                  style: AppTextStyles.label(context),
                 ),
               ),
             ],
@@ -554,28 +568,12 @@ class _CouponCard extends StatelessWidget {
                   '${Formatters.date(coupon.startDate)} - ${Formatters.date(coupon.endDate)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.label(context).copyWith(
-                    color: colors.textMuted,
-                    fontSize: context.h(11),
-                  ),
-                ),
-              ),
-              SizedBox(width: context.w(6)),
-              Flexible(
-                child: Text(
-                  isExpired
-                      ? 'Ended'
-                      : coupon.status == CouponStatus.scheduled
-                          ? 'Starts soon'
-                          : 'Active now',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: context.h(10),
-                    fontWeight: FontWeight.w700,
-                  ),
+                  // style: AppTextStyles.label(context).copyWith(
+                  //   color: colors.textMuted,
+                  //   fontSize: context.h(11),
+                  // ),
+                  style: AppTextStyles.label(context)
+                      .copyWith(color: colors.textMuted),
                 ),
               ),
             ],

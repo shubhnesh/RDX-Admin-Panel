@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/responsive_size.dart';
 
@@ -145,29 +146,33 @@ class _RdxTextFieldState extends State<RdxTextField> {
         focusNode: _focusNode,
         textAlignVertical:
             isMultiline ? TextAlignVertical.top : TextAlignVertical.center,
-        style: TextStyle(
-          color: colors.textPrimary,
-          fontSize: fs,
-          fontWeight: FontWeight.w400,
-          height: lineHeightFactor,
-        ),
+        // style: TextStyle(
+        //   color: colors.textPrimary,
+        //   fontSize: fs,
+        //   fontWeight: FontWeight.w400,
+        //   height: lineHeightFactor,
+        // ),
+        style: AppTextStyles.body(context),
         cursorColor: AppColors.primary,
         decoration: InputDecoration(
           hintText: widget.hint,
-          hintStyle: TextStyle(
-            color: colors.textMuted,
-            fontSize: fs,
-            fontWeight: FontWeight.w400,
-            height: lineHeightFactor,
-          ),
+          // hintStyle: TextStyle(
+          //   color: colors.textMuted,
+          //   fontSize: fs,
+          //   fontWeight: FontWeight.w400,
+          //   height: lineHeightFactor,
+          // ),
+          hintStyle:
+              AppTextStyles.body(context).copyWith(color: colors.textMuted),
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
           prefixText: widget.prefixText,
-          prefixStyle: TextStyle(
-            color: colors.textPrimary,
-            fontSize: fs,
-            height: lineHeightFactor,
-          ),
+          // prefixStyle: TextStyle(
+          //   color: colors.textPrimary,
+          //   fontSize: fs,
+          //   height: lineHeightFactor,
+          // ),
+          prefixStyle: AppTextStyles.body(context),
           counterText: widget.counterText ?? '',
           filled: true,
           fillColor: _focusNode.hasFocus || hasText
@@ -203,11 +208,13 @@ class _RdxTextFieldState extends State<RdxTextField> {
       children: [
         Text(
           widget.label!,
-          style: TextStyle(
-            color: colors.textSecondary,
-            fontSize: context.h(12),
-            fontWeight: FontWeight.w500,
-          ),
+          // style: TextStyle(
+          //   color: colors.textSecondary,
+          //   fontSize: context.h(12),
+          //   fontWeight: FontWeight.w500,
+          // ),
+          style: AppTextStyles.bodySecondary(context)
+              .copyWith(color: colors.textSecondary),
         ),
         SizedBox(height: context.h(6)),
         field,

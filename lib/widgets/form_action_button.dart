@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/responsive_size.dart';
 
@@ -66,10 +67,14 @@ class FormActionButton extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: context.h(13),
-              fontWeight: FontWeight.w600,
-            ),
+            // style: TextStyle(
+            //   fontSize: context.h(13),
+            //   fontWeight: FontWeight.w600,
+            // ),
+            style: isPrimary
+                ? AppTextStyles.label(context).copyWith(color: Colors.white)
+                : AppTextStyles.label(context)
+                    .copyWith(color: colors.textPrimary),
           );
 
     final shape = RoundedRectangleBorder(

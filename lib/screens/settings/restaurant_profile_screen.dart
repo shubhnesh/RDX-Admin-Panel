@@ -1,5 +1,280 @@
+// import 'package:flutter/material.dart';
+// import 'package:provider/provider.dart';
+// import 'package:rdx_admin/core/theme/text_styles.dart';
+
+// import '../../core/theme/app_colors.dart';
+// import '../../core/utils/responsive_size.dart';
+// import '../../providers/settings_provider.dart';
+// import '../../widgets/rdx_text_field.dart';
+// import '../../widgets/form_action_button.dart';
+
+// class RestaurantProfileScreen extends StatefulWidget {
+//   const RestaurantProfileScreen({super.key});
+
+//   @override
+//   State<RestaurantProfileScreen> createState() =>
+//       _RestaurantProfileScreenState();
+// }
+
+// class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
+//   late final TextEditingController nameController;
+//   late final TextEditingController descriptionController;
+//   late final TextEditingController addressController;
+//   late final TextEditingController phoneController;
+//   late final TextEditingController emailController;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     final settings = context.read<SettingsProvider>();
+//     nameController = TextEditingController(text: settings.restaurantName);
+//     descriptionController = TextEditingController(text: settings.description);
+//     addressController = TextEditingController(text: settings.address);
+//     phoneController = TextEditingController(text: settings.phone);
+//     emailController = TextEditingController(text: settings.email);
+//   }
+
+//   @override
+//   void dispose() {
+//     nameController.dispose();
+//     descriptionController.dispose();
+//     addressController.dispose();
+//     phoneController.dispose();
+//     emailController.dispose();
+//     super.dispose();
+//   }
+
+//   Future<void> _save() async {
+//     final ok = await context.read<SettingsProvider>().save(
+//           name: nameController.text,
+//           desc: descriptionController.text,
+//           addr: addressController.text,
+//           ph: phoneController.text,
+//           em: emailController.text,
+//         );
+//     if (!mounted) return;
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(
+//         content: Text(
+//           ok ? 'Settings saved' : 'Failed to save settings',
+//           style: AppTextStyles.bodySecondary(context)
+//               .copyWith(color: Colors.white),
+//         ),
+//       ),
+//     );
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final colors = AppColors.of(context);
+//     final provider = context.watch<SettingsProvider>();
+
+//     return Scaffold(
+//       backgroundColor: colors.background,
+//       body: SingleChildScrollView(
+//         padding: Responsive.pagePadding(context, top: 16),
+//         child: Center(
+//           child: ConstrainedBox(
+//             constraints: const BoxConstraints(maxWidth: 860),
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 Row(
+//                   children: [
+//                     IconButton(
+//                       onPressed: () => Navigator.of(context).maybePop(),
+//                       icon: const Icon(Icons.arrow_back),
+//                     ),
+//                     Text(
+//                       'Restaurant Profile',
+//                       style: AppTextStyles.heading(context)
+//                           .copyWith(color: colors.textPrimary),
+//                     ),
+//                     const Spacer(),
+//                     FormActionButton.save(
+//                       isLoading: provider.isLoading,
+//                       onPressed: _save,
+//                     ),
+//                     SizedBox(width: context.w(10)),
+//                     FormActionButton.discard(
+//                       onPressed: () => Navigator.of(context).maybePop(),
+//                     ),
+//                   ],
+//                 ),
+//                 Text('Configure RDX Admin platform details.',
+//                     style: AppTextStyles.bodySecondary(context)
+//                         .copyWith(color: colors.textSecondary)),
+//                 const SizedBox(height: 18),
+//                 _ProfileSection(
+//                   title: 'Brand Identity',
+//                   colors: colors,
+//                   child: Row(
+//                     children: [
+//                       Container(
+//                           width: 64,
+//                           height: 64,
+//                           decoration: BoxDecoration(
+//                               shape: BoxShape.circle,
+//                               color: colors.background,
+//                               border: Border.all(color: colors.border)),
+//                           child: const Icon(Icons.restaurant,
+//                               color: AppColors.primary)),
+//                       const SizedBox(width: 14),
+//                       Expanded(
+//                           child: Column(
+//                               crossAxisAlignment: CrossAxisAlignment.start,
+//                               children: [
+//                             Text(
+//                               'Brand Identity',
+//                               style: AppTextStyles.bodySecondary(context),
+//                             ),
+//                             Text('Recommended size: 512x512px. Max 2MB.',
+//                                 style: AppTextStyles.body(context)),
+//                             const SizedBox(height: 8),
+//                             OutlinedButton(
+//                               onPressed: () {},
+//                               child: Text(
+//                                 'Upload New',
+//                                 style: AppTextStyles.section(context)
+//                                     .copyWith(color: colors.primary),
+//                               ),
+//                             ),
+//                           ])),
+//                     ],
+//                   ),
+//                 ),
+//                 _ProfileSection(
+//                   title: 'Basic Information',
+//                   colors: colors,
+//                   child: Column(children: [
+//                     RdxTextField(
+//                         controller: nameController, label: 'Restaurant Name'),
+//                     const SizedBox(height: 12),
+//                     RdxTextField(
+//                         controller: descriptionController,
+//                         label: 'Brief Description',
+//                         maxLines: 3)
+//                   ]),
+//                 ),
+//                 _ProfileSection(
+//                   title: 'Location & Contact',
+//                   colors: colors,
+//                   child: Column(children: [
+//                     RdxTextField(
+//                         controller: addressController,
+//                         label: 'Primary Address'),
+//                     const SizedBox(height: 12),
+//                     LayoutBuilder(builder: (context, constraints) {
+//                       final narrow = constraints.maxWidth < 480;
+//                       final phone = RdxTextField(
+//                           controller: phoneController, label: 'Support Phone');
+//                       final email = RdxTextField(
+//                           controller: emailController, label: 'Support Email');
+//                       return narrow
+//                           ? Column(children: [
+//                               phone,
+//                               const SizedBox(height: 12),
+//                               email
+//                             ])
+//                           : Row(children: [
+//                               Expanded(child: phone),
+//                               const SizedBox(width: 12),
+//                               Expanded(child: email)
+//                             ]);
+//                     })
+//                   ]),
+//                 ),
+//                 _ProfileSection(
+//                   title: 'Operating Hours',
+//                   colors: colors,
+//                   child: Column(children: [
+//                     for (final day in ['Weekdays', 'Weekends'])
+//                       Padding(
+//                           padding: const EdgeInsets.symmetric(vertical: 5),
+//                           child: Row(children: [
+//                             Expanded(
+//                               child: Text(day,
+//                                   style: AppTextStyles.bodySecondary(context)
+//                                       .copyWith(color: colors.textSecondary)),
+//                             ),
+//                             Expanded(
+//                                 child: _ProfileTime(
+//                                     text: day == 'Weekdays'
+//                                         ? '08:00 AM'
+//                                         : '10:00 AM',
+//                                     colors: colors)),
+//                             const SizedBox(width: 10),
+//                             Expanded(
+//                                 child: _ProfileTime(
+//                                     text: day == 'Weekdays'
+//                                         ? '11:00 PM'
+//                                         : '02:00 AM',
+//                                     colors: colors)),
+//                             Switch(
+//                                 value: true,
+//                                 onChanged: (_) {},
+//                                 materialTapTargetSize:
+//                                     MaterialTapTargetSize.shrinkWrap)
+//                           ]))
+//                   ]),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+// class _ProfileSection extends StatelessWidget {
+//   final String title;
+//   final AppColorScheme colors;
+//   final Widget child;
+//   const _ProfileSection(
+//       {required this.title, required this.colors, required this.child});
+//   @override
+//   Widget build(BuildContext context) => Container(
+//       width: double.infinity,
+//       margin: const EdgeInsets.only(bottom: 14),
+//       padding: const EdgeInsets.all(14),
+//       decoration: BoxDecoration(
+//           color: colors.surface,
+//           borderRadius: BorderRadius.circular(8),
+//           border: Border.all(color: colors.border)),
+//       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+//         Text(title,
+//             style: AppTextStyles.section(context)
+//                 .copyWith(color: colors.textPrimary)),
+//         const SizedBox(height: 12),
+//         child
+//       ]));
+// }
+
+// class _ProfileTime extends StatelessWidget {
+//   final String text;
+//   final AppColorScheme colors;
+//   const _ProfileTime({required this.text, required this.colors});
+//   @override
+//   Widget build(BuildContext context) => Container(
+//         alignment: Alignment.center,
+//         padding: const EdgeInsets.symmetric(vertical: 9),
+//         decoration: BoxDecoration(
+//             color: colors.background,
+//             borderRadius: BorderRadius.circular(5),
+//             border: Border.all(color: colors.border)),
+//         child: Text(text,
+//             style: AppTextStyles.section(context)
+//                 .copyWith(color: colors.textSecondary)),
+//       );
+// }
+
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'package:rdx_admin/core/theme/text_styles.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -23,10 +298,16 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
   late final TextEditingController phoneController;
   late final TextEditingController emailController;
 
+  Uint8List? _logoBytes;
+  String? _logoName;
+  bool _isUploadingLogo = false;
+
   @override
   void initState() {
     super.initState();
+
     final settings = context.read<SettingsProvider>();
+
     nameController = TextEditingController(text: settings.restaurantName);
     descriptionController = TextEditingController(text: settings.description);
     addressController = TextEditingController(text: settings.address);
@@ -41,7 +322,194 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
     addressController.dispose();
     phoneController.dispose();
     emailController.dispose();
+
     super.dispose();
+  }
+
+  // Future<void> _pickLogo() async {
+  //   if (_isUploadingLogo) return;
+
+  //   setState(() {
+  //     _isUploadingLogo = true;
+  //   });
+
+  //   try {
+  //     final result = await FilePicker.platform.pickFiles(
+  //       type: FileType.image,
+  //       withData: true,
+  //     );
+
+  //     if (!mounted) return;
+
+  //     // User cancelled the picker.
+  //     if (result == null || result.files.isEmpty) {
+  //       setState(() {
+  //         _isUploadingLogo = false;
+  //       });
+  //       return;
+  //     }
+
+  //     final file = result.files.single;
+
+  //     // Maximum allowed size: 2 MB.
+  //     const maxSizeInBytes = 2 * 1024 * 1024;
+
+  //     if (file.size > maxSizeInBytes) {
+  //       setState(() {
+  //         _isUploadingLogo = false;
+  //       });
+
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text(
+  //             'Logo must be smaller than 2 MB.',
+  //             style: AppTextStyles.bodySecondary(context).copyWith(
+  //               color: Colors.white,
+  //             ),
+  //           ),
+  //         ),
+  //       );
+
+  //       return;
+  //     }
+
+  //     final bytes = file.bytes;
+
+  //     if (bytes == null || bytes.isEmpty) {
+  //       setState(() {
+  //         _isUploadingLogo = false;
+  //       });
+
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text(
+  //             'Unable to read the selected image.',
+  //             style: AppTextStyles.bodySecondary(context).copyWith(
+  //               color: Colors.white,
+  //             ),
+  //           ),
+  //         ),
+  //       );
+
+  //       return;
+  //     }
+
+  //     setState(() {
+  //       _logoBytes = bytes;
+  //       _logoName = file.name;
+  //       _isUploadingLogo = false;
+  //     });
+  //   } catch (e) {
+  //     if (!mounted) return;
+
+  //     setState(() {
+  //       _isUploadingLogo = false;
+  //     });
+
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text(
+  //           'Failed to select logo. Please try again.',
+  //           style: AppTextStyles.bodySecondary(context).copyWith(
+  //             color: Colors.white,
+  //           ),
+  //         ),
+  //       ),
+  //     );
+  //   }
+  // }
+
+  Future<void> _pickLogo() async {
+    if (_isUploadingLogo) return;
+
+    setState(() {
+      _isUploadingLogo = true;
+    });
+
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+
+      if (!mounted) return;
+
+      // User cancelled the picker.
+      if (result == null || result.files.isEmpty) {
+        setState(() {
+          _isUploadingLogo = false;
+        });
+        return;
+      }
+
+      final file = result.files.single;
+
+      // Maximum allowed size: 2 MB.
+      const maxSizeInBytes = 2 * 1024 * 1024;
+
+      if (file.size > maxSizeInBytes) {
+        setState(() {
+          _isUploadingLogo = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Logo must be smaller than 2 MB.',
+              style: AppTextStyles.bodySecondary(context).copyWith(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+
+        return;
+      }
+
+      final bytes = file.bytes;
+
+      if (bytes == null || bytes.isEmpty) {
+        setState(() {
+          _isUploadingLogo = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Unable to read the selected image.',
+              style: AppTextStyles.bodySecondary(context).copyWith(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+
+        return;
+      }
+
+      setState(() {
+        _logoBytes = bytes;
+        _logoName = file.name;
+        _isUploadingLogo = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isUploadingLogo = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to select logo. Please try again.',
+            style: AppTextStyles.bodySecondary(context).copyWith(
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _save() async {
@@ -52,13 +520,16 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
           ph: phoneController.text,
           em: emailController.text,
         );
+
     if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           ok ? 'Settings saved' : 'Failed to save settings',
-          style: AppTextStyles.bodySecondary(context)
-              .copyWith(color: Colors.white),
+          style: AppTextStyles.bodySecondary(context).copyWith(
+            color: Colors.white,
+          ),
         ),
       ),
     );
@@ -87,8 +558,9 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                     ),
                     Text(
                       'Restaurant Profile',
-                      style: AppTextStyles.heading(context)
-                          .copyWith(color: colors.textPrimary),
+                      style: AppTextStyles.heading(context).copyWith(
+                        color: colors.textPrimary,
+                      ),
                     ),
                     const Spacer(),
                     FormActionButton.save(
@@ -101,122 +573,214 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                     ),
                   ],
                 ),
-                Text('Configure RDX Admin platform details.',
-                    style: AppTextStyles.bodySecondary(context)
-                        .copyWith(color: colors.textSecondary)),
+                Text(
+                  'Configure RDX Admin platform details.',
+                  style: AppTextStyles.bodySecondary(context).copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
                 const SizedBox(height: 18),
                 _ProfileSection(
                   title: 'Brand Identity',
                   colors: colors,
                   child: Row(
                     children: [
+                      // -------------------------------------------------------
+                      // RESTAURANT LOGO
+                      // -------------------------------------------------------
                       Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: colors.background,
-                              border: Border.all(color: colors.border)),
-                          child: const Icon(Icons.restaurant,
-                              color: AppColors.primary)),
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colors.background,
+                          border: Border.all(
+                            color: colors.border,
+                          ),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: _logoBytes != null
+                            ? Image.memory(
+                                _logoBytes!,
+                                width: 64,
+                                height: 64,
+                                fit: BoxFit.cover,
+                              )
+                            : const Icon(
+                                Icons.restaurant,
+                                color: AppColors.primary,
+                              ),
+                      ),
+
                       const SizedBox(width: 14),
+
                       Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
                               'Brand Identity',
                               style: AppTextStyles.bodySecondary(context),
                             ),
-                            Text('Recommended size: 512x512px. Max 2MB.',
-                                style: AppTextStyles.body(context)),
-                            const SizedBox(height: 8),
-                            OutlinedButton(
-                              onPressed: () {},
-                              child: Text(
-                                'Upload New',
-                                style: AppTextStyles.section(context)
-                                    .copyWith(color: colors.primary),
-                              ),
+
+                            Text(
+                              'Recommended size: 512x512px. Max 2MB.',
+                              style: AppTextStyles.body(context),
                             ),
-                          ])),
+
+                            const SizedBox(height: 8),
+
+                            OutlinedButton(
+                              onPressed: _pickLogo,
+                              child: _isUploadingLogo
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      _logoBytes != null
+                                          ? 'Change Logo'
+                                          : 'Upload New',
+                                      style: AppTextStyles.section(context)
+                                          .copyWith(
+                                        color: colors.primary,
+                                      ),
+                                    ),
+                            ),
+
+                            // Show selected filename without changing
+                            // the existing layout when no logo is selected.
+                            if (_logoName != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                _logoName!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.body(context).copyWith(
+                                  color: colors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 _ProfileSection(
                   title: 'Basic Information',
                   colors: colors,
-                  child: Column(children: [
-                    RdxTextField(
-                        controller: nameController, label: 'Restaurant Name'),
-                    const SizedBox(height: 12),
-                    RdxTextField(
+                  child: Column(
+                    children: [
+                      RdxTextField(
+                        controller: nameController,
+                        label: 'Restaurant Name',
+                      ),
+                      const SizedBox(height: 12),
+                      RdxTextField(
                         controller: descriptionController,
                         label: 'Brief Description',
-                        maxLines: 3)
-                  ]),
+                        maxLines: 3,
+                      ),
+                    ],
+                  ),
                 ),
                 _ProfileSection(
                   title: 'Location & Contact',
                   colors: colors,
-                  child: Column(children: [
-                    RdxTextField(
+                  child: Column(
+                    children: [
+                      RdxTextField(
                         controller: addressController,
-                        label: 'Primary Address'),
-                    const SizedBox(height: 12),
-                    LayoutBuilder(builder: (context, constraints) {
-                      final narrow = constraints.maxWidth < 480;
-                      final phone = RdxTextField(
-                          controller: phoneController, label: 'Support Phone');
-                      final email = RdxTextField(
-                          controller: emailController, label: 'Support Email');
-                      return narrow
-                          ? Column(children: [
-                              phone,
-                              const SizedBox(height: 12),
-                              email
-                            ])
-                          : Row(children: [
-                              Expanded(child: phone),
-                              const SizedBox(width: 12),
-                              Expanded(child: email)
-                            ]);
-                    })
-                  ]),
+                        label: 'Primary Address',
+                      ),
+                      const SizedBox(height: 12),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final narrow = constraints.maxWidth < 480;
+
+                          final phone = RdxTextField(
+                            controller: phoneController,
+                            label: 'Support Phone',
+                          );
+
+                          final email = RdxTextField(
+                            controller: emailController,
+                            label: 'Support Email',
+                          );
+
+                          return narrow
+                              ? Column(
+                                  children: [
+                                    phone,
+                                    const SizedBox(height: 12),
+                                    email,
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(child: phone),
+                                    const SizedBox(width: 12),
+                                    Expanded(child: email),
+                                  ],
+                                );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
                 _ProfileSection(
                   title: 'Operating Hours',
                   colors: colors,
-                  child: Column(children: [
-                    for (final day in ['Weekdays', 'Weekends'])
-                      Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 5),
-                          child: Row(children: [
-                            Expanded(
-                              child: Text(day,
+                  child: Column(
+                    children: [
+                      for (final day in ['Weekdays', 'Weekends'])
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 5,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  day,
                                   style: AppTextStyles.bodySecondary(context)
-                                      .copyWith(color: colors.textSecondary)),
-                            ),
-                            Expanded(
+                                      .copyWith(
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
                                 child: _ProfileTime(
-                                    text: day == 'Weekdays'
-                                        ? '08:00 AM'
-                                        : '10:00 AM',
-                                    colors: colors)),
-                            const SizedBox(width: 10),
-                            Expanded(
+                                  text: day == 'Weekdays'
+                                      ? '08:00 AM'
+                                      : '10:00 AM',
+                                  colors: colors,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
                                 child: _ProfileTime(
-                                    text: day == 'Weekdays'
-                                        ? '11:00 PM'
-                                        : '02:00 AM',
-                                    colors: colors)),
-                            Switch(
+                                  text: day == 'Weekdays'
+                                      ? '11:00 PM'
+                                      : '02:00 AM',
+                                  colors: colors,
+                                ),
+                              ),
+                              Switch(
                                 value: true,
                                 onChanged: (_) {},
                                 materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap)
-                          ]))
-                  ]),
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -231,40 +795,62 @@ class _ProfileSection extends StatelessWidget {
   final String title;
   final AppColorScheme colors;
   final Widget child;
-  const _ProfileSection(
-      {required this.title, required this.colors, required this.child});
+
+  const _ProfileSection({
+    required this.title,
+    required this.colors,
+    required this.child,
+  });
+
   @override
   Widget build(BuildContext context) => Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: colors.border)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title,
-            style: AppTextStyles.section(context)
-                .copyWith(color: colors.textPrimary)),
-        const SizedBox(height: 12),
-        child
-      ]));
+          border: Border.all(color: colors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: AppTextStyles.section(context).copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
+      );
 }
 
 class _ProfileTime extends StatelessWidget {
   final String text;
   final AppColorScheme colors;
-  const _ProfileTime({required this.text, required this.colors});
+
+  const _ProfileTime({
+    required this.text,
+    required this.colors,
+  });
+
   @override
   Widget build(BuildContext context) => Container(
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-            color: colors.background,
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: colors.border)),
-        child: Text(text,
-            style: AppTextStyles.section(context)
-                .copyWith(color: colors.textSecondary)),
+          color: colors.background,
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: colors.border),
+        ),
+        child: Text(
+          text,
+          style: AppTextStyles.section(context).copyWith(
+            color: colors.textSecondary,
+          ),
+        ),
       );
 }

@@ -546,7 +546,16 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
           SizedBox(
             height: context.h(16),
             child: _ingredients.isEmpty
-                ? null
+                ? Text(
+                    'Ingredients will be shown here, comma-separated.',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: context.h(11),
+                      height: context.h(1.4),
+                    ),
+                  )
                 : Text(
                     _ingredients.join(', '),
                     maxLines: 1,

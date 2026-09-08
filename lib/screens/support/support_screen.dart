@@ -187,8 +187,8 @@ class _SupportScreenState extends State<SupportScreen> {
                         // ),
                         style: selected
                             ? AppTextStyles.body(context)
-                                .copyWith(color: colors.textPrimary)
-                            : AppTextStyles.label(context)
+                                .copyWith(color: colors.primary)
+                            : AppTextStyles.body(context)
                                 .copyWith(color: colors.textSecondary),
                       ),
                     ],

@@ -949,7 +949,7 @@ class _AddItemTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(context.h(14)),
       child: DottedBorderContainer(
-        color: colors.textMuted,
+        color: colors.border,
         radius: context.h(14),
         dashLength: context.h(6),
         gapLength: context.h(5),

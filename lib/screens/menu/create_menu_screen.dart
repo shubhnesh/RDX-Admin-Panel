@@ -291,7 +291,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
             Text(
               'Ingredients',
               style: AppTextStyles.bodySecondary(context).copyWith(
-                color: colors.textPrimary,
+                color: colors.textMuted,
               ),
             ),
             SizedBox(height: context.h(4)),
@@ -309,8 +309,8 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               //   color: colors.textMuted,
               //   fontSize: context.h(10),
               // ),
-              style: AppTextStyles.caption(context)
-                  .copyWith(color: colors.textMuted),
+              style:
+                  AppTextStyles.body(context).copyWith(color: colors.textMuted),
             ),
             SizedBox(height: context.h(8)),
             Row(

@@ -562,33 +562,52 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                 .copyWith(color: colors.textPrimary),
           ),
           SizedBox(height: context.h(4)),
-          SizedBox(
-            height: context.h(16),
+          // SizedBox(
+          //   height: context.h(18),
+          //   child: _ingredients.isEmpty
+          //       ? Text(
+          //           'Ingredients will be shown here, comma-separated.',
+          //           maxLines: 1,
+          //           overflow: TextOverflow.ellipsis,
+          //           // style: TextStyle(
+          //           //   color: colors.textSecondary,
+          //           //   fontSize: context.h(11),
+          //           //   height: context.h(1.4),
+          //           // ),
+          //           style: AppTextStyles.bodySecondary(context)
+          //               .copyWith(color: colors.textSecondary),
+          //         )
+          //       : Text(
+          //           _ingredients.join(', '),
+          //           maxLines: 1,
+          //           overflow: TextOverflow.ellipsis,
+          //           // style: TextStyle(
+          //           //   color: colors.textSecondary,
+          //           //   fontSize: context.h(11),
+          //           //   height: context.h(1.4),
+          //           // ),
+          //           style: AppTextStyles.caption(context)
+          //               .copyWith(color: colors.textSecondary),
+          //         ),
+          // ),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: context.h(18),
+            ),
             child: _ingredients.isEmpty
                 ? Text(
                     'Ingredients will be shown here, comma-separated.',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    // style: TextStyle(
-                    //   color: colors.textSecondary,
-                    //   fontSize: context.h(11),
-                    //   height: context.h(1.4),
-                    // ),
                     style: AppTextStyles.bodySecondary(context)
                         .copyWith(color: colors.textSecondary),
                   )
                 : Text(
                     _ingredients.join(', '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      fontSize: context.h(11),
-                      height: context.h(1.4),
-                    ),
+                    softWrap: true,
+                    style: AppTextStyles.caption(context)
+                        .copyWith(color: colors.textSecondary),
                   ),
           ),
-          SizedBox(height: context.h(8)),
+          // SizedBox(height: context.h(8)),
           Wrap(
             spacing: context.w(5),
             runSpacing: context.h(5),

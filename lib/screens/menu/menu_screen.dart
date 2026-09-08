@@ -342,13 +342,13 @@ class _MenuScreenState extends State<MenuScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.tune, size: context.h(16), color: AppColors.primary),
+            Icon(Icons.tune, size: context.h(19), color: AppColors.primary),
             SizedBox(width: context.w(4)),
             Icon(
               _categoryPickerOpen
                   ? Icons.keyboard_arrow_up
                   : Icons.keyboard_arrow_down,
-              size: context.h(17),
+              size: context.h(20),
               color: colors.textMuted,
             ),
           ],
@@ -573,7 +573,7 @@ class _MenuScreenState extends State<MenuScreen> {
       padding: EdgeInsets.only(bottom: context.h(24)),
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: context.w(225),
-        mainAxisExtent: context.h(375),
+        mainAxisExtent: context.h(378),
         mainAxisSpacing: context.h(18),
         crossAxisSpacing: context.w(18),
       ),
@@ -772,7 +772,7 @@ class _MenuItemCard extends StatelessWidget {
                           //   fontSize: context.h(10),
                           // ),
                           style: AppTextStyles.body(context),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                 ),

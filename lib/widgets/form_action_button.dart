@@ -195,8 +195,8 @@ class FormActionButton extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: isPrimary
-                ? AppTextStyles.label(context).copyWith(color: Colors.white)
-                : AppTextStyles.label(context)
+                ? AppTextStyles.section(context).copyWith(color: Colors.white)
+                : AppTextStyles.section(context)
                     .copyWith(color: colors.textPrimary),
           );
 

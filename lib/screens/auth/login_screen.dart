@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
+import 'package:rdx_admin/widgets/rdx_text_field.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
 
@@ -51,38 +53,61 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Text(
                     'RDX Admin',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
+                    // style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    //       fontWeight: FontWeight.bold,
+                    //       color: AppColors.primary,
+                    //     ),
+                    style: AppTextStyles.heading(context)
+                        .copyWith(color: AppColors.primary),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _isRegister ? 'Create admin account' : 'Sign in to continue',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    _isRegister
+                        ? 'Create admin account'
+                        : 'Sign in to continue',
+                    // style: Theme.of(context).textTheme.bodyMedium,
+                    style: AppTextStyles.bodySecondary(context),
                   ),
                   const SizedBox(height: 32),
-                  TextField(
+                  // TextField(
+                  //   controller: _emailCtrl,
+                  //   keyboardType: TextInputType.emailAddress,
+                  //   decoration: const InputDecoration(
+                  //     labelText: 'Email',
+                  //     border: OutlineInputBorder(),
+                  //     prefixIcon: Icon(Icons.email_outlined),
+                  //   ),
+                  // ),
+                  RdxTextField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.email_outlined),
-                    ),
+                    hint: 'Email',
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   const SizedBox(height: 16),
-                  TextField(
+                  // TextField(
+                  //   controller: _passCtrl,
+                  //   obscureText: _obscure,
+                  //   decoration: InputDecoration(
+                  //     labelText: 'Password',
+                  //     border: const OutlineInputBorder(),
+                  //     prefixIcon: const Icon(Icons.lock_outline),
+                  //     suffixIcon: IconButton(
+                  //       icon: Icon(
+                  //           _obscure ? Icons.visibility : Icons.visibility_off),
+                  //       onPressed: () => setState(() => _obscure = !_obscure),
+                  //     ),
+                  //   ),
+                  // ),
+                  RdxTextField(
                     controller: _passCtrl,
                     obscureText: _obscure,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
+                    hint: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                          _obscure ? Icons.visibility : Icons.visibility_off),
+                      onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -97,7 +122,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               height: 22,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text(_isRegister ? 'Create Account' : 'Sign In'),
+                          : Text(
+                              _isRegister ? 'Create Account' : 'Sign In',
+                              style: AppTextStyles.label(context)
+                                  .copyWith(color: Colors.white),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -107,6 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       _isRegister
                           ? 'Already have an account? Sign in'
                           : 'First time? Create admin account',
+                      style: AppTextStyles.label(context),
                     ),
                   ),
                 ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../widgets/rdx_header.dart';
@@ -115,11 +116,12 @@ class _SupportScreenState extends State<SupportScreen> {
       children: [
         Text(
           'Questions? Our Support team is here. Create tickets or reply to existing problems.',
-          style: TextStyle(
-            color: colors.textSecondary,
-            fontSize: context.h(14),
-            height: context.h(1.4),
-          ),
+          // style: TextStyle(
+          //   color: colors.textSecondary,
+          //   fontSize: context.h(14),
+          //   height: context.h(1.4),
+          // ),
+          style: AppTextStyles.bodySecondary(context),
         ),
       ],
     );
@@ -131,11 +133,12 @@ class _SupportScreenState extends State<SupportScreen> {
       children: [
         Text(
           'Issue Category',
-          style: TextStyle(
-            color: colors.textPrimary,
-            fontSize: context.h(15),
-            fontWeight: FontWeight.w600,
-          ),
+          // style: TextStyle(
+          //   color: colors.textPrimary,
+          //   fontSize: context.h(15),
+          //   fontWeight: FontWeight.w600,
+          // ),
+          style: AppTextStyles.section(context),
         ),
         SizedBox(height: context.h(12)),
         Wrap(
@@ -174,14 +177,19 @@ class _SupportScreenState extends State<SupportScreen> {
                       SizedBox(width: context.w(8)),
                       Text(
                         c.$1,
-                        style: TextStyle(
-                          color: selected
-                              ? colors.textPrimary
-                              : colors.textSecondary,
-                          fontSize: context.h(13),
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w500,
-                        ),
+                        // style: TextStyle(
+                        //   color: selected
+                        //       ? colors.textPrimary
+                        //       : colors.textSecondary,
+                        //   fontSize: context.h(13),
+                        //   fontWeight:
+                        //       selected ? FontWeight.w600 : FontWeight.w500,
+                        // ),
+                        style: selected
+                            ? AppTextStyles.body(context)
+                                .copyWith(color: colors.textPrimary)
+                            : AppTextStyles.label(context)
+                                .copyWith(color: colors.textSecondary),
                       ),
                     ],
                   ),
@@ -234,19 +242,19 @@ class _SupportScreenState extends State<SupportScreen> {
                 Icon(Icons.cloud_upload_outlined,
                     size: context.h(32), color: colors.textMuted),
                 SizedBox(height: context.h(8)),
-                Text(
-                  'Drag & drop screenshots or logs',
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: context.h(13),
-                  ),
-                ),
+                Text('Drag & drop screenshots or logs',
+                    // style: TextStyle(
+                    //   color: colors.textSecondary,
+                    //   fontSize: context.h(13),
+                    // ),
+                    style: AppTextStyles.bodySecondary(context)),
                 SizedBox(height: context.h(4)),
-                Text(
-                  'PNG, JPG, PDF up to 10 MB',
-                  style: TextStyle(
-                      color: colors.textMuted, fontSize: context.h(11)),
-                ),
+                Text('PNG, JPG, PDF up to 10 MB',
+                    // style: TextStyle(
+                    //   color: colors.textMuted,
+                    //   fontSize: context.h(11),
+                    // ),
+                    style: AppTextStyles.body(context)),
               ],
             ),
           ),
@@ -262,8 +270,12 @@ class _SupportScreenState extends State<SupportScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: context.h(2), color: Colors.white),
                     )
-                  : Icon(Icons.send_rounded, size: context.h(18)),
-              label: Text(_sending ? 'Submitting…' : 'Submit Ticket'),
+                  : Icon(Icons.send_rounded, size: context.h(17)),
+              label: Text(
+                _sending ? 'Submitting…' : 'Submit Ticket',
+                style:
+                    AppTextStyles.label(context).copyWith(color: Colors.white),
+              ),
             ),
           ),
         ],
@@ -284,11 +296,12 @@ class _SupportScreenState extends State<SupportScreen> {
         children: [
           Text(
             'Direct Channels',
-            style: TextStyle(
-              color: colors.textPrimary,
-              fontSize: context.h(15),
-              fontWeight: FontWeight.w600,
-            ),
+            // style: TextStyle(
+            //   color: colors.textPrimary,
+            //   fontSize: context.h(15),
+            //   fontWeight: FontWeight.w600,
+            // ),
+            style: AppTextStyles.section(context),
           ),
           SizedBox(height: context.h(16)),
           _channelRow(
@@ -329,26 +342,25 @@ class _SupportScreenState extends State<SupportScreen> {
                 Row(
                   children: [
                     Icon(Icons.schedule,
-                        size: context.h(16), color: AppColors.primary),
+                        size: context.h(18), color: AppColors.primary),
                     SizedBox(width: context.w(8)),
-                    Text(
-                      'Average Response',
-                      style: TextStyle(
-                        color: colors.textPrimary,
-                        fontSize: context.h(13),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text('Average Response',
+                        // style: TextStyle(
+                        //   color: colors.textPrimary,
+                        //   fontSize: context.h(13),
+                        //   fontWeight: FontWeight.w600,
+                        // ),
+                        style: AppTextStyles.bodySecondary(context)
+                            .copyWith(color: colors.textPrimary)),
                   ],
                 ),
                 SizedBox(height: context.h(6)),
-                Text(
-                  'Under 2 hours on business days',
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: context.h(12),
-                  ),
-                ),
+                Text('Under 2 hours on business days',
+                    // style: TextStyle(
+                    //   color: colors.textSecondary,
+                    //   fontSize: context.h(12),
+                    // ),
+                    style: AppTextStyles.body(context)),
               ],
             ),
           ),
@@ -382,18 +394,22 @@ class _SupportScreenState extends State<SupportScreen> {
             children: [
               Text(
                 title,
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: context.h(13),
-                  fontWeight: FontWeight.w600,
-                ),
+                // style: TextStyle(
+                //   color: colors.textPrimary,
+                //   fontSize: context.h(13),
+                //   fontWeight: FontWeight.w600,
+                // ),
+                style: AppTextStyles.bodySecondary(context)
+                    .copyWith(color: colors.primary),
               ),
               Text(
                 subtitle,
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  fontSize: context.h(12),
-                ),
+                // style: TextStyle(
+                //   color: colors.textSecondary,
+                //   fontSize: context.h(12),
+                // ),
+                style: AppTextStyles.body(context)
+                    .copyWith(color: colors.textPrimary),
               ),
             ],
           ),

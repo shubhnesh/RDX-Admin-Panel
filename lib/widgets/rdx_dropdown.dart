@@ -213,7 +213,7 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
         children: [
           Text(
             widget.label!,
-            style: AppTextStyles.label(context)
+            style: AppTextStyles.bodySecondary(context)
                 .copyWith(color: colors.textSecondary),
           ),
           SizedBox(height: context.h(6)),

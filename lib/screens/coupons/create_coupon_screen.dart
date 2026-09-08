@@ -31,9 +31,6 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   bool isLoading = false;
   String? errorMessage;
 
-  static const _categories = ['All Menu', 'Main Courses', 'Beverages'];
-  final Set<String> _selectedCategories = {'All Menu'};
-
   @override
   void initState() {
     super.initState();
@@ -58,7 +55,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     }
     if (endDate!.isBefore(startDate!)) {
       setState(
-          () => errorMessage = 'Expiry date must be after the start date.');
+          () => errorMessage = 'Expiry date cannot be before the start date.');
       return;
     }
 
@@ -296,7 +293,12 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                       SizedBox(height: context.h(6)),
                       _datePickerField(
                         startDate,
-                        (d) => setState(() => startDate = d),
+                        (d) => setState(() {
+                          startDate = d;
+                          if (endDate != null && endDate!.isBefore(d)) {
+                            endDate = null;
+                          }
+                        }),
                       ),
                     ],
                   ),
@@ -315,53 +317,12 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                       _datePickerField(
                         endDate,
                         (d) => setState(() => endDate = d),
+                        firstDate: startDate ?? DateTime(2024),
                       ),
                     ],
                   ),
                 ),
               ],
-            ),
-            SizedBox(height: context.h(16)),
-            Text(
-              'Applicable Categories',
-              style: AppTextStyles.bodySecondary(context).copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-            SizedBox(height: context.h(8)),
-            Wrap(
-              spacing: context.w(8),
-              runSpacing: context.h(8),
-              children: _categories.map((cat) {
-                final selected = _selectedCategories.contains(cat);
-                return FilterChip(
-                  label: Text(
-                    cat,
-                    style: AppTextStyles.body(context).copyWith(
-                      color: selected ? AppColors.primary : colors.textPrimary,
-                    ),
-                  ),
-                  selected: selected,
-                  showCheckmark: true,
-                  checkmarkColor: AppColors.primary,
-                  onSelected: (v) => setState(() => v
-                      ? _selectedCategories.add(cat)
-                      : _selectedCategories.remove(cat)),
-                  backgroundColor: colors.surfaceVariant,
-                  selectedColor: Colors.white,
-                  side: BorderSide(
-                    color: selected ? AppColors.primary : colors.border,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(context.h(8)),
-                  ),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.w(9),
-                    vertical: context.h(5),
-                  ),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                );
-              }).toList(),
             ),
           ],
         ),
@@ -434,17 +395,66 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     );
   }
 
-  Widget _datePickerField(DateTime? date, ValueChanged<DateTime> onPick) {
+  Widget _datePickerField(
+    DateTime? date,
+    ValueChanged<DateTime> onPick, {
+    DateTime? firstDate,
+  }) {
     return Builder(builder: (context) {
       final colors = AppColors.of(context);
+      final minimumDate = firstDate ?? DateTime(2024);
+      final lastDate = DateTime(2030);
+      final today = DateTime.now();
+      final initialDate = today.isBefore(minimumDate)
+          ? minimumDate
+          : today.isAfter(lastDate)
+              ? lastDate
+              : today;
       return InkWell(
         borderRadius: BorderRadius.circular(context.h(8)),
         onTap: () async {
           final picked = await showDatePicker(
             context: context,
-            initialDate: date ?? DateTime.now(),
-            firstDate: DateTime(2024),
-            lastDate: DateTime(2030),
+            initialDate: initialDate,
+            firstDate: minimumDate,
+            lastDate: lastDate,
+            builder: (context, child) {
+              final theme = Theme.of(context);
+              return Theme(
+                data: theme.copyWith(
+                  colorScheme: theme.colorScheme.copyWith(
+                    primary: colors.primary,
+                    onPrimary: Colors.white,
+                    surface: colors.surface,
+                    onSurface: colors.textPrimary,
+                  ),
+                  datePickerTheme: DatePickerThemeData(
+                    backgroundColor: colors.surface,
+                    surfaceTintColor: Colors.transparent,
+                    headerBackgroundColor: colors.primary,
+                    headerForegroundColor: Colors.white,
+                    todayBackgroundColor: WidgetStatePropertyAll(
+                      colors.primary.withValues(alpha: 0.12),
+                    ),
+                    todayForegroundColor: WidgetStatePropertyAll(
+                      colors.primary,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(context.h(16)),
+                    ),
+                  ),
+                  dialogTheme: DialogThemeData(
+                    backgroundColor: colors.surface,
+                    surfaceTintColor: Colors.transparent,
+                    elevation: 10,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(context.h(16)),
+                    ),
+                  ),
+                ),
+                child: child!,
+              );
+            },
           );
           if (picked != null) onPick(picked);
         },

@@ -1051,7 +1051,6 @@
 //       oldDelegate.strokeWidth != strokeWidth;
 // }
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
@@ -1064,6 +1063,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/form_action_button.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/rdx_toggle_button.dart';
+import '../../widgets/rdx_category_tabs.dart';
 import '../../widgets/rdx_search_bar.dart';
 
 class MenuScreen extends StatefulWidget {
@@ -1074,7 +1074,6 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
-  final ScrollController _categoryScrollController = ScrollController();
   final Set<String> _appliedCategories = {};
   Set<String>? _stagedCategories;
   bool _hasAppliedCategories = false;
@@ -1085,7 +1084,10 @@ class _MenuScreenState extends State<MenuScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => context.read<MenuProvider>().load());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<MenuProvider>().load();
+    });
   }
 
   void _openCategoryPicker(MenuProvider provider) {
@@ -1232,7 +1234,6 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   void dispose() {
-    _categoryScrollController.dispose();
     _categoryOverlay?.remove();
     _categoryOverlay = null;
     super.dispose();
@@ -1318,54 +1319,11 @@ class _MenuScreenState extends State<MenuScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(
-          child: Listener(
-            onPointerSignal: (event) {
-              if (event is PointerScrollEvent &&
-                  _categoryScrollController.hasClients) {
-                final position = _categoryScrollController.position;
-                final offset = (position.pixels + event.scrollDelta.dy)
-                    .clamp(0.0, position.maxScrollExtent);
-                _categoryScrollController.jumpTo(offset);
-              }
-            },
-            child: ScrollConfiguration(
-              behavior: ScrollConfiguration.of(context).copyWith(
-                dragDevices: {
-                  PointerDeviceKind.mouse,
-                  PointerDeviceKind.touch,
-                  PointerDeviceKind.stylus,
-                },
-              ),
-              child: ClipRect(
-                child: SingleChildScrollView(
-                  controller: _categoryScrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _categoryChip(
-                        colors,
-                        label: 'All',
-                        selected: provider.selectedCategory == 'All',
-                        onTap: () => provider.setCategory('All'),
-                      ),
-                      for (final category in categories) ...[
-                        SizedBox(width: context.w(8)),
-                        _categoryChip(
-                          colors,
-                          label: category,
-                          selected: provider.selectedCategory == category,
-                          onTap: () => provider.setCategory(category),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+        RdxCategoryTabs(
+          labels: categories,
+          allLabel: 'All',
+          selectedLabel: provider.selectedCategory,
+          onSelected: provider.setCategory,
         ),
         SizedBox(width: context.w(12)),
         // This button stays fixed and never scrolls with the chips
@@ -1572,39 +1530,6 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  Widget _categoryChip(
-    AppColorScheme colors, {
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(context.h(20)),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: EdgeInsets.symmetric(
-          horizontal: context.w(16),
-          vertical: context.h(9),
-        ),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : colors.surface,
-          borderRadius: BorderRadius.circular(context.h(20)),
-          border:
-              Border.all(color: selected ? AppColors.primary : colors.border),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : colors.textSecondary,
-            fontSize: context.h(12.5),
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
   // ═══════════════════════════════════════════════════════════════════
   // GRID — leading "Add New Menu Item" tile + item cards
   // ═══════════════════════════════════════════════════════════════════
@@ -1693,7 +1618,6 @@ class _MenuScreenState extends State<MenuScreen> {
         );
       },
     );
-    ;
   }
 }
 

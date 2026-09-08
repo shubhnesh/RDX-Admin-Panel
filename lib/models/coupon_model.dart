@@ -16,6 +16,8 @@ class CouponModel {
   final DateTime startDate;
   final DateTime endDate;
   final CouponStatus status;
+  final List<String> applicableCategories;
+  final List<String> applicableSubCategories;
 
   CouponModel({
     required this.id,
@@ -29,6 +31,8 @@ class CouponModel {
     required this.startDate,
     required this.endDate,
     required this.status,
+    this.applicableCategories = const [],
+    this.applicableSubCategories = const [],
   });
 
   factory CouponModel.fromFirestore(DocumentSnapshot doc) {
@@ -49,11 +53,14 @@ class CouponModel {
       usageLimit: json['usage_limit'] as int?,
       usageCount: json['usage_count'] as int? ?? 0,
       startDate: _parseTimestamp(json['start_date']) ?? DateTime.now(),
-      endDate: _parseTimestamp(json['end_date']) ?? DateTime.now().add(const Duration(days: 30)),
+      endDate: _parseTimestamp(json['end_date']) ??
+          DateTime.now().add(const Duration(days: 30)),
       status: CouponStatus.values.firstWhere(
         (e) => e.name == json['status'],
         orElse: () => CouponStatus.active,
       ),
+      applicableCategories: _strings(json['applicable_categories']),
+      applicableSubCategories: _strings(json['applicable_sub_categories']),
     );
   }
 
@@ -68,8 +75,15 @@ class CouponModel {
         'start_date': Timestamp.fromDate(startDate),
         'end_date': Timestamp.fromDate(endDate),
         'status': status.name,
+        'applicable_categories': applicableCategories,
+        'applicable_sub_categories': applicableSubCategories,
         'updated_at': FieldValue.serverTimestamp(),
       };
+
+  static List<String> _strings(dynamic value) {
+    if (value is! List) return const [];
+    return value.whereType<String>().toList();
+  }
 
   static DateTime? _parseTimestamp(dynamic value) {
     if (value == null) return null;

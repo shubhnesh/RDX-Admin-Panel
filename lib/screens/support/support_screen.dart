@@ -186,9 +186,9 @@ class _SupportScreenState extends State<SupportScreen> {
                         //       selected ? FontWeight.w600 : FontWeight.w500,
                         // ),
                         style: selected
-                            ? AppTextStyles.body(context)
+                            ? AppTextStyles.label(context)
                                 .copyWith(color: colors.primary)
-                            : AppTextStyles.body(context)
+                            : AppTextStyles.label(context)
                                 .copyWith(color: colors.textSecondary),
                       ),
                     ],

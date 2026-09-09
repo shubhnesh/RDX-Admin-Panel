@@ -573,7 +573,7 @@ class _MenuScreenState extends State<MenuScreen> {
       padding: EdgeInsets.only(bottom: context.h(24)),
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: context.w(225),
-        mainAxisExtent: context.h(378),
+        mainAxisExtent: context.h(385),
         mainAxisSpacing: context.h(18),
         crossAxisSpacing: context.w(18),
       ),

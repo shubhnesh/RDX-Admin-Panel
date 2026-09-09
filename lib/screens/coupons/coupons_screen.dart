@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
-import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/coupon_model.dart';
 import '../../providers/coupon_provider.dart';
@@ -13,6 +12,7 @@ import '../../widgets/loading_indicator.dart';
 import '../../widgets/rdx_search_bar.dart';
 import '../../widgets/rdx_category_tabs.dart';
 import '../../widgets/stat_card.dart';
+import '../../widgets/coupon_card.dart';
 
 class CouponsScreen extends StatefulWidget {
   const CouponsScreen({super.key});
@@ -197,7 +197,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
                                   children: visibleCoupons.map((coupon) {
                                     return SizedBox(
                                       width: cardWidth,
-                                      child: _CouponCard(
+                                      child: CouponCard(
                                         coupon: coupon,
                                         onDelete: () =>
                                             provider.deleteCoupon(coupon.id),
@@ -217,6 +217,8 @@ class _CouponsScreenState extends State<CouponsScreen> {
   }
 }
 
+/* replaced by shared CouponCard */
+/*
 class _CouponCard extends StatelessWidget {
   final CouponModel coupon;
   final VoidCallback onDelete;
@@ -489,3 +491,4 @@ class _CouponCard extends StatelessWidget {
     );
   }
 }
+*/

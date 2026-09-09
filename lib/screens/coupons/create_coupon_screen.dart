@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -7,6 +8,7 @@ import '../../core/utils/responsive_size.dart';
 import '../../models/coupon_model.dart';
 import '../../providers/coupon_provider.dart';
 import '../../widgets/form_action_button.dart';
+import '../../widgets/coupon_card.dart';
 import '../../widgets/rdx_dropdown.dart';
 import '../../widgets/rdx_text_field.dart';
 import '../../widgets/rdx_header.dart';
@@ -25,6 +27,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   final minOrderController = TextEditingController();
   final usageLimitController = TextEditingController();
 
+  // Percentage is the default selection
   DiscountType discountType = DiscountType.percentage;
   DateTime? startDate;
   DateTime? endDate;
@@ -39,20 +42,81 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
       descriptionController,
       discountValueController,
       minOrderController,
+      usageLimitController,
     ]) {
       c.addListener(() => setState(() {}));
+    }
+
+    // Clamp percentage value to max 100 while typing
+    discountValueController.addListener(_clampPercentage);
+  }
+
+  void _clampPercentage() {
+    if (discountType != DiscountType.percentage) return;
+    final text = discountValueController.text.trim();
+    if (text.isEmpty) return;
+    final value = double.tryParse(text);
+    if (value != null && value > 100) {
+      discountValueController.text = '100';
+      discountValueController.selection = TextSelection.fromPosition(
+        const TextPosition(offset: 3),
+      );
     }
   }
 
   Future<void> _save() async {
-    if (codeController.text.trim().isEmpty ||
-        double.tryParse(discountValueController.text.trim()) == null ||
+    final code = codeController.text.trim();
+    final description = descriptionController.text.trim();
+    final discountText = discountValueController.text.trim();
+    final minOrderText = minOrderController.text.trim();
+    final usageLimitText = usageLimitController.text.trim();
+
+    final discountValue = double.tryParse(discountText);
+    final minOrderValue = double.tryParse(minOrderText);
+    final usageLimit = int.tryParse(usageLimitText);
+
+    // Every field is mandatory
+    if (code.isEmpty ||
+        description.isEmpty ||
+        discountValue == null ||
+        minOrderValue == null ||
+        usageLimit == null ||
         startDate == null ||
         endDate == null) {
       setState(() => errorMessage =
-          'Please enter a coupon code, valid discount value, start date, and expiry date.');
+          'All fields are mandatory. Please fill coupon code, description, discount value, minimum order value, usage limit, start date and expiry date.');
       return;
     }
+
+    // Coupon code length restriction
+    if (code.length > 15) {
+      setState(() =>
+          errorMessage = 'Coupon code cannot be longer than 15 characters.');
+      return;
+    }
+
+    // Percentage max value = 100
+    if (discountType == DiscountType.percentage && discountValue > 100) {
+      setState(
+          () => errorMessage = 'Discount percentage cannot be more than 100.');
+      return;
+    }
+
+    if (discountValue <= 0) {
+      setState(() => errorMessage = 'Discount value must be greater than 0.');
+      return;
+    }
+
+    if (minOrderValue < 0) {
+      setState(() => errorMessage = 'Minimum order value cannot be negative.');
+      return;
+    }
+
+    if (usageLimit <= 0) {
+      setState(() => errorMessage = 'Usage limit must be greater than 0.');
+      return;
+    }
+
     if (endDate!.isBefore(startDate!)) {
       setState(
           () => errorMessage = 'Expiry date cannot be before the start date.');
@@ -61,12 +125,12 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
 
     final coupon = CouponModel(
       id: 'c${DateTime.now().millisecondsSinceEpoch}',
-      code: codeController.text.trim().toUpperCase(),
-      description: descriptionController.text.trim(),
+      code: code.toUpperCase(),
+      description: description,
       discountType: discountType,
-      discountValue: double.parse(discountValueController.text.trim()),
-      minOrderValue: double.tryParse(minOrderController.text.trim()),
-      usageLimit: int.tryParse(usageLimitController.text.trim()),
+      discountValue: discountValue,
+      minOrderValue: minOrderValue,
+      usageLimit: usageLimit,
       startDate: startDate!,
       endDate: endDate!,
       status: startDate!.isAfter(DateTime.now())
@@ -90,6 +154,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
 
   @override
   void dispose() {
+    discountValueController.removeListener(_clampPercentage);
     codeController.dispose();
     descriptionController.dispose();
     discountValueController.dispose();
@@ -103,21 +168,33 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     final colors = AppColors.of(context);
     final narrow = MediaQuery.sizeOf(context).width < 900;
 
+    final parsedDiscount = double.tryParse(discountValueController.text.trim());
+
     return Scaffold(
       backgroundColor: colors.background,
       appBar: const RdxHeader(title: 'Create New Coupon'),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final form = _formContent(context, colors);
-          final preview = _LivePreviewCard(
-            code: codeController.text.trim().isEmpty
-                ? 'SUMMER50'
-                : codeController.text.trim().toUpperCase(),
+          final previewCoupon = CouponModel(
+            id: 'draft',
+            code: codeController.text.trim().toUpperCase(),
+            description: descriptionController.text.trim(),
             discountType: discountType,
-            discountValue:
-                double.tryParse(discountValueController.text.trim()) ?? 50,
-            minOrder: double.tryParse(minOrderController.text.trim()),
-            isActive: startDate != null && !startDate!.isAfter(DateTime.now()),
+            discountValue: parsedDiscount ?? 0,
+            minOrderValue: double.tryParse(minOrderController.text.trim()),
+            usageLimit: int.tryParse(usageLimitController.text.trim()),
+            startDate: startDate ?? DateTime.now(),
+            endDate: endDate ?? DateTime.now(),
+            status: startDate != null && !startDate!.isAfter(DateTime.now())
+                ? CouponStatus.active
+                : CouponStatus.scheduled,
+          );
+          final preview = CouponCard(
+            coupon: previewCoupon,
+            previewStartDate: startDate,
+            previewEndDate: endDate,
+            isDraft: true,
           );
 
           // ── Narrow (mobile / tablet) ───────────────────────────────
@@ -218,11 +295,11 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
               controller: codeController,
               label: 'Coupon Code',
               hint: 'Create coupon code',
-            ),
-            SizedBox(height: context.h(4)),
-            Text(
-              'Customers will enter this code at checkout.',
-              style: AppTextStyles.caption(context),
+              maxLength: 15,
+              inputFormatters: [
+                LengthLimitingTextInputFormatter(15),
+                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+              ],
             ),
             SizedBox(height: context.h(16)),
             RdxTextField(
@@ -245,6 +322,9 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                         ? 'Enter Discount Percentage'
                         : 'Enter Discount Amount',
                     keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
                   ),
                 ),
               ],
@@ -265,6 +345,9 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                     label: 'Minimum Order Value (₹)',
                     hint: 'Enter Amount',
                     keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
                   ),
                 ),
                 SizedBox(width: context.w(16)),
@@ -274,6 +357,9 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                     label: 'Usage Limit',
                     hint: 'Enter usage limit of coupon',
                     keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
                   ),
                 ),
               ],
@@ -390,7 +476,15 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
       labelBuilder: (v) =>
           v == DiscountType.percentage ? 'Percentage (%)' : 'Flat Amount (₹)',
       onChanged: (v) {
-        if (v != null) setState(() => discountType = v);
+        if (v != null) {
+          setState(() {
+            discountType = v;
+            // Re-clamp if switching back to percentage
+            if (v == DiscountType.percentage) {
+              _clampPercentage();
+            }
+          });
+        }
       },
     );
   }
@@ -490,10 +584,11 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   }
 }
 
+/*
 class _LivePreviewCard extends StatelessWidget {
   final String code;
   final DiscountType discountType;
-  final double discountValue;
+  final double? discountValue;
   final double? minOrder;
   final bool isActive;
 
@@ -508,6 +603,13 @@ class _LivePreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+
+    // Always show a concrete value (0 when empty)
+    final displayValue = discountValue ?? 0;
+    final discountText = discountType == DiscountType.percentage
+        ? '${displayValue.toStringAsFixed(0)}%'
+        : Formatters.currency(displayValue);
+
     return Container(
       padding: EdgeInsets.all(context.h(20)),
       decoration: BoxDecoration(
@@ -568,17 +670,17 @@ class _LivePreviewCard extends StatelessWidget {
                 ),
                 SizedBox(height: context.h(14)),
                 Text(
-                  discountType == DiscountType.percentage
-                      ? '${discountValue.toStringAsFixed(0)}%'
-                      : Formatters.currency(discountValue),
-                  style: AppTextStyles.heading(context)
-                      .copyWith(color: Colors.white),
+                  discountText,
+                  style: AppTextStyles.heading(context).copyWith(
+                    color: Colors.white,
+                  ),
                 ),
                 SizedBox(height: context.h(4)),
                 Text(
                   'Off your next order',
-                  style: AppTextStyles.bodySecondary(context)
-                      .copyWith(color: Colors.white70),
+                  style: AppTextStyles.bodySecondary(context).copyWith(
+                    color: Colors.white70,
+                  ),
                 ),
                 SizedBox(height: context.h(16)),
                 Container(
@@ -593,7 +695,7 @@ class _LivePreviewCard extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      code,
+                      code, // "CODE" when empty, otherwise the entered code
                       style: AppTextStyles.section(context)
                           .copyWith(color: Colors.white),
                     ),
@@ -623,11 +725,6 @@ class _LivePreviewCard extends StatelessWidget {
                     minOrder != null && minOrder! > 0
                         ? 'This preview shows how the coupon will appear to end-users. Minimum order: ${Formatters.currency(minOrder!)}.'
                         : 'This preview shows how the coupon will appear to end-users in the RDX delivery app.',
-                    // style: AppTextStyles.label(context).copyWith(
-                    //   color: colors.textSecondary,
-                    //   height: 1.4,
-                    //   fontSize: context.h(11),
-                    // ),
                     style: AppTextStyles.label(context),
                   ),
                 ),
@@ -639,3 +736,4 @@ class _LivePreviewCard extends StatelessWidget {
     );
   }
 }
+*/

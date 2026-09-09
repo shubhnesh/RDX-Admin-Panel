@@ -10,6 +10,12 @@ class InventoryService {
     return snap.docs.map((d) => InventoryItemModel.fromFirestore(d)).toList();
   }
 
+  Future<InventoryItemModel?> getItem(String id) async {
+    final doc = await _col.doc(id).get();
+    if (!doc.exists) return null;
+    return InventoryItemModel.fromFirestore(doc);
+  }
+
   Future<void> updateQuantity(String id, double quantity) async {
     await _col.doc(id).update({
       'quantity': quantity,
@@ -17,16 +23,24 @@ class InventoryService {
     });
   }
 
-  Future<void> saveItem(InventoryItemModel item) async {
+  Future<String> saveItem(InventoryItemModel item) async {
     final data = item.toJson();
     if (item.id.isEmpty) {
-      await _col.add(data);
+      final ref = await _col.add(data);
+      return ref.id;
     } else {
       await _col.doc(item.id).set(data, SetOptions(merge: true));
+      return item.id;
     }
   }
 
   Future<void> deleteItem(String id) async {
     await _col.doc(id).delete();
+  }
+
+  /// Returns only items that are below their minimum required level.
+  Future<List<InventoryItemModel>> fetchLowStock() async {
+    final all = await fetchInventory();
+    return all.where((e) => e.needsRestock).toList();
   }
 }

@@ -6,7 +6,13 @@ import '../../core/theme/text_styles.dart';
 import '../../models/inventory_item_model.dart';
 import '../../providers/inventory_provider.dart';
 import '../../widgets/loading_indicator.dart';
-import '../../widgets/rdx_header.dart';
+import '../../widgets/rdx_search_bar.dart';
+import '../../widgets/rdx_category_tabs.dart';
+import 'add_material_screen.dart';
+import 'low_stock_screen.dart';
+import 'widgets/inventory_stats_row.dart';
+import 'widgets/inventory_table.dart';
+import 'widgets/delete_material_dialog.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -16,129 +22,234 @@ class InventoryScreen extends StatefulWidget {
 }
 
 class _InventoryScreenState extends State<InventoryScreen> {
+  final _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() => context.read<InventoryProvider>().load());
   }
 
-  Color _statusColor(StockStatus s) {
-    switch (s) {
-      case StockStatus.inStock:
-        return AppColors.success;
-      case StockStatus.lowStock:
-        return AppColors.warning;
-      case StockStatus.outOfStock:
-        return AppColors.danger;
-    }
-  }
-
-  String _statusLabel(StockStatus s) {
-    switch (s) {
-      case StockStatus.inStock:
-        return 'In Stock';
-      case StockStatus.lowStock:
-        return 'Low Stock';
-      case StockStatus.outOfStock:
-        return 'Out of Stock';
-    }
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<InventoryProvider>();
+    final colors = AppColors.of(context);
 
     return Scaffold(
-      backgroundColor: AppColors.of(context).background,
-      appBar: RdxHeader(
-        title: 'Inventory Management',
-      ),
+      backgroundColor: colors.background,
       body: provider.isLoading
           ? const LoadingIndicator()
-          : ListView.separated(
-              padding: context.defaultScreenPadding(),
-              itemCount: provider.items.length,
-              separatorBuilder: (_, __) => const Divider(height: 24),
-              itemBuilder: (context, index) {
-                final item = provider.items[index];
-                return Row(
+          : provider.errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(provider.errorMessage!,
+                          style: AppTextStyles.body(context)),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => provider.load(),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Expanded(
-                    //     flex: 2,
-                    //     child: Text(item.name, style: AppTextStyles.body)),
-                    // Expanded(
-                    //     child: Text(
-                    //         '${item.quantity.toStringAsFixed(1)} ${item.unit}',
-                    //         style: AppTextStyles.bodyMuted)),
-                    // Expanded(
-                    //     child: Text(_timeAgo(item.lastUpdated),
-                    //         style: AppTextStyles.label)),
-                    // Expanded(
-                    //   child: Align(
-                    //     alignment: Alignment.centerLeft,
-                    //     child: Container(
-                    //       padding: const EdgeInsets.symmetric(
-                    //           horizontal: 10, vertical: 4),
-                    //       decoration: BoxDecoration(
-                    //         color: _statusColor(item.status).withOpacity(0.15),
-                    //         borderRadius: BorderRadius.circular(20),
-                    //       ),
-                    //       child: Text(_statusLabel(item.status),
-                    //           style: TextStyle(
-                    //               color: _statusColor(item.status),
-                    //               fontSize: 11,
-                    //               fontWeight: FontWeight.w600)),
-                    //     ),
-                    //   ),
-                    // ),
-                    // IconButton(
-                    //   icon: const Icon(Icons.edit_outlined, size: 16),
-                    //   color: AppColors.textSecondary,
-                    //   onPressed: () =>
-                    //       _showUpdateDialog(context, provider, item),
-                    // ),
+                    // ── Page header ─────────────────────────────────────
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        Responsive.pageHorizontal(context),
+                        context.h(20),
+                        Responsive.pageHorizontal(context),
+                        context.h(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Inventory',
+                                    style: AppTextStyles.heading(context)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Track raw materials, stock levels, and replenishment alerts',
+                                  style: AppTextStyles.caption(context)
+                                      .copyWith(color: colors.textMuted),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: () => _openAddMaterial(context),
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('ADD MATERIAL'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: context.w(18),
+                                vertical: context.h(12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // ── Stats cards ─────────────────────────────────────
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: Responsive.pageHorizontal(context),
+                      ),
+                      child: InventoryStatsRow(
+                        total: provider.totalItems,
+                        inStock: provider.inStockCount,
+                        needsRestock: provider.needsRestockCount,
+                        critical: provider.criticalCount,
+                        lowStock: provider.lowStockCount,
+                        onNeedsRestockTap: () => _openLowStock(context),
+                      ),
+                    ),
+
+                    SizedBox(height: context.h(16)),
+
+                    // ── Category tabs + search + stock filter ───────────
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: Responsive.pageHorizontal(context),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: RdxCategoryTabs(
+                              labels: provider.categories,
+                              selectedLabel: provider.selectedCategory,
+                              allLabel: 'All',
+                              onSelected: provider.setCategory,
+                              expand: false,
+                            ),
+                          ),
+                          SizedBox(width: context.w(12)),
+                          SizedBox(
+                            width: context.w(220),
+                            child: RdxSearchBar(
+                              controller: _searchController,
+                              hintText: 'Search materials or categories',
+                              onChanged: provider.setSearch,
+                              height: context.h(40),
+                            ),
+                          ),
+                          SizedBox(width: context.w(10)),
+                          _StockLevelDropdown(
+                            value: provider.stockLevelFilter,
+                            onChanged: provider.setStockLevelFilter,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: context.h(12)),
+
+                    // ── Table ───────────────────────────────────────────
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Responsive.pageHorizontal(context),
+                        ),
+                        child: InventoryTable(
+                          items: provider.filteredItems,
+                          onEdit: (item) => _openAddMaterial(context, item: item),
+                          onDelete: (item) => _confirmDelete(context, item),
+                        ),
+                      ),
+                    ),
+
+                    // ── Pagination footer (simple) ──────────────────────
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        Responsive.pageHorizontal(context),
+                        context.h(8),
+                        Responsive.pageHorizontal(context),
+                        context.h(16),
+                      ),
+                      child: Text(
+                        'Showing ${provider.filteredItems.length} of ${provider.totalItems} raw materials',
+                        style: AppTextStyles.caption(context),
+                      ),
+                    ),
                   ],
-                );
-              },
-            ),
+                ),
     );
   }
 
-  String _timeAgo(DateTime d) {
-    final diff = DateTime.now().difference(d);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+  void _openAddMaterial(BuildContext context, {InventoryItemModel? item}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AddMaterialScreen(existing: item),
+      ),
+    );
   }
 
-  void _showUpdateDialog(BuildContext context, InventoryProvider provider,
-      InventoryItemModel item) {
-    final controller = TextEditingController(text: item.quantity.toString());
-    showDialog(
+  void _openLowStock(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const LowStockScreen()),
+    );
+  }
+
+  Future<void> _confirmDelete(
+      BuildContext context, InventoryItemModel item) async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text('Update ${item.name}',
-            style: const TextStyle(color: AppColors.textPrimary)),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(suffixText: item.unit),
+      builder: (_) => DeleteMaterialDialog(item: item),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<InventoryProvider>().deleteItem(item.id);
+    }
+  }
+}
+
+class _StockLevelDropdown extends StatelessWidget {
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  const _StockLevelDropdown({required this.value, required this.onChanged});
+
+  static const _options = ['All', 'In Stock', 'Low Stock', 'Critical'];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return Container(
+      height: context.h(40),
+      padding: EdgeInsets.symmetric(horizontal: context.w(12)),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(context.h(8)),
+        border: Border.all(color: colors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isDense: true,
+          icon: Icon(Icons.keyboard_arrow_down_rounded,
+              size: 18, color: colors.textSecondary),
+          style: AppTextStyles.body(context),
+          items: _options
+              .map((o) => DropdownMenuItem(value: o, child: Text(o)))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) onChanged(v);
+          },
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final value = double.tryParse(controller.text);
-              if (value != null) provider.updateQuantity(item.id, value);
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Update'),
-          ),
-        ],
       ),
     );
   }

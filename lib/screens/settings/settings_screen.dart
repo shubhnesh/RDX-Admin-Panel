@@ -47,13 +47,12 @@ class SettingsScreen extends StatelessWidget {
                 final compact = constraints.maxWidth < 760;
                 final identity = _IdentityCard(colors: colors);
                 final rules = _RulesCard(provider: provider, colors: colors);
-                if (compact) {
-                  return Column(children: [
-                    identity,
-                    SizedBox(height: context.h(14)),
-                    rules,
-                    SizedBox(height: context.h(20)),
-                    Row(
+
+                final actionButtons = Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    width: context.w(300), // same width as Create Menu sidebar
+                    child: Row(
                       children: [
                         Expanded(
                           child: FormActionButton.save(
@@ -68,6 +67,16 @@ class SettingsScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
+                );
+
+                if (compact) {
+                  return Column(children: [
+                    identity,
+                    SizedBox(height: context.h(14)),
+                    rules,
+                    SizedBox(height: context.h(20)),
+                    actionButtons,
                   ]);
                 }
                 return Column(
@@ -86,21 +95,7 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                     SizedBox(height: context.h(20)),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FormActionButton.save(
-                            onPressed: () {},
-                          ),
-                        ),
-                        SizedBox(width: context.w(10)),
-                        Expanded(
-                          child: FormActionButton.discard(
-                            onPressed: () {},
-                          ),
-                        ),
-                      ],
-                    ),
+                    actionButtons,
                   ],
                 );
               },

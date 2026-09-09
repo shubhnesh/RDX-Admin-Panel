@@ -56,7 +56,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       SizedBox(height: context.h(20)),
                       _buildMiddleRow(provider.stats!, colors),
                       SizedBox(height: context.h(20)),
-                      _buildRecentActivity(provider.recentActivity, colors),
+                      // _buildRecentActivity(provider.recentActivity, colors),
                     ],
                   ),
                 ),
@@ -637,173 +637,173 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // RECENT ACTIVITY TABLE
   // ═══════════════════════════════════════════════════════════════════
 
-  Widget _buildRecentActivity(
-      List<ActivityLogModel> logs, AppColorScheme colors) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        context.w(20),
-        context.h(18),
-        context.w(20),
-        context.h(8),
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Recent Activity',
-                style: AppTextStyles.heading(context),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  padding: EdgeInsets.symmetric(horizontal: context.w(8)),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'VIEW ALL',
-                  style: AppTextStyles.label(context),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: context.h(8)),
-          // Header row
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: context.h(8)),
-            child: Row(
-              children: [
-                _colHeader(colors, 'ID', flex: 2),
-                _colHeader(colors, 'TIME', flex: 2),
-                _colHeader(colors, 'EVENT', flex: 4),
-                _colHeader(colors, 'STATUS/ROLE', flex: 2),
-                SizedBox(width: context.w(36)),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: colors.divider),
-          for (final log in logs) _activityRow(log, colors),
-        ],
-      ),
-    );
-  }
+  // Widget _buildRecentActivity(
+  //     List<ActivityLogModel> logs, AppColorScheme colors) {
+  //   return Container(
+  //     padding: EdgeInsets.fromLTRB(
+  //       context.w(20),
+  //       context.h(18),
+  //       context.w(20),
+  //       context.h(8),
+  //     ),
+  //     decoration: BoxDecoration(
+  //       color: colors.surface,
+  //       borderRadius: BorderRadius.circular(14),
+  //       border: Border.all(color: colors.border),
+  //     ),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Row(
+  //           children: [
+  //             Text(
+  //               'Recent Activity',
+  //               style: AppTextStyles.heading(context),
+  //             ),
+  //             const Spacer(),
+  //             TextButton(
+  //               onPressed: () {},
+  //               style: TextButton.styleFrom(
+  //                 foregroundColor: AppColors.primary,
+  //                 padding: EdgeInsets.symmetric(horizontal: context.w(8)),
+  //                 minimumSize: Size.zero,
+  //                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  //               ),
+  //               child: Text(
+  //                 'VIEW ALL',
+  //                 style: AppTextStyles.label(context),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         SizedBox(height: context.h(8)),
+  //         // Header row
+  //         Padding(
+  //           padding: EdgeInsets.symmetric(vertical: context.h(8)),
+  //           child: Row(
+  //             children: [
+  //               _colHeader(colors, 'ID', flex: 2),
+  //               _colHeader(colors, 'TIME', flex: 2),
+  //               _colHeader(colors, 'EVENT', flex: 4),
+  //               _colHeader(colors, 'STATUS/ROLE', flex: 2),
+  //               SizedBox(width: context.w(36)),
+  //             ],
+  //           ),
+  //         ),
+  //         Divider(height: 1, color: colors.divider),
+  //         for (final log in logs) _activityRow(log, colors),
+  //       ],
+  //     ),
+  //   );
+  // }
 
-  Widget _colHeader(AppColorScheme colors, String text, {required int flex}) {
-    return Expanded(
-      flex: flex,
-      child: Text(
-        text,
-        style: AppTextStyles.bodySecondary(context)
-            .copyWith(color: colors.textMuted),
-      ),
-    );
-  }
+  // Widget _colHeader(AppColorScheme colors, String text, {required int flex}) {
+  //   return Expanded(
+  //     flex: flex,
+  //     child: Text(
+  //       text,
+  //       style: AppTextStyles.bodySecondary(context)
+  //           .copyWith(color: colors.textMuted),
+  //     ),
+  //   );
+  // }
 
   /// Recent Activity status pill — LIVE (new order), SYSTEM (system alert),
   /// COMPLETED (delivered), plus fallbacks for pending/alert wording.
-  Widget _activityRow(ActivityLogModel log, AppColorScheme colors) {
-    final status = log.details.toUpperCase();
-    Color badgeBg;
-    Color badgeFg;
-    switch (status) {
-      case 'LIVE':
-      case 'PENDING':
-        badgeBg = AppColors.danger.withOpacity(0.15);
-        badgeFg = AppColors.danger;
-        break;
-      case 'SYSTEM':
-        badgeBg = colors.surfaceVariant;
-        badgeFg = colors.textSecondary;
-        break;
-      case 'ALERT':
-        badgeBg = AppColors.warning.withOpacity(0.15);
-        badgeFg = AppColors.warning;
-        break;
-      case 'COMPLETED':
-        badgeBg = AppColors.success.withOpacity(0.15);
-        badgeFg = AppColors.success;
-        break;
-      default:
-        badgeBg = colors.surfaceVariant;
-        badgeFg = colors.textSecondary;
-    }
+  // Widget _activityRow(ActivityLogModel log, AppColorScheme colors) {
+  //   final status = log.details.toUpperCase();
+  //   Color badgeBg;
+  //   Color badgeFg;
+  //   switch (status) {
+  //     case 'LIVE':
+  //     case 'PENDING':
+  //       badgeBg = AppColors.danger.withOpacity(0.15);
+  //       badgeFg = AppColors.danger;
+  //       break;
+  //     case 'SYSTEM':
+  //       badgeBg = colors.surfaceVariant;
+  //       badgeFg = colors.textSecondary;
+  //       break;
+  //     case 'ALERT':
+  //       badgeBg = AppColors.warning.withOpacity(0.15);
+  //       badgeFg = AppColors.warning;
+  //       break;
+  //     case 'COMPLETED':
+  //       badgeBg = AppColors.success.withOpacity(0.15);
+  //       badgeFg = AppColors.success;
+  //       break;
+  //     default:
+  //       badgeBg = colors.surfaceVariant;
+  //       badgeFg = colors.textSecondary;
+  //   }
 
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: context.h(12)),
-      decoration: BoxDecoration(
-        border:
-            Border(bottom: BorderSide(color: colors.divider.withOpacity(0.6))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              '#${log.id}',
-              style: AppTextStyles.body(context)
-                  .copyWith(color: colors.textPrimary),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              Formatters.timeAgo(log.timestamp),
-              style: AppTextStyles.body(context)
-                  .copyWith(color: colors.textSecondary),
-            ),
-          ),
-          Expanded(
-            flex: 4,
-            child: Text(
-              log.action,
-              style: AppTextStyles.body(context),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.w(8),
-                  vertical: context.h(4),
-                ),
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  status,
-                  style: AppTextStyles.body(context).copyWith(color: badgeFg),
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: context.w(36),
-            child: IconButton(
-              onPressed: () {},
-              icon: Icon(
-                Icons.more_vert,
-                size: context.h(18),
-                color: colors.textMuted,
-              ),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  //   return Container(
+  //     padding: EdgeInsets.symmetric(vertical: context.h(12)),
+  //     decoration: BoxDecoration(
+  //       border:
+  //           Border(bottom: BorderSide(color: colors.divider.withOpacity(0.6))),
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         Expanded(
+  //           flex: 2,
+  //           child: Text(
+  //             '#${log.id}',
+  //             style: AppTextStyles.body(context)
+  //                 .copyWith(color: colors.textPrimary),
+  //           ),
+  //         ),
+  //         Expanded(
+  //           flex: 2,
+  //           child: Text(
+  //             Formatters.timeAgo(log.timestamp),
+  //             style: AppTextStyles.body(context)
+  //                 .copyWith(color: colors.textSecondary),
+  //           ),
+  //         ),
+  //         Expanded(
+  //           flex: 4,
+  //           child: Text(
+  //             log.action,
+  //             style: AppTextStyles.body(context),
+  //             overflow: TextOverflow.ellipsis,
+  //           ),
+  //         ),
+  //         Expanded(
+  //           flex: 2,
+  //           child: Align(
+  //             alignment: Alignment.centerLeft,
+  //             child: Container(
+  //               padding: EdgeInsets.symmetric(
+  //                 horizontal: context.w(8),
+  //                 vertical: context.h(4),
+  //               ),
+  //               decoration: BoxDecoration(
+  //                 color: badgeBg,
+  //                 borderRadius: BorderRadius.circular(6),
+  //               ),
+  //               child: Text(
+  //                 status,
+  //                 style: AppTextStyles.body(context).copyWith(color: badgeFg),
+  //               ),
+  //             ),
+  //           ),
+  //         ),
+  //         SizedBox(
+  //           width: context.w(36),
+  //           child: IconButton(
+  //             onPressed: () {},
+  //             icon: Icon(
+  //               Icons.more_vert,
+  //               size: context.h(18),
+  //               color: colors.textMuted,
+  //             ),
+  //             padding: EdgeInsets.zero,
+  //             constraints: const BoxConstraints(),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 }

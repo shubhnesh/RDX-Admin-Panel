@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
 import '../../widgets/form_action_button.dart';
+import '../../widgets/rdx_toggle_button.dart'; // adjust path if needed
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -268,10 +269,10 @@ class _RuleTile extends StatelessWidget {
                 .copyWith(color: colors.textSecondary),
           )
         ])),
-        Switch(
-            value: value,
-            onChanged: onChanged,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap)
+        RdxToggleButton(
+          value: value,
+          onChanged: onChanged,
+        ),
       ]));
 }
 

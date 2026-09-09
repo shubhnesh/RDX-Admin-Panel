@@ -8,8 +8,10 @@ import '../../core/utils/responsive_size.dart';
 import '../../models/coupon_model.dart';
 import '../../providers/coupon_provider.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/form_action_button.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/rdx_search_bar.dart';
+import '../../widgets/rdx_category_tabs.dart';
 import '../../widgets/stat_card.dart';
 
 class CouponsScreen extends StatefulWidget {
@@ -26,7 +28,10 @@ class _CouponsScreenState extends State<CouponsScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => context.read<CouponProvider>().load());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<CouponProvider>().load();
+    });
   }
 
   @override
@@ -34,6 +39,21 @@ class _CouponsScreenState extends State<CouponsScreen> {
     _searchController.dispose();
     super.dispose();
   }
+
+  String _selectedStatusLabel(CouponProvider provider) =>
+      switch (provider.statusFilter) {
+        CouponStatus.active => 'Active',
+        CouponStatus.scheduled => 'Scheduled',
+        CouponStatus.expired => 'Expired',
+        null => 'All',
+      };
+
+  CouponStatus? _statusForLabel(String label) => switch (label) {
+        'Active' => CouponStatus.active,
+        'Scheduled' => CouponStatus.scheduled,
+        'Expired' => CouponStatus.expired,
+        _ => null,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -57,99 +77,106 @@ class _CouponsScreenState extends State<CouponsScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: RdxSearchToolbar(
-        hintText: 'Search coupons...',
-        controller: _searchController,
-        onChanged: (v) => setState(() => _query = v),
-      ),
-      body: provider.isLoading
-          ? const LoadingIndicator()
-          : Padding(
-              padding: Responsive.pagePadding(context),
-              child: Column(
+      body: SafeArea(
+        child: Padding(
+          padding: Responsive.pagePadding(
+            context,
+            top: context.h(14),
+            bottom: context.h(0),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Search + Create button ──────────────────────────
+              RdxSearchToolbar(
+                hintText: 'Search coupons',
+                controller: _searchController,
+                onChanged: (v) => setState(() => _query = v),
+                actions: [
+                  FormActionButton(
+                    label: 'Create Coupon',
+                    onPressed: () async {
+                      await Navigator.of(context).pushNamed(
+                        AppRoutes.createCoupon,
+                      );
+                      if (context.mounted) {
+                        context.read<CouponProvider>().load();
+                      }
+                    },
+                  ),
+                ],
+              ),
+
+              SizedBox(height: context.h(16)),
+
+              // ── Title + status filter on the same row ───────────
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Title row with subtitle + create button ─────────
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Coupons & Offers',
-                              style: AppTextStyles.heading(context).copyWith(),
-                            ),
-                            SizedBox(height: context.h(4)),
-                            Text(
-                              'Manage active promotions and discount codes.',
-                              style:
-                                  AppTextStyles.bodySecondary(context).copyWith(
-                                color: colors.textSecondary,
-                                // fontSize: context.h(12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          await Navigator.of(context).pushNamed(
-                            AppRoutes.createCoupon,
-                          );
-                          if (context.mounted) {
-                            context.read<CouponProvider>().load();
-                          }
-                        },
-                        icon: Icon(Icons.add, size: context.h(24)),
-                        label: Text(
-                          'Create New Coupon',
-                          style: AppTextStyles.section(context).copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: context.h(20)),
-
-                  // ── Summary stat cards ──────────────────────────────
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: StatCard(
-                            label: 'Total Active',
-                            value: '${provider.activeCount} coupons',
-                            icon: Icons.local_offer_outlined,
-                          ),
+                        Text(
+                          'Coupons & Offers',
+                          style: AppTextStyles.heading(context),
                         ),
-                        SizedBox(width: context.w(16)),
-                        Expanded(
-                          child: StatCard(
-                            label: 'Total Usages Today',
-                            value: '$totalUsageToday',
-                            icon: Icons.trending_up_rounded,
-                            accentColor: AppColors.success,
+                        SizedBox(height: context.h(4)),
+                        Text(
+                          'Manage active promotions and discount codes.',
+                          style: AppTextStyles.bodySecondary(context).copyWith(
+                            color: colors.textSecondary,
                           ),
-                        ),
-                        SizedBox(width: context.w(16)),
-                        Expanded(
-                          flex: 2,
-                          child: _StatusFilterCard(provider: provider),
                         ),
                       ],
                     ),
                   ),
+                  RdxCategoryTabs(
+                    expand: false,
+                    labels: const ['Active', 'Scheduled', 'Expired'],
+                    allLabel: 'All',
+                    selectedLabel: _selectedStatusLabel(provider),
+                    onSelected: (label) {
+                      provider.setStatusFilter(_statusForLabel(label));
+                    },
+                  ),
+                ],
+              ),
 
-                  SizedBox(height: context.h(20)),
+              SizedBox(height: context.h(20)),
 
-                  // ── Coupon grid ─────────────────────────────────────
-                  Expanded(
-                    child: visibleCoupons.isEmpty
+              // ── Summary stat cards ──────────────────────────────
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: StatCard(
+                        label: 'Total Active',
+                        value: '${provider.activeCount} coupons',
+                        icon: Icons.local_offer_outlined,
+                      ),
+                    ),
+                    SizedBox(width: context.w(16)),
+                    Expanded(
+                      child: StatCard(
+                        label: 'Total Usages Today',
+                        value: '$totalUsageToday',
+                        icon: Icons.trending_up_rounded,
+                        accentColor: AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: context.h(20)),
+
+              // ── Coupon grid ─────────────────────────────────────
+              Expanded(
+                child: provider.isLoading
+                    ? const LoadingIndicator()
+                    : visibleCoupons.isEmpty
                         ? const EmptyState(
                             message: 'No coupons found',
                             icon: Icons.local_offer_outlined,
@@ -181,91 +208,8 @@ class _CouponsScreenState extends State<CouponsScreen> {
                               );
                             },
                           ),
-                  ),
-                ],
               ),
-            ),
-    );
-  }
-}
-
-/// Pill-style status filter row.
-class _StatusFilterCard extends StatelessWidget {
-  final CouponProvider provider;
-
-  const _StatusFilterCard({required this.provider});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: context.w(16),
-        vertical: context.h(14),
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(context.h(12)),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.max,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Filter by Status',
-            style: AppTextStyles.section(context).copyWith(
-              color: colors.textMuted,
-              // fontSize: context.h(12),
-            ),
-          ),
-          SizedBox(height: context.h(10)),
-          Wrap(
-            spacing: context.w(6),
-            runSpacing: context.h(6),
-            children: [
-              _pill(context, 'All', null),
-              _pill(context, 'Active', CouponStatus.active),
-              _pill(context, 'Scheduled', CouponStatus.scheduled),
-              _pill(context, 'Expired', CouponStatus.expired),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _pill(BuildContext context, String label, CouponStatus? status) {
-    final colors = AppColors.of(context);
-    final selected = provider.statusFilter == status;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(context.h(20)),
-        onTap: () => provider.setStatusFilter(status),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: EdgeInsets.symmetric(
-            horizontal: context.w(12),
-            vertical: context.h(7),
-          ),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(context.h(20)),
-            border: Border.all(
-              color: selected ? AppColors.primary : colors.border,
-            ),
-          ),
-          child: Text(
-            label,
-            style: selected
-                ? AppTextStyles.section(context).copyWith(color: Colors.white)
-                : AppTextStyles.bodySecondary(context)
-                    .copyWith(color: colors.textSecondary),
           ),
         ),
       ),

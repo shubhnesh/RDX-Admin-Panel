@@ -172,93 +172,101 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: const RdxHeader(title: 'Create New Coupon'),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final form = _formContent(context, colors);
-          final previewCoupon = CouponModel(
-            id: 'draft',
-            code: codeController.text.trim().toUpperCase(),
-            description: descriptionController.text.trim(),
-            discountType: discountType,
-            discountValue: parsedDiscount ?? 0,
-            minOrderValue: double.tryParse(minOrderController.text.trim()),
-            usageLimit: int.tryParse(usageLimitController.text.trim()),
-            startDate: startDate ?? DateTime.now(),
-            endDate: endDate ?? DateTime.now(),
-            status: startDate != null && !startDate!.isAfter(DateTime.now())
-                ? CouponStatus.active
-                : CouponStatus.scheduled,
-          );
-          final preview = CouponCard(
-            coupon: previewCoupon,
-            previewStartDate: startDate,
-            previewEndDate: endDate,
-            isDraft: true,
-          );
+      body: Column(
+        children: [
+          const RdxHeader(title: 'Create New Coupon', showBackButton: true),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final form = _formContent(context, colors);
+                final previewCoupon = CouponModel(
+                  id: 'draft',
+                  code: codeController.text.trim().toUpperCase(),
+                  description: descriptionController.text.trim(),
+                  discountType: discountType,
+                  discountValue: parsedDiscount ?? 0,
+                  minOrderValue:
+                      double.tryParse(minOrderController.text.trim()),
+                  usageLimit: int.tryParse(usageLimitController.text.trim()),
+                  startDate: startDate ?? DateTime.now(),
+                  endDate: endDate ?? DateTime.now(),
+                  status:
+                      startDate != null && !startDate!.isAfter(DateTime.now())
+                          ? CouponStatus.active
+                          : CouponStatus.scheduled,
+                );
+                final preview = CouponCard(
+                  coupon: previewCoupon,
+                  previewStartDate: startDate,
+                  previewEndDate: endDate,
+                  isDraft: true,
+                );
 
-          // ── Narrow (mobile / tablet) ───────────────────────────────
-          if (narrow) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                Responsive.pageHorizontal(context),
-                context.h(16),
-                Responsive.pageHorizontal(context),
-                context.h(28),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  form,
-                  SizedBox(height: context.h(20)),
-                  preview,
-                  SizedBox(height: context.h(20)),
-                  _actionButtons(context),
-                ],
-              ),
-            );
-          }
-
-          // ── Wide (desktop) ─────────────────────────────────────────
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-              Responsive.pageHorizontal(context),
-              context.h(16),
-              Responsive.pageHorizontal(context),
-              context.h(24),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.only(right: context.w(22)),
-                    child: form,
-                  ),
-                ),
-                VerticalDivider(
-                  width: context.w(1),
-                  thickness: context.h(1),
-                  color: colors.border,
-                ),
-                SizedBox(
-                  width: context.w(330),
-                  child: Padding(
-                    padding: EdgeInsets.only(left: context.w(22)),
+                // ── Narrow (mobile / tablet) ───────────────────────────────
+                if (narrow) {
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      Responsive.pageHorizontal(context),
+                      context.h(16),
+                      Responsive.pageHorizontal(context),
+                      context.h(28),
+                    ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        form,
+                        SizedBox(height: context.h(20)),
                         preview,
-                        const Spacer(),
+                        SizedBox(height: context.h(20)),
                         _actionButtons(context),
                       ],
                     ),
+                  );
+                }
+
+                // ── Wide (desktop) ─────────────────────────────────────────
+                return Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    Responsive.pageHorizontal(context),
+                    context.h(16),
+                    Responsive.pageHorizontal(context),
+                    context.h(24),
                   ),
-                ),
-              ],
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.only(right: context.w(22)),
+                          child: form,
+                        ),
+                      ),
+                      VerticalDivider(
+                        width: context.w(1),
+                        thickness: context.h(1),
+                        color: colors.border,
+                      ),
+                      SizedBox(
+                        width: context.w(330),
+                        child: Padding(
+                          padding: EdgeInsets.only(left: context.w(22)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              preview,
+                              const Spacer(),
+                              _actionButtons(context),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

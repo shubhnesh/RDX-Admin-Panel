@@ -48,7 +48,7 @@ class DeleteMaterialDialog extends StatelessWidget {
                             style: AppTextStyles.section(context)),
                         Text('PERMANENT REMOVAL',
                             style: AppTextStyles.caption(context)
-                                .copyWith(color: AppColors.danger, letterSpacing: 0.8)),
+                                .copyWith(color: colors.textMuted, letterSpacing: 0.8)),
                       ],
                     ),
                   ),
@@ -69,6 +69,7 @@ class DeleteMaterialDialog extends StatelessWidget {
                   border: Border.all(color: colors.border),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Column(
@@ -77,10 +78,10 @@ class DeleteMaterialDialog extends StatelessWidget {
                           Text(item.name,
                               style: AppTextStyles.body(context)
                                   .copyWith(fontWeight: FontWeight.w600)),
-                          SizedBox(height: context.h(4)),
+                          SizedBox(height: context.h(8)),
                           Container(
                             padding: EdgeInsets.symmetric(
-                                horizontal: context.w(8), vertical: context.h(2)),
+                                horizontal: context.w(8), vertical: context.h(3)),
                             decoration: BoxDecoration(
                               color: colors.surface,
                               borderRadius: BorderRadius.circular(6),
@@ -93,19 +94,26 @@ class DeleteMaterialDialog extends StatelessWidget {
                       ),
                     ),
                     Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('CURRENT STOCK',
                             style: AppTextStyles.caption(context)
                                 .copyWith(color: colors.textMuted)),
+                        SizedBox(height: context.h(2)),
                         Text(
-                          '${_fmt(item.quantity)} / ${_fmt(item.maxCapacity)} ${item.unit}',
+                          '${_fmt(item.quantity)} ${item.unit} / ${_fmt(item.maxCapacity)} ${item.unit} max',
                           style: AppTextStyles.body(context),
                         ),
-                        SizedBox(height: context.h(6)),
+                      ],
+                    ),
+                    SizedBox(width: context.w(24)),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text('UNIT COST',
                             style: AppTextStyles.caption(context)
                                 .copyWith(color: colors.textMuted)),
+                        SizedBox(height: context.h(2)),
                         Text(
                           '${Formatters.currency(item.unitCost)} / ${item.unit}',
                           style: AppTextStyles.body(context),
@@ -133,10 +141,23 @@ class DeleteMaterialDialog extends StatelessWidget {
                         color: AppColors.danger, size: 18),
                     SizedBox(width: context.w(10)),
                     Expanded(
-                      child: Text(
-                        'IRREVERSIBLE ACTION\nRemoving this raw material will delete its inventory stock history, supplier linkage, and usage logs from recipes and kitchen queue orders. This cannot be undone.',
-                        style: AppTextStyles.caption(context)
-                            .copyWith(color: AppColors.danger, height: 1.4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'IRREVERSIBLE ACTION',
+                            style: AppTextStyles.caption(context).copyWith(
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5),
+                          ),
+                          SizedBox(height: context.h(4)),
+                          Text(
+                            'Removing this raw material will delete its inventory stock history, supplier linkage, and usage logs from recipes and kitchen queue orders. This cannot be undone.',
+                            style: AppTextStyles.caption(context)
+                                .copyWith(color: AppColors.danger, height: 1.4),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -150,6 +171,10 @@ class DeleteMaterialDialog extends StatelessWidget {
                 children: [
                   OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: colors.border),
+                      foregroundColor: colors.textSecondary,
+                    ),
                     child: const Text('CANCEL'),
                   ),
                   SizedBox(width: context.w(10)),

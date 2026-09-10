@@ -40,15 +40,22 @@ class _OrderDetailBody extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
-      appBar: RdxHeader(
-        title: order == null ? 'Order Detail' : 'Order #RDX-${order.id}',
+      body: Column(
+        children: [
+          RdxHeader(
+            title: order == null ? 'Order Detail' : 'Order #RDX-${order.id}',
+            showBackButton: true,
+          ),
+          Expanded(
+            child: provider.isLoading || order == null
+                ? const LoadingIndicator()
+                : _OrderDetailContent(
+                    order: order,
+                    provider: provider,
+                  ),
+          ),
+        ],
       ),
-      body: provider.isLoading || order == null
-          ? const LoadingIndicator()
-          : _OrderDetailContent(
-              order: order,
-              provider: provider,
-            ),
     );
   }
 }

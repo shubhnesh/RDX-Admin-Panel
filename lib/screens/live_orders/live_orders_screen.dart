@@ -33,9 +33,16 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
-      appBar: const RdxHeader(title: 'Live Orders'),
-      body:
-          provider.isLoading ? const LoadingIndicator() : _buildBoard(provider),
+      body: Column(
+        children: [
+          const RdxHeader(title: 'Live Orders'),
+          Expanded(
+            child: provider.isLoading
+                ? const LoadingIndicator()
+                : _buildBoard(provider),
+          ),
+        ],
+      ),
     );
   }
 

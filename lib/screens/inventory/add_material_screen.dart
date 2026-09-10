@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
+import 'package:rdx_admin/widgets/rdx_header.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../models/inventory_item_model.dart';
@@ -9,6 +10,7 @@ import '../../providers/inventory_provider.dart';
 import '../../widgets/form_action_button.dart';
 import '../../widgets/rdx_text_field.dart';
 import '../../widgets/rdx_dropdown.dart';
+import '../../widgets/app_back_button.dart';
 
 class AddMaterialScreen extends StatefulWidget {
   final InventoryItemModel? existing;
@@ -28,7 +30,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
   late final TextEditingController _costCtrl;
 
   String _category = 'Dry Pantry';
-  String _unit = 'pcs';
+  String _unit = 'Cans / Tins';
   bool _saving = false;
 
   static const _categories = [
@@ -45,7 +47,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
     'kg',
     'g',
     'pcs',
-    'cans',
+    'Cans / Tins',
     'L',
     'ml',
     'box',
@@ -59,14 +61,14 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
     super.initState();
     final e = widget.existing;
     _nameCtrl = TextEditingController(text: e?.name ?? '');
-    _qtyCtrl = TextEditingController(
-        text: e != null ? e.quantity.toString() : '');
-    _minCtrl = TextEditingController(
-        text: e != null ? e.minRequired.toString() : '');
-    _maxCtrl = TextEditingController(
-        text: e != null ? e.maxCapacity.toString() : '');
-    _costCtrl = TextEditingController(
-        text: e != null ? e.unitCost.toString() : '');
+    _qtyCtrl =
+        TextEditingController(text: e != null ? e.quantity.toString() : '');
+    _minCtrl =
+        TextEditingController(text: e != null ? e.minRequired.toString() : '');
+    _maxCtrl =
+        TextEditingController(text: e != null ? e.maxCapacity.toString() : '');
+    _costCtrl =
+        TextEditingController(text: e != null ? e.unitCost.toString() : '');
     if (e != null) {
       _category = e.category;
       _unit = e.unit;
@@ -137,45 +139,29 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
     return Scaffold(
       backgroundColor: colors.background,
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Top bar
-          Container(
-            height: 56,
-            padding: EdgeInsets.symmetric(
-                horizontal: Responsive.pageHorizontal(context)),
-            decoration: BoxDecoration(
-              color: colors.background,
-              border: Border(bottom: BorderSide(color: colors.border)),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.arrow_back_ios_new,
-                      size: 18, color: colors.textPrimary),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  isEdit ? 'Edit Material' : 'Add New Material',
-                  style: AppTextStyles.heading(context),
-                ),
-                const Spacer(),
-                FormActionButton.discard(
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                SizedBox(width: context.w(10)),
-                FormActionButton.save(
-                  label: isEdit ? 'Save Changes' : 'Save & Add Material',
-                  onPressed: _save,
-                  isLoading: _saving,
-                ),
-              ],
-            ),
+          RdxHeader(
+        title: isEdit ? 'Edit Material' : 'Add New Material',
+        subtitle:
+            'Create a new raw ingredient or packaging item in your inventory catalog.',
+        showBackButton: true,
+        actions: [
+          FormActionButton.discard(
+            onPressed: () => Navigator.of(context).pop(),
           ),
+          SizedBox(width: context.w(10)),
+          FormActionButton.save(
+            label: 'Save',
+            onPressed: _save,
+            isLoading: _saving,
+          ),
+        ],
+      ),
 
           Expanded(
             child: SingleChildScrollView(
-              padding: Responsive.pagePadding(context, top: 24, bottom: 32),
+              padding: Responsive.pagePadding(context, top: 16, bottom: 32),
               child: Form(
                 key: _formKey,
                 child: Row(
@@ -186,6 +172,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                       child: _SectionCard(
                         title: 'Basic Information & Category',
                         sectionLabel: 'SECTION 1',
+                        icon: Icons.badge_outlined,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -193,10 +180,15 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                               controller: _nameCtrl,
                               label: 'MATERIAL NAME *',
                               hint: 'e.g., San Marzano Whole Peeled Tomatoes',
-                              validator: (v) =>
-                                  (v == null || v.trim().isEmpty)
-                                      ? 'Required'
-                                      : null,
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Required'
+                                  : null,
+                            ),
+                            SizedBox(height: context.h(6)),
+                            Text(
+                              'Enter descriptive name recognized by kitchen & receiving staff',
+                              style: AppTextStyles.caption(context)
+                                  .copyWith(color: colors.textMuted),
                             ),
                             SizedBox(height: context.h(16)),
                             Row(
@@ -208,7 +200,9 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                                     items: _categories,
                                     labelBuilder: (s) => s,
                                     onChanged: (v) {
-                                      if (v != null) setState(() => _category = v);
+                                      if (v != null) {
+                                        setState(() => _category = v);
+                                      }
                                     },
                                   ),
                                 ),
@@ -231,8 +225,9 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                               controller: _costCtrl,
                               label: 'UNIT COST (\$) *',
                               hint: '0.00',
-                              keyboardType: const TextInputType.numberWithOptions(
-                                  decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               inputFormatters: [
                                 FilteringTextInputFormatter.allow(
                                     RegExp(r'[\d.]')),
@@ -245,6 +240,12 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                                 return null;
                               },
                             ),
+                            SizedBox(height: context.h(6)),
+                            Text(
+                              'Direct cost per unit',
+                              style: AppTextStyles.caption(context)
+                                  .copyWith(color: colors.textMuted),
+                            ),
                           ],
                         ),
                       ),
@@ -255,10 +256,12 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                       child: _SectionCard(
                         title: 'Stock Tracking & Thresholds',
                         sectionLabel: 'SECTION 2',
+                        icon: Icons.bar_chart_rounded,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
                                   child: RdxTextField(
@@ -307,7 +310,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                               ],
                               onChanged: (_) => setState(() {}),
                             ),
-                            SizedBox(height: context.h(8)),
+                            SizedBox(height: context.h(6)),
                             Text(
                               'Restock alert triggers when stock falls below this amount — no confusing PAR terminology',
                               style: AppTextStyles.caption(context)
@@ -326,18 +329,48 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('LIVE STOCK PREVIEW',
-                                      style: AppTextStyles.caption(context)
-                                          .copyWith(
-                                              color: colors.textMuted,
-                                              letterSpacing: 0.5)),
-                                  SizedBox(height: context.h(8)),
                                   Row(
                                     children: [
-                                      _StatusDot(status: _previewStatus),
-                                      SizedBox(width: context.w(8)),
+                                      Text('LIVE STOCK PREVIEW',
+                                          style: AppTextStyles.caption(context)
+                                              .copyWith(
+                                                  color: colors.textMuted,
+                                                  letterSpacing: 0.5)),
+                                      const Spacer(),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: context.w(8),
+                                            vertical: context.h(3)),
+                                        decoration: BoxDecoration(
+                                          color: _statusColor(_previewStatus)
+                                              .withValues(alpha: 0.14),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            _StatusDot(status: _previewStatus),
+                                            SizedBox(width: context.w(5)),
+                                            Text(
+                                              _statusLabel(_previewStatus),
+                                              style: TextStyle(
+                                                color: _statusColor(
+                                                    _previewStatus),
+                                                fontSize: context.h(10),
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: context.h(10)),
+                                  Row(
+                                    children: [
                                       Text(
-                                        _statusLabel(_previewStatus),
+                                        'Initial Stock: ${_previewMax > 0 ? ((_previewQty / _previewMax) * 100).toStringAsFixed(0) : 0}%',
                                         style: AppTextStyles.body(context)
                                             .copyWith(
                                                 fontWeight: FontWeight.w600),
@@ -345,7 +378,8 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                                       const Spacer(),
                                       Text(
                                         '${_previewQty.toStringAsFixed(1)} / ${_previewMax.toStringAsFixed(1)} $_unit',
-                                        style: AppTextStyles.caption(context),
+                                        style: AppTextStyles.caption(context)
+                                            .copyWith(color: colors.textMuted),
                                       ),
                                     ],
                                   ),
@@ -363,19 +397,24 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                                           _statusColor(_previewStatus)),
                                     ),
                                   ),
-                                  SizedBox(height: context.h(6)),
-                                  Text(
-                                    'Initial Stock: ${_previewMax > 0 ? ((_previewQty / _previewMax) * 100).toStringAsFixed(0) : 0}%',
-                                    style: AppTextStyles.caption(context),
-                                  ),
                                 ],
                               ),
                             ),
                             SizedBox(height: context.h(12)),
-                            Text(
-                              'Status badges (In Stock / Low Stock / Critical) are calculated automatically based on your minimum required level.',
-                              style: AppTextStyles.caption(context)
-                                  .copyWith(color: colors.textMuted),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.info_outline,
+                                    size: 14, color: colors.textMuted),
+                                SizedBox(width: context.w(8)),
+                                Expanded(
+                                  child: Text(
+                                    'Status badges (In Stock / Low Stock / Critical) are calculated automatically based on your minimum required level.',
+                                    style: AppTextStyles.caption(context)
+                                        .copyWith(color: colors.textMuted),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -384,32 +423,6 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                   ],
                 ),
               ),
-            ),
-          ),
-
-          // Bottom actions (mobile-friendly)
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: Responsive.pageHorizontal(context),
-              vertical: context.h(12),
-            ),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              border: Border(top: BorderSide(color: colors.border)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FormActionButton.discard(
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                SizedBox(width: context.w(10)),
-                FormActionButton.save(
-                  label: isEdit ? 'Save Changes' : '+ Save & Add Material',
-                  onPressed: _save,
-                  isLoading: _saving,
-                ),
-              ],
             ),
           ),
         ],
@@ -446,11 +459,13 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
 class _SectionCard extends StatelessWidget {
   final String title;
   final String sectionLabel;
+  final IconData icon;
   final Widget child;
 
   const _SectionCard({
     required this.title,
     required this.sectionLabel,
+    required this.icon,
     required this.child,
   });
 
@@ -468,9 +483,20 @@ class _SectionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: AppTextStyles.section(context)),
-              const Spacer(),
+              Container(
+                padding: EdgeInsets.all(context.h(6)),
+                decoration: BoxDecoration(
+                  color: colors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(context.h(6)),
+                ),
+                child: Icon(icon, size: 16, color: AppColors.primary),
+              ),
+              SizedBox(width: context.w(10)),
+              Expanded(
+                child: Text(title, style: AppTextStyles.section(context)),
+              ),
               Text(sectionLabel,
                   style: AppTextStyles.caption(context)
                       .copyWith(color: colors.textMuted, letterSpacing: 0.8)),
@@ -502,8 +528,8 @@ class _StatusDot extends StatelessWidget {
         c = AppColors.danger;
     }
     return Container(
-      width: 8,
-      height: 8,
+      width: 6,
+      height: 6,
       decoration: BoxDecoration(color: c, shape: BoxShape.circle),
     );
   }

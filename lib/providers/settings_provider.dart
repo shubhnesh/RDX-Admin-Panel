@@ -11,11 +11,11 @@ class SettingsProvider extends ChangeNotifier {
   bool isSeeding = false;
   String? seedMessage;
 
-  String restaurantName = 'Uttarakhand Waffles';
-  String description = 'Best comfort waffles in town, freshly made every morning.';
-  String address = '17 Winchester Road, Suite 4';
+  String restaurantName = 'RDX Restaurants';
+  String description = 'Best in city, freshly made every morning.';
+  String address = 'Chandigarh';
   String phone = '+91 98765 43210';
-  String email = 'contact@uttarakhandwaffles.com';
+  String email = 'contact@rdxrestaurant.com';
 
   bool autoAcceptOrders = true;
   bool requireManagerApprovalForRefunds = true;
@@ -35,7 +35,8 @@ class SettingsProvider extends ChangeNotifier {
         phone = d['phone'] ?? phone;
         email = d['email'] ?? email;
         autoAcceptOrders = d['auto_accept_orders'] ?? true;
-        requireManagerApprovalForRefunds = d['require_manager_approval_for_refunds'] ?? true;
+        requireManagerApprovalForRefunds =
+            d['require_manager_approval_for_refunds'] ?? true;
         keepPricingConsistent = d['keep_pricing_consistent'] ?? false;
       }
     } catch (e) {
@@ -45,19 +46,54 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleAutoAccept(bool value) {
+  Future<void> toggleAutoAccept(bool value) async {
+    final previous = autoAcceptOrders;
     autoAcceptOrders = value;
     notifyListeners();
+    await _persistToggle(
+      field: 'auto_accept_orders',
+      value: value,
+      rollback: () => autoAcceptOrders = previous,
+    );
   }
 
-  void toggleManagerApproval(bool value) {
+  Future<void> toggleManagerApproval(bool value) async {
+    final previous = requireManagerApprovalForRefunds;
     requireManagerApprovalForRefunds = value;
     notifyListeners();
+    await _persistToggle(
+      field: 'require_manager_approval_for_refunds',
+      value: value,
+      rollback: () => requireManagerApprovalForRefunds = previous,
+    );
   }
 
-  void toggleKeepPricing(bool value) {
+  Future<void> toggleKeepPricing(bool value) async {
+    final previous = keepPricingConsistent;
     keepPricingConsistent = value;
     notifyListeners();
+    await _persistToggle(
+      field: 'keep_pricing_consistent',
+      value: value,
+      rollback: () => keepPricingConsistent = previous,
+    );
+  }
+
+  Future<void> _persistToggle({
+    required String field,
+    required bool value,
+    required void Function() rollback,
+  }) async {
+    try {
+      await _db.collection('settings').doc('restaurant').set({
+        field: value,
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (_) {
+      rollback();
+      errorMessage = 'Failed to save setting.';
+      notifyListeners();
+    }
   }
 
   Future<bool> save({
@@ -78,7 +114,8 @@ class SettingsProvider extends ChangeNotifier {
         'phone': ph,
         'email': em,
         'auto_accept_orders': autoAcceptOrders,
-        'require_manager_approval_for_refunds': requireManagerApprovalForRefunds,
+        'require_manager_approval_for_refunds':
+            requireManagerApprovalForRefunds,
         'keep_pricing_consistent': keepPricingConsistent,
         'updated_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));

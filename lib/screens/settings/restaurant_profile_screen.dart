@@ -11,7 +11,8 @@ import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
 import '../../widgets/rdx_text_field.dart';
 import '../../widgets/form_action_button.dart';
-import '../../widgets/rdx_toggle_button.dart'; // adjust path if needed
+import '../../widgets/rdx_toggle_button.dart';
+import '../../widgets/rdx_header.dart';
 
 class RestaurantProfileScreen extends StatefulWidget {
   const RestaurantProfileScreen({super.key});
@@ -183,284 +184,301 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      body: SingleChildScrollView(
-        padding: Responsive.pagePadding(context, top: 16),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 860),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
-                    Text(
-                      'Restaurant Profile',
-                      style: AppTextStyles.heading(context).copyWith(
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    FormActionButton.save(
-                      isLoading: provider.isLoading,
-                      onPressed: _save,
-                    ),
-                    SizedBox(width: context.w(10)),
-                    FormActionButton.discard(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
-                  ],
-                ),
-                Text(
-                  'Configure RDX Admin platform details.',
-                  style: AppTextStyles.bodySecondary(context).copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                _ProfileSection(
-                  title: 'Brand Identity',
-                  colors: colors,
-                  child: Row(
+      body: Column(
+        children: [
+          // ── Shared header ───────────────────────────────────────
+          RdxHeader(
+            title: 'Restaurant Profile',
+            subtitle: 'Configure RDX Admin platform details.',
+            showBackButton: true,
+            actions: [
+              FormActionButton.save(
+                isLoading: provider.isLoading,
+                onPressed: _save,
+              ),
+              SizedBox(width: context.w(10)),
+              FormActionButton.discard(
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            ],
+          ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: Responsive.pagePadding(context, top: 8, bottom: 32),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 860),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // -------------------------------------------------------
-                      // RESTAURANT LOGO
-                      // -------------------------------------------------------
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: colors.background,
-                          border: Border.all(
-                            color: colors.border,
-                          ),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: _logoBytes != null
-                            ? Image.memory(
-                                _logoBytes!,
-                                width: 64,
-                                height: 64,
-                                fit: BoxFit.cover,
-                              )
-                            : const Icon(
-                                Icons.restaurant,
-                                color: AppColors.primary,
-                              ),
-                      ),
-
-                      const SizedBox(width: 14),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      _ProfileSection(
+                        title: 'Brand Identity',
+                        colors: colors,
+                        child: Row(
                           children: [
-                            Text(
-                              'Brand Identity',
-                              style: AppTextStyles.bodySecondary(context),
-                            ),
-
-                            Text(
-                              'Recommended size: 512x512px. Max 2MB.',
-                              style: AppTextStyles.body(context),
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            OutlinedButton(
-                              onPressed: _pickLogo,
-                              child: _isUploadingLogo
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
+                            // -------------------------------------------------------
+                            // RESTAURANT LOGO
+                            // -------------------------------------------------------
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: colors.background,
+                                border: Border.all(
+                                  color: colors.border,
+                                ),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: _logoBytes != null
+                                  ? Image.memory(
+                                      _logoBytes!,
+                                      width: 64,
+                                      height: 64,
+                                      fit: BoxFit.cover,
                                     )
-                                  : Text(
-                                      _logoBytes != null
-                                          ? 'Change Logo'
-                                          : 'Upload New',
-                                      style: AppTextStyles.section(context)
-                                          .copyWith(
-                                        color: colors.primary,
-                                      ),
+                                  : const Icon(
+                                      Icons.restaurant,
+                                      color: AppColors.primary,
                                     ),
                             ),
 
-                            // Show selected filename without changing
-                            // the existing layout when no logo is selected.
-                            if (_logoName != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                _logoName!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.body(context).copyWith(
-                                  color: colors.textSecondary,
-                                ),
+                            const SizedBox(width: 14),
+
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Brand Identity',
+                                    style: AppTextStyles.bodySecondary(context),
+                                  ),
+                                  Text(
+                                    'Recommended size: 512x512px. Max 2MB.',
+                                    style: AppTextStyles.body(context),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  OutlinedButton(
+                                    onPressed: _pickLogo,
+                                    child: _isUploadingLogo
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Text(
+                                            _logoBytes != null
+                                                ? 'Change Logo'
+                                                : 'Upload New',
+                                            style: AppTextStyles.section(context)
+                                                .copyWith(
+                                              color: colors.primary,
+                                            ),
+                                          ),
+                                  ),
+                                  if (_logoName != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _logoName!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          AppTextStyles.body(context).copyWith(
+                                        color: colors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
-                            ],
+                            ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                _ProfileSection(
-                  title: 'Basic Information',
-                  colors: colors,
-                  child: Column(
-                    children: [
-                      RdxTextField(
-                        controller: nameController,
-                        label: 'Restaurant Name',
+                      _ProfileSection(
+                        title: 'Basic Information',
+                        colors: colors,
+                        child: Column(
+                          children: [
+                            RdxTextField(
+                              controller: nameController,
+                              label: 'Restaurant Name',
+                            ),
+                            const SizedBox(height: 12),
+                            RdxTextField(
+                              controller: descriptionController,
+                              label: 'Brief Description',
+                              maxLines: 3,
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      RdxTextField(
-                        controller: descriptionController,
-                        label: 'Brief Description',
-                        maxLines: 3,
-                      ),
-                    ],
-                  ),
-                ),
-                _ProfileSection(
-                  title: 'Location & Contact',
-                  colors: colors,
-                  child: Column(
-                    children: [
-                      RdxTextField(
-                        controller: addressController,
-                        label: 'Primary Address',
-                      ),
-                      const SizedBox(height: 12),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final narrow = constraints.maxWidth < 480;
+                      _ProfileSection(
+                        title: 'Location & Contact',
+                        colors: colors,
+                        child: Column(
+                          children: [
+                            RdxTextField(
+                              controller: addressController,
+                              label: 'Primary Address',
+                            ),
+                            const SizedBox(height: 12),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final narrow = constraints.maxWidth < 480;
 
-                          final phone = RdxTextField(
-                            controller: phoneController,
-                            label: 'Support Phone',
-                          );
-
-                          final email = RdxTextField(
-                            controller: emailController,
-                            label: 'Support Email',
-                          );
-
-                          return narrow
-                              ? Column(
-                                  children: [
-                                    phone,
-                                    const SizedBox(height: 12),
-                                    email,
-                                  ],
-                                )
-                              : Row(
-                                  children: [
-                                    Expanded(child: phone),
-                                    const SizedBox(width: 12),
-                                    Expanded(child: email),
-                                  ],
+                                final phone = RdxTextField(
+                                  controller: phoneController,
+                                  label: 'Support Phone',
                                 );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                _ProfileSection(
-                  title: 'Operating Hours',
-                  colors: colors,
-                  child: Column(
-                    children: [
-                      // Weekdays row
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Weekdays',
-                                style: AppTextStyles.bodySecondary(context)
-                                    .copyWith(
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: _ProfileTime(
-                                text: '08:00 AM',
-                                colors: colors,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _ProfileTime(
-                                text: '11:00 PM',
-                                colors: colors,
-                              ),
-                            ),
-                            RdxToggleButton(
-                              value: _weekdaysOpen,
-                              onChanged: (value) {
-                                setState(() {
-                                  _weekdaysOpen = value;
-                                });
+
+                                final email = RdxTextField(
+                                  controller: emailController,
+                                  label: 'Support Email',
+                                );
+
+                                return narrow
+                                    ? Column(
+                                        children: [
+                                          phone,
+                                          const SizedBox(height: 12),
+                                          email,
+                                        ],
+                                      )
+                                    : Row(
+                                        children: [
+                                          Expanded(child: phone),
+                                          const SizedBox(width: 12),
+                                          Expanded(child: email),
+                                        ],
+                                      );
                               },
                             ),
                           ],
                         ),
                       ),
-                      // Weekends row
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Weekends',
-                                style: AppTextStyles.bodySecondary(context)
-                                    .copyWith(
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: _ProfileTime(
-                                text: '10:00 AM',
-                                colors: colors,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _ProfileTime(
-                                text: '02:00 AM',
-                                colors: colors,
-                              ),
-                            ),
-                            RdxToggleButton(
-                              value: _weekendsOpen,
-                              onChanged: (value) {
-                                setState(() {
-                                  _weekendsOpen = value;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
+                      _ProfileSection(
+  title: 'Operating Hours',
+  colors: colors,
+  child: Column(
+    children: [
+      // Weekdays row
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(
+                'Weekdays',
+                style: AppTextStyles.bodySecondary(context).copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+
+            // Opening time
+            Expanded(
+              child: _ProfileTime(
+                text: '08:00 AM',
+                colors: colors,
+              ),
+            ),
+
+            // Gap between opening and closing time
+            SizedBox(width: context.w(12)),
+
+            // Closing time
+            Expanded(
+              child: _ProfileTime(
+                text: '11:00 PM',
+                colors: colors,
+              ),
+            ),
+
+            // Toggle
+            Expanded(
+              flex: 1,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: RdxToggleButton(
+                  value: _weekdaysOpen,
+                  onChanged: (value) {
+                    setState(() {
+                      _weekdaysOpen = value;
+                    });
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      // Weekends row
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(
+                'Weekends',
+                style: AppTextStyles.bodySecondary(context).copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+
+            // Opening time
+            Expanded(
+              child: _ProfileTime(
+                text: '10:00 AM',
+                colors: colors,
+              ),
+            ),
+
+            // Gap between opening and closing time
+            SizedBox(width: context.w(12)),
+
+            // Closing time
+            Expanded(
+              child: _ProfileTime(
+                text: '02:00 AM',
+                colors: colors,
+              ),
+            ),
+
+            // Toggle
+            Expanded(
+              flex: 1,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: RdxToggleButton(
+                  value: _weekendsOpen,
+                  onChanged: (value) {
+                    setState(() {
+                      _weekendsOpen = value;
+                    });
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -5,7 +5,6 @@ import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
-import '../../widgets/form_action_button.dart';
 import '../../widgets/rdx_toggle_button.dart'; // adjust path if needed
 
 class SettingsScreen extends StatelessWidget {
@@ -48,35 +47,11 @@ class SettingsScreen extends StatelessWidget {
                 final identity = _IdentityCard(colors: colors);
                 final rules = _RulesCard(provider: provider, colors: colors);
 
-                final actionButtons = Align(
-                  alignment: Alignment.centerRight,
-                  child: SizedBox(
-                    width: context.w(300), // same width as Create Menu sidebar
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: FormActionButton.save(
-                            onPressed: () {},
-                          ),
-                        ),
-                        SizedBox(width: context.w(10)),
-                        Expanded(
-                          child: FormActionButton.discard(
-                            onPressed: () {},
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-
                 if (compact) {
                   return Column(children: [
                     identity,
                     SizedBox(height: context.h(14)),
                     rules,
-                    SizedBox(height: context.h(20)),
-                    actionButtons,
                   ]);
                 }
                 return Column(
@@ -94,9 +69,7 @@ class SettingsScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(height: context.h(20)),
-                    actionButtons,
-                  ],
+                  ]
                 );
               },
             ),

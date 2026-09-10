@@ -163,77 +163,88 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: RdxHeader(
-        title: _editing ? 'Edit Menu Item' : 'Add Menu Item',
+      body: Column(
+        children: [
+          RdxHeader(
+            title: _editing ? 'Edit Menu Item' : 'Add Menu Item',
+            showBackButton: true,
+          ),
+          Expanded(
+            child: _loading && _editing
+                ? const Center(child: CircularProgressIndicator())
+                : Form(
+                    key: _formKey,
+                    child: narrow
+                        ? SingleChildScrollView(
+                            padding: EdgeInsets.fromLTRB(
+                              context.w(20),
+                              context.h(16),
+                              context.w(20),
+                              context.h(28),
+                            ),
+                            child: Column(
+                              children: [
+                                if (_error != null)
+                                  _errorBanner(context, colors),
+                                _mainColumn(context, colors),
+                                SizedBox(height: context.h(16)),
+                                _preview(context, colors),
+                                SizedBox(height: context.h(14)),
+                                _actionButtons(context, colors),
+                              ],
+                            ),
+                          )
+                        : Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              context.w(20),
+                              context.h(16),
+                              context.w(20),
+                              context.h(24),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    padding:
+                                        EdgeInsets.only(right: context.w(22)),
+                                    child: Column(
+                                      children: [
+                                        if (_error != null)
+                                          _errorBanner(context, colors),
+                                        _mainColumn(context, colors),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                VerticalDivider(
+                                  width: context.w(1),
+                                  thickness: context.h(1),
+                                  color: colors.border,
+                                ),
+                                SizedBox(
+                                  width: context.w(300),
+                                  child: Padding(
+                                    padding:
+                                        EdgeInsets.only(left: context.w(22)),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        _preview(context, colors),
+                                        const Spacer(),
+                                        _actionButtons(context, colors),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                  ),
+          ),
+        ],
       ),
-      body: _loading && _editing
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: narrow
-                  ? SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        context.w(20),
-                        context.h(16),
-                        context.w(20),
-                        context.h(28),
-                      ),
-                      child: Column(
-                        children: [
-                          if (_error != null) _errorBanner(context, colors),
-                          _mainColumn(context, colors),
-                          SizedBox(height: context.h(16)),
-                          _preview(context, colors),
-                          SizedBox(height: context.h(14)),
-                          _actionButtons(context, colors),
-                        ],
-                      ),
-                    )
-                  : Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        context.w(20),
-                        context.h(16),
-                        context.w(20),
-                        context.h(24),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              padding: EdgeInsets.only(right: context.w(22)),
-                              child: Column(
-                                children: [
-                                  if (_error != null)
-                                    _errorBanner(context, colors),
-                                  _mainColumn(context, colors),
-                                ],
-                              ),
-                            ),
-                          ),
-                          VerticalDivider(
-                            width: context.w(1),
-                            thickness: context.h(1),
-                            color: colors.border,
-                          ),
-                          SizedBox(
-                            width: context.w(300),
-                            child: Padding(
-                              padding: EdgeInsets.only(left: context.w(22)),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _preview(context, colors),
-                                  const Spacer(),
-                                  _actionButtons(context, colors),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
     );
   }
 

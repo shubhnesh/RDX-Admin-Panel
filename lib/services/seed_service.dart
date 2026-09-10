@@ -135,103 +135,102 @@ class SeedService {
     // INVENTORY
     // ============================================================
 
-   final inventory = [
-  InventoryItemModel(
-    id: '',
-    name: 'A5 Wagyu Ribeye',
-    category: 'Proteins & Meats',
-    quantity: 4.2,
-    minRequired: 8.0,
-    maxCapacity: 25.0,
-    unit: 'kg',
-    unitCost: 42.50,
-    lastUpdated: now,
-  ),
-  InventoryItemModel(
-    id: '',
-    name: 'Atlantic Salmon',
-    category: 'Proteins & Meats',
-    quantity: 8.5,
-    minRequired: 15.0,
-    maxCapacity: 40.0,
-    unit: 'kg',
-    unitCost: 24.00,
-    lastUpdated: now,
-  ),
-  InventoryItemModel(
-    id: '',
-    name: 'Black Winter Truffles',
-    category: 'Fresh Produce',
-    quantity: 0.08, // 80 g
-    minRequired: 0.20, // 200 g
-    maxCapacity: 0.50, // 500 g
-    unit: 'g',
-    unitCost: 1.80,
-    lastUpdated: now,
-  ),
-  InventoryItemModel(
-    id: '',
-    name: 'San Marzano Tomatoes',
-    category: 'Dry Pantry',
-    quantity: 32,
-    minRequired: 15,
-    maxCapacity: 50,
-    unit: 'cans',
-    unitCost: 3.20,
-    lastUpdated: now,
-  ),
-  InventoryItemModel(
-    id: '',
-    name: 'Organic Mozzarella',
-    category: 'Dairy & Cold',
-    quantity: 18.0,
-    minRequired: 5.0,
-    maxCapacity: 20.0,
-    unit: 'kg',
-    unitCost: 12.50,
-    lastUpdated: now,
-  ),
-  InventoryItemModel(
-    id: '',
-    name: 'Biodegradable Takeout Boxes',
-    category: 'Packaging',
-    quantity: 450,
-    minRequired: 150,
-    maxCapacity: 500,
-    unit: 'pcs',
-    unitCost: 0.45,
-    lastUpdated: now,
-  ),
-  // Keep a couple of the original seed items for variety
-  InventoryItemModel(
-    id: '',
-    name: 'Arborio Rice',
-    category: 'Dry Pantry',
-    quantity: 42,
-    minRequired: 10,
-    maxCapacity: 60,
-    unit: 'kg',
-    unitCost: 2.80,
-    lastUpdated: now,
-  ),
-  InventoryItemModel(
-    id: '',
-    name: 'Extra Virgin Olive Oil',
-    category: 'Dry Pantry',
-    quantity: 18,
-    minRequired: 5,
-    maxCapacity: 30,
-    unit: 'L',
-    unitCost: 9.50,
-    lastUpdated: now,
-  ),
-];
+    final inventory = [
+      InventoryItemModel(
+        id: '',
+        name: 'A5 Wagyu Ribeye',
+        category: 'Proteins & Meats',
+        quantity: 4.2,
+        minRequired: 8.0,
+        maxCapacity: 25.0,
+        unit: 'kg',
+        unitCost: 42.50,
+        lastUpdated: now,
+      ),
+      InventoryItemModel(
+        id: '',
+        name: 'Atlantic Salmon',
+        category: 'Proteins & Meats',
+        quantity: 8.5,
+        minRequired: 15.0,
+        maxCapacity: 40.0,
+        unit: 'kg',
+        unitCost: 24.00,
+        lastUpdated: now,
+      ),
+      InventoryItemModel(
+        id: '',
+        name: 'Black Winter Truffles',
+        category: 'Fresh Produce',
+        quantity: 0.08, // 80 g
+        minRequired: 0.20, // 200 g
+        maxCapacity: 0.50, // 500 g
+        unit: 'g',
+        unitCost: 1.80,
+        lastUpdated: now,
+      ),
+      InventoryItemModel(
+        id: '',
+        name: 'San Marzano Tomatoes',
+        category: 'Dry Pantry',
+        quantity: 32,
+        minRequired: 15,
+        maxCapacity: 50,
+        unit: 'cans',
+        unitCost: 3.20,
+        lastUpdated: now,
+      ),
+      InventoryItemModel(
+        id: '',
+        name: 'Organic Mozzarella',
+        category: 'Dairy & Cold',
+        quantity: 18.0,
+        minRequired: 5.0,
+        maxCapacity: 20.0,
+        unit: 'kg',
+        unitCost: 12.50,
+        lastUpdated: now,
+      ),
+      InventoryItemModel(
+        id: '',
+        name: 'Biodegradable Takeout Boxes',
+        category: 'Packaging',
+        quantity: 450,
+        minRequired: 150,
+        maxCapacity: 500,
+        unit: 'pcs',
+        unitCost: 0.45,
+        lastUpdated: now,
+      ),
+      // Keep a couple of the original seed items for variety
+      InventoryItemModel(
+        id: '',
+        name: 'Arborio Rice',
+        category: 'Dry Pantry',
+        quantity: 42,
+        minRequired: 10,
+        maxCapacity: 60,
+        unit: 'kg',
+        unitCost: 2.80,
+        lastUpdated: now,
+      ),
+      InventoryItemModel(
+        id: '',
+        name: 'Extra Virgin Olive Oil',
+        category: 'Dry Pantry',
+        quantity: 18,
+        minRequired: 5,
+        maxCapacity: 30,
+        unit: 'L',
+        unitCost: 9.50,
+        lastUpdated: now,
+      ),
+    ];
 
-for (final item in inventory) {
-  final ref = _db.collection('inventory').doc();
-  batch.set(ref, item.toJson());
-}
-
+    for (final item in inventory) {
+      final ref = _db.collection('inventory').doc();
+      batch.set(ref, item.toJson());
+    }
 
     // ============================================================
     // ORDERS
@@ -348,12 +347,12 @@ for (final item in inventory) {
     batch.set(
       _db.collection('settings').doc('restaurant'),
       {
-        'restaurant_name': 'Uttarakhand Waffles',
+        'restaurant_name': 'RDX Restaurants',
         'description':
             'Best comfort waffles in town, freshly made every morning.',
-        'address': '17 Winchester Road, Suite 4',
+        'address': 'Chandigarh',
         'phone': '+91 98765 43210',
-        'email': 'contact@uttarakhandwaffles.com',
+        'email': 'contact@rdxrestaurant.com',
         'auto_accept_orders': true,
         'require_manager_approval_for_refunds': true,
         'keep_pricing_consistent': false,

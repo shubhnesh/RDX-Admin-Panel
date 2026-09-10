@@ -41,49 +41,58 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     );
 
     return Scaffold(
-      appBar: const RdxHeader(title: 'Notification History'),
       backgroundColor: colors.background,
-      body: provider.isLoading && provider.history.isEmpty
-          ? const LoadingIndicator()
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
+      body: Column(
+        children: [
+          const RdxHeader(
+            title: 'Notification History',
+            showBackButton: true,
+          ),
+          Expanded(
+            child: provider.isLoading && provider.history.isEmpty
+                ? const LoadingIndicator()
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = constraints.maxWidth;
 
-                final isMobile = width < 600;
-                final isTablet = width >= 600 && width < 1000;
+                      final isMobile = width < 600;
+                      final isTablet = width >= 600 && width < 1000;
 
-                return SingleChildScrollView(
-                  padding: Responsive.pagePadding(
-                    context,
-                    top: isMobile ? context.h(18) : context.h(24),
+                      return SingleChildScrollView(
+                        padding: Responsive.pagePadding(
+                          context,
+                          top: isMobile ? context.h(18) : context.h(24),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              height: isMobile ? context.h(20) : context.h(24),
+                            ),
+                            _buildFilters(
+                              colors,
+                              isMobile,
+                              isTablet,
+                              provider,
+                            ),
+                            SizedBox(
+                              height: isMobile ? context.h(14) : context.h(18),
+                            ),
+                            _buildTable(
+                              colors,
+                              filteredNotifications,
+                              isMobile,
+                              isTablet,
+                              width,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        height: isMobile ? context.h(20) : context.h(24),
-                      ),
-                      _buildFilters(
-                        colors,
-                        isMobile,
-                        isTablet,
-                        provider,
-                      ),
-                      SizedBox(
-                        height: isMobile ? context.h(14) : context.h(18),
-                      ),
-                      _buildTable(
-                        colors,
-                        filteredNotifications,
-                        isMobile,
-                        isTablet,
-                        width,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -59,53 +59,60 @@ class _SupportScreenState extends State<SupportScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: const RdxHeader(title: 'Contact Technical Support'),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final content = isNarrow
-              ? ListView(
-                  padding: Responsive.pagePadding(context, top: context.h(20)),
-                  children: [
-                    _buildIntro(context, colors),
-                    SizedBox(height: context.h(20)),
-                    _buildCategorySection(context, colors),
-                    SizedBox(height: context.h(20)),
-                    _buildFormSection(context, colors),
-                    SizedBox(height: context.h(24)),
-                    _buildDirectChannels(context, colors),
-                  ],
-                )
-              : Padding(
-                  padding: Responsive.pagePadding(context),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildIntro(context, colors),
-                              SizedBox(height: context.h(20)),
-                              _buildCategorySection(context, colors),
-                              SizedBox(height: context.h(20)),
-                              _buildFormSection(context, colors),
-                            ],
-                          ),
+      body: Column(
+        children: [
+          const RdxHeader(title: 'Contact Technical Support'),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final content = isNarrow
+                    ? ListView(
+                        padding:
+                            Responsive.pagePadding(context, top: context.h(20)),
+                        children: [
+                          _buildIntro(context, colors),
+                          SizedBox(height: context.h(20)),
+                          _buildCategorySection(context, colors),
+                          SizedBox(height: context.h(20)),
+                          _buildFormSection(context, colors),
+                          SizedBox(height: context.h(24)),
+                          _buildDirectChannels(context, colors),
+                        ],
+                      )
+                    : Padding(
+                        padding: Responsive.pagePadding(context),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildIntro(context, colors),
+                                    SizedBox(height: context.h(20)),
+                                    _buildCategorySection(context, colors),
+                                    SizedBox(height: context.h(20)),
+                                    _buildFormSection(context, colors),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: context.w(24)),
+                            SizedBox(
+                              width: context.w(300),
+                              child: _buildDirectChannels(context, colors),
+                            ),
+                          ],
                         ),
-                      ),
-                      SizedBox(width: context.w(24)),
-                      SizedBox(
-                        width: context.w(300),
-                        child: _buildDirectChannels(context, colors),
-                      ),
-                    ],
-                  ),
-                );
+                      );
 
-          return content;
-        },
+                return content;
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

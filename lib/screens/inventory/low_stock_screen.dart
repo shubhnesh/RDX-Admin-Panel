@@ -50,28 +50,81 @@ class _LowStockScreenState extends State<LowStockScreen> {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
+                // ── Breadcrumb + badge ──────────────────────────────
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                     Responsive.pageHorizontal(context),
                     context.h(16),
                     Responsive.pageHorizontal(context),
-                    context.h(8),
+                    0,
                   ),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.arrow_back_ios_new,
-                            size: 18, color: colors.textPrimary),
-                        onPressed: () => Navigator.of(context).pop(),
+                      InkWell(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Row(
+                          children: [
+                            Icon(Icons.arrow_back_ios_new,
+                                size: 12, color: colors.textMuted),
+                            SizedBox(width: context.w(6)),
+                            Text('Back to Inventory',
+                                style: AppTextStyles.caption(context)
+                                    .copyWith(color: colors.textMuted)),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 4),
+                      const Spacer(),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: context.w(10), vertical: context.h(5)),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                  color: AppColors.danger,
+                                  shape: BoxShape.circle),
+                            ),
+                            SizedBox(width: context.w(6)),
+                            Text(
+                              '${provider.needsRestockCount} ITEMS BELOW THRESHOLD',
+                              style: TextStyle(
+                                color: AppColors.danger,
+                                fontSize: context.h(11),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Header
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    Responsive.pageHorizontal(context),
+                    context.h(10),
+                    Responsive.pageHorizontal(context),
+                    context.h(8),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Low Stock & Restock',
                                 style: AppTextStyles.heading(context)),
+                            SizedBox(height: context.h(4)),
                             Text(
                               '${provider.needsRestockCount} items below minimum threshold replenishment level',
                               style: AppTextStyles.caption(context)
@@ -91,10 +144,14 @@ class _LowStockScreenState extends State<LowStockScreen> {
                                 );
                               },
                         icon: const Icon(Icons.shopping_cart_outlined, size: 18),
-                        label: Text('+ REORDER ALL (${items.length})'),
+                        label: Text('+ REORDER ALL (${provider.needsRestockCount})'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: context.w(16),
+                            vertical: context.h(12),
+                          ),
                         ),
                       ),
                     ],
@@ -131,7 +188,6 @@ class _LowStockScreenState extends State<LowStockScreen> {
                               ? provider.lowStockItems
                                   .where((e) => e.status == StockStatus.lowStock)
                                   .map((e) => e.name)
-                                  .take(2)
                                   .join(', ')
                               : '—',
                           accent: AppColors.warning,
@@ -142,10 +198,10 @@ class _LowStockScreenState extends State<LowStockScreen> {
                       Expanded(
                         child: _SummaryCard(
                           label: 'RESTOCK COST',
-                          value: Formatters.currency(provider.restockCostEstimate),
+                          value: '${Formatters.currency(provider.restockCostEstimate)} est.',
                           subtitle: 'Covers deficit for all flagged items',
                           accent: AppColors.info,
-                          icon: Icons.attach_money_rounded,
+                          icon: Icons.credit_card_outlined,
                         ),
                       ),
                     ],
@@ -171,14 +227,12 @@ class _LowStockScreenState extends State<LowStockScreen> {
                         label: 'CRITICAL (${provider.criticalCount})',
                         selected: _filter == 'CRITICAL',
                         onTap: () => setState(() => _filter = 'CRITICAL'),
-                        color: AppColors.danger,
                       ),
                       SizedBox(width: context.w(8)),
                       _FilterChip(
                         label: 'LOW STOCK (${provider.lowStockCount})',
                         selected: _filter == 'LOW STOCK',
                         onTap: () => setState(() => _filter = 'LOW STOCK'),
-                        color: AppColors.warning,
                       ),
                       const Spacer(),
                       SizedBox(
@@ -209,6 +263,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
                         : _LowStockTable(items: items),
                   ),
                 ),
+                SizedBox(height: context.h(16)),
               ],
             ),
     );
@@ -256,7 +311,8 @@ class _SummaryCard extends StatelessWidget {
           Text(value, style: AppTextStyles.section(context)),
           SizedBox(height: context.h(4)),
           Text(subtitle,
-              style: AppTextStyles.caption(context),
+              style: AppTextStyles.caption(context)
+                  .copyWith(color: colors.textMuted),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
         ],
@@ -269,19 +325,16 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  final Color? color;
 
   const _FilterChip({
     required this.label,
     required this.selected,
     required this.onTap,
-    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final c = color ?? AppColors.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -289,9 +342,9 @@ class _FilterChip extends StatelessWidget {
         padding: EdgeInsets.symmetric(
             horizontal: context.w(14), vertical: context.h(8)),
         decoration: BoxDecoration(
-          color: selected ? c : colors.surface,
+          color: selected ? AppColors.primary : colors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? c : colors.border),
+          border: Border.all(color: selected ? AppColors.primary : colors.border),
         ),
         child: Text(
           label,
@@ -349,6 +402,7 @@ class _LowStockTable extends StatelessWidget {
                 final color = isCritical ? AppColors.danger : AppColors.warning;
                 final short = item.shortage;
                 final cost = short > 0 ? short * item.unitCost : 0.0;
+                final pct = item.stockPercent.clamp(0, 100);
 
                 return Padding(
                   padding: EdgeInsets.symmetric(
@@ -357,16 +411,15 @@ class _LowStockTable extends StatelessWidget {
                     children: [
                       Expanded(
                         flex: 3,
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(item.name,
-                                  style: AppTextStyles.body(context)
-                                      .copyWith(fontWeight: FontWeight.w600),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
-                            ),
-                            SizedBox(width: context.w(6)),
+                            Text(item.name,
+                                style: AppTextStyles.body(context)
+                                    .copyWith(fontWeight: FontWeight.w600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                            SizedBox(height: context.h(4)),
                             Container(
                               padding: EdgeInsets.symmetric(
                                   horizontal: context.w(6), vertical: 2),
@@ -386,9 +439,21 @@ class _LowStockTable extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '${_fmt(item.quantity)} / ${_fmt(item.maxCapacity)} ${item.unit}',
-                              style: AppTextStyles.caption(context),
+                            Row(
+                              children: [
+                                Text(
+                                  '${_fmt(item.quantity)} ${item.unit} / ${_fmt(item.maxCapacity)} ${item.unit}',
+                                  style: AppTextStyles.caption(context),
+                                ),
+                                SizedBox(width: context.w(6)),
+                                Text(
+                                  '${pct.toStringAsFixed(0)}%',
+                                  style: AppTextStyles.caption(context)
+                                      .copyWith(
+                                          color: color,
+                                          fontWeight: FontWeight.w700),
+                                ),
+                              ],
                             ),
                             SizedBox(height: 4),
                             ClipRRect(
@@ -414,13 +479,25 @@ class _LowStockTable extends StatelessWidget {
                               color: color.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text(
-                              isCritical ? 'CRITICAL' : 'LOW STOCK',
-                              style: TextStyle(
-                                color: color,
-                                fontSize: context.h(11),
-                                fontWeight: FontWeight.w700,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                      color: color, shape: BoxShape.circle),
+                                ),
+                                SizedBox(width: context.w(6)),
+                                Text(
+                                  isCritical ? 'CRITICAL' : 'LOW STOCK',
+                                  style: TextStyle(
+                                    color: color,
+                                    fontSize: context.h(11),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -443,23 +520,28 @@ class _LowStockTable extends StatelessWidget {
                       Expanded(
                         flex: 1,
                         child: Center(
-                          child: ElevatedButton(
+                          child: ElevatedButton.icon(
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                     content: Text('Reorder ${item.name} (demo)')),
                               );
                             },
+                            icon: const Icon(Icons.add_shopping_cart, size: 14),
+                            label: const Text('REORDER'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
+                              backgroundColor: isCritical
+                                  ? AppColors.danger
+                                  : colors.surfaceVariant,
+                              foregroundColor: isCritical
+                                  ? Colors.white
+                                  : colors.textPrimary,
                               padding: EdgeInsets.symmetric(
                                   horizontal: context.w(10),
                                   vertical: context.h(8)),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            child: const Text('+ REORDER'),
                           ),
                         ),
                       ),

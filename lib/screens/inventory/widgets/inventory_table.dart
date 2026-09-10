@@ -194,7 +194,7 @@ class _InventoryRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${_fmt(item.quantity)} ${_fmt(item.maxCapacity)} ${item.unit} (${pct.toStringAsFixed(0)}%)',
+                  '${_fmt(item.quantity)} / ${_fmt(item.maxCapacity)} ${item.unit} (${pct.toStringAsFixed(0)}%)',
                   style: AppTextStyles.caption(context),
                 ),
                 SizedBox(height: context.h(4)),

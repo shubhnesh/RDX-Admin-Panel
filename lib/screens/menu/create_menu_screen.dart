@@ -28,7 +28,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
   final _sortOrder = TextEditingController(text: '0');
   final _ingredientInput = TextEditingController();
 
-  String _primaryCategory = MenuTaxonomy.categories.first.id;
+  String? _primaryCategory; // ← no default selection
   String? _subcategory;
   DietaryType? _dietaryType;
   PreparationStyle? _preparationStyle;
@@ -44,11 +44,15 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
     'New',
     'Popular',
   ];
+
   bool get _editing => widget.itemId != null;
 
-  List<MenuCategory> get _subcategories => MenuTaxonomy.categories
-      .where((item) => item.parentId == _primaryCategory)
-      .toList();
+  List<MenuCategory> get _subcategories {
+    if (_primaryCategory == null) return [];
+    return MenuTaxonomy.categories
+        .where((item) => item.parentId == _primaryCategory)
+        .toList();
+  }
 
   @override
   void initState() {
@@ -100,20 +104,28 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_primaryCategory == null) {
+      setState(() => _error = 'Please select a category.');
+      return;
+    }
     if (_dietaryType == null || _preparationStyle == null) {
       setState(
           () => _error = 'Please select a dietary type and preparation style.');
       return;
     }
+
     final price = double.tryParse(_price.text.trim());
     if (price == null || price < 0) {
       setState(() => _error = 'Please enter a valid price.');
       return;
     }
+
     setState(() {
       _loading = true;
       _error = null;
     });
+
     final item = MenuItemModel(
       id: widget.itemId ?? '',
       name: _name.text.trim(),
@@ -125,15 +137,17 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       dietaryType: _dietaryType,
       preparationStyle: _preparationStyle!,
       price: price,
-      primaryCategoryId: _primaryCategory,
+      primaryCategoryId: _primaryCategory!,
       tags: _tags
           .where((tag) => tag != 'Featured')
           .map((tag) => tag.toLowerCase().replaceAll(' ', '_'))
           .toList(),
       ingredients: List<String>.from(_ingredients),
     );
+
     final success = await context.read<MenuProvider>().saveItem(item);
     if (!mounted) return;
+
     if (success) {
       Navigator.pop(context, true);
     } else {
@@ -298,7 +312,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
             ]),
             SizedBox(height: context.h(15)),
 
-            // ── Ingredients (max 10) ────────────────────────────────
+            // ── Ingredients ────────────────────────────────────────
             Text(
               'Ingredients',
               style: AppTextStyles.bodySecondary(context).copyWith(
@@ -306,22 +320,10 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               ),
             ),
             SizedBox(height: context.h(4)),
-            // Text(
-            //   'Add up to 10 major ingredients. These appear on the menu card.',
-            //   style: TextStyle(
-            //     color: colors.textSecondary,
-            //     fontSize: context.h(10),
-            //   ),
-            // ),
-            SizedBox(height: context.h(4)),
             Text(
               '${_ingredients.length}/10 ingredients',
-              // style: TextStyle(
-              //   color: colors.textMuted,
-              //   fontSize: context.h(10),
-              // ),
-              style:
-                  AppTextStyles.body(context).copyWith(color: colors.textMuted),
+              style: AppTextStyles.bodyTertiary(context)
+                  .copyWith(color: colors.textMuted),
             ),
             SizedBox(height: context.h(8)),
             Row(
@@ -338,14 +340,13 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                   label: 'Add',
                   onPressed: _ingredients.length >= 10 ? null : _addIngredient,
                   isPrimary: true,
-                  // Optional: make it more compact to match the image
-                  height: context
-                      .h(35), // or whatever height matches your text field
-                  minWidth: context.w(60), // adjust as needed
+                  height: context.h(35),
+                  minWidth: context.w(60),
                 ),
               ],
             ),
             if (_ingredients.isNotEmpty) ...[
+              SizedBox(height: context.h(10)),
               Wrap(
                 spacing: context.w(8),
                 runSpacing: context.h(8),
@@ -389,11 +390,12 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                       .map((item) => item.id)
                       .toList(),
                   (value) => setState(() {
-                    _primaryCategory = value!;
+                    _primaryCategory = value;
                     _subcategory = null;
                   }),
                   _categoryLabel,
                   required: true,
+                  hint: 'Select category',
                 ),
               ),
               SizedBox(width: context.w(14)),
@@ -433,9 +435,9 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
             SizedBox(height: context.h(15)),
             Text(
               'Tags',
-              // style: _labelStyle(context, colors),
-              style: AppTextStyles.bodySecondary(context)
-                  .copyWith(color: colors.textPrimary),
+              style: AppTextStyles.bodySecondary(context).copyWith(
+                color: colors.textMuted,
+              ),
             ),
             SizedBox(height: context.h(7)),
             Wrap(
@@ -481,11 +483,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                 Expanded(
                   child: Text(
                     'Tip: Add high quality images and detailed descriptions to attract more customers.',
-                    // style: TextStyle(
-                    //   color: Color(0xFF9B5B3A),
-                    //   fontSize: context.h(11),
-                    // ),
-                    style: AppTextStyles.bodySecondary(context)
+                    style: AppTextStyles.bodyTertiary(context)
                         .copyWith(color: colors.primary),
                   ),
                 ),
@@ -551,60 +549,22 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
           ),
           SizedBox(height: context.h(5)),
           Text(
-            _categoryLabel(_primaryCategory),
+            _primaryCategory == null
+                ? 'Category'
+                : _categoryLabel(_primaryCategory!),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            // style: TextStyle(
-            //   color: AppColors.primary,
-            //   fontSize: context.h(9),
-            //   fontWeight: FontWeight.w700,
-            // ),
-            style: AppTextStyles.label(context).copyWith(color: colors.primary),
+            style: AppTextStyles.body(context).copyWith(color: colors.primary),
           ),
           SizedBox(height: context.h(3)),
           Text(
             _name.text.trim().isEmpty ? 'Item Name' : _name.text.trim(),
-            // style: TextStyle(
-            //   color: colors.textPrimary,
-            //   fontSize: context.h(14),
-            //   fontWeight: FontWeight.w700,
-            // ),
-            style: AppTextStyles.section(context)
+            style: AppTextStyles.bodySecondary(context)
                 .copyWith(color: colors.textPrimary),
           ),
           SizedBox(height: context.h(4)),
-          // SizedBox(
-          //   height: context.h(18),
-          //   child: _ingredients.isEmpty
-          //       ? Text(
-          //           'Ingredients will be shown here, comma-separated.',
-          //           maxLines: 1,
-          //           overflow: TextOverflow.ellipsis,
-          //           // style: TextStyle(
-          //           //   color: colors.textSecondary,
-          //           //   fontSize: context.h(11),
-          //           //   height: context.h(1.4),
-          //           // ),
-          //           style: AppTextStyles.bodySecondary(context)
-          //               .copyWith(color: colors.textSecondary),
-          //         )
-          //       : Text(
-          //           _ingredients.join(', '),
-          //           maxLines: 1,
-          //           overflow: TextOverflow.ellipsis,
-          //           // style: TextStyle(
-          //           //   color: colors.textSecondary,
-          //           //   fontSize: context.h(11),
-          //           //   height: context.h(1.4),
-          //           // ),
-          //           style: AppTextStyles.caption(context)
-          //               .copyWith(color: colors.textSecondary),
-          //         ),
-          // ),
           ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: context.h(18),
-            ),
+            constraints: BoxConstraints(minHeight: context.h(18)),
             child: _ingredients.isEmpty
                 ? Text(
                     'Ingredients will be shown here, comma-separated.',
@@ -618,7 +578,6 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                         .copyWith(color: colors.textSecondary),
                   ),
           ),
-          // SizedBox(height: context.h(8)),
           Wrap(
             spacing: context.w(5),
             runSpacing: context.h(5),
@@ -630,11 +589,6 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
           SizedBox(height: context.h(10)),
           Text(
             '₹${_price.text.trim().isEmpty ? '0.00' : _price.text.trim()}',
-            // style: TextStyle(
-            //   color: AppColors.primary,
-            //   fontSize: context.h(15),
-            //   fontWeight: FontWeight.w700,
-            // ),
             style:
                 AppTextStyles.section(context).copyWith(color: colors.primary),
           ),
@@ -651,7 +605,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               SizedBox(width: context.w(5)),
               Text(
                 _available ? 'Available' : 'Sold Out',
-                style: AppTextStyles.label(context).copyWith(
+                style: AppTextStyles.bodyTertiary(context).copyWith(
                   color: _available ? AppColors.primary : colors.textMuted,
                 ),
               ),
@@ -682,14 +636,11 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               children: [
                 Icon(icon, size: context.h(15), color: colors.textSecondary),
                 SizedBox(width: context.w(8)),
-                Text(title,
-                    // style: TextStyle(
-                    //   color: colors.textPrimary,
-                    //   fontSize: context.h(12),
-                    //   fontWeight: FontWeight.w700,
-                    // ),
-                    style: AppTextStyles.section(context)
-                        .copyWith(color: colors.textPrimary)),
+                Text(
+                  title,
+                  style: AppTextStyles.section(context)
+                      .copyWith(color: colors.textPrimary),
+                ),
               ],
             ),
             SizedBox(height: context.h(16)),
@@ -732,22 +683,13 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               children: [
                 Text(
                   title,
-                  // style: TextStyle(
-                  //   color: colors.textPrimary,
-                  //   fontSize: context.h(11),
-                  //   fontWeight: FontWeight.w600,
-                  // ),
                   style: AppTextStyles.bodySecondary(context)
                       .copyWith(color: colors.textPrimary),
                 ),
                 SizedBox(height: context.h(3)),
                 Text(
                   subtitle,
-                  // style: TextStyle(
-                  //   color: colors.textSecondary,
-                  //   fontSize: context.h(10),
-                  // ),
-                  style: AppTextStyles.body(context)
+                  style: AppTextStyles.bodySecondary(context)
                       .copyWith(color: colors.textSecondary),
                 ),
               ],
@@ -764,13 +706,9 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       FilterChip(
         label: Text(
           tag,
-          // style: TextStyle(
-          //   color: _tags.contains(tag) ? AppColors.primary : colors.textPrimary,
-          //   fontSize: context.h(10),
-          //   fontWeight: FontWeight.w600,
-          // ),
-          style: AppTextStyles.body(context).copyWith(
-            color: _tags.contains(tag) ? AppColors.primary : colors.textPrimary,
+          style: AppTextStyles.label(context).copyWith(
+            color:
+                _tags.contains(tag) ? AppColors.primary : colors.textPrimary,
           ),
         ),
         selected: _tags.contains(tag),
@@ -897,13 +835,6 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
           _error!,
           style: TextStyle(color: AppColors.danger, fontSize: context.h(12)),
         ),
-      );
-
-  TextStyle _labelStyle(BuildContext context, AppColorScheme colors) =>
-      TextStyle(
-        color: colors.textPrimary,
-        fontSize: context.h(11),
-        fontWeight: FontWeight.w600,
       );
 
   String _categoryLabel(String id) => MenuTaxonomy.nameFor(id);

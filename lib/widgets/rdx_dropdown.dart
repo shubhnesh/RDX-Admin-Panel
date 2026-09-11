@@ -526,10 +526,9 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: hasValue
-                        ? AppTextStyles.body(context)
-                        : AppTextStyles.body(context)
+                        ? AppTextStyles.bodySecondary(context)
+                        : AppTextStyles.bodySecondary(context)
                             .copyWith(color: colors.textMuted),
-                    // AppTextStyles.body(context).copyWith(color: colors.textMuted),
                   ),
                 ),
                 SizedBox(width: context.w(6)),
@@ -687,7 +686,7 @@ class _DropdownMenuPanelState<T> extends State<_DropdownMenuPanel<T>> {
                 decoration: InputDecoration(
                   isDense: true,
                   hintText: widget.searchHint,
-                  hintStyle: AppTextStyles.body(context)
+                  hintStyle: AppTextStyles.bodySecondary(context)
                       .copyWith(color: widget.colors.textMuted),
                   prefixIcon: Icon(
                     Icons.search_rounded,
@@ -755,7 +754,7 @@ class _DropdownMenuPanelState<T> extends State<_DropdownMenuPanel<T>> {
                               widget.searchController.text.trim().isNotEmpty
                           ? 'No matches'
                           : 'No options',
-                      style: AppTextStyles.caption(context),
+                      style: AppTextStyles.bodySecondary(context),
                     ),
                   )
                 : ListView.separated(
@@ -791,9 +790,9 @@ class _DropdownMenuPanelState<T> extends State<_DropdownMenuPanel<T>> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: selected
-                                        ? AppTextStyles.label(context)
+                                        ? AppTextStyles.bodySecondary(context)
                                             .copyWith(color: AppColors.primary)
-                                        : AppTextStyles.body(context),
+                                        : AppTextStyles.bodySecondary(context),
                                   ),
                                 ),
                                 if (selected)

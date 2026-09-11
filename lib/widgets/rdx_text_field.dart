@@ -349,16 +349,16 @@ class _RdxTextFieldState extends State<RdxTextField> {
         focusNode: _focusNode,
         textAlignVertical:
             isMultiline ? TextAlignVertical.top : TextAlignVertical.center,
-        style: AppTextStyles.body(context),
+        style: AppTextStyles.bodySecondary(context),
         cursorColor: AppColors.primary,
         decoration: InputDecoration(
           hintText: widget.hint,
           hintStyle:
-              AppTextStyles.body(context).copyWith(color: colors.textMuted),
+              AppTextStyles.bodySecondary(context).copyWith(color: colors.textMuted),
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
           prefixText: widget.prefixText,
-          prefixStyle: AppTextStyles.body(context),
+          prefixStyle: AppTextStyles.bodySecondary(context),
           counterText: widget.counterText ?? '',
           filled: true,
           fillColor: _focusNode.hasFocus || hasText

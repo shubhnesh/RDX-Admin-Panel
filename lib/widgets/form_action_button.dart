@@ -115,8 +115,6 @@ class FormActionButton extends StatelessWidget {
     final resolvedDisabledTextColor = disabledTextColor ??
         (isPrimary ? Colors.white70 : colors.textPrimary.withAlpha(120));
 
-    final resolvedDisabledIconColor =
-        disabledIconColor ?? resolvedDisabledTextColor;
 
     final textStyle = AppTextStyles.section(context).copyWith(
       color: isLoading ? resolvedTextColor : resolvedTextColor,

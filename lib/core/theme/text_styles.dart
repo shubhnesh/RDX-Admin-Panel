@@ -41,6 +41,12 @@ class AppTextStyles {
         fontWeight: FontWeight.w400,
       );
 
+  static TextStyle bodyTertiary(BuildContext context) => TextStyle(
+        color: AppColors.textSecondary,
+        fontSize: context.h(15),
+        fontWeight: FontWeight.w400,
+      );
+
   // ---------------------------------------------------------------------------
   // LABELS
   // ---------------------------------------------------------------------------
@@ -49,8 +55,10 @@ class AppTextStyles {
   static TextStyle label(BuildContext context) => TextStyle(
         color: AppColors.textSecondary,
         fontSize: context.h(15),
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
       );
+
+      
 
   // ---------------------------------------------------------------------------
   // CAPTION
@@ -59,7 +67,7 @@ class AppTextStyles {
   /// Small metadata, helper text and supporting information.
   static TextStyle caption(BuildContext context) => TextStyle(
         color: AppColors.lightTextSecondary,
-        fontSize: context.h(14),
+        fontSize: context.h(13),
         fontWeight: FontWeight.w400,
       );
 

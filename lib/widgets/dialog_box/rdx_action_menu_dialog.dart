@@ -713,7 +713,7 @@ class RdxActionMenuDialog extends StatelessWidget {
     this.barrierColor = Colors.transparent,
     this.borderRadius = 9,
     this.elevation = 8,
-    this.gap = 6,
+    this.gap = 4,
   });
 
   @override

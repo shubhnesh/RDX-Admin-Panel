@@ -14,7 +14,11 @@ import '../../widgets/rdx_text_field.dart';
 import '../../widgets/rdx_header.dart';
 
 class CreateCouponScreen extends StatefulWidget {
-  const CreateCouponScreen({super.key});
+  final CouponModel? existing;
+  const CreateCouponScreen({
+    super.key,
+    this.existing,
+  });
 
   @override
   State<CreateCouponScreen> createState() => _CreateCouponScreenState();
@@ -27,6 +31,8 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   final minOrderController = TextEditingController();
   final usageLimitController = TextEditingController();
 
+  bool get isEdit => widget.existing != null && widget.existing!.id.isNotEmpty;
+
   // Percentage is the default selection
   DiscountType discountType = DiscountType.percentage;
   DateTime? startDate;
@@ -37,6 +43,21 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   @override
   void initState() {
     super.initState();
+
+    final existing = widget.existing;
+
+    if (existing != null) {
+      codeController.text = existing.code;
+      descriptionController.text = existing.description;
+      discountValueController.text = existing.discountValue.toString();
+      minOrderController.text = existing.minOrderValue?.toString() ?? '';
+      usageLimitController.text = existing.usageLimit?.toString() ?? '';
+
+      discountType = existing.discountType;
+      startDate = existing.startDate;
+      endDate = existing.endDate;
+    }
+
     for (final c in [
       codeController,
       descriptionController,
@@ -64,6 +85,94 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     }
   }
 
+  // Future<void> _save() async {
+  //   final code = codeController.text.trim();
+  //   final description = descriptionController.text.trim();
+  //   final discountText = discountValueController.text.trim();
+  //   final minOrderText = minOrderController.text.trim();
+  //   final usageLimitText = usageLimitController.text.trim();
+
+  //   final discountValue = double.tryParse(discountText);
+  //   final minOrderValue = double.tryParse(minOrderText);
+  //   final usageLimit = int.tryParse(usageLimitText);
+
+  //   // Every field is mandatory
+  //   if (code.isEmpty ||
+  //       description.isEmpty ||
+  //       discountValue == null ||
+  //       minOrderValue == null ||
+  //       usageLimit == null ||
+  //       startDate == null ||
+  //       endDate == null) {
+  //     setState(() => errorMessage =
+  //         'All fields are mandatory. Please fill coupon code, description, discount value, minimum order value, usage limit, start date and expiry date.');
+  //     return;
+  //   }
+
+  //   // Coupon code length restriction
+  //   if (code.length > 15) {
+  //     setState(() =>
+  //         errorMessage = 'Coupon code cannot be longer than 15 characters.');
+  //     return;
+  //   }
+
+  //   // Percentage max value = 100
+  //   if (discountType == DiscountType.percentage && discountValue > 100) {
+  //     setState(
+  //         () => errorMessage = 'Discount percentage cannot be more than 100.');
+  //     return;
+  //   }
+
+  //   if (discountValue <= 0) {
+  //     setState(() => errorMessage = 'Discount value must be greater than 0.');
+  //     return;
+  //   }
+
+  //   if (minOrderValue < 0) {
+  //     setState(() => errorMessage = 'Minimum order value cannot be negative.');
+  //     return;
+  //   }
+
+  //   if (usageLimit <= 0) {
+  //     setState(() => errorMessage = 'Usage limit must be greater than 0.');
+  //     return;
+  //   }
+
+  //   if (endDate!.isBefore(startDate!)) {
+  //     setState(
+  //         () => errorMessage = 'Expiry date cannot be before the start date.');
+  //     return;
+  //   }
+
+  //   final coupon = CouponModel(
+  //     id: 'c${DateTime.now().millisecondsSinceEpoch}',
+  //     code: code.toUpperCase(),
+  //     description: description,
+  //     discountType: discountType,
+  //     discountValue: discountValue,
+  //     minOrderValue: minOrderValue,
+  //     usageLimit: usageLimit,
+  //     startDate: startDate!,
+  //     endDate: endDate!,
+  //     status: startDate!.isAfter(DateTime.now())
+  //         ? CouponStatus.scheduled
+  //         : CouponStatus.active,
+  //   );
+
+  //   setState(() {
+  //     isLoading = true;
+  //     errorMessage = null;
+  //   });
+  //   final success = await context.read<CouponProvider>().createCoupon(coupon);
+  //   if (!mounted) return;
+  //   setState(() => isLoading = false);
+  //   if (success) {
+  //     Navigator.of(context).pop();
+  //   } else {
+  //     setState(() => errorMessage = 'Failed to create coupon.');
+  //   }
+  // }
+
   Future<void> _save() async {
     final code = codeController.text.trim();
     final description = descriptionController.text.trim();
@@ -75,7 +184,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     final minOrderValue = double.tryParse(minOrderText);
     final usageLimit = int.tryParse(usageLimitText);
 
-    // Every field is mandatory
+    // Every field is mandatory.
     if (code.isEmpty ||
         description.isEmpty ||
         discountValue == null ||
@@ -83,48 +192,62 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
         usageLimit == null ||
         startDate == null ||
         endDate == null) {
-      setState(() => errorMessage =
-          'All fields are mandatory. Please fill coupon code, description, discount value, minimum order value, usage limit, start date and expiry date.');
+      setState(() {
+        errorMessage =
+            'All fields are mandatory. Please fill coupon code, description, '
+            'discount value, minimum order value, usage limit, start date and expiry date.';
+      });
       return;
     }
 
-    // Coupon code length restriction
     if (code.length > 15) {
-      setState(() =>
-          errorMessage = 'Coupon code cannot be longer than 15 characters.');
+      setState(() {
+        errorMessage = 'Coupon code cannot be longer than 15 characters.';
+      });
       return;
     }
 
-    // Percentage max value = 100
     if (discountType == DiscountType.percentage && discountValue > 100) {
-      setState(
-          () => errorMessage = 'Discount percentage cannot be more than 100.');
+      setState(() {
+        errorMessage = 'Discount percentage cannot be more than 100.';
+      });
       return;
     }
 
     if (discountValue <= 0) {
-      setState(() => errorMessage = 'Discount value must be greater than 0.');
+      setState(() {
+        errorMessage = 'Discount value must be greater than 0.';
+      });
       return;
     }
 
     if (minOrderValue < 0) {
-      setState(() => errorMessage = 'Minimum order value cannot be negative.');
+      setState(() {
+        errorMessage = 'Minimum order value cannot be negative.';
+      });
       return;
     }
 
     if (usageLimit <= 0) {
-      setState(() => errorMessage = 'Usage limit must be greater than 0.');
+      setState(() {
+        errorMessage = 'Usage limit must be greater than 0.';
+      });
       return;
     }
 
     if (endDate!.isBefore(startDate!)) {
-      setState(
-          () => errorMessage = 'Expiry date cannot be before the start date.');
+      setState(() {
+        errorMessage = 'Expiry date cannot be before the start date.';
+      });
       return;
     }
 
     final coupon = CouponModel(
-      id: 'c${DateTime.now().millisecondsSinceEpoch}',
+      // Keep existing ID while editing.
+      id: isEdit
+          ? widget.existing!.id
+          : 'c${DateTime.now().millisecondsSinceEpoch}',
+
       code: code.toUpperCase(),
       description: description,
       discountType: discountType,
@@ -133,6 +256,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
       usageLimit: usageLimit,
       startDate: startDate!,
       endDate: endDate!,
+
       status: startDate!.isAfter(DateTime.now())
           ? CouponStatus.scheduled
           : CouponStatus.active,
@@ -142,13 +266,34 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
       isLoading = true;
       errorMessage = null;
     });
-    final success = await context.read<CouponProvider>().createCoupon(coupon);
-    if (!mounted) return;
-    setState(() => isLoading = false);
-    if (success) {
-      Navigator.of(context).pop();
-    } else {
-      setState(() => errorMessage = 'Failed to create coupon.');
+
+    try {
+      final provider = context.read<CouponProvider>();
+
+      final success = isEdit
+          ? await provider.updateCoupon(coupon)
+          : await provider.createCoupon(coupon);
+
+      if (!mounted) return;
+
+      setState(() => isLoading = false);
+
+      if (success) {
+        Navigator.of(context).pop();
+      } else {
+        setState(() {
+          errorMessage =
+              isEdit ? 'Failed to update coupon.' : 'Failed to create coupon.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+        errorMessage =
+            isEdit ? 'Failed to update coupon.' : 'Failed to create coupon.';
+      });
     }
   }
 
@@ -174,7 +319,9 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
       backgroundColor: colors.background,
       body: Column(
         children: [
-          const RdxHeader(title: 'Create New Coupon', showBackButton: true),
+          RdxHeader(
+              title: isEdit ? 'Edit Coupon' : 'Create New Coupon',
+              showBackButton: true),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -428,6 +575,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
         children: [
           Expanded(
             child: FormActionButton.save(
+              label: isEdit ? 'Update' : 'Save',
               isLoading: isLoading,
               onPressed: _save,
             ),

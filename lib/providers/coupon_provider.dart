@@ -16,7 +16,8 @@ class CouponProvider extends ChangeNotifier {
     return _coupons.where((c) => c.status == statusFilter).toList();
   }
 
-  int get activeCount => _coupons.where((c) => c.status == CouponStatus.active).length;
+  int get activeCount =>
+      _coupons.where((c) => c.status == CouponStatus.active).length;
 
   Future<void> load() async {
     isLoading = true;
@@ -53,6 +54,18 @@ class CouponProvider extends ChangeNotifier {
     } catch (e) {
       errorMessage = 'Failed to create coupon.';
       isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateCoupon(CouponModel coupon) async {
+    try {
+      await _service.updateCoupon(coupon);
+      await load();
+      return true;
+    } catch (e) {
+      errorMessage = 'Failed to update coupon.';
       notifyListeners();
       return false;
     }

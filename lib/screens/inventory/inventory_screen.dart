@@ -13,8 +13,6 @@ import '../../widgets/rdx_category_tabs.dart';
 import 'add_material_screen.dart';
 import 'low_stock_screen.dart';
 import 'widgets/inventory_stats_row.dart';
-// import 'widgets/inventory_table.dart';
-import 'package:rdx_admin/widgets/rdx_table.dart';
 import 'widgets/delete_material_dialog.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -177,12 +175,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           context,
                           provider.filteredItems,
                         ),
-                        // InventoryTable(
-                        //   items: provider.filteredItems,
-                        //   onEdit: (item) =>
-                        //       _openAddMaterial(context, item: item),
-                        //   onDelete: (item) => _confirmDelete(context, item),
-                        // ),
                       ),
                     ),
 
@@ -206,97 +198,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  // Widget _buildInventoryTable(
-  //   BuildContext context,
-  //   List<InventoryItemModel> items,
-  // ) {
-  //   if (items.isEmpty) {
-  //     return _buildEmptyInventoryState(context);
-  //   }
-
-  //   return RdxTable(
-  //     mobileMinTableWidth: 900,
-  //     tabletMinTableWidth: 950,
-  //     showFooter: false,
-  //     columns: const [
-  //       RdxTableColumn(
-  //         title: 'MATERIAL',
-  //         minWidth: 220,
-  //         flex: 0.30,
-  //       ),
-  //       RdxTableColumn(
-  //         title: 'CATEGORY',
-  //         minWidth: 150,
-  //         flex: 0.20,
-  //       ),
-  //       RdxTableColumn(
-  //         title: 'STOCK',
-  //         minWidth: 120,
-  //         flex: 0.15,
-  //       ),
-  //       RdxTableColumn(
-  //         title: 'UNIT',
-  //         minWidth: 100,
-  //         flex: 0.10,
-  //       ),
-  //       RdxTableColumn(
-  //         title: 'STATUS',
-  //         minWidth: 130,
-  //         flex: 0.15,
-  //       ),
-  //       RdxTableColumn(
-  //         title: 'ACTIONS',
-  //         minWidth: 110,
-  //         flex: 0.10,
-  //       ),
-  //     ],
-  //     rows: items.map((item) {
-  //       return [
-  //         _inventoryTextCell(
-  //           context,
-  //           item.name,
-  //         ),
-  //         _inventoryTextCell(
-  //           context,
-  //           item.category,
-  //         ),
-  //         _inventoryTextCell(
-  //           context,
-  //           item.quantity.toString(),
-  //         ),
-  //         _inventoryTextCell(
-  //           context,
-  //           item.unit,
-  //         ),
-  //         _inventoryStatusCell(
-  //           context,
-  //           item,
-  //         ),
-  //         Row(
-  //           children: [
-  //             RdxTableActionButton(
-  //               icon: Icons.edit_outlined,
-  //               tooltip: 'Edit material',
-  //               onPressed: () => _openAddMaterial(
-  //                 context,
-  //                 item: item,
-  //               ),
-  //             ),
-  //             const SizedBox(width: 4),
-  //             RdxTableActionButton(
-  //               icon: Icons.delete_outline,
-  //               tooltip: 'Delete material',
-  //               onPressed: () => _confirmDelete(
-  //                 context,
-  //                 item,
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ];
-  //     }).toList(),
-  //   );
-  // }
   Widget _buildInventoryTable(
     BuildContext context,
     List<InventoryItemModel> items,
@@ -439,57 +340,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  // Widget _inventoryStockLevelCell(
-  //   BuildContext context,
-  //   InventoryItemModel item,
-  // ) {
-  //   final colors = AppColors.of(context);
-  //   final status = item.status;
-
-  //   final Color color;
-
-  //   switch (status) {
-  //     case StockStatus.inStock:
-  //       color = AppColors.success;
-  //       break;
-  //     case StockStatus.lowStock:
-  //       color = AppColors.warning;
-  //       break;
-  //     case StockStatus.critical:
-  //       color = AppColors.danger;
-  //       break;
-  //     case StockStatus.outOfStock:
-  //       color = AppColors.danger;
-  //       break;
-  //   }
-
-  //   final pct = item.stockPercent.clamp(0, 100);
-
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     mainAxisSize: MainAxisSize.min,
-  //     children: [
-  //       Text(
-  //         '${_fmt(item.quantity)} / ${_fmt(item.maxCapacity)} '
-  //         '${item.unit} (${pct.toStringAsFixed(0)}%)',
-  //         style: AppTextStyles.caption(context),
-  //         maxLines: 1,
-  //         overflow: TextOverflow.ellipsis,
-  //       ),
-  //       SizedBox(height: context.h(4)),
-  //       ClipRRect(
-  //         borderRadius: BorderRadius.circular(4),
-  //         child: LinearProgressIndicator(
-  //           value: pct / 100,
-  //           minHeight: 6,
-  //           backgroundColor: colors.border,
-  //           valueColor: AlwaysStoppedAnimation(color),
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
-
   Widget _inventoryStockLevelCell(
     BuildContext context,
     InventoryItemModel item,
@@ -548,62 +398,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-
-  // Widget _inventoryStatusCell(
-  //   BuildContext context,
-  //   InventoryItemModel item,
-  // ) {
-  //   final colors = AppColors.of(context);
-
-  //   final String status;
-  //   final Color statusColor;
-
-  //   switch (item.status) {
-  //     case StockStatus.critical:
-  //       status = 'Critical';
-  //       statusColor = AppColors.danger;
-  //       break;
-
-  //     case StockStatus.lowStock:
-  //       status = 'Low Stock';
-  //       statusColor = AppColors.warning;
-  //       break;
-
-  //     case StockStatus.outOfStock:
-  //       status = 'Out of Stock';
-  //       statusColor = AppColors.danger;
-  //       break;
-
-  //     case StockStatus.inStock:
-  //       status = 'In Stock';
-  //       statusColor = AppColors.success;
-  //       break;
-  //   }
-
-  //   return Row(
-  //     children: [
-  //       Container(
-  //         width: 7,
-  //         height: 7,
-  //         decoration: BoxDecoration(
-  //           color: statusColor,
-  //           shape: BoxShape.circle,
-  //         ),
-  //       ),
-  //       const SizedBox(width: 8),
-  //       Flexible(
-  //         child: Text(
-  //           status,
-  //           maxLines: 1,
-  //           overflow: TextOverflow.ellipsis,
-  //           style: AppTextStyles.bodySecondary(context).copyWith(
-  //             color: colors.textPrimary,
-  //           ),
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
   Widget _inventoryStatusCell(
     BuildContext context,
     InventoryItemModel item,

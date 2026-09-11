@@ -12,7 +12,7 @@ class AppTextStyles {
   /// Main page heading.
   static TextStyle heading(BuildContext context) => TextStyle(
         color: AppColors.lightTextPrimary,
-        fontSize: context.h(22),
+        fontSize: context.h(24),
         fontWeight: FontWeight.w700,
       );
 
@@ -30,7 +30,7 @@ class AppTextStyles {
   /// Main application text.
   static TextStyle body(BuildContext context) => TextStyle(
         color: AppColors.lightTextPrimary,
-        fontSize: context.h(14),
+        fontSize: context.h(18),
         fontWeight: FontWeight.w400,
       );
 
@@ -48,7 +48,7 @@ class AppTextStyles {
   /// Buttons, navigation items and important labels.
   static TextStyle label(BuildContext context) => TextStyle(
         color: AppColors.textSecondary,
-        fontSize: context.h(13),
+        fontSize: context.h(15),
         fontWeight: FontWeight.w600,
       );
 
@@ -59,7 +59,7 @@ class AppTextStyles {
   /// Small metadata, helper text and supporting information.
   static TextStyle caption(BuildContext context) => TextStyle(
         color: AppColors.lightTextSecondary,
-        fontSize: context.h(11),
+        fontSize: context.h(14),
         fontWeight: FontWeight.w400,
       );
 

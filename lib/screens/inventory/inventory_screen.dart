@@ -356,7 +356,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           // MATERIAL
           Text(
             item.name,
-            style: AppTextStyles.body(context).copyWith(
+            style: AppTextStyles.bodySecondary(context).copyWith(
               fontWeight: FontWeight.w600,
             ),
             maxLines: 1,
@@ -380,7 +380,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ),
               child: Text(
                 item.category,
-                style: AppTextStyles.caption(context),
+                style: AppTextStyles.label(context),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -390,7 +390,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           // MIN. REQUIRED
           Text(
             '${_fmt(item.minRequired)} ${item.unit} min',
-            style: AppTextStyles.body(context),
+            style: AppTextStyles.bodySecondary(context),
           ),
 
           // STOCK LEVEL
@@ -408,7 +408,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           // UNIT COST
           Text(
             '${Formatters.currency(item.unitCost)}/${item.unit}',
-            style: AppTextStyles.body(context),
+            style: AppTextStyles.bodySecondary(context),
           ),
 
           // ACTIONS
@@ -523,7 +523,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         Text(
           '${_fmt(item.quantity)} / ${_fmt(item.maxCapacity)} '
           '${item.unit} (${pct.toStringAsFixed(0)}%)',
-          style: AppTextStyles.caption(context),
+          style: AppTextStyles.bodySecondary(context),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -548,17 +548,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  Widget _inventoryTextCell(
-    BuildContext context,
-    String value,
-  ) {
-    return Text(
-      value,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: AppTextStyles.bodySecondary(context),
-    );
-  }
 
   // Widget _inventoryStatusCell(
   //   BuildContext context,
@@ -660,8 +649,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 6,
-              height: 6,
+              width: context.w(6),
+              height: context.h(6),
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
@@ -670,10 +659,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
             SizedBox(width: context.w(6)),
             Text(
               label,
-              style: TextStyle(
+              style: AppTextStyles.label(context).copyWith(
                 color: color,
-                fontSize: context.h(11),
-                fontWeight: FontWeight.w600,
               ),
             ),
           ],

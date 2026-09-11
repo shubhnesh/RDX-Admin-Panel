@@ -532,7 +532,7 @@ class _MenuScreenState extends State<MenuScreen> {
       padding: EdgeInsets.only(bottom: context.h(24)),
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: context.w(225),
-        mainAxisExtent: context.h(385),
+        mainAxisExtent: context.h(410),
         mainAxisSpacing: context.h(18),
         crossAxisSpacing: context.w(18),
       ),
@@ -720,7 +720,7 @@ class _MenuItemCard extends StatelessWidget {
                         .copyWith(color: colors.textPrimary)),
                 SizedBox(height: context.h(4)),
                 SizedBox(
-                  height: context.h(14),
+                  height: context.h(18),
                   child: item.ingredients.isEmpty
                       ? null
                       : Text(
@@ -730,26 +730,31 @@ class _MenuItemCard extends StatelessWidget {
                           //   fontSize: context.h(10),
                           // ),
                           style: AppTextStyles.body(context),
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                 ),
                 SizedBox(height: context.h(8)),
-                Wrap(
-                  spacing: context.w(5),
-                  runSpacing: context.h(5),
-                  children: [
-                    _detailChip(
-                      context,
-                      _titleCase(preparation),
-                      colors.textSecondary,
+                SizedBox(
+                  height: context.h(28),
+                  child: ClipRect(
+                    child: Wrap(
+                      spacing: context.w(5),
+                      runSpacing: context.h(5),
+                      children: [
+                        _detailChip(
+                          context,
+                          _titleCase(preparation),
+                          colors.textSecondary,
+                        ),
+                        for (final tag in item.tags
+                            .where((tag) => tag.toLowerCase() != 'featured')
+                            .take(item.featuredItem ? 3 : 4))
+                          _detailChip(
+                              context, _titleCase(tag), colors.textSecondary),
+                      ],
                     ),
-                    for (final tag in item.tags
-                        .where((tag) => tag.toLowerCase() != 'featured')
-                        .take(item.featuredItem ? 3 : 4))
-                      _detailChip(
-                          context, _titleCase(tag), colors.textSecondary),
-                  ],
+                  ),
                 ),
                 SizedBox(height: context.h(10)),
                 Row(

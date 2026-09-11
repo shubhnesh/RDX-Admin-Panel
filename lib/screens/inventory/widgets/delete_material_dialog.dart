@@ -71,56 +71,46 @@ class DeleteMaterialDialog extends StatelessWidget {
                   borderRadius: BorderRadius.circular(context.h(10)),
                   border: Border.all(color: colors.border),
                 ),
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(item.name,
-                              style: AppTextStyles.bodySecondary(context)
-                                  .copyWith(fontWeight: FontWeight.w600)),
-                          SizedBox(height: context.h(8)),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: context.w(8),
-                                vertical: context.h(3)),
-                            decoration: BoxDecoration(
-                              color: colors.surface,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: colors.border),
-                            ),
-                            child: Text(item.category,
-                                style: AppTextStyles.body(context)),
-                          ),
-                        ],
+                    Text(item.name,
+                        style: AppTextStyles.bodySecondary(context)
+                            .copyWith(fontWeight: FontWeight.w600)),
+                    SizedBox(height: context.h(8)),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: context.w(8), vertical: context.h(3)),
+                      decoration: BoxDecoration(
+                        color: colors.surface,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: colors.border),
                       ),
+                      child: Text(item.category,
+                          style: AppTextStyles.body(context)),
                     ),
-                    Column(
+                    SizedBox(height: context.h(14)),
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('CURRENT STOCK',
-                            style: AppTextStyles.label(context)
-                                .copyWith(color: colors.textMuted)),
-                        SizedBox(height: context.h(2)),
-                        Text(
-                          '${_fmt(item.quantity)} ${item.unit} / ${_fmt(item.maxCapacity)} ${item.unit} max',
-                          style: AppTextStyles.body(context),
+                        Expanded(
+                          child: _Metric(
+                            label: 'CURRENT STOCK',
+                            value:
+                                '${_fmt(item.quantity)} ${item.unit} / ${_fmt(item.maxCapacity)} ${item.unit} max',
+                            context: context,
+                            color: colors.textMuted,
+                          ),
                         ),
-                      ],
-                    ),
-                    SizedBox(width: context.w(24)),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('UNIT COST',
-                            style: AppTextStyles.label(context)
-                                .copyWith(color: colors.textMuted)),
-                        SizedBox(height: context.h(2)),
-                        Text(
-                          '${Formatters.currency(item.unitCost)} / ${item.unit}',
-                          style: AppTextStyles.body(context),
+                        SizedBox(width: context.w(16)),
+                        Expanded(
+                          child: _Metric(
+                            label: 'UNIT COST',
+                            value:
+                                '${Formatters.currency(item.unitCost)} / ${item.unit}',
+                            context: context,
+                            color: colors.textMuted,
+                          ),
                         ),
                       ],
                     ),
@@ -173,7 +163,7 @@ class DeleteMaterialDialog extends StatelessWidget {
                 children: [
                   FormActionButton(
                     label: 'CANCEL',
-                    onPressed: () => Navigator.of(context).pop(true),
+                    onPressed: () => Navigator.of(context).pop(false),
                     // isPrimary: false,
                     // leadingIcon: Icons.delete_outline,
                     // iconSize: 18,
@@ -222,5 +212,31 @@ class DeleteMaterialDialog extends StatelessWidget {
   String _fmt(double v) {
     if (v == v.roundToDouble()) return v.toInt().toString();
     return v.toStringAsFixed(1);
+  }
+}
+
+class _Metric extends StatelessWidget {
+  final String label;
+  final String value;
+  final BuildContext context;
+  final Color color;
+
+  const _Metric({
+    required this.label,
+    required this.value,
+    required this.context,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext buildContext) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTextStyles.label(context).copyWith(color: color)),
+        SizedBox(height: context.h(2)),
+        Text(value, style: AppTextStyles.body(context)),
+      ],
+    );
   }
 }

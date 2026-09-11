@@ -196,7 +196,7 @@ class MainSideNav extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'RDX Admin',
+                            'Admin',
                             // style: TextStyle(
                             //   color: textPrimary,
                             //   fontSize: 17,
@@ -209,7 +209,7 @@ class MainSideNav extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            'MANAGEMENT HUB',
+                            'RDX Restaurant',
                             // style: TextStyle(
                             //   color: textSecondary,
                             //   fontSize: 9.5,
@@ -271,13 +271,13 @@ class _EdgeToggleButtonState extends State<_EdgeToggleButton> {
                   color: _hovering ? AppColors.primary : AppColors.lightBorder,
                   width: 1.5,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.4),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                // boxShadow: [
+                //   BoxShadow(
+                //     color: Colors.black.withOpacity(0.4),
+                //     blurRadius: 8,
+                //     offset: const Offset(0, 2),
+                //   ),
+                // ],
               ),
               // Clear directional icons instead of a rotating chevron.
               child: Icon(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
+import 'package:rdx_admin/widgets/form_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../models/inventory_item_model.dart';
@@ -36,8 +37,8 @@ class DeleteMaterialDialog extends StatelessWidget {
                       color: AppColors.danger.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.delete_forever_rounded,
-                        color: AppColors.danger, size: 20),
+                    child: const Icon(Icons.delete,
+                        color: AppColors.danger, size: 22),
                   ),
                   SizedBox(width: context.w(12)),
                   Expanded(
@@ -47,13 +48,15 @@ class DeleteMaterialDialog extends StatelessWidget {
                         Text('Delete Material',
                             style: AppTextStyles.section(context)),
                         Text('PERMANENT REMOVAL',
-                            style: AppTextStyles.caption(context)
-                                .copyWith(color: colors.textMuted, letterSpacing: 0.8)),
+                            style: AppTextStyles.bodySecondary(context)
+                                .copyWith(
+                                    color: colors.textMuted,
+                                    letterSpacing: 0.8)),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close, size: 18, color: colors.textMuted),
+                    icon: Icon(Icons.close, size: 20, color: colors.textMuted),
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
                 ],
@@ -76,19 +79,20 @@ class DeleteMaterialDialog extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(item.name,
-                              style: AppTextStyles.body(context)
+                              style: AppTextStyles.bodySecondary(context)
                                   .copyWith(fontWeight: FontWeight.w600)),
                           SizedBox(height: context.h(8)),
                           Container(
                             padding: EdgeInsets.symmetric(
-                                horizontal: context.w(8), vertical: context.h(3)),
+                                horizontal: context.w(8),
+                                vertical: context.h(3)),
                             decoration: BoxDecoration(
                               color: colors.surface,
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(color: colors.border),
                             ),
                             child: Text(item.category,
-                                style: AppTextStyles.caption(context)),
+                                style: AppTextStyles.body(context)),
                           ),
                         ],
                       ),
@@ -97,7 +101,7 @@ class DeleteMaterialDialog extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('CURRENT STOCK',
-                            style: AppTextStyles.caption(context)
+                            style: AppTextStyles.label(context)
                                 .copyWith(color: colors.textMuted)),
                         SizedBox(height: context.h(2)),
                         Text(
@@ -111,7 +115,7 @@ class DeleteMaterialDialog extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('UNIT COST',
-                            style: AppTextStyles.caption(context)
+                            style: AppTextStyles.label(context)
                                 .copyWith(color: colors.textMuted)),
                         SizedBox(height: context.h(2)),
                         Text(
@@ -138,7 +142,7 @@ class DeleteMaterialDialog extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(Icons.warning_amber_rounded,
-                        color: AppColors.danger, size: 18),
+                        color: AppColors.danger, size: 20),
                     SizedBox(width: context.w(10)),
                     Expanded(
                       child: Column(
@@ -146,15 +150,13 @@ class DeleteMaterialDialog extends StatelessWidget {
                         children: [
                           Text(
                             'IRREVERSIBLE ACTION',
-                            style: AppTextStyles.caption(context).copyWith(
-                                color: AppColors.danger,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5),
+                            style: AppTextStyles.label(context).copyWith(
+                                color: AppColors.danger, letterSpacing: 0.5),
                           ),
                           SizedBox(height: context.h(4)),
                           Text(
                             'Removing this raw material will delete its inventory stock history, supplier linkage, and usage logs from recipes and kitchen queue orders. This cannot be undone.',
-                            style: AppTextStyles.caption(context)
+                            style: AppTextStyles.body(context)
                                 .copyWith(color: AppColors.danger, height: 1.4),
                           ),
                         ],
@@ -169,24 +171,45 @@ class DeleteMaterialDialog extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: colors.border),
-                      foregroundColor: colors.textSecondary,
-                    ),
-                    child: const Text('CANCEL'),
-                  ),
-                  SizedBox(width: context.w(10)),
-                  ElevatedButton.icon(
+                  FormActionButton(
+                    label: 'CANCEL',
                     onPressed: () => Navigator.of(context).pop(true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.danger,
-                      foregroundColor: Colors.white,
-                    ),
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('DELETE MATERIAL'),
+                    // isPrimary: false,
+                    // leadingIcon: Icons.delete_outline,
+                    // iconSize: 18,
+                    backgroundColor: Colors.transparent,
+                    textColor: AppColors.lightTextSecondary,
+                    // iconColor: AppColors.danger,
+                    borderColor: AppColors.border,
                   ),
+
+                  // OutlinedButton(
+                  //   onPressed: () => Navigator.of(context).pop(false),
+                  //   style: OutlinedButton.styleFrom(
+                  //     side: BorderSide(color: colors.border),
+                  //     foregroundColor: colors.textSecondary,
+                  //   ),
+                  //   child: const Text('CANCEL'),
+                  // ),
+                  SizedBox(width: context.w(10)),
+                  FormActionButton(
+                    label: 'DELETE MATERIAL',
+                    onPressed: () => Navigator.of(context).pop(true),
+                    leadingIcon: Icons.delete,
+                    iconSize: 18,
+                    backgroundColor: AppColors.danger,
+                    textColor: Colors.white,
+                    iconColor: Colors.white,
+                  ),
+                  // ElevatedButton.icon(
+                  //   onPressed: () => Navigator.of(context).pop(true),
+                  //   style: ElevatedButton.styleFrom(
+                  //     backgroundColor: AppColors.danger,
+                  //     foregroundColor: Colors.white,
+                  //   ),
+                  //   icon: const Icon(Icons.delete_outline, size: 18),
+                  //   label: const Text('DELETE MATERIAL'),
+                  // ),
                 ],
               ),
             ],

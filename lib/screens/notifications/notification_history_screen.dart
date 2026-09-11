@@ -273,9 +273,10 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                 Icons.refresh,
                 size: 18,
               ),
-        label: Text('Refresh',
-            style:
-                AppTextStyles.section(context).copyWith(color: Colors.white)),
+        label: Text(
+          'Refresh',
+          style: AppTextStyles.section(context).copyWith(color: Colors.white),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
@@ -488,11 +489,12 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
   }) {
     return SizedBox(
       width: width,
-      child: Text(text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style:
-              AppTextStyles.section(context).copyWith(color: colors.textMuted)),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTextStyles.section(context).copyWith(color: colors.textMuted),
+      ),
     );
   }
 
@@ -705,11 +707,13 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
       child: Row(
         children: [
           Expanded(
-            child: Text('Showing 1-$count of $count notifications',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.label(context)
-                    .copyWith(color: colors.textMuted)),
+            child: Text(
+              'Showing 1-$count of $count notifications',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.label(context)
+                  .copyWith(color: colors.textMuted),
+            ),
           ),
           Align(
             alignment: Alignment.centerRight,

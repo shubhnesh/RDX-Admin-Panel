@@ -171,7 +171,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) SizedBox(height: context.h(12)),
-            _statCard(cards[i]),
+            cards[i],
           ],
         ],
       );
@@ -187,18 +187,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _statCard(StatCard d) {
-    return StatCard(
-      label: d.label,
-      value: d.value,
-      icon: d.icon,
-      // accentColor: d.iconColor,
-      subtitle: d.subtitle,
-      subtitleColor: d.subtitleColor,
-      subtitleIcon: d.subtitleIcon,
-      progress: d.progress,
-    );
-  }
+  // Widget _statCard(StatCard d) {
+  //   return StatCard(
+  //     label: d.label,
+  //     value: d.value,
+  //     icon: d.icon,
+  //     // accentColor: d.iconColor,
+  //     subtitle: d.subtitle,
+  //     subtitleColor: d.subtitleColor,
+  //     subtitleIcon: d.subtitleIcon,
+  //     progress: d.progress,
+  //   );
+  // }
 
   // ═══════════════════════════════════════════════════════════════════
   // ANALYTICS PERFORMANCE (line chart)

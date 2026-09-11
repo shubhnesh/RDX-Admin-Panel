@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/theme/text_styles.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/utils/responsive_size.dart';
@@ -123,11 +124,15 @@ class _CategoryTabChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(
-            color: selected ? Colors.white : colors.textSecondary,
-            fontSize: context.h(12.5),
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          ),
+          // style: TextStyle(
+          //   color: selected ? Colors.white : colors.textSecondary,
+          //   fontSize: context.h(12.5),
+          //   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          // ),
+          style: selected
+              ? AppTextStyles.label(context).copyWith(color: Colors.white)
+              : AppTextStyles.label(context)
+                  .copyWith(color: colors.textSecondary),
         ),
       ),
     );

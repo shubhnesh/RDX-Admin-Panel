@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
+import 'package:rdx_admin/widgets/stat_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/notification_provider.dart';
@@ -159,30 +160,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       (sum, item) => sum + item.recipientCount,
     );
     final totalBroadcasts = provider.history.length;
-    final scheduled =
-        provider.history.where((item) => item.scheduled).length;
+    final scheduled = provider.history.where((item) => item.scheduled).length;
 
     final cards = [
-      _NotificationStat(
+      StatCard(
         label: 'TOTAL RECIPIENTS',
         value: _formatNumber(totalRecipients),
         subtitle: 'Across all broadcasts',
         icon: Icons.people_alt_outlined,
-        color: AppColors.primary,
+        accentColor: AppColors.primary,
       ),
-      _NotificationStat(
+      StatCard(
         label: 'TOTAL BROADCASTS',
         value: _formatNumber(totalBroadcasts),
         subtitle: 'Notifications created',
         icon: Icons.campaign_outlined,
-        color: AppColors.info,
+        accentColor: AppColors.info,
       ),
-      _NotificationStat(
+      StatCard(
         label: 'SCHEDULED',
         value: _formatNumber(scheduled),
         subtitle: 'Upcoming notifications',
         icon: Icons.schedule_outlined,
-        color: AppColors.warning,
+        accentColor: AppColors.warning,
       ),
     ];
 
@@ -191,7 +191,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         children: [
           for (int i = 0; i < cards.length; i++) ...[
             if (i > 0) SizedBox(height: context.h(12)),
-            _buildStatCard(cards[i], colors),
+            cards[i],
           ],
         ],
       );
@@ -201,60 +201,63 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       children: [
         for (int i = 0; i < cards.length; i++) ...[
           if (i > 0) SizedBox(width: context.w(14)),
-          Expanded(child: _buildStatCard(cards[i], colors)),
+          Expanded(
+            child: cards[i],
+          ),
         ],
       ],
     );
   }
 
-  Widget _buildStatCard(_NotificationStat stat, AppColorScheme colors) {
-    return Container(
-      constraints: BoxConstraints(minHeight: context.h(102)),
-      padding: EdgeInsets.fromLTRB(
-        context.w(18),
-        context.h(16),
-        context.w(16),
-        context.h(15),
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(context.h(14)),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  stat.label,
-                  style: AppTextStyles.section(context)
-                      .copyWith(color: colors.textMuted),
-                ),
-                SizedBox(height: context.h(6)),
-                Text(stat.value, style: AppTextStyles.heading(context)),
-                SizedBox(height: context.h(6)),
-                Text(stat.subtitle, style: AppTextStyles.bodySecondary(context)),
-              ],
-            ),
-          ),
-          SizedBox(width: context.w(12)),
-          Container(
-            width: context.w(42),
-            height: context.h(42),
-            decoration: BoxDecoration(
-              color: stat.color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(context.h(10)),
-            ),
-            alignment: Alignment.center,
-            child: Icon(stat.icon, size: context.h(20), color: stat.color),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildStatCard(_NotificationStat stat, AppColorScheme colors) {
+  //   return Container(
+  //     constraints: BoxConstraints(minHeight: context.h(102)),
+  //     padding: EdgeInsets.fromLTRB(
+  //       context.w(18),
+  //       context.h(16),
+  //       context.w(16),
+  //       context.h(15),
+  //     ),
+  //     decoration: BoxDecoration(
+  //       color: colors.surface,
+  //       borderRadius: BorderRadius.circular(context.h(14)),
+  //       border: Border.all(color: colors.border),
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         Expanded(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             mainAxisAlignment: MainAxisAlignment.center,
+  //             children: [
+  //               Text(
+  //                 stat.label,
+  //                 style: AppTextStyles.section(context)
+  //                     .copyWith(color: colors.textMuted),
+  //               ),
+  //               SizedBox(height: context.h(6)),
+  //               Text(stat.value, style: AppTextStyles.heading(context)),
+  //               SizedBox(height: context.h(6)),
+  //               Text(stat.subtitle,
+  //                   style: AppTextStyles.bodySecondary(context)),
+  //             ],
+  //           ),
+  //         ),
+  //         SizedBox(width: context.w(12)),
+  //         Container(
+  //           width: context.w(42),
+  //           height: context.h(42),
+  //           decoration: BoxDecoration(
+  //             color: stat.color.withOpacity(0.12),
+  //             borderRadius: BorderRadius.circular(context.h(10)),
+  //           ),
+  //           alignment: Alignment.center,
+  //           child: Icon(stat.icon, size: context.h(20), color: stat.color),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // ============================================================
   // MAIN CONTENT
@@ -317,7 +320,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ),
               SizedBox(width: context.w(10)),
-              Text('Compose Notification', style: AppTextStyles.section(context)),
+              Text('Compose Notification',
+                  style: AppTextStyles.section(context)),
             ],
           ),
           SizedBox(height: context.h(23)),
@@ -547,14 +551,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 final picked = await showDatePicker(
                                   context: context,
                                   initialDate: selectedDate ?? now,
-                                  firstDate: DateTime(now.year, now.month, now.day),
+                                  firstDate:
+                                      DateTime(now.year, now.month, now.day),
                                   lastDate: DateTime(now.year + 5),
                                   builder: (context, child) {
                                     return Theme(
                                       data: Theme.of(context).copyWith(
                                         colorScheme: Theme.of(context)
                                             .colorScheme
-                                            .copyWith(primary: AppColors.primary),
+                                            .copyWith(
+                                                primary: AppColors.primary),
                                       ),
                                       child: child!,
                                     );
@@ -584,7 +590,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       data: Theme.of(context).copyWith(
                                         colorScheme: Theme.of(context)
                                             .colorScheme
-                                            .copyWith(primary: AppColors.primary),
+                                            .copyWith(
+                                                primary: AppColors.primary),
                                       ),
                                       child: child!,
                                     );
@@ -663,7 +670,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                             content: Text(
                                               'Notification scheduled successfully.',
                                               style: AppTextStyles.body(context)
-                                                  .copyWith(color: Colors.white),
+                                                  .copyWith(
+                                                      color: Colors.white),
                                             ),
                                             behavior: SnackBarBehavior.floating,
                                           ),
@@ -679,7 +687,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                  : Icon(Icons.send_outlined, size: context.h(15)),
+                                  : Icon(Icons.send_outlined,
+                                      size: context.h(15)),
                               label: Text(
                                 'Schedule Now',
                                 style: AppTextStyles.body(context).copyWith(
@@ -690,7 +699,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 ),
                               ),
                               style: ElevatedButton.styleFrom(
-                                minimumSize: Size(context.w(128), context.h(40)),
+                                minimumSize:
+                                    Size(context.w(128), context.h(40)),
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
@@ -866,12 +876,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, size: context.h(16), color: AppColors.danger),
+          Icon(Icons.error_outline,
+              size: context.h(16), color: AppColors.danger),
           SizedBox(width: context.w(8)),
           Expanded(
             child: Text(
               message,
-              style: AppTextStyles.body(context).copyWith(color: AppColors.danger),
+              style:
+                  AppTextStyles.body(context).copyWith(color: AppColors.danger),
             ),
           ),
         ],
@@ -932,18 +944,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 }
 
-class _NotificationStat {
-  final String label;
-  final String value;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
+// class _NotificationStat {
+//   final String label;
+//   final String value;
+//   final String subtitle;
+//   final IconData icon;
+//   final Color color;
 
-  const _NotificationStat({
-    required this.label,
-    required this.value,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-  });
-}
+//   const _NotificationStat({
+//     required this.label,
+//     required this.value,
+//     required this.subtitle,
+//     required this.icon,
+//     required this.color,
+//   });
+// }

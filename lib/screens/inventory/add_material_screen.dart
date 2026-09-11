@@ -142,23 +142,22 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           RdxHeader(
-        title: isEdit ? 'Edit Material' : 'Add New Material',
-        subtitle:
-            'Create a new raw ingredient or packaging item in your inventory catalog.',
-        showBackButton: true,
-        actions: [
-          FormActionButton.discard(
-            onPressed: () => Navigator.of(context).pop(),
+            title: isEdit ? 'Edit Material' : 'Add New Material',
+            subtitle:
+                'Create a new raw ingredient or packaging item in your inventory catalog.',
+            showBackButton: true,
+            actions: [
+              FormActionButton.discard(
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              SizedBox(width: context.w(10)),
+              FormActionButton.save(
+                label: 'Save',
+                onPressed: _save,
+                isLoading: _saving,
+              ),
+            ],
           ),
-          SizedBox(width: context.w(10)),
-          FormActionButton.save(
-            label: 'Save',
-            onPressed: _save,
-            isLoading: _saving,
-          ),
-        ],
-      ),
-
           Expanded(
             child: SingleChildScrollView(
               padding: Responsive.pagePadding(context, top: 16, bottom: 32),
@@ -184,10 +183,10 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                                   ? 'Required'
                                   : null,
                             ),
-                            SizedBox(height: context.h(6)),
+                            // SizedBox(height: context.h(0.5)),
                             Text(
                               'Enter descriptive name recognized by kitchen & receiving staff',
-                              style: AppTextStyles.caption(context)
+                              style: AppTextStyles.body(context)
                                   .copyWith(color: colors.textMuted),
                             ),
                             SizedBox(height: context.h(16)),
@@ -240,10 +239,10 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                                 return null;
                               },
                             ),
-                            SizedBox(height: context.h(6)),
+                            // SizedBox(height: context.h(6)),
                             Text(
                               'Direct cost per unit',
-                              style: AppTextStyles.caption(context)
+                              style: AppTextStyles.body(context)
                                   .copyWith(color: colors.textMuted),
                             ),
                           ],
@@ -313,7 +312,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                             SizedBox(height: context.h(6)),
                             Text(
                               'Restock alert triggers when stock falls below this amount — no confusing PAR terminology',
-                              style: AppTextStyles.caption(context)
+                              style: AppTextStyles.body(context)
                                   .copyWith(color: colors.textMuted),
                             ),
                             SizedBox(height: context.h(20)),
@@ -331,11 +330,15 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      Text('LIVE STOCK PREVIEW',
-                                          style: AppTextStyles.caption(context)
-                                              .copyWith(
-                                                  color: colors.textMuted,
-                                                  letterSpacing: 0.5)),
+                                      Text(
+                                        'LIVE STOCK PREVIEW',
+                                        style:
+                                            AppTextStyles.bodySecondary(context)
+                                                .copyWith(
+                                          color: colors.textMuted,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
                                       const Spacer(),
                                       Container(
                                         padding: EdgeInsets.symmetric(
@@ -354,11 +357,18 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                                             SizedBox(width: context.w(5)),
                                             Text(
                                               _statusLabel(_previewStatus),
-                                              style: TextStyle(
+                                              // style: TextStyle(
+                                              //   color: _statusColor(
+                                              //       _previewStatus),
+                                              //   fontSize: context.h(10),
+                                              //   fontWeight: FontWeight.w700,
+                                              // ),
+                                              style:
+                                                  AppTextStyles.label(context)
+                                                      .copyWith(
                                                 color: _statusColor(
                                                     _previewStatus),
-                                                fontSize: context.h(10),
-                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.5,
                                               ),
                                             ),
                                           ],
@@ -378,7 +388,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                                       const Spacer(),
                                       Text(
                                         '${_previewQty.toStringAsFixed(1)} / ${_previewMax.toStringAsFixed(1)} $_unit',
-                                        style: AppTextStyles.caption(context)
+                                        style: AppTextStyles.body(context)
                                             .copyWith(color: colors.textMuted),
                                       ),
                                     ],
@@ -410,7 +420,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                                 Expanded(
                                   child: Text(
                                     'Status badges (In Stock / Low Stock / Critical) are calculated automatically based on your minimum required level.',
-                                    style: AppTextStyles.caption(context)
+                                    style: AppTextStyles.body(context)
                                         .copyWith(color: colors.textMuted),
                                   ),
                                 ),
@@ -498,7 +508,7 @@ class _SectionCard extends StatelessWidget {
                 child: Text(title, style: AppTextStyles.section(context)),
               ),
               Text(sectionLabel,
-                  style: AppTextStyles.caption(context)
+                  style: AppTextStyles.label(context)
                       .copyWith(color: colors.textMuted, letterSpacing: 0.8)),
             ],
           ),

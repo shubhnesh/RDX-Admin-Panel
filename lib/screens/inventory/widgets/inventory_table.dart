@@ -60,7 +60,8 @@ class InventoryTable extends StatelessWidget {
           Expanded(
             child: ListView.separated(
               itemCount: items.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: colors.divider),
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: colors.divider),
               itemBuilder: (context, index) {
                 final item = items[index];
                 return _InventoryRow(
@@ -90,11 +91,13 @@ class _HeaderCell extends StatelessWidget {
       child: Text(
         label,
         textAlign: align,
-        style: AppTextStyles.caption(context).copyWith(
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.4,
-          color: AppColors.of(context).textMuted,
-        ),
+        // style: AppTextStyles.caption(context).copyWith(
+        //   fontWeight: FontWeight.w600,
+        //   letterSpacing: 0.4,
+        //   color: AppColors.of(context).textMuted,
+        // ),
+        style:
+            AppTextStyles.section(context).copyWith(color: AppColors.textMuted),
       ),
     );
   }
@@ -155,7 +158,8 @@ class _InventoryRow extends StatelessWidget {
           Expanded(
             flex: 3,
             child: Text(item.name,
-                style: AppTextStyles.body(context).copyWith(fontWeight: FontWeight.w600),
+                style: AppTextStyles.body(context)
+                    .copyWith(fontWeight: FontWeight.w600),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
           ),
@@ -228,7 +232,8 @@ class _InventoryRow extends StatelessWidget {
                     Container(
                       width: 6,
                       height: 6,
-                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                      decoration:
+                          BoxDecoration(color: color, shape: BoxShape.circle),
                     ),
                     SizedBox(width: context.w(6)),
                     Text(_statusLabel(status),
@@ -257,13 +262,15 @@ class _InventoryRow extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton(
-                  icon: Icon(Icons.edit_outlined, size: 18, color: colors.textSecondary),
+                  icon: Icon(Icons.edit_outlined,
+                      size: 18, color: colors.textSecondary),
                   onPressed: onEdit,
                   tooltip: 'Edit',
                   visualDensity: VisualDensity.compact,
                 ),
                 IconButton(
-                  icon: Icon(Icons.delete_outline, size: 18, color: AppColors.danger),
+                  icon: Icon(Icons.delete_outline,
+                      size: 18, color: AppColors.danger),
                   onPressed: onDelete,
                   tooltip: 'Delete',
                   visualDensity: VisualDensity.compact,

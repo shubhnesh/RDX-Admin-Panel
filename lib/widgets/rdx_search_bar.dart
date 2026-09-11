@@ -192,8 +192,7 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
     final bool hasText = _controller.text.isNotEmpty;
     final colors = AppColors.of(context);
 
-    final double effectiveHeight =
-        widget.height ?? context.h(42);
+    final double effectiveHeight = widget.height ?? context.h(42);
 
     return Container(
       width: widget.width,
@@ -216,7 +215,7 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
           widget.leading ??
               Icon(
                 Icons.search_rounded,
-                size: context.h(20),
+                size: context.h(25),
                 color: widget.hintColor ?? colors.textMuted,
               ),
           SizedBox(width: context.w(9)),
@@ -232,13 +231,13 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
               style: widget.textStyle ??
-                  AppTextStyles.bodySecondary(context).copyWith(
+                  AppTextStyles.section(context).copyWith(
                     color: widget.textColor ?? colors.textPrimary,
                   ),
               decoration: InputDecoration(
                 hintText: widget.hintText,
                 hintStyle: widget.hintStyle ??
-                    AppTextStyles.bodySecondary(context).copyWith(
+                    AppTextStyles.section(context).copyWith(
                       color: widget.hintColor ?? colors.textMuted,
                     ),
 

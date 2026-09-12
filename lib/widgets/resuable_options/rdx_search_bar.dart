@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
-import '../core/theme/app_colors.dart';
-import '../core/utils/responsive_size.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/responsive_size.dart';
 import 'rdx_text_field.dart';
 
 class RdxSearchBar extends StatefulWidget {
@@ -99,18 +100,36 @@ class RdxSearchToolbar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 480;
+    final search = RdxSearchBar(
+      height: RdxTextField.singleLineHeight(context),
+      hintText: hintText,
+      controller: controller,
+      onChanged: onChanged,
+    );
+
+    if (narrow && actions.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          search,
+          SizedBox(height: context.h(10)),
+          Wrap(
+            spacing: context.w(10),
+            runSpacing: context.h(8),
+            alignment: WrapAlignment.end,
+            children: actions,
+          ),
+        ],
+      );
+    }
+
     return SizedBox(
       height: preferredSize.height,
       child: Row(
         children: [
-          Expanded(
-            child: RdxSearchBar(
-              height: RdxTextField.singleLineHeight(context),
-              hintText: hintText,
-              controller: controller,
-              onChanged: onChanged,
-            ),
-          ),
+          Expanded(child: search),
           for (final action in actions) ...[
             SizedBox(width: context.w(14)),
             action,
@@ -231,13 +250,13 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
               style: widget.textStyle ??
-                  AppTextStyles.section(context).copyWith(
+                  AppTextStyles.label(context).copyWith(
                     color: widget.textColor ?? colors.textPrimary,
                   ),
               decoration: InputDecoration(
                 hintText: widget.hintText,
                 hintStyle: widget.hintStyle ??
-                    AppTextStyles.section(context).copyWith(
+                    AppTextStyles.label(context).copyWith(
                       color: widget.hintColor ?? colors.textMuted,
                     ),
 

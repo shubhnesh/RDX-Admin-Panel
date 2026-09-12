@@ -9,9 +9,9 @@ import '../../core/utils/formatters.dart';
 import '../../models/dashboard_stats_model.dart';
 import '../../models/activity_log_model.dart';
 import '../../providers/dashboard_provider.dart';
-import '../../widgets/loading_indicator.dart';
-import '../../widgets/rdx_search_bar.dart';
-import '../../widgets/stat_card.dart';
+import '../../widgets/reusable_widgets/loading_indicator.dart';
+import '../../widgets/resuable_options/rdx_search_bar.dart';
+import '../../widgets/reusable_widgets/stat_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   final ValueChanged<String> onNavigate;
@@ -46,19 +46,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: AppColors.primary,
                   onRefresh: provider.load,
                   child: ListView(
-                    padding: context.defaultScreenPadding(),
-                    children: [
-                      _buildTopBar(colors),
-                      SizedBox(height: context.h(20)),
-                      _buildStatCards(provider.stats!, colors),
-                      SizedBox(height: context.h(20)),
-                      _buildAnalyticsCard(provider.stats!, colors),
-                      SizedBox(height: context.h(20)),
-                      _buildMiddleRow(provider.stats!, colors),
-                      SizedBox(height: context.h(20)),
-                      // _buildRecentActivity(provider.recentActivity, colors),
-                    ],
-                  ),
+  padding: Responsive.pagePadding(
+    context,
+    top: context.h(14),
+    bottom: context.h(0),
+  ),
+  children: [
+    _buildTopBar(colors),
+    SizedBox(height: context.h(20)),
+    _buildStatCards(provider.stats!, colors),
+    SizedBox(height: context.h(20)),
+    _buildAnalyticsCard(provider.stats!, colors),
+    SizedBox(height: context.h(20)),
+    _buildMiddleRow(provider.stats!, colors),
+    SizedBox(height: context.h(20)),
+    // _buildRecentActivity(provider.recentActivity, colors),
+  ],
+),
                 ),
     );
   }
@@ -98,7 +102,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Icon(icon, size: context.h(21), color: colors.textSecondary),
+            Icon(icon, size: context.h(25), color: colors.textSecondary),
             if (badge)
               Positioned(
                 top: -1,
@@ -227,27 +231,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Analytics Performance',
-                      style: AppTextStyles.heading(context),
-                    ),
-                    Text(
-                      "Real-time insight into your restaurant's ecosystem.",
-                      style: AppTextStyles.bodySecondary(context),
-                    ),
-                  ],
+          Builder(builder: (context) {
+            final narrow = MediaQuery.sizeOf(context).width < 700;
+            final titleCol = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Analytics Performance',
+                  style: AppTextStyles.heading(context),
                 ),
-              ),
-              _periodTabs(colors),
-            ],
-          ),
+                Text(
+                  "Real-time insight into your restaurant's ecosystem.",
+                  style: AppTextStyles.bodySecondary(context),
+                ),
+              ],
+            );
+            if (narrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  titleCol,
+                  SizedBox(height: context.h(12)),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _periodTabs(colors),
+                  ),
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: titleCol),
+                _periodTabs(colors),
+              ],
+            );
+          }),
           SizedBox(height: context.h(20)),
           SizedBox(
             height: context.h(200),
@@ -354,42 +373,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _periodTabs(AppColorScheme colors) {
-    const periods = ['Daily', 'Weekly', 'Monthly'];
-    return Container(
-      padding: EdgeInsets.all(context.w(3)),
-      decoration: BoxDecoration(
-        color: colors.surfaceVariant,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: periods.map((p) {
-          final selected = _chartPeriod == p;
-          return GestureDetector(
-            onTap: () => setState(() => _chartPeriod = p),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              padding: EdgeInsets.symmetric(
-                horizontal: context.w(12),
-                vertical: context.h(6),
-              ),
-              decoration: BoxDecoration(
-                color: selected ? AppColors.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                p,
-                style: selected
-                    ? AppTextStyles.label(context).copyWith(color: Colors.white)
-                    : AppTextStyles.bodySecondary(context),
+Widget _periodTabs(AppColorScheme colors) {
+  const periods = ['Daily', 'Weekly', 'Monthly'];
+  return Container(
+    decoration: BoxDecoration(
+      color: colors.surfaceVariant,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: periods.map((p) {
+        final selected = _chartPeriod == p;
+        return InkWell(
+          onTap: () => setState(() => _chartPeriod = p),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.w(12),
+              vertical: context.h(6),
+            ),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              p,
+              style: AppTextStyles.label(context).copyWith(
+                color: selected ? Colors.white : colors.textSecondary,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
-          );
-        }).toList(),
-      ),
-    );
-  }
+          ),
+        );
+      }).toList(),
+    ),
+  );
+}
 
   // ═══════════════════════════════════════════════════════════════════
   // MIDDLE ROW — Volume Trend + Top Selling
@@ -439,38 +458,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                'Volume Trend',
-                style: AppTextStyles.heading(context),
+          Builder(builder: (context) {
+            final narrow = MediaQuery.sizeOf(context).width < 500;
+            final title = Text(
+              'Volume Trend',
+              style: AppTextStyles.heading(context),
+            );
+            final chip = Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: context.w(10),
+                vertical: context.h(5),
               ),
-              const Spacer(),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.w(10),
-                  vertical: context.h(5),
-                ),
-                decoration: BoxDecoration(
-                  color: colors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: colors.border),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Today',
-                      style: AppTextStyles.bodySecondary(context),
-                    ),
-                    SizedBox(width: context.w(4)),
-                    Icon(Icons.keyboard_arrow_down,
-                        size: 16, color: colors.textMuted),
-                  ],
-                ),
+              decoration: BoxDecoration(
+                color: colors.surfaceVariant,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: colors.border),
               ),
-            ],
-          ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Today',
+                    style: AppTextStyles.bodySecondary(context),
+                  ),
+                  SizedBox(width: context.w(4)),
+                  Icon(Icons.keyboard_arrow_down,
+                      size: 16, color: colors.textMuted),
+                ],
+              ),
+            );
+            if (narrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  title,
+                  SizedBox(height: context.h(8)),
+                  chip,
+                ],
+              );
+            }
+            return Row(
+              children: [
+                title,
+                const Spacer(),
+                chip,
+              ],
+            );
+          }),
           SizedBox(height: context.h(16)),
           SizedBox(
             height: context.h(160),

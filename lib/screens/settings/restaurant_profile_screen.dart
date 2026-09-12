@@ -9,10 +9,10 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
-import '../../widgets/rdx_text_field.dart';
-import '../../widgets/form_action_button.dart';
-import '../../widgets/rdx_toggle_button.dart';
-import '../../widgets/rdx_header.dart';
+import '../../widgets/resuable_options/rdx_text_field.dart';
+import '../../widgets/buttons/rdx_action_button.dart';
+import '../../widgets/buttons/rdx_toggle_button.dart';
+import '../../widgets/reusable_widgets/rdx_header.dart';
 
 class RestaurantProfileScreen extends StatefulWidget {
   const RestaurantProfileScreen({super.key});
@@ -192,12 +192,12 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
             subtitle: 'Configure RDX Admin platform details.',
             showBackButton: true,
             actions: [
-              FormActionButton.save(
+              RdxActionButton.save(
                 isLoading: provider.isLoading,
                 onPressed: _save,
               ),
               SizedBox(width: context.w(10)),
-              FormActionButton.discard(
+              RdxActionButton.discard(
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
             ],
@@ -214,6 +214,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                     children: [
                       _ProfileSection(
                         title: 'Brand Identity',
+                        icon: Icons.image_outlined,
                         colors: colors,
                         child: Row(
                           children: [
@@ -273,8 +274,9 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                                             _logoBytes != null
                                                 ? 'Change Logo'
                                                 : 'Upload New',
-                                            style: AppTextStyles.section(context)
-                                                .copyWith(
+                                            style:
+                                                AppTextStyles.section(context)
+                                                    .copyWith(
                                               color: colors.primary,
                                             ),
                                           ),
@@ -299,6 +301,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                       ),
                       _ProfileSection(
                         title: 'Basic Information',
+                        icon: Icons.description_outlined,
                         colors: colors,
                         child: Column(
                           children: [
@@ -317,6 +320,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                       ),
                       _ProfileSection(
                         title: 'Location & Contact',
+                        icon: Icons.location_on_outlined,
                         colors: colors,
                         child: Column(
                           children: [
@@ -360,118 +364,32 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                         ),
                       ),
                       _ProfileSection(
-  title: 'Operating Hours',
-  colors: colors,
-  child: Column(
-    children: [
-      // Weekdays row
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: Text(
-                'Weekdays',
-                style: AppTextStyles.bodySecondary(context).copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-            ),
-
-            // Opening time
-            Expanded(
-              child: _ProfileTime(
-                text: '08:00 AM',
-                colors: colors,
-              ),
-            ),
-
-            // Gap between opening and closing time
-            SizedBox(width: context.w(12)),
-
-            // Closing time
-            Expanded(
-              child: _ProfileTime(
-                text: '11:00 PM',
-                colors: colors,
-              ),
-            ),
-
-            // Toggle
-            Expanded(
-              flex: 1,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: RdxToggleButton(
-                  value: _weekdaysOpen,
-                  onChanged: (value) {
-                    setState(() {
-                      _weekdaysOpen = value;
-                    });
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // Weekends row
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: Text(
-                'Weekends',
-                style: AppTextStyles.bodySecondary(context).copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-            ),
-
-            // Opening time
-            Expanded(
-              child: _ProfileTime(
-                text: '10:00 AM',
-                colors: colors,
-              ),
-            ),
-
-            // Gap between opening and closing time
-            SizedBox(width: context.w(12)),
-
-            // Closing time
-            Expanded(
-              child: _ProfileTime(
-                text: '02:00 AM',
-                colors: colors,
-              ),
-            ),
-
-            // Toggle
-            Expanded(
-              flex: 1,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: RdxToggleButton(
-                  value: _weekendsOpen,
-                  onChanged: (value) {
-                    setState(() {
-                      _weekendsOpen = value;
-                    });
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  ),
-),
+                        title: 'Operating Hours',
+                        icon: Icons.access_time_outlined,
+                        colors: colors,
+                        child: Column(
+                          children: [
+                            _HoursRow(
+                              label: 'Weekdays',
+                              openText: '08:00 AM',
+                              closeText: '11:00 PM',
+                              isOpen: _weekdaysOpen,
+                              onChanged: (value) =>
+                                  setState(() => _weekdaysOpen = value),
+                              colors: colors,
+                            ),
+                            _HoursRow(
+                              label: 'Weekends',
+                              openText: '10:00 AM',
+                              closeText: '02:00 AM',
+                              isOpen: _weekendsOpen,
+                              onChanged: (value) =>
+                                  setState(() => _weekendsOpen = value),
+                              colors: colors,
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -486,11 +404,13 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
 
 class _ProfileSection extends StatelessWidget {
   final String title;
+  final IconData icon;
   final AppColorScheme colors;
   final Widget child;
 
   const _ProfileSection({
     required this.title,
+    required this.icon,
     required this.colors,
     required this.child,
   });
@@ -508,11 +428,17 @@ class _ProfileSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: AppTextStyles.section(context).copyWith(
-                color: colors.textPrimary,
-              ),
+            Row(
+              children: [
+                Icon(icon, size: context.h(18), color: AppColors.primary),
+                SizedBox(width: context.w(8)),
+                Text(
+                  title,
+                  style: AppTextStyles.section(context).copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             child,
@@ -546,4 +472,84 @@ class _ProfileTime extends StatelessWidget {
           ),
         ),
       );
+}
+
+
+class _HoursRow extends StatelessWidget {
+  final String label;
+  final String openText;
+  final String closeText;
+  final bool isOpen;
+  final ValueChanged<bool> onChanged;
+  final AppColorScheme colors;
+
+  const _HoursRow({
+    required this.label,
+    required this.openText,
+    required this.closeText,
+    required this.isOpen,
+    required this.onChanged,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 520;
+    final times = Row(
+      children: [
+        Expanded(child: _ProfileTime(text: openText, colors: colors)),
+        SizedBox(width: context.w(12)),
+        Expanded(child: _ProfileTime(text: closeText, colors: colors)),
+      ],
+    );
+    final toggle = RdxToggleButton(value: isOpen, onChanged: onChanged);
+
+    if (narrow) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: AppTextStyles.bodySecondary(context)
+                        .copyWith(color: colors.textSecondary),
+                  ),
+                ),
+                toggle,
+              ],
+            ),
+            const SizedBox(height: 8),
+            times,
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: AppTextStyles.bodySecondary(context)
+                  .copyWith(color: colors.textSecondary),
+            ),
+          ),
+          Expanded(child: _ProfileTime(text: openText, colors: colors)),
+          SizedBox(width: context.w(12)),
+          Expanded(child: _ProfileTime(text: closeText, colors: colors)),
+          Expanded(
+            flex: 1,
+            child: Align(alignment: Alignment.centerRight, child: toggle),
+          ),
+        ],
+      ),
+    );
+  }
 }

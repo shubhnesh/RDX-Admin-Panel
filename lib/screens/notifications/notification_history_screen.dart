@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
-import 'package:rdx_admin/widgets/rdx_header.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/notification_model.dart';
 import '../../providers/notification_provider.dart';
-import '../../widgets/loading_indicator.dart';
-import '../../widgets/rdx_dropdown.dart';
+import '../../widgets/reusable_widgets/loading_indicator.dart';
+import '../../widgets/resuable_options/rdx_dropdown.dart';
 
 class NotificationHistoryScreen extends StatefulWidget {
   const NotificationHistoryScreen({
@@ -51,24 +53,22 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
           Expanded(
             child: provider.isLoading && provider.history.isEmpty
                 ? const LoadingIndicator()
-                : LayoutBuilder(
-                    builder: (context, constraints) {
-                      final width = constraints.maxWidth;
+                : Padding(
+                    padding: Responsive.pagePadding(
+                      context,
+                      top: context.h(14),
+                      bottom: context.h(0),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.maxWidth;
 
-                      final isMobile = width < 600;
-                      final isTablet = width >= 600 && width < 1000;
+                        final isMobile = width < 600;
+                        final isTablet = width >= 600 && width < 1000;
 
-                      return SingleChildScrollView(
-                        padding: Responsive.pagePadding(
-                          context,
-                          top: isMobile ? context.h(18) : context.h(24),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            SizedBox(
-                              height: isMobile ? context.h(20) : context.h(24),
-                            ),
                             _buildFilters(
                               colors,
                               isMobile,
@@ -78,17 +78,29 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                             SizedBox(
                               height: isMobile ? context.h(14) : context.h(18),
                             ),
-                            _buildTable(
-                              colors,
-                              filteredNotifications,
-                              isMobile,
-                              isTablet,
-                              width,
+                            Expanded(
+                              child: _buildTable(
+                                context,
+                                colors,
+                                filteredNotifications,
+                              ),
+                            ),
+                            // ── Footer ─────────────────────────────────
+                            Padding(
+                              padding: EdgeInsets.only(
+                                top: context.h(8),
+                                bottom: context.h(16),
+                              ),
+                              child: Text(
+                                'Showing ${filteredNotifications.length} of ${provider.history.length} notifications',
+                                style: AppTextStyles.label(context)
+                                    .copyWith(color: colors.textMuted),
+                              ),
                             ),
                           ],
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
           ),
         ],
@@ -119,15 +131,15 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                   Icons.calendar_today_outlined,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: context.w(8)),
               Expanded(
                 child: _statusDropdown(colors),
               ),
             ],
           ),
-          const SizedBox(height: 9),
+          SizedBox(height: context.h(9)),
           SizedBox(
-            height: 40,
+            height: context.h(40),
             width: double.infinity,
             child: _refreshButton(
               colors,
@@ -140,8 +152,8 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
 
     if (isTablet) {
       return Wrap(
-        spacing: 8,
-        runSpacing: 8,
+        spacing: context.w(8),
+        runSpacing: context.h(8),
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           _filterButton(
@@ -165,7 +177,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
           'Last 7 Days',
           Icons.calendar_today_outlined,
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: context.w(8)),
         _statusDropdown(colors),
         const Spacer(),
         _refreshButton(
@@ -186,12 +198,12 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     IconData icon,
   ) {
     return SizedBox(
-      height: 40,
+      height: context.h(40),
       child: OutlinedButton.icon(
         onPressed: () {},
         icon: Icon(
           icon,
-          size: 15,
+          size: context.h(15),
           color: colors.textSecondary,
         ),
         label: Text(text,
@@ -203,13 +215,13 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
           side: BorderSide(
             color: colors.border,
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
+          padding: EdgeInsets.symmetric(
+            horizontal: context.w(12),
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(7),
+            borderRadius: BorderRadius.circular(context.h(7)),
           ),
-          minimumSize: const Size(0, 40),
+          minimumSize: Size(0, context.h(40)),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
       ),
@@ -224,7 +236,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     AppColorScheme colors,
   ) {
     return SizedBox(
-      width: 160,
+      width: context.w(160),
       child: RdxDropdown<String>(
         value: _statusFilter,
         isDense: true,
@@ -252,519 +264,132 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
   ) {
     final isLoading = provider.isLoading;
 
-    return SizedBox(
-      height: 40,
-      child: ElevatedButton.icon(
-        onPressed: isLoading
-            ? null
-            : () async {
-                await context.read<NotificationProvider>().load();
-              },
-        icon: isLoading
-            ? SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                  strokeWidth: 1.7,
-                  color: Colors.white.withOpacity(0.9),
-                ),
-              )
-            : const Icon(
-                Icons.refresh,
-                size: 18,
-              ),
-        label: Text(
-          'Refresh',
-          style: AppTextStyles.section(context).copyWith(color: Colors.white),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.primary.withOpacity(0.55),
-          disabledForegroundColor: Colors.white70,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(7),
-          ),
-          minimumSize: const Size(0, 40),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-      ),
+    return RdxActionButton(
+      label: 'Refresh',
+      onPressed: isLoading
+          ? null
+          : () async {
+              await context.read<NotificationProvider>().load();
+            },
+      isPrimary: true,
+      isLoading: isLoading,
+      height: context.h(40),
+      leadingIcon: Icons.refresh,
+      iconSize: context.h(18),
     );
   }
 
   // ============================================================
-  // TABLE
+  // TABLE (RdxTable — same as Inventory screen)
   // ============================================================
 
   Widget _buildTable(
+    BuildContext context,
     AppColorScheme colors,
     List<NotificationModel> notifications,
-    bool isMobile,
-    bool isTablet,
-    double availableWidth,
   ) {
     if (notifications.isEmpty) {
-      return _buildEmptyState(colors);
+      return Center(
+        child: Text(
+          'No notifications found.',
+          style: AppTextStyles.bodySecondary(context),
+        ),
+      );
     }
 
-    final minimumTableWidth = isMobile
-        ? 760.0
-        : isTablet
-            ? 790.0
-            : 0.0;
+    return RdxTable(
+      showFooter: false,
+      columns: const [
+        RdxTableColumn(title: 'STATUS', minWidth: 130, flex: 1),
+        RdxTableColumn(title: 'NOTIFICATION TITLE', minWidth: 300, flex: 4),
+        RdxTableColumn(title: 'DATE / TIME', minWidth: 150, flex: 2),
+        RdxTableColumn(title: 'ACTIONS', minWidth: 90, flex: 1),
+      ],
+      rows: notifications.map((item) {
+        final status = item.scheduled ? 'Scheduled' : 'Sent';
+        final statusColor =
+            item.scheduled ? AppColors.warning : AppColors.success;
+        final date = item.scheduledAt ?? item.sentAt ?? item.createdAt;
 
-    final tableWidth =
-        isMobile || isTablet ? minimumTableWidth : availableWidth;
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: colors.border,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          // ===== SCROLLABLE HEADER + ROWS =====
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final effectiveWidth = constraints.maxWidth < tableWidth
-                  ? tableWidth
-                  : constraints.maxWidth;
-
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const ClampingScrollPhysics(),
-                child: SizedBox(
-                  width: effectiveWidth,
-                  child: Column(
-                    children: [
-                      _tableHeader(
-                        colors,
-                        effectiveWidth,
-                      ),
-                      Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: colors.divider,
-                      ),
-                      for (int i = 0; i < notifications.length; i++) ...[
-                        _tableRow(
-                          colors,
-                          notifications[i],
-                          effectiveWidth,
-                        ),
-                        if (i != notifications.length - 1)
-                          Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: colors.divider,
-                          ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-
-          // ===== FIXED FULL-WIDTH FOOTER =====
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: colors.divider,
-          ),
-          _tableFooter(
-            colors,
-            notifications.length,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================
-  // EMPTY STATE
-  // ============================================================
-
-  Widget _buildEmptyState(
-    AppColorScheme colors,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 52,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: colors.border,
-        ),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.notifications_none_outlined,
-              size: 26,
-              color: AppColors.primary.withOpacity(0.75),
-            ),
-          ),
-          const SizedBox(height: 15),
-          Text('No notifications found', style: AppTextStyles.section(context)),
-          const SizedBox(height: 5),
-          Text(
-            'Sent and scheduled notifications will appear here.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.section(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================
-  // TABLE HEADER
-  // ============================================================
-
-  Widget _tableHeader(
-    AppColorScheme colors,
-    double tableWidth,
-  ) {
-    final widths = _columnWidths(tableWidth);
-
-    return Container(
-      height: 46,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
-      ),
-      color: colors.surfaceVariant.withOpacity(0.35),
-      child: Row(
-        children: [
-          _colHeader(
-            'STATUS',
-            width: widths.status,
-            colors: colors,
-          ),
-          _colHeader(
-            'NOTIFICATION TITLE',
-            width: widths.title,
-            colors: colors,
-          ),
-          _colHeader(
-            'DATE / TIME',
-            width: widths.date,
-            colors: colors,
-          ),
-          _colHeader(
-            'ACTIONS',
-            width: widths.actions,
-            colors: colors,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _colHeader(
-    String text, {
-    required double width,
-    required AppColorScheme colors,
-  }) {
-    return SizedBox(
-      width: width,
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: AppTextStyles.section(context).copyWith(color: colors.textMuted),
-      ),
-    );
-  }
-
-  // ============================================================
-  // TABLE ROW
-  // ============================================================
-
-  Widget _tableRow(
-    AppColorScheme colors,
-    NotificationModel item,
-    double tableWidth,
-  ) {
-    final status = item.scheduled ? 'Scheduled' : 'Sent';
-
-    final statusColor = item.scheduled ? AppColors.warning : AppColors.success;
-
-    final date = item.scheduledAt ?? item.sentAt ?? item.createdAt;
-
-    final widths = _columnWidths(tableWidth);
-
-    return Container(
-      constraints: const BoxConstraints(
-        minHeight: 72,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 11,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
+        return [
           // STATUS
-          SizedBox(
-            width: widths.status,
-            child: Row(
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: statusColor,
-                    shape: BoxShape.circle,
-                  ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: context.w(7),
+                height: context.h(7),
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(status,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodySecondary(context)
-                          .copyWith(color: colors.textPrimary)),
+              ),
+              SizedBox(width: context.w(8)),
+              Flexible(
+                child: Text(
+                  status,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.bodySecondary(context)
+                      .copyWith(color: colors.textPrimary),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
 
           // TITLE
-          SizedBox(
-            width: widths.title,
-            child: Padding(
-              padding: const EdgeInsets.only(
-                right: 18,
-              ),
-              child: Text(
-                item.title,
-                maxLines: 2,
+          Text(
+            item.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.bodySecondary(context)
+                .copyWith(color: colors.textPrimary),
+          ),
+
+          // DATE / TIME
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _formatDate(date),
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.bodySecondary(context)
                     .copyWith(color: colors.textPrimary),
               ),
-            ),
-          ),
-
-          // DATE / TIME
-          SizedBox(
-            width: widths.date,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_formatDate(date),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodySecondary(context)
-                        .copyWith(color: colors.textPrimary)),
-                const SizedBox(height: 3),
-                Text(_formatTime(date),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodySecondary(context)
-                        .copyWith(color: colors.textMuted)),
-              ],
-            ),
+              SizedBox(height: context.h(3)),
+              Text(
+                _formatTime(date),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodySecondary(context)
+                    .copyWith(color: colors.textMuted),
+              ),
+            ],
           ),
 
           // ACTIONS
-          SizedBox(
-            width: widths.actions,
-            child: Row(
-              children: [
-                _tableActionButton(
-                  colors: colors,
-                  icon: Icons.visibility_outlined,
-                  tooltip: 'View notification',
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RdxTableActionButton(
+                icon: Icons.visibility_outlined,
+                tooltip: 'View notification',
+                onPressed: () {},
+              ),
+              if (item.scheduled) ...[
+                SizedBox(width: context.w(4)),
+                RdxTableActionButton(
+                  icon: Icons.edit_outlined,
+                  tooltip: 'Edit notification',
                   onPressed: () {},
                 ),
-                if (item.scheduled) ...[
-                  const SizedBox(width: 4),
-                  _tableActionButton(
-                    colors: colors,
-                    icon: Icons.edit_outlined,
-                    tooltip: 'Edit notification',
-                    onPressed: () {},
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================
-  // RESPONSIVE COLUMN WIDTHS
-  // ============================================================
-
-  _NotificationColumnWidths _columnWidths(
-    double tableWidth,
-  ) {
-    const horizontalPadding = 36.0;
-
-    final available = tableWidth - horizontalPadding;
-
-    const minStatus = 105.0;
-    const minTitle = 300.0;
-    const minDate = 150.0;
-    const minActions = 85.0;
-
-    const minimumTotal = minStatus + minTitle + minDate + minActions;
-
-    if (available >= minimumTotal) {
-      final extra = available - minimumTotal;
-
-      return _NotificationColumnWidths(
-        status: minStatus + extra * 0.10,
-        title: minTitle + extra * 0.65,
-        date: minDate + extra * 0.15,
-        actions: minActions + extra * 0.10,
-      );
-    }
-
-    return const _NotificationColumnWidths(
-      status: minStatus,
-      title: minTitle,
-      date: minDate,
-      actions: minActions,
-    );
-  }
-
-  // ============================================================
-  // TABLE ACTION BUTTON
-  // ============================================================
-
-  Widget _tableActionButton({
-    required AppColorScheme colors,
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onPressed,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              icon,
-              size: 16,
-              color: colors.textMuted,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
-  // FOOTER
-  // ============================================================
-
-  Widget _tableFooter(
-    AppColorScheme colors,
-    int count,
-  ) {
-    return Container(
-      width: double.infinity,
-      height: 50,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Showing 1-$count of $count notifications',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.label(context)
-                  .copyWith(color: colors.textMuted),
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _paginationButton(
-                  colors,
-                  'Prev',
-                  enabled: false,
-                ),
-                const SizedBox(width: 6),
-                _paginationButton(
-                  colors,
-                  'Next',
-                  enabled: false,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================
-  // PAGINATION BUTTON
-  // ============================================================
-
-  Widget _paginationButton(
-    AppColorScheme colors,
-    String text, {
-    required bool enabled,
-  }) {
-    return Container(
-      height: 30,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 11,
-      ),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: enabled ? colors.surface : colors.surfaceVariant,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: colors.border,
-        ),
-      ),
-      child: Text(text,
-          style: AppTextStyles.label(context).copyWith(
-            color: enabled ? colors.textSecondary : colors.textMuted,
-          )),
+        ];
+      }).toList(),
     );
   }
 
@@ -833,22 +458,4 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
 
     return months[month - 1];
   }
-}
-
-// ============================================================
-// RESPONSIVE TABLE COLUMN MODEL
-// ============================================================
-
-class _NotificationColumnWidths {
-  final double status;
-  final double title;
-  final double date;
-  final double actions;
-
-  const _NotificationColumnWidths({
-    required this.status,
-    required this.title,
-    required this.date,
-    required this.actions,
-  });
 }

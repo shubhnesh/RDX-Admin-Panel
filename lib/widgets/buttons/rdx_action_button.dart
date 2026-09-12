@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:rdx_admin/core/theme/text_styles.dart';
 
-import '../core/theme/app_colors.dart';
-import '../core/utils/responsive_size.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/responsive_size.dart';
 
 /// Single form action button for Save / Discard footers.
 ///
 /// Icons and colors are optional and can be customized by the screen.
-class FormActionButton extends StatelessWidget {
+class RdxActionButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool isPrimary;
@@ -32,7 +32,7 @@ class FormActionButton extends StatelessWidget {
   final Color? disabledTextColor;
   final Color? disabledIconColor;
 
-  const FormActionButton({
+  const RdxActionButton({
     super.key,
     required this.label,
     required this.onPressed,
@@ -52,7 +52,7 @@ class FormActionButton extends StatelessWidget {
     this.disabledIconColor,
   });
 
-  const FormActionButton.save({
+  const RdxActionButton.save({
     super.key,
     this.label = 'Save',
     required this.onPressed,
@@ -71,7 +71,7 @@ class FormActionButton extends StatelessWidget {
     this.disabledIconColor,
   }) : isPrimary = true;
 
-  const FormActionButton.discard({
+  const RdxActionButton.discard({
     super.key,
     this.label = 'Discard',
     required this.onPressed,
@@ -94,7 +94,7 @@ class FormActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
 
-    final btnHeight = height ?? context.h(44);
+    final btnHeight = height ?? context.h(40);
 
     // Default colors preserve the existing behavior.
     final defaultTextColor = isPrimary ? Colors.white : colors.textPrimary;
@@ -114,7 +114,6 @@ class FormActionButton extends StatelessWidget {
 
     final resolvedDisabledTextColor = disabledTextColor ??
         (isPrimary ? Colors.white70 : colors.textPrimary.withAlpha(120));
-
 
     final textStyle = AppTextStyles.section(context).copyWith(
       color: isLoading ? resolvedTextColor : resolvedTextColor,

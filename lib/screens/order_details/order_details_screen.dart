@@ -6,13 +6,13 @@ import '../../core/theme/app_colors.dart';
 import '../../models/order_model.dart';
 import '../../providers/order_detail_provider.dart';
 import '../../services/order_service.dart';
-import '../../widgets/loading_indicator.dart';
-import '../../widgets/rdx_header.dart';
+import '../../widgets/reusable_widgets/loading_indicator.dart';
+import '../../widgets/reusable_widgets/rdx_header.dart';
 
-class OrderDetailScreen extends StatelessWidget {
+class OrderDetailsScreen extends StatelessWidget {
   final String orderId;
 
-  const OrderDetailScreen({
+  const OrderDetailsScreen({
     super.key,
     required this.orderId,
   });
@@ -168,30 +168,30 @@ class _OrderHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final narrow = MediaQuery.sizeOf(context).width < 600;
+    final titleBlock = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text('Order #RDX-${order.id}',
-                      style: AppTextStyles.label(context)
-                          .copyWith(color: const Color(0xFFE8E8E8))),
-                  const SizedBox(width: 7),
-                  _SmallStatusBadge(
-                    status: order.status,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text('Placed at ${_formatTime(order.createdAt)} • Delivery order',
-                  style: AppTextStyles.caption(context)
-                      .copyWith(color: const Color(0xFF666666))),
-            ],
-          ),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 7,
+          runSpacing: 4,
+          children: [
+            Text('Order #RDX-${order.id}',
+                style: AppTextStyles.label(context)
+                    .copyWith(color: const Color(0xFFE8E8E8))),
+            _SmallStatusBadge(status: order.status),
+          ],
         ),
+        const SizedBox(height: 4),
+        Text('Placed at ${_formatTime(order.createdAt)} • Delivery order',
+            style: AppTextStyles.caption(context)
+                .copyWith(color: const Color(0xFF666666))),
+      ],
+    );
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
         _HeaderButton(
           icon: Icons.print_outlined,
           label: 'Print',
@@ -203,6 +203,22 @@ class _OrderHeader extends StatelessWidget {
           label: 'Support',
           onTap: () {},
         ),
+      ],
+    );
+    if (narrow) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          titleBlock,
+          const SizedBox(height: 10),
+          Align(alignment: Alignment.centerLeft, child: actions),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: titleBlock),
+        actions,
       ],
     );
   }
@@ -921,11 +937,69 @@ class _BottomActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 900;
+
+    final quickActions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('QUICK ACTIONS',
+            style: AppTextStyles.caption(context)
+                .copyWith(color: const Color(0xFF656565))),
+        const SizedBox(width: 14),
+        _QuickAction(
+          icon: Icons.schedule_outlined,
+          title: 'Delay',
+          subtitle: '5m',
+          onTap: () {},
+        ),
+        const SizedBox(width: 7),
+        _QuickAction(
+          icon: Icons.notifications_none_outlined,
+          title: 'Notify',
+          subtitle: 'Rider',
+          onTap: () {},
+        ),
+      ],
+    );
+
+    final primaryActions = Wrap(
+      spacing: 7,
+      runSpacing: 7,
+      alignment: WrapAlignment.end,
+      children: [
+        _BottomButton(
+          label: 'Contact Customer',
+          icon: Icons.phone_outlined,
+          onTap: () {},
+        ),
+        _BottomButton(
+          label: 'Mark Ready',
+          icon: Icons.check_circle_outline,
+          onTap: () {
+            provider.updateStatus(
+              OrderStatus.ready,
+            );
+          },
+        ),
+        _BottomButton(
+          label: 'Dispatch Rider',
+          icon: Icons.delivery_dining_outlined,
+          primary: true,
+          onTap: () {
+            provider.updateStatus(
+              OrderStatus.delivered,
+            );
+          },
+        ),
+      ],
+    );
+
     return Container(
-      height: 57,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
+      padding: EdgeInsets.symmetric(
+        horizontal: narrow ? 12 : 18,
+        vertical: narrow ? 10 : 0,
       ),
+      constraints: BoxConstraints(minHeight: narrow ? 0 : 57),
       decoration: const BoxDecoration(
         color: Color(0xFF0D0D0D),
         border: Border(
@@ -934,54 +1008,26 @@ class _BottomActionBar extends StatelessWidget {
           ),
         ),
       ),
-      child: Row(
-        children: [
-          Text('QUICK ACTIONS',
-              style: AppTextStyles.caption(context)
-                  .copyWith(color: const Color(0xFF656565))),
-          const SizedBox(width: 14),
-          _QuickAction(
-            icon: Icons.schedule_outlined,
-            title: 'Delay',
-            subtitle: '5m',
-            onTap: () {},
-          ),
-          const SizedBox(width: 7),
-          _QuickAction(
-            icon: Icons.notifications_none_outlined,
-            title: 'Notify',
-            subtitle: 'Rider',
-            onTap: () {},
-          ),
-          const Spacer(),
-          _BottomButton(
-            label: 'Contact Customer',
-            icon: Icons.phone_outlined,
-            onTap: () {},
-          ),
-          const SizedBox(width: 7),
-          _BottomButton(
-            label: 'Mark Ready',
-            icon: Icons.check_circle_outline,
-            onTap: () {
-              provider.updateStatus(
-                OrderStatus.ready,
-              );
-            },
-          ),
-          const SizedBox(width: 7),
-          _BottomButton(
-            label: 'Dispatch Rider',
-            icon: Icons.delivery_dining_outlined,
-            primary: true,
-            onTap: () {
-              provider.updateStatus(
-                OrderStatus.delivered,
-              );
-            },
-          ),
-        ],
-      ),
+      child: narrow
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: quickActions,
+                ),
+                const SizedBox(height: 8),
+                primaryActions,
+              ],
+            )
+          : Row(
+              children: [
+                quickActions,
+                const Spacer(),
+                primaryActions,
+              ],
+            ),
     );
   }
 }

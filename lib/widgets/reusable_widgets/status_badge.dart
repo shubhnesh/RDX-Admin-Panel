@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
-import '../core/theme/app_colors.dart';
-import '../models/order_model.dart';
+import '../../core/theme/app_colors.dart';
+import '../../models/order_model.dart';
 
 class StatusBadge extends StatelessWidget {
   final OrderStatus status;

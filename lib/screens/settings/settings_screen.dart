@@ -5,7 +5,7 @@ import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
-import '../../widgets/rdx_toggle_button.dart'; // adjust path if needed
+import '../../widgets/buttons/rdx_toggle_button.dart'; // adjust path if needed
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -190,7 +190,7 @@ class _SettingsCard extends StatelessWidget {
           border: Border.all(color: colors.border)),
       child: Column(children: [
         Row(children: [
-          Icon(icon, size: context.h(15), color: AppColors.primary),
+          Icon(icon, size: context.h(18), color: AppColors.primary),
           SizedBox(width: context.w(8)),
           Text(title,
               style: AppTextStyles.section(context)

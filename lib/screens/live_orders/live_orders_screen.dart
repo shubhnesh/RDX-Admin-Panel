@@ -7,8 +7,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/order_model.dart';
 import '../../providers/live_orders_provider.dart';
-import '../../widgets/loading_indicator.dart';
-import '../../widgets/rdx_header.dart';
+import '../../widgets/reusable_widgets/loading_indicator.dart';
+import '../../widgets/reusable_widgets/rdx_header.dart';
 
 class LiveOrdersScreen extends StatefulWidget {
   const LiveOrdersScreen({super.key});
@@ -34,8 +34,31 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const RdxHeader(title: 'Live Orders'),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              Responsive.pageHorizontal(context),
+              context.h(16),
+              Responsive.pageHorizontal(context),
+              context.h(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Live Orders',
+                  style: AppTextStyles.heading(context),
+                ),
+                SizedBox(height: context.h(4)),
+                Text(
+                  'Track orders and create orders for customers',
+                  style: AppTextStyles.bodySecondary(context)
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: provider.isLoading
                 ? const LoadingIndicator()
@@ -108,8 +131,33 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final horizontalPadding = context.w(44);
+        final narrow = constraints.maxWidth < 900;
         final sectionGap = context.w(18);
+
+        // On narrow screens: stack sections vertically so the whole board
+        // is scrollable and every column is fully readable.
+        if (narrow) {
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              Responsive.pageHorizontal(context),
+              context.h(12),
+              Responsive.pageHorizontal(context),
+              context.h(24),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (int i = 0; i < sections.length; i++) ...[
+                  if (i > 0) SizedBox(height: context.h(20)),
+                  sections[i],
+                ],
+              ],
+            ),
+          );
+        }
+
+        // Desktop / wide tablet: equal-width columns in a row.
+        final horizontalPadding = context.w(44);
         final sectionWidth = ((constraints.maxWidth -
                     horizontalPadding -
                     sectionGap * (sections.length - 1)) /

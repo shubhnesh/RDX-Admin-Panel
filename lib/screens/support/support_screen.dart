@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
-import '../../widgets/rdx_header.dart';
-import '../../widgets/rdx_text_field.dart';
+import '../../widgets/reusable_widgets/rdx_header.dart';
+import '../../widgets/resuable_options/rdx_text_field.dart';
 
 /// Contact Technical Support — matches the provided design.
 class SupportScreen extends StatefulWidget {
@@ -68,9 +69,8 @@ class _SupportScreenState extends State<SupportScreen> {
                 final content = isNarrow
                     ? ListView(
                         padding:
-                            Responsive.pagePadding(context, top: context.h(20)),
+                            Responsive.pagePadding(context, top: context.h(10)),
                         children: [
-                          _buildIntro(context, colors),
                           SizedBox(height: context.h(20)),
                           _buildCategorySection(context, colors),
                           SizedBox(height: context.h(20)),
@@ -90,7 +90,6 @@ class _SupportScreenState extends State<SupportScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildIntro(context, colors),
                                     SizedBox(height: context.h(20)),
                                     _buildCategorySection(context, colors),
                                     SizedBox(height: context.h(20)),
@@ -123,11 +122,6 @@ class _SupportScreenState extends State<SupportScreen> {
       children: [
         Text(
           'Questions? Our Support team is here. Create tickets or reply to existing problems.',
-          // style: TextStyle(
-          //   color: colors.textSecondary,
-          //   fontSize: context.h(14),
-          //   height: context.h(1.4),
-          // ),
           style: AppTextStyles.bodySecondary(context),
         ),
       ],
@@ -138,14 +132,19 @@ class _SupportScreenState extends State<SupportScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Issue Category',
-          // style: TextStyle(
-          //   color: colors.textPrimary,
-          //   fontSize: context.h(15),
-          //   fontWeight: FontWeight.w600,
-          // ),
-          style: AppTextStyles.section(context),
+        Row(
+          children: [
+            Icon(
+              Icons.category_outlined,
+              size: context.h(18),
+              color: AppColors.primary,
+            ),
+            SizedBox(width: context.w(8)),
+            Text(
+              'Issue Category',
+              style: AppTextStyles.section(context),
+            ),
+          ],
         ),
         SizedBox(height: context.h(12)),
         Wrap(
@@ -220,6 +219,21 @@ class _SupportScreenState extends State<SupportScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Icon(
+                Icons.description_outlined,
+                size: context.h(18),
+                color: AppColors.primary,
+              ),
+              SizedBox(width: context.w(8)),
+              Text(
+                'Describe the Issue',
+                style: AppTextStyles.section(context),
+              ),
+            ],
+          ),
+          SizedBox(height: context.h(16)),
           RdxTextField(
             controller: _subjectController,
             label: 'Subject',
@@ -250,17 +264,9 @@ class _SupportScreenState extends State<SupportScreen> {
                     size: context.h(32), color: colors.textMuted),
                 SizedBox(height: context.h(8)),
                 Text('Drag & drop screenshots or logs',
-                    // style: TextStyle(
-                    //   color: colors.textSecondary,
-                    //   fontSize: context.h(13),
-                    // ),
                     style: AppTextStyles.bodySecondary(context)),
                 SizedBox(height: context.h(4)),
                 Text('PNG, JPG, PDF up to 10 MB',
-                    // style: TextStyle(
-                    //   color: colors.textMuted,
-                    //   fontSize: context.h(11),
-                    // ),
                     style: AppTextStyles.body(context)),
               ],
             ),
@@ -268,21 +274,13 @@ class _SupportScreenState extends State<SupportScreen> {
           SizedBox(height: context.h(20)),
           Align(
             alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
+            child: RdxActionButton(
+              label: _sending ? 'Submitting' : 'Submit Ticket',
               onPressed: _sending ? null : _submit,
-              icon: _sending
-                  ? SizedBox(
-                      width: context.w(16),
-                      height: context.h(16),
-                      child: CircularProgressIndicator(
-                          strokeWidth: context.h(2), color: Colors.white),
-                    )
-                  : Icon(Icons.send_rounded, size: context.h(17)),
-              label: Text(
-                _sending ? 'Submitting…' : 'Submit Ticket',
-                style:
-                    AppTextStyles.label(context).copyWith(color: Colors.white),
-              ),
+              isPrimary: true,
+              isLoading: _sending,
+              leadingIcon: Icons.send_rounded,
+              iconSize: context.h(17),
             ),
           ),
         ],
@@ -303,11 +301,6 @@ class _SupportScreenState extends State<SupportScreen> {
         children: [
           Text(
             'Direct Channels',
-            // style: TextStyle(
-            //   color: colors.textPrimary,
-            //   fontSize: context.h(15),
-            //   fontWeight: FontWeight.w600,
-            // ),
             style: AppTextStyles.section(context),
           ),
           SizedBox(height: context.h(16)),
@@ -315,25 +308,41 @@ class _SupportScreenState extends State<SupportScreen> {
             context,
             colors,
             icon: Icons.email_outlined,
-            title: 'Email Support',
-            subtitle: 'support@rdxadmin.com',
+            title: 'Email Support 1',
+            subtitle: 'kashyapshubhnesh@gmail.com',
+          ),
+          SizedBox(height: context.h(16)),
+          _channelRow(
+            context,
+            colors,
+            icon: Icons.email_outlined,
+            title: 'Email Support 2',
+            subtitle: 'siddhantbisht440@gmail.com',
           ),
           SizedBox(height: context.h(14)),
           _channelRow(
             context,
             colors,
             icon: Icons.phone_outlined,
-            title: 'Phone Hotline',
-            subtitle: '+91 1800-123-4567',
+            title: 'Phone Hotline 1',
+            subtitle: '+91 9528714534',
           ),
           SizedBox(height: context.h(14)),
           _channelRow(
             context,
             colors,
-            icon: Icons.chat_bubble_outline,
-            title: 'Live Chat',
-            subtitle: 'Available 9 AM – 9 PM IST',
+            icon: Icons.phone_outlined,
+            title: 'Phone Hotline 2',
+            subtitle: '+91 8791158024',
           ),
+          // SizedBox(height: context.h(14)),
+          // _channelRow(
+          //   context,
+          //   colors,
+          //   icon: Icons.chat_bubble_outline,
+          //   title: 'Live Chat',
+          //   subtitle: 'Available 9 AM – 9 PM IST',
+          // ),
           SizedBox(height: context.h(20)),
           Container(
             width: double.infinity,
@@ -367,7 +376,7 @@ class _SupportScreenState extends State<SupportScreen> {
                     //   color: colors.textSecondary,
                     //   fontSize: context.h(12),
                     // ),
-                    style: AppTextStyles.body(context)),
+                    style: AppTextStyles.bodySecondary(context)),
               ],
             ),
           ),
@@ -392,7 +401,12 @@ class _SupportScreenState extends State<SupportScreen> {
             color: colors.surfaceVariant,
             borderRadius: BorderRadius.circular(context.h(10)),
           ),
-          child: Icon(icon, size: context.h(20), color: AppColors.primary),
+          alignment: Alignment.center,
+          child: Icon(
+            icon,
+            size: context.h(20),
+            color: AppColors.primary,
+          ),
         ),
         SizedBox(width: context.w(12)),
         Expanded(
@@ -401,21 +415,12 @@ class _SupportScreenState extends State<SupportScreen> {
             children: [
               Text(
                 title,
-                // style: TextStyle(
-                //   color: colors.textPrimary,
-                //   fontSize: context.h(13),
-                //   fontWeight: FontWeight.w600,
-                // ),
                 style: AppTextStyles.bodySecondary(context)
                     .copyWith(color: colors.primary),
               ),
               Text(
                 subtitle,
-                // style: TextStyle(
-                //   color: colors.textSecondary,
-                //   fontSize: context.h(12),
-                // ),
-                style: AppTextStyles.body(context)
+                style: AppTextStyles.bodySecondary(context)
                     .copyWith(color: colors.textPrimary),
               ),
             ],

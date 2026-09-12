@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
-import 'package:rdx_admin/widgets/rdx_text_field.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
+import 'package:rdx_admin/widgets/resuable_options/rdx_text_field.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
 
@@ -114,19 +115,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 48,
-                    child: ElevatedButton(
+                    child: RdxActionButton(
+                      label: _isRegister ? 'Create Account' : 'Sign In',
                       onPressed: auth.isLoading ? null : _submit,
-                      child: auth.isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(
-                              _isRegister ? 'Create Account' : 'Sign In',
-                              style: AppTextStyles.label(context)
-                                  .copyWith(color: Colors.white),
-                            ),
+                      isPrimary: true,
+                      isLoading: auth.isLoading,
                     ),
                   ),
                   const SizedBox(height: 12),

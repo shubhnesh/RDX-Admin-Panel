@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:rdx_admin/screens/coupons/widgets/coupon_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/coupon_model.dart';
 import '../../providers/coupon_provider.dart';
-import '../../widgets/form_action_button.dart';
-import '../../widgets/coupon_card.dart';
-import '../../widgets/rdx_dropdown.dart';
-import '../../widgets/rdx_text_field.dart';
-import '../../widgets/rdx_header.dart';
+import '../../widgets/buttons/rdx_action_button.dart';
+import '../../widgets/resuable_options/rdx_dropdown.dart';
+import '../../widgets/resuable_options/rdx_text_field.dart';
+import '../../widgets/reusable_widgets/rdx_header.dart';
 
 class CreateCouponScreen extends StatefulWidget {
   final CouponModel? existing;
@@ -328,7 +328,9 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                 final form = _formContent(context, colors);
                 final previewCoupon = CouponModel(
                   id: 'draft',
-                  code: codeController.text.trim().toUpperCase(),
+                  code: codeController.text.trim().isEmpty
+                      ? 'ABCD123'
+                      : codeController.text.trim().toUpperCase(),
                   description: descriptionController.text.trim(),
                   discountType: discountType,
                   discountValue: parsedDiscount ?? 0,
@@ -344,9 +346,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                 );
                 final preview = CouponCard(
                   coupon: previewCoupon,
-                  previewStartDate: startDate,
-                  previewEndDate: endDate,
-                  isDraft: true,
+                  onActions: (_) {},
                 );
 
                 // ── Narrow (mobile / tablet) ───────────────────────────────
@@ -363,6 +363,12 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                       children: [
                         form,
                         SizedBox(height: context.h(20)),
+                        Text(
+                          'Preview',
+                          style: AppTextStyles.section(context)
+                              .copyWith(color: colors.textPrimary),
+                        ),
+                        SizedBox(height: context.h(10)),
                         preview,
                         SizedBox(height: context.h(20)),
                         _actionButtons(context),
@@ -400,6 +406,12 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              Text(
+                                'Preview',
+                                style: AppTextStyles.section(context)
+                                    .copyWith(color: colors.textPrimary),
+                              ),
+                              SizedBox(height: context.h(10)),
                               preview,
                               const Spacer(),
                               _actionButtons(context),
@@ -464,26 +476,38 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
               hint: 'Enter coupon description',
             ),
             SizedBox(height: context.h(16)),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _discountTypeDropdown(context, colors)),
-                SizedBox(width: context.w(16)),
-                Expanded(
-                  child: RdxTextField(
-                    controller: discountValueController,
-                    label: 'Discount Value',
-                    hint: discountType == DiscountType.percentage
-                        ? 'Enter Discount Percentage'
-                        : 'Enter Discount Amount',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            LayoutBuilder(builder: (context, c) {
+              final stack = c.maxWidth < 420;
+              final typeField = _discountTypeDropdown(context, colors);
+              final valueField = RdxTextField(
+                controller: discountValueController,
+                label: 'Discount Value',
+                hint: discountType == DiscountType.percentage
+                    ? 'Enter Discount Percentage'
+                    : 'Enter Discount Amount',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+              );
+              if (stack) {
+                return Column(
+                  children: [
+                    typeField,
+                    SizedBox(height: context.h(16)),
+                    valueField,
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: typeField),
+                  SizedBox(width: context.w(16)),
+                  Expanded(child: valueField),
+                ],
+              );
+            }),
           ],
         ),
         SizedBox(height: context.h(20)),
@@ -492,79 +516,99 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
           icon: Icons.rule_folder_outlined,
           title: 'Usage Rules',
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: RdxTextField(
-                    controller: minOrderController,
-                    label: 'Minimum Order Value (₹)',
-                    hint: 'Enter Amount',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                    ],
-                  ),
-                ),
-                SizedBox(width: context.w(16)),
-                Expanded(
-                  child: RdxTextField(
-                    controller: usageLimitController,
-                    label: 'Usage Limit',
-                    hint: 'Enter usage limit of coupon',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            LayoutBuilder(builder: (context, c) {
+              final stack = c.maxWidth < 420;
+              final minField = RdxTextField(
+                controller: minOrderController,
+                label: 'Minimum Order Value (₹)',
+                hint: 'Enter Amount',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+              );
+              final limitField = RdxTextField(
+                controller: usageLimitController,
+                label: 'Usage Limit',
+                hint: 'Enter usage limit of coupon',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+              );
+              if (stack) {
+                return Column(
+                  children: [
+                    minField,
+                    SizedBox(height: context.h(16)),
+                    limitField,
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: minField),
+                  SizedBox(width: context.w(16)),
+                  Expanded(child: limitField),
+                ],
+              );
+            }),
             SizedBox(height: context.h(16)),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Start Date',
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textSecondary),
-                      ),
-                      SizedBox(height: context.h(6)),
-                      _datePickerField(
-                        startDate,
-                        (d) => setState(() {
-                          startDate = d;
-                          if (endDate != null && endDate!.isBefore(d)) {
-                            endDate = null;
-                          }
-                        }),
-                      ),
-                    ],
+            LayoutBuilder(builder: (context, c) {
+              final stack = c.maxWidth < 420;
+              final startCol = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Start Date',
+                    style: AppTextStyles.bodySecondary(context)
+                        .copyWith(color: colors.textSecondary),
                   ),
-                ),
-                SizedBox(width: context.w(16)),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Expiry Date',
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textSecondary),
-                      ),
-                      SizedBox(height: context.h(6)),
-                      _datePickerField(
-                        endDate,
-                        (d) => setState(() => endDate = d),
-                        firstDate: startDate ?? DateTime(2024),
-                      ),
-                    ],
+                  SizedBox(height: context.h(6)),
+                  _datePickerField(
+                    startDate,
+                    (d) => setState(() {
+                      startDate = d;
+                      if (endDate != null && endDate!.isBefore(d)) {
+                        endDate = null;
+                      }
+                    }),
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+              final endCol = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Expiry Date',
+                    style: AppTextStyles.bodySecondary(context)
+                        .copyWith(color: colors.textSecondary),
+                  ),
+                  SizedBox(height: context.h(6)),
+                  _datePickerField(
+                    endDate,
+                    (d) => setState(() => endDate = d),
+                    firstDate: startDate ?? DateTime(2024),
+                  ),
+                ],
+              );
+              if (stack) {
+                return Column(
+                  children: [
+                    startCol,
+                    SizedBox(height: context.h(16)),
+                    endCol,
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: startCol),
+                  SizedBox(width: context.w(16)),
+                  Expanded(child: endCol),
+                ],
+              );
+            }),
           ],
         ),
       ],
@@ -574,7 +618,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   Widget _actionButtons(BuildContext context) => Row(
         children: [
           Expanded(
-            child: FormActionButton.save(
+            child: RdxActionButton.save(
               label: isEdit ? 'Update' : 'Save',
               isLoading: isLoading,
               onPressed: _save,
@@ -582,7 +626,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
           ),
           SizedBox(width: context.w(10)),
           Expanded(
-            child: FormActionButton.discard(
+            child: RdxActionButton.discard(
               onPressed: isLoading ? null : () => Navigator.of(context).pop(),
             ),
           ),
@@ -739,157 +783,3 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     });
   }
 }
-
-/*
-class _LivePreviewCard extends StatelessWidget {
-  final String code;
-  final DiscountType discountType;
-  final double? discountValue;
-  final double? minOrder;
-  final bool isActive;
-
-  const _LivePreviewCard({
-    required this.code,
-    required this.discountType,
-    required this.discountValue,
-    required this.minOrder,
-    required this.isActive,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-
-    // Always show a concrete value (0 when empty)
-    final displayValue = discountValue ?? 0;
-    final discountText = discountType == DiscountType.percentage
-        ? '${displayValue.toStringAsFixed(0)}%'
-        : Formatters.currency(displayValue);
-
-    return Container(
-      padding: EdgeInsets.all(context.h(20)),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(context.h(14)),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.visibility_outlined,
-                size: context.h(16),
-                color: colors.textSecondary,
-              ),
-              SizedBox(width: context.w(6)),
-              Text(
-                'Preview',
-                style: AppTextStyles.section(context),
-              ),
-            ],
-          ),
-          SizedBox(height: context.h(16)),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(context.h(18)),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryDark],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(context.h(14)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: context.w(8),
-                        vertical: context.h(3),
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(context.h(20)),
-                      ),
-                      child: Text(
-                        isActive ? 'ACTIVE' : 'SCHEDULED',
-                        style: AppTextStyles.label(context)
-                            .copyWith(color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: context.h(14)),
-                Text(
-                  discountText,
-                  style: AppTextStyles.heading(context).copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: context.h(4)),
-                Text(
-                  'Off your next order',
-                  style: AppTextStyles.bodySecondary(context).copyWith(
-                    color: Colors.white70,
-                  ),
-                ),
-                SizedBox(height: context.h(16)),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: context.h(10)),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(context.h(8)),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      code, // "CODE" when empty, otherwise the entered code
-                      style: AppTextStyles.section(context)
-                          .copyWith(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: context.h(16)),
-          Container(
-            padding: EdgeInsets.all(context.h(12)),
-            decoration: BoxDecoration(
-              color: colors.surfaceVariant,
-              borderRadius: BorderRadius.circular(context.h(10)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  size: context.h(15),
-                  color: colors.textMuted,
-                ),
-                SizedBox(width: context.w(8)),
-                Expanded(
-                  child: Text(
-                    minOrder != null && minOrder! > 0
-                        ? 'This preview shows how the coupon will appear to end-users. Minimum order: ${Formatters.currency(minOrder!)}.'
-                        : 'This preview shows how the coupon will appear to end-users in the RDX delivery app.',
-                    style: AppTextStyles.label(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-*/

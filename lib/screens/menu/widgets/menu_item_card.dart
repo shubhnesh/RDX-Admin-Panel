@@ -3,20 +3,24 @@ import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/menu_item_model.dart';
-import 'package:rdx_admin/widgets/rdx_toggle_button.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_toggle_button.dart';
 
 class MenuItemCard extends StatelessWidget {
   final MenuItemModel item;
   final VoidCallback onToggleAvailability;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final void Function(BuildContext buttonContext) onActions;
+  final bool categorySelected;
+  final bool dietarySelected;
+  final bool hasTags;
 
   const MenuItemCard({
     super.key,
     required this.item,
     required this.onToggleAvailability,
-    required this.onEdit,
-    required this.onDelete,
+    required this.onActions,
+    this.categorySelected = true,
+    this.dietarySelected = true,
+    this.hasTags = true,
   });
 
   @override
@@ -27,13 +31,13 @@ class MenuItemCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(context.h(10)),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: context.h(10),
-            offset: Offset(0, context.h(3)),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -41,13 +45,13 @@ class MenuItemCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Image ──────────────────────────────────────────────
+          // ── Image (flexible but capped via aspect ratio) ───────
           AspectRatio(
-            aspectRatio: 1.45,
+            aspectRatio: 1.55,
             child: Padding(
-              padding: EdgeInsets.all(context.h(6)),
+              padding: const EdgeInsets.all(6),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(context.h(8)),
+                borderRadius: BorderRadius.circular(8),
                 child: Stack(
                   children: [
                     Positioned.fill(
@@ -57,7 +61,7 @@ class MenuItemCard extends StatelessWidget {
                               child: Icon(
                                 Icons.restaurant_outlined,
                                 color: colors.textMuted,
-                                size: context.h(34),
+                                size: 32,
                               ),
                             )
                           : Image.network(
@@ -68,15 +72,15 @@ class MenuItemCard extends StatelessWidget {
                                 child: Icon(
                                   Icons.restaurant_outlined,
                                   color: colors.textMuted,
-                                  size: context.h(34),
+                                  size: 32,
                                 ),
                               ),
                             ),
                     ),
                     if (item.featuredItem)
                       Positioned(
-                        left: context.w(10),
-                        top: context.h(10),
+                        left: 8,
+                        top: 8,
                         child: _cardBadge(
                           context,
                           'Featured',
@@ -84,104 +88,96 @@ class MenuItemCard extends StatelessWidget {
                           Colors.white,
                         ),
                       ),
-                    Positioned(
-                      right: context.w(10),
-                      bottom: context.h(10),
-                      child: _dietaryBadge(context, item),
-                    ),
+                    if (dietarySelected)
+                      Positioned(
+                        right: 8,
+                        bottom: 8,
+                        child: _dietaryBadge(context, item),
+                      ),
                   ],
                 ),
               ),
             ),
           ),
 
-          // ── Flexible content ───────────────────────────────────
+          // ── Content ─────────────────────────────────────────
           Expanded(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                context.w(12),
-                context.h(6),
-                context.w(12),
-                0,
-              ),
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    item.category,
+                    categorySelected ? item.category : 'Category',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.bodyTertiary(context)
-                        .copyWith(color: AppColors.primary),
+                        .copyWith(color: AppColors.primary, fontSize: 11),
                   ),
-                  SizedBox(height: context.h(3)),
+                  const SizedBox(height: 2),
                   Text(
                     item.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.section(context)
-                        .copyWith(color: colors.textPrimary),
+                        .copyWith(color: colors.textPrimary, fontSize: 14),
                   ),
-                  SizedBox(height: context.h(3)),
                   if (item.ingredients.isNotEmpty) ...[
+                    const SizedBox(height: 2),
                     Text(
                       item.ingredients.join(', '),
-                      style: AppTextStyles.bodyTertiary(context),
+                      style: AppTextStyles.bodyTertiary(context)
+                          .copyWith(fontSize: 11),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: context.h(3)),
                   ],
-                  SizedBox(height: context.h(8)),
-                  SizedBox(
-                    height: context.h(28),
-                    child: ClipRect(
-                      child: Wrap(
-                        spacing: context.w(5),
-                        runSpacing: context.h(5),
-                        children: [
-                          _detailChip(
-                            context,
-                            _titleCase(preparation),
-                            colors.textSecondary,
-                          ),
-                          for (final tag in item.tags
-                              .where((tag) => tag.toLowerCase() != 'featured')
-                              .take(item.featuredItem ? 3 : 4))
-                            _detailChip(
-                              context,
-                              _titleCase(tag),
-                              colors.textSecondary,
-                            ),
-                        ],
-                      ),
+                  const SizedBox(height: 6),
+                  ClipRect(
+                    child: Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: hasTags
+                          ? [
+                              _detailChip(
+                                context,
+                                _titleCase(preparation),
+                                colors.textSecondary,
+                              ),
+                              for (final tag in item.tags
+                                  .where((tag) => tag.toLowerCase() != 'featured')
+                                  .take(item.featuredItem ? 2 : 3))
+                                _detailChip(
+                                  context,
+                                  _titleCase(tag),
+                                  colors.textSecondary,
+                                ),
+                            ]
+                          : [_detailChip(context, 'Tags', colors.textSecondary)],
                     ),
                   ),
-                  SizedBox(height: context.h(10)),
+                  const SizedBox(height: 6),
                   Text(
                     '₹${item.price.toStringAsFixed(2)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.section(context)
-                        .copyWith(color: colors.primary),
+                        .copyWith(color: colors.primary, fontSize: 14),
                   ),
-                  const Spacer(), // pushes bottom section down
                 ],
               ),
             ),
           ),
 
-          // ── Fixed bottom section ───────────────────────────────
+          // ── Fixed bottom (compact) ─────────────────────────────
           Padding(
-            padding: EdgeInsets.fromLTRB(
-              context.w(12),
-              0,
-              context.w(12),
-              context.h(12),
-            ),
+            padding: const EdgeInsets.fromLTRB(10, 6, 6, 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Divider(height: context.h(1), color: colors.divider),
-                SizedBox(height: context.h(6)),
+                Divider(height: 1, color: colors.divider),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     RdxToggleButton(
@@ -189,42 +185,36 @@ class MenuItemCard extends StatelessWidget {
                       activeColor: AppColors.primary,
                       onChanged: (_) => onToggleAvailability(),
                     ),
-                    SizedBox(width: context.w(5)),
-                    Text(
-                      item.available ? 'Available' : 'Sold Out',
-                      style: AppTextStyles.bodyTertiary(context).copyWith(
-                        color: item.available
-                            ? AppColors.success
-                            : colors.textMuted,
-                      ),
-                    ),
-                    const Spacer(),
-                    InkWell(
-                      onTap: onEdit,
-                      borderRadius: BorderRadius.circular(context.h(6)),
-                      child: Padding(
-                        padding: EdgeInsets.all(context.h(5)),
-                        child: Icon(
-                          Icons.edit_outlined,
-                          size: context.h(20),
-                          color: colors.textSecondary,
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        item.available ? 'Available' : 'Sold Out',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodyTertiary(context).copyWith(
+                          color: item.available
+                              ? AppColors.success
+                              : colors.textMuted,
+                          fontSize: 11,
                         ),
                       ),
                     ),
-                    // Optional: uncomment if you want delete button visible
-                    // SizedBox(width: context.w(4)),
-                    // InkWell(
-                    //   onTap: onDelete,
-                    //   borderRadius: BorderRadius.circular(context.h(6)),
-                    //   child: Padding(
-                    //     padding: EdgeInsets.all(context.h(5)),
-                    //     child: Icon(
-                    //       Icons.delete_outline,
-                    //       size: context.h(20),
-                    //       color: colors.textSecondary,
-                    //     ),
-                    //   ),
-                    // ),
+                    Builder(
+                      builder: (buttonContext) {
+                        return InkWell(
+                          onTap: () => onActions(buttonContext),
+                          borderRadius: BorderRadius.circular(6),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.more_vert_rounded,
+                              size: 18,
+                              color: Color(0xFF5D687A),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ],
@@ -249,7 +239,7 @@ class MenuItemCard extends StatelessWidget {
         vertical: context.h(2),
       ),
       decoration: BoxDecoration(
-        color: background.withValues(alpha: 0.7),
+        color: background,
         borderRadius: BorderRadius.circular(context.h(5)),
       ),
       child: Text(

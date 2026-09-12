@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
-import 'package:rdx_admin/widgets/rdx_header.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../models/inventory_item_model.dart';
 import '../../providers/inventory_provider.dart';
-import '../../widgets/form_action_button.dart';
-import '../../widgets/rdx_text_field.dart';
-import '../../widgets/rdx_dropdown.dart';
-import '../../widgets/app_back_button.dart';
+import '../../widgets/buttons/rdx_action_button.dart';
+import '../../widgets/resuable_options/rdx_text_field.dart';
+import '../../widgets/resuable_options/rdx_dropdown.dart';
 
 class AddMaterialScreen extends StatefulWidget {
   final InventoryItemModel? existing;
@@ -135,6 +134,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final isNarrow = MediaQuery.sizeOf(context).width < 900;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -147,11 +147,11 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                 'Create a new raw ingredient or packaging item in your inventory catalog.',
             showBackButton: true,
             actions: [
-              FormActionButton.discard(
+              RdxActionButton.discard(
                 onPressed: () => Navigator.of(context).pop(),
               ),
               SizedBox(width: context.w(10)),
-              FormActionButton.save(
+              RdxActionButton.save(
                 label: 'Save',
                 onPressed: _save,
                 isLoading: _saving,
@@ -160,280 +160,281 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: Responsive.pagePadding(context, top: 16, bottom: 32),
+              padding: Responsive.pagePadding(
+                context,
+                top: context.h(16),
+                bottom: context.h(32),
+              ),
               child: Form(
                 key: _formKey,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: isNarrow
+                    ? Column(
+                        children: [
+                          _basicInfoSection(context, colors),
+                          SizedBox(height: context.h(16)),
+                          _stockTrackingSection(context, colors),
+                        ],
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _basicInfoSection(context, colors),
+                          ),
+                          SizedBox(width: context.w(20)),
+                          Expanded(
+                            child: _stockTrackingSection(context, colors),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _basicInfoSection(BuildContext context, AppColorScheme colors) {
+    return _SectionCard(
+      title: 'Basic Information & Category',
+      sectionLabel: 'SECTION 1',
+      icon: Icons.badge_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RdxTextField(
+            controller: _nameCtrl,
+            label: 'MATERIAL NAME *',
+            hint: 'e.g., San Marzano Whole Peeled Tomatoes',
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Required' : null,
+          ),
+          Text(
+            'Enter descriptive name recognized by kitchen & receiving staff',
+            style:
+                AppTextStyles.body(context).copyWith(color: colors.textMuted),
+          ),
+          SizedBox(height: context.h(16)),
+          LayoutBuilder(builder: (context, c) {
+            final stack = c.maxWidth < 400;
+            final cat = RdxDropdown<String>(
+              label: 'CATEGORY *',
+              value: _category,
+              items: _categories,
+              labelBuilder: (s) => s,
+              onChanged: (v) {
+                if (v != null) setState(() => _category = v);
+              },
+            );
+            final unit = RdxDropdown<String>(
+              label: 'UNIT OF MEASUREMENT *',
+              value: _unit,
+              items: _units,
+              labelBuilder: (s) => s,
+              onChanged: (v) {
+                if (v != null) setState(() => _unit = v);
+              },
+            );
+            if (stack) {
+              return Column(children: [
+                cat,
+                SizedBox(height: context.h(12)),
+                unit,
+              ]);
+            }
+            return Row(children: [
+              Expanded(child: cat),
+              SizedBox(width: context.w(12)),
+              Expanded(child: unit),
+            ]);
+          }),
+          SizedBox(height: context.h(16)),
+          RdxTextField(
+            controller: _costCtrl,
+            label: 'UNIT COST (\$) *',
+            hint: '0.00',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+            ],
+            validator: (v) {
+              if (v == null || v.isEmpty) return 'Required';
+              if (double.tryParse(v) == null) return 'Invalid number';
+              return null;
+            },
+          ),
+          Text(
+            'Direct cost per unit',
+            style:
+                AppTextStyles.body(context).copyWith(color: colors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stockTrackingSection(BuildContext context, AppColorScheme colors) {
+    return _SectionCard(
+      title: 'Stock Tracking & Thresholds',
+      sectionLabel: 'SECTION 2',
+      icon: Icons.bar_chart_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(builder: (context, c) {
+            final stack = c.maxWidth < 400;
+            final qty = RdxTextField(
+              controller: _qtyCtrl,
+              label: 'CURRENT IN-STOCK QUANTITY',
+              hint: 'e.g., 25.0',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+              ],
+              onChanged: (_) => setState(() {}),
+            );
+            final maxf = RdxTextField(
+              controller: _maxCtrl,
+              label: 'TOTAL STORAGE CAPACITY',
+              hint: 'e.g., 50.0',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+              ],
+              onChanged: (_) => setState(() {}),
+            );
+            if (stack) {
+              return Column(children: [
+                qty,
+                SizedBox(height: context.h(12)),
+                maxf,
+              ]);
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: qty),
+                SizedBox(width: context.w(12)),
+                Expanded(child: maxf),
+              ],
+            );
+          }),
+          SizedBox(height: context.h(16)),
+          RdxTextField(
+            controller: _minCtrl,
+            label: 'MIN. REQUIRED LEVEL',
+            hint: 'e.g., 10.0',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+            ],
+            onChanged: (_) => setState(() {}),
+          ),
+          SizedBox(height: context.h(6)),
+          Text(
+            'Restock alert triggers when stock falls below this amount — no confusing PAR terminology',
+            style:
+                AppTextStyles.body(context).copyWith(color: colors.textMuted),
+          ),
+          SizedBox(height: context.h(20)),
+          // Live preview
+          Container(
+            padding: EdgeInsets.all(context.h(14)),
+            decoration: BoxDecoration(
+              color: colors.surfaceVariant,
+              borderRadius: BorderRadius.circular(context.h(10)),
+              border: Border.all(color: colors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    // Section 1 – Basic info
-                    Expanded(
-                      child: _SectionCard(
-                        title: 'Basic Information & Category',
-                        sectionLabel: 'SECTION 1',
-                        icon: Icons.badge_outlined,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            RdxTextField(
-                              controller: _nameCtrl,
-                              label: 'MATERIAL NAME *',
-                              hint: 'e.g., San Marzano Whole Peeled Tomatoes',
-                              validator: (v) => (v == null || v.trim().isEmpty)
-                                  ? 'Required'
-                                  : null,
-                            ),
-                            // SizedBox(height: context.h(0.5)),
-                            Text(
-                              'Enter descriptive name recognized by kitchen & receiving staff',
-                              style: AppTextStyles.body(context)
-                                  .copyWith(color: colors.textMuted),
-                            ),
-                            SizedBox(height: context.h(16)),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: RdxDropdown<String>(
-                                    label: 'CATEGORY *',
-                                    value: _category,
-                                    items: _categories,
-                                    labelBuilder: (s) => s,
-                                    onChanged: (v) {
-                                      if (v != null) {
-                                        setState(() => _category = v);
-                                      }
-                                    },
-                                  ),
-                                ),
-                                SizedBox(width: context.w(12)),
-                                Expanded(
-                                  child: RdxDropdown<String>(
-                                    label: 'UNIT OF MEASUREMENT *',
-                                    value: _unit,
-                                    items: _units,
-                                    labelBuilder: (s) => s,
-                                    onChanged: (v) {
-                                      if (v != null) setState(() => _unit = v);
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: context.h(16)),
-                            RdxTextField(
-                              controller: _costCtrl,
-                              label: 'UNIT COST (\$) *',
-                              hint: '0.00',
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(
-                                    RegExp(r'[\d.]')),
-                              ],
-                              validator: (v) {
-                                if (v == null || v.isEmpty) return 'Required';
-                                if (double.tryParse(v) == null) {
-                                  return 'Invalid number';
-                                }
-                                return null;
-                              },
-                            ),
-                            // SizedBox(height: context.h(6)),
-                            Text(
-                              'Direct cost per unit',
-                              style: AppTextStyles.body(context)
-                                  .copyWith(color: colors.textMuted),
-                            ),
-                          ],
-                        ),
+                    Text(
+                      'LIVE STOCK PREVIEW',
+                      style: AppTextStyles.bodySecondary(context).copyWith(
+                        color: colors.textMuted,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                    SizedBox(width: context.w(20)),
-                    // Section 2 – Stock tracking
-                    Expanded(
-                      child: _SectionCard(
-                        title: 'Stock Tracking & Thresholds',
-                        sectionLabel: 'SECTION 2',
-                        icon: Icons.bar_chart_rounded,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: RdxTextField(
-                                    controller: _qtyCtrl,
-                                    label: 'CURRENT IN-STOCK QUANTITY',
-                                    hint: 'e.g., 25.0',
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                            decimal: true),
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.allow(
-                                          RegExp(r'[\d.]')),
-                                    ],
-                                    onChanged: (_) => setState(() {}),
-                                  ),
-                                ),
-                                SizedBox(width: context.w(12)),
-                                Expanded(
-                                  child: RdxTextField(
-                                    controller: _maxCtrl,
-                                    label: 'TOTAL STORAGE CAPACITY',
-                                    hint: 'e.g., 50.0',
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                            decimal: true),
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.allow(
-                                          RegExp(r'[\d.]')),
-                                    ],
-                                    onChanged: (_) => setState(() {}),
-                                  ),
-                                ),
-                              ],
+                    const Spacer(),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.w(8),
+                        vertical: context.h(3),
+                      ),
+                      decoration: BoxDecoration(
+                        color: _statusColor(_previewStatus)
+                            .withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _StatusDot(status: _previewStatus),
+                          SizedBox(width: context.w(5)),
+                          Text(
+                            _statusLabel(_previewStatus),
+                            style: AppTextStyles.label(context).copyWith(
+                              color: _statusColor(_previewStatus),
+                              letterSpacing: 0.5,
                             ),
-                            SizedBox(height: context.h(16)),
-                            RdxTextField(
-                              controller: _minCtrl,
-                              label: 'MIN. REQUIRED LEVEL',
-                              hint: 'e.g., 10.0',
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(
-                                    RegExp(r'[\d.]')),
-                              ],
-                              onChanged: (_) => setState(() {}),
-                            ),
-                            SizedBox(height: context.h(6)),
-                            Text(
-                              'Restock alert triggers when stock falls below this amount — no confusing PAR terminology',
-                              style: AppTextStyles.body(context)
-                                  .copyWith(color: colors.textMuted),
-                            ),
-                            SizedBox(height: context.h(20)),
-                            // Live preview
-                            Container(
-                              padding: EdgeInsets.all(context.h(14)),
-                              decoration: BoxDecoration(
-                                color: colors.surfaceVariant,
-                                borderRadius:
-                                    BorderRadius.circular(context.h(10)),
-                                border: Border.all(color: colors.border),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'LIVE STOCK PREVIEW',
-                                        style:
-                                            AppTextStyles.bodySecondary(context)
-                                                .copyWith(
-                                          color: colors.textMuted,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: context.w(8),
-                                            vertical: context.h(3)),
-                                        decoration: BoxDecoration(
-                                          color: _statusColor(_previewStatus)
-                                              .withValues(alpha: 0.14),
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            _StatusDot(status: _previewStatus),
-                                            SizedBox(width: context.w(5)),
-                                            Text(
-                                              _statusLabel(_previewStatus),
-                                              // style: TextStyle(
-                                              //   color: _statusColor(
-                                              //       _previewStatus),
-                                              //   fontSize: context.h(10),
-                                              //   fontWeight: FontWeight.w700,
-                                              // ),
-                                              style:
-                                                  AppTextStyles.label(context)
-                                                      .copyWith(
-                                                color: _statusColor(
-                                                    _previewStatus),
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: context.h(10)),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'Initial Stock: ${_previewMax > 0 ? ((_previewQty / _previewMax) * 100).toStringAsFixed(0) : 0}%',
-                                        style: AppTextStyles.body(context)
-                                            .copyWith(
-                                                fontWeight: FontWeight.w600),
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        '${_previewQty.toStringAsFixed(1)} / ${_previewMax.toStringAsFixed(1)} $_unit',
-                                        style: AppTextStyles.body(context)
-                                            .copyWith(color: colors.textMuted),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: context.h(8)),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value: _previewMax > 0
-                                          ? (_previewQty / _previewMax)
-                                              .clamp(0.0, 1.0)
-                                          : 0,
-                                      minHeight: 8,
-                                      backgroundColor: colors.border,
-                                      valueColor: AlwaysStoppedAnimation(
-                                          _statusColor(_previewStatus)),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: context.h(12)),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.info_outline,
-                                    size: 14, color: colors.textMuted),
-                                SizedBox(width: context.w(8)),
-                                Expanded(
-                                  child: Text(
-                                    'Status badges (In Stock / Low Stock / Critical) are calculated automatically based on your minimum required level.',
-                                    style: AppTextStyles.body(context)
-                                        .copyWith(color: colors.textMuted),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
+                SizedBox(height: context.h(10)),
+                Row(
+                  children: [
+                    Text(
+                      'Initial Stock: ${_previewMax > 0 ? ((_previewQty / _previewMax) * 100).toStringAsFixed(0) : 0}%',
+                      style: AppTextStyles.body(context)
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_previewQty.toStringAsFixed(1)} / ${_previewMax.toStringAsFixed(1)} $_unit',
+                      style: AppTextStyles.body(context)
+                          .copyWith(color: colors.textMuted),
+                    ),
+                  ],
+                ),
+                SizedBox(height: context.h(8)),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: _previewMax > 0
+                        ? (_previewQty / _previewMax).clamp(0.0, 1.0)
+                        : 0,
+                    minHeight: 8,
+                    backgroundColor: colors.border,
+                    valueColor:
+                        AlwaysStoppedAnimation(_statusColor(_previewStatus)),
+                  ),
+                ),
+              ],
             ),
+          ),
+          SizedBox(height: context.h(12)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline,
+                  size: context.h(14), color: colors.textMuted),
+              SizedBox(width: context.w(8)),
+              Expanded(
+                child: Text(
+                  'Status badges (In Stock / Low Stock / Critical) are calculated automatically based on your minimum required level.',
+                  style: AppTextStyles.body(context)
+                      .copyWith(color: colors.textMuted),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -495,21 +496,18 @@ class _SectionCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: EdgeInsets.all(context.h(6)),
-                decoration: BoxDecoration(
-                  color: colors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(context.h(6)),
-                ),
-                child: Icon(icon, size: 16, color: AppColors.primary),
-              ),
-              SizedBox(width: context.w(10)),
+              Icon(icon, size: context.h(18), color: AppColors.primary),
+              SizedBox(width: context.w(8)),
               Expanded(
                 child: Text(title, style: AppTextStyles.section(context)),
               ),
-              Text(sectionLabel,
-                  style: AppTextStyles.label(context)
-                      .copyWith(color: colors.textMuted, letterSpacing: 0.8)),
+              Text(
+                sectionLabel,
+                style: AppTextStyles.label(context).copyWith(
+                  color: colors.textMuted,
+                  letterSpacing: 0.8,
+                ),
+              ),
             ],
           ),
           SizedBox(height: context.h(16)),
@@ -538,8 +536,8 @@ class _StatusDot extends StatelessWidget {
         c = AppColors.danger;
     }
     return Container(
-      width: 6,
-      height: 6,
+      width: context.w(6),
+      height: context.h(6),
       decoration: BoxDecoration(color: c, shape: BoxShape.circle),
     );
   }

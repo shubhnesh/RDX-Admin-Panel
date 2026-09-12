@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
-import 'package:rdx_admin/widgets/form_action_button.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../models/inventory_item_model.dart';
@@ -161,8 +161,8 @@ class DeleteMaterialDialog extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  FormActionButton(
-                    label: 'CANCEL',
+                  RdxActionButton(
+                    label: 'Cancel',
                     onPressed: () => Navigator.of(context).pop(false),
                     // isPrimary: false,
                     // leadingIcon: Icons.delete_outline,
@@ -182,8 +182,8 @@ class DeleteMaterialDialog extends StatelessWidget {
                   //   child: const Text('CANCEL'),
                   // ),
                   SizedBox(width: context.w(10)),
-                  FormActionButton(
-                    label: 'DELETE MATERIAL',
+                  RdxActionButton(
+                    label: 'Delete Material',
                     onPressed: () => Navigator.of(context).pop(true),
                     leadingIcon: Icons.delete,
                     iconSize: 18,
@@ -191,15 +191,6 @@ class DeleteMaterialDialog extends StatelessWidget {
                     textColor: Colors.white,
                     iconColor: Colors.white,
                   ),
-                  // ElevatedButton.icon(
-                  //   onPressed: () => Navigator.of(context).pop(true),
-                  //   style: ElevatedButton.styleFrom(
-                  //     backgroundColor: AppColors.danger,
-                  //     foregroundColor: Colors.white,
-                  //   ),
-                  //   icon: const Icon(Icons.delete_outline, size: 18),
-                  //   label: const Text('DELETE MATERIAL'),
-                  // ),
                 ],
               ),
             ],

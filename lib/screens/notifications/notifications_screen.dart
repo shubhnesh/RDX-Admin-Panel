@@ -1,43 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
-import 'package:rdx_admin/widgets/stat_card.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/stat_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/notification_provider.dart';
-import '../../widgets/loading_indicator.dart';
-import '../../widgets/rdx_text_field.dart';
+import '../../widgets/reusable_widgets/loading_indicator.dart';
+import '../../widgets/resuable_options/rdx_text_field.dart';
 import 'notification_history_screen.dart';
-
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
-
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
-
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
     Future.microtask(() => context.read<NotificationProvider>().load());
   }
-
   @override
   void dispose() {
     _titleController.dispose();
     _messageController.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<NotificationProvider>();
     final colors = AppColors.of(context);
-
     return Scaffold(
       backgroundColor: colors.background,
       body: provider.isLoading && provider.history.isEmpty
@@ -47,7 +41,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 final width = constraints.maxWidth;
                 final isMobile = width < 700;
                 final isTablet = width >= 700 && width < 1050;
-
                 return RefreshIndicator(
                   color: AppColors.primary,
                   backgroundColor: colors.surface,
@@ -80,11 +73,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
     );
   }
-
   // ============================================================
   // PAGE HEADER
   // ============================================================
-
   Widget _buildPageHeader(AppColorScheme colors, {required bool isMobile}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -121,35 +112,33 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ),
         ),
-        if (!isMobile) ...[
-          SizedBox(width: context.w(20)),
-          OutlinedButton.icon(
-            onPressed: _openHistory,
-            icon: Icon(Icons.history_outlined, size: context.h(16)),
-            label: Text(
-              'Notification History',
-              style: AppTextStyles.bodySecondary(context)
-                  .copyWith(color: colors.textPrimary),
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: colors.textPrimary,
-              side: BorderSide(color: colors.border),
-              minimumSize: Size(0, context.h(40)),
-              padding: EdgeInsets.symmetric(horizontal: context.w(14)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(context.h(8)),
-              ),
-            ),
-          ),
-        ],
+        // if (!isMobile) ...[
+        //   SizedBox(width: context.w(20)),
+        //   OutlinedButton.icon(
+        //     onPressed: _openHistory,
+        //     icon: Icon(Icons.history_outlined, size: context.h(16)),
+        //     label: Text(
+        //       'Notification History',
+        //       style: AppTextStyles.bodySecondary(context)
+        //           .copyWith(color: colors.textPrimary),
+        //     ),
+        //     style: OutlinedButton.styleFrom(
+        //       foregroundColor: colors.textPrimary,
+        //       side: BorderSide(color: colors.border),
+        //       minimumSize: Size(0, context.h(40)),
+        //       padding: EdgeInsets.symmetric(horizontal: context.w(14)),
+        //       shape: RoundedRectangleBorder(
+        //         borderRadius: BorderRadius.circular(context.h(8)),
+        //       ),
+        //     ),
+        //   ),
+        // ],
       ],
     );
   }
-
   // ============================================================
   // STATS
   // ============================================================
-
   Widget _buildStats(
     NotificationProvider provider,
     AppColorScheme colors, {
@@ -161,7 +150,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
     final totalBroadcasts = provider.history.length;
     final scheduled = provider.history.where((item) => item.scheduled).length;
-
     final cards = [
       StatCard(
         label: 'TOTAL RECIPIENTS',
@@ -185,7 +173,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         accentColor: AppColors.warning,
       ),
     ];
-
     if (isMobile) {
       return Column(
         children: [
@@ -196,7 +183,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       );
     }
-
     return Row(
       children: [
         for (int i = 0; i < cards.length; i++) ...[
@@ -208,7 +194,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ],
     );
   }
-
   // Widget _buildStatCard(_NotificationStat stat, AppColorScheme colors) {
   //   return Container(
   //     constraints: BoxConstraints(minHeight: context.h(102)),
@@ -258,11 +243,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   //     ),
   //   );
   // }
-
   // ============================================================
   // MAIN CONTENT
   // ============================================================
-
   Widget _buildMainContent(
     NotificationProvider provider,
     AppColorScheme colors, {
@@ -276,11 +259,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       isTablet: isTablet,
     );
   }
-
   // ============================================================
   // COMPOSE
   // ============================================================
-
   Widget _buildComposeCard(
     NotificationProvider provider,
     AppColorScheme colors, {
@@ -303,23 +284,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Compose Notification header (inside _buildComposeCard) ──
           Row(
             children: [
-              Container(
-                width: context.w(34),
-                height: context.h(34),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(context.h(9)),
-                ),
-                child: Icon(
-                  Icons.edit_outlined,
-                  size: context.h(18),
-                  color: AppColors.primary,
-                ),
+              Icon(
+                Icons.edit_outlined,
+                size: context.h(18),
+                color: AppColors.primary,
               ),
-              SizedBox(width: context.w(10)),
+              SizedBox(width: context.w(8)),
               Text('Compose Notification',
                   style: AppTextStyles.section(context)),
             ],
@@ -327,34 +300,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           SizedBox(height: context.h(23)),
           RdxTextField(
             controller: _titleController,
-            label: 'NOTIFICATION TITLE',
-            hint: 'e.g. System Update',
+            label: 'Notification Title',
+            hint: 'Write a title for your notification',
             maxLines: 1,
           ),
           SizedBox(height: context.h(19)),
-          Row(
-            children: [
-              Expanded(child: _fieldLabel(colors, 'MESSAGE CONTENT')),
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _messageController,
-                builder: (_, value, __) {
-                  return Text(
-                    '${value.text.length}/500',
-                    style: AppTextStyles.body(context),
-                  );
-                },
-              ),
-            ],
-          ),
+          _fieldLabel(colors, 'Message Content'),
           SizedBox(height: context.h(8)),
           RdxTextField(
             controller: _messageController,
-            hint: 'Type your message here...',
+            hint: 'Type your message here',
             maxLines: isMobile ? 7 : 8,
             maxLength: 500,
+            counterText: '${_messageController.text.length}/500',
+            onChanged: (_) => setState(() {}),
           ),
           SizedBox(height: context.h(21)),
-          _buildActionButtons(provider, colors, vertical: isMobile),
+          _buildActionButtons(provider, colors, vertical: false),
           if (provider.errorMessage != null) ...[
             SizedBox(height: context.h(14)),
             _buildError(provider.errorMessage!, colors),
@@ -363,74 +325,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
-
   // ============================================================
   // ACTION BUTTONS (right-aligned, not expanded)
   // ============================================================
-
   Widget _buildActionButtons(
     NotificationProvider provider,
     AppColorScheme colors, {
     required bool vertical,
   }) {
-    final scheduleButton = OutlinedButton.icon(
+    final scheduleButton = RdxActionButton(
+      label: 'Schedule',
       onPressed: provider.isLoading
           ? null
           : () => _showScheduleDialog(provider, colors),
-      icon: Icon(Icons.calendar_month_outlined, size: context.h(17)),
-      label: Text(
-        'Schedule',
-        style: AppTextStyles.label(context).copyWith(color: colors.textPrimary),
-      ),
-      style: OutlinedButton.styleFrom(
-        minimumSize: Size(0, context.h(46)),
-        padding: EdgeInsets.symmetric(horizontal: context.w(20)),
-        foregroundColor: colors.textPrimary,
-        side: BorderSide(color: colors.border),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(context.h(8)),
-        ),
-      ),
+      isPrimary: false,
+      leadingIcon: Icons.calendar_month_outlined,
+      iconSize: context.h(17),
     );
-
-    final sendButton = ElevatedButton.icon(
+    final sendButton = RdxActionButton(
+      label: 'Send Now',
       onPressed: provider.isLoading ? null : () => _sendNow(provider),
-      icon: provider.isLoading
-          ? SizedBox(
-              width: context.w(15),
-              height: context.h(15),
-              child: const CircularProgressIndicator(
-                strokeWidth: 1.8,
-                color: Colors.white,
-              ),
-            )
-          : Icon(Icons.send_outlined, size: context.h(17)),
-      label: Text(
-        'Send Now',
-        style: AppTextStyles.label(context).copyWith(color: Colors.white),
-      ),
-      style: ElevatedButton.styleFrom(
-        minimumSize: Size(0, context.h(46)),
-        padding: EdgeInsets.symmetric(horizontal: context.w(22)),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(context.h(8)),
-        ),
-      ),
+      isPrimary: true,
+      isLoading: provider.isLoading,
+      leadingIcon: Icons.send_outlined,
+      iconSize: context.h(17),
     );
-
-    if (vertical) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          scheduleButton,
-          SizedBox(height: context.h(10)),
-          sendButton,
-        ],
-      );
-    }
-
+    // Always keep Schedule + Send Now on the same row (right-aligned).
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -440,11 +360,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ],
     );
   }
-
   // ============================================================
   // SCHEDULE DIALOG
   // ============================================================
-
   Future<void> _showScheduleDialog(
     NotificationProvider provider,
     AppColorScheme colors,
@@ -456,10 +374,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       );
       return;
     }
-
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
-
     await showDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -467,7 +383,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final isReady = selectedDate != null && selectedTime != null;
-
             return Dialog(
               backgroundColor: Colors.transparent,
               insetPadding: EdgeInsets.symmetric(
@@ -523,9 +438,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           ],
                         ),
                       ),
-
                       Divider(height: context.h(1), color: colors.divider),
-
                       // DATE / TIME
                       Padding(
                         padding: EdgeInsets.fromLTRB(
@@ -605,7 +518,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           ],
                         ),
                       ),
-
                       // ACTIONS
                       Container(
                         padding: EdgeInsets.fromLTRB(
@@ -638,7 +550,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               ),
                             ),
                             SizedBox(width: context.w(10)),
-                            ElevatedButton.icon(
+                            RdxActionButton(
+                              label: 'Schedule Now',
                               onPressed: !isReady || provider.isLoading
                                   ? null
                                   : () async {
@@ -649,21 +562,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         selectedTime!.hour,
                                         selectedTime!.minute,
                                       );
-
                                       final success =
                                           await provider.scheduleBroadcast(
                                         title: _titleController.text,
                                         message: _messageController.text,
                                         scheduledAt: scheduledAt,
                                       );
-
                                       if (!context.mounted) return;
-
                                       if (success) {
                                         Navigator.pop(dialogContext);
                                         _titleController.clear();
                                         _messageController.clear();
-
                                         ScaffoldMessenger.of(this.context)
                                             .showSnackBar(
                                           SnackBar(
@@ -678,36 +587,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         );
                                       }
                                     },
-                              icon: provider.isLoading
-                                  ? SizedBox(
-                                      width: context.w(14),
-                                      height: context.h(14),
-                                      child: const CircularProgressIndicator(
-                                        strokeWidth: 1.7,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Icon(Icons.send_outlined,
-                                      size: context.h(15)),
-                              label: Text(
-                                'Schedule Now',
-                                style: AppTextStyles.body(context).copyWith(
-                                  color: selectedDate == null ||
-                                          selectedTime == null
-                                      ? colors.textMuted
-                                      : Colors.white,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                minimumSize:
-                                    Size(context.w(128), context.h(40)),
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(context.h(6)),
-                                ),
-                              ),
+                              isPrimary: true,
+                              isLoading: provider.isLoading,
+                              leadingIcon: Icons.send_outlined,
+                              iconSize: context.h(15),
+                              minWidth: context.w(128),
+                              height: context.h(40),
                             ),
                           ],
                         ),
@@ -722,11 +607,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       },
     );
   }
-
   // ============================================================
   // SCHEDULE FIELD
   // ============================================================
-
   Widget _scheduleFieldLabel(String text, AppColorScheme colors) {
     return Text(
       text,
@@ -734,7 +617,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           .copyWith(color: colors.textMuted),
     );
   }
-
   Widget _scheduleInput({
     required AppColorScheme colors,
     required IconData icon,
@@ -773,11 +655,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
-
   // ============================================================
   // HISTORY NAVIGATION
   // ============================================================
-
   Widget _buildHistoryNavigation(
     AppColorScheme colors, {
     required bool isMobile,
@@ -795,23 +675,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           borderRadius: BorderRadius.circular(context.h(12)),
           border: Border.all(color: colors.border),
         ),
+        // ── Notification History header (inside _buildHistoryNavigation) ──
         child: Row(
           children: [
-            Container(
-              width: context.w(36),
-              height: context.h(36),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(context.h(9)),
-              ),
-              child: Icon(
-                Icons.history_outlined,
-                size: context.h(19),
-                color: AppColors.primary,
-              ),
+            Icon(
+              Icons.history_outlined,
+              size: context.h(18),
+              color: AppColors.primary,
             ),
-            SizedBox(width: context.w(12)),
+            SizedBox(width: context.w(8)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -839,17 +711,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
-
   void _openHistory() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const NotificationHistoryScreen()),
     );
   }
-
   // ============================================================
   // TEXT FIELD
   // ============================================================
-
   Widget _fieldLabel(AppColorScheme colors, String text) {
     return Text(
       text,
@@ -857,11 +726,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           .copyWith(color: colors.textMuted),
     );
   }
-
   // ============================================================
   // ERROR
   // ============================================================
-
   Widget _buildError(String message, AppColorScheme colors) {
     return Container(
       width: double.infinity,
@@ -890,22 +757,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
-
   // ============================================================
   // SEND NOW
   // ============================================================
-
   Future<void> _sendNow(NotificationProvider provider) async {
     final success = await provider.sendBroadcast(
       title: _titleController.text,
       message: _messageController.text,
     );
-
     if (!mounted || !success) return;
-
     _titleController.clear();
     _messageController.clear();
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -916,46 +778,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
-
   // ============================================================
   // HELPERS
   // ============================================================
-
   String _formatScheduleDate(DateTime date) {
     return '${date.month.toString().padLeft(2, '0')}/'
         '${date.day.toString().padLeft(2, '0')}/'
         '${date.year}';
   }
-
   String _formatNumber(int value) {
     if (value < 1000) return value.toString();
-
     final text = value.toString();
     final result = StringBuffer();
-
     for (int i = 0; i < text.length; i++) {
       if (i > 0 && (text.length - i) % 3 == 0) {
         result.write(',');
       }
       result.write(text[i]);
     }
-
     return result.toString();
   }
 }
-
-// class _NotificationStat {
-//   final String label;
-//   final String value;
-//   final String subtitle;
-//   final IconData icon;
-//   final Color color;
-
-//   const _NotificationStat({
-//     required this.label,
-//     required this.value,
-//     required this.subtitle,
-//     required this.icon,
-//     required this.color,
-//   });
-// }

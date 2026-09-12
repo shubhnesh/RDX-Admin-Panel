@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/core/utils/formatters.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
+import 'package:rdx_admin/widgets/dialog_box/rdx_action_menu_dialog.dart';
+import 'package:rdx_admin/widgets/dialog_box/rdx_delete_dialog.dart';
 import 'package:rdx_admin/widgets/rdx_table.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -35,6 +37,111 @@ class _InventoryScreenState extends State<InventoryScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  // void _showInventoryActions(
+  //   BuildContext buttonContext,
+  //   InventoryItemModel item,
+  // ) {
+  //   final renderBox = buttonContext.findRenderObject() as RenderBox;
+
+  //   final buttonPosition = renderBox.localToGlobal(
+  //     Offset.zero,
+  //   );
+
+  //   final buttonBottomRight = buttonPosition +
+  //       Offset(
+  //         renderBox.size.width,
+  //         renderBox.size.height,
+  //       );
+
+  //   showGeneralDialog<void>(
+  //     context: buttonContext,
+  //     barrierDismissible: true,
+  //     barrierLabel: 'Inventory actions',
+  //     barrierColor: Colors.transparent,
+  //     transitionDuration: const Duration(milliseconds: 120),
+  //     pageBuilder: (
+  //       dialogContext,
+  //       animation,
+  //       secondaryAnimation,
+  //     ) {
+  //       return RdxActionMenuDialog(
+  //         position: buttonBottomRight,
+  //         items: [
+  //           RdxActionMenuItem(
+  //             title: 'Edit',
+  //             onTap: () {
+  //               _openAddMaterial(
+  //                 context,
+  //                 item: item,
+  //               );
+  //             },
+  //           ),
+  //           RdxActionMenuItem(
+  //             title: 'Delete',
+  //             textColor: AppColors.danger,
+  //             onTap: () {
+  //               _confirmDelete(
+  //                 context,
+  //                 item,
+  //               );
+  //             },
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
+
+  void _showInventoryActions(
+    BuildContext buttonContext,
+    InventoryItemModel item,
+  ) {
+    final renderBox = buttonContext.findRenderObject() as RenderBox;
+
+    final buttonPosition = renderBox.localToGlobal(Offset.zero);
+
+    showGeneralDialog<void>(
+      context: buttonContext,
+      barrierDismissible: true,
+      barrierLabel: 'Inventory actions',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(
+        milliseconds: 120,
+      ),
+      pageBuilder: (
+        dialogContext,
+        animation,
+        secondaryAnimation,
+      ) {
+        return RdxActionMenuDialog(
+          position: buttonPosition,
+          gap: 6,
+          items: [
+            RdxActionMenuItem(
+              title: 'Edit',
+              onTap: () {
+                _openAddMaterial(
+                  context,
+                  item: item,
+                );
+              },
+            ),
+            RdxActionMenuItem(
+              title: 'Delete',
+              textColor: AppColors.danger,
+              onTap: () {
+                _confirmDelete(
+                  context,
+                  item,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -248,8 +355,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ),
         RdxTableColumn(
           title: 'ACTIONS',
-          minWidth: 110,
-          flex: 1,
+          minWidth: 72,
+          // flex: 1,
         ),
       ],
       rows: items.map((item) {
@@ -313,27 +420,54 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
 
           // ACTIONS
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RdxTableActionButton(
-                icon: Icons.edit_outlined,
-                tooltip: 'Edit',
-                onPressed: () => _openAddMaterial(
-                  context,
-                  item: item,
-                ),
-              ),
-              RdxTableActionButton(
-                icon: Icons.delete_outline,
-                tooltip: 'Delete',
-                onPressed: () => _confirmDelete(
-                  context,
-                  item,
-                ),
-              ),
-            ],
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.center,
+          //   mainAxisSize: MainAxisSize.min,
+          //   children: [
+          //     RdxTableActionButton(
+          //       icon: Icons.edit_outlined,
+          //       tooltip: 'Edit',
+          //       onPressed: () => _openAddMaterial(
+          //         context,
+          //         item: item,
+          //       ),
+          //     ),
+          //     RdxTableActionButton(
+          //       icon: Icons.delete_outline,
+          //       tooltip: 'Delete',
+          //       onPressed: () => _confirmDelete(
+          //         context,
+          //         item,
+          //       ),
+          //     ),
+          //   ],
+          // ),
+
+          // Builder(
+          //   builder: (buttonContext) {
+          //     return RdxTableMoreButton(
+          //       tooltip: 'More actions',
+          //       onPressed: () {
+          //         _showInventoryActions(
+          //           buttonContext,
+          //           item,
+          //         );
+          //       },
+          //     );
+          //   },
+          // ),
+          Builder(
+            builder: (buttonContext) {
+              return RdxTableMoreButton(
+                tooltip: 'More actions',
+                onPressed: () {
+                  _showInventoryActions(
+                    buttonContext,
+                    item,
+                  );
+                },
+              );
+            },
           ),
         ];
       }).toList(),
@@ -500,15 +634,83 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
+  // Future<void> _confirmDelete(
+  //     BuildContext context, InventoryItemModel item) async {
+  //   final confirmed = await showDialog<bool>(
+  //     context: context,
+  //     builder: (_) => DeleteMaterialDialog(item: item),
+  //   );
+  //   if (confirmed == true && context.mounted) {
+  //     await context.read<InventoryProvider>().deleteItem(item.id);
+  //   }
+  // }
+
   Future<void> _confirmDelete(
-      BuildContext context, InventoryItemModel item) async {
+    BuildContext context,
+    InventoryItemModel item,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => DeleteMaterialDialog(item: item),
+      builder: (_) => RdxDeleteDialog(
+        title: 'Delete Material',
+        itemName: item.name,
+        itemDetails: [
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.w(8),
+              vertical: context.h(3),
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.of(context).surface,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: AppColors.of(context).border,
+              ),
+            ),
+            child: Text(
+              item.category,
+              style: AppTextStyles.body(context),
+            ),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: RdxDeleteMetric(
+                  label: 'CURRENT STOCK',
+                  value: '${_formatQuantity(item.quantity)} ${item.unit} / '
+                      '${_formatQuantity(item.maxCapacity)} ${item.unit} max',
+                ),
+              ),
+              SizedBox(width: context.w(16)),
+              Expanded(
+                child: RdxDeleteMetric(
+                  label: 'UNIT COST',
+                  value: '${Formatters.currency(item.unitCost)} / ${item.unit}',
+                ),
+              ),
+            ],
+          ),
+        ],
+        deleteButtonLabel: 'DELETE MATERIAL',
+        warningMessage:
+            'Removing this raw material will delete its inventory stock '
+            'history, supplier linkage, and usage logs from recipes and '
+            'kitchen queue orders. This cannot be undone.',
+      ),
     );
+
     if (confirmed == true && context.mounted) {
       await context.read<InventoryProvider>().deleteItem(item.id);
     }
+  }
+
+  String _formatQuantity(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+
+    return value.toStringAsFixed(1);
   }
 }
 

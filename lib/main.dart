@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -36,7 +37,7 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase init skipped (not configured yet): $e');
   }
-  runApp(const RdxAdminApp());
+  runApp(const ProviderScope(child: RdxAdminApp()));
 }
 
 class RdxAdminApp extends StatelessWidget {

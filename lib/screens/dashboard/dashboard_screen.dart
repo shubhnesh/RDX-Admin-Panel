@@ -320,7 +320,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             TextStyle(
                               color: colors.textPrimary,
                               fontWeight: FontWeight.w600,
-                              fontSize: context.h(12),
                             ),
                           ),
                         )
@@ -542,8 +541,8 @@ Widget _periodTabs(AppColorScheme colors) {
                           child: Text(
                             labels[i],
                             style: TextStyle(
-                                color: colors.textMuted,
-                                fontSize: context.h(13)),
+                                color: colors.textMuted
+                                ),
                           ),
                         );
                       },

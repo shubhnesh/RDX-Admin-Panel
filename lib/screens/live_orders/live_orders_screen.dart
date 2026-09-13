@@ -7,8 +7,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/order_model.dart';
 import '../../providers/live_orders_provider.dart';
+import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
-import '../../widgets/reusable_widgets/rdx_header.dart';
+import '../order/place_order_screen.dart';
 
 class LiveOrdersScreen extends StatefulWidget {
   const LiveOrdersScreen({super.key});
@@ -22,14 +23,15 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
   void initState() {
     super.initState();
 
-    Future.microtask(
-      () => context.read<LiveOrdersProvider>().load(),
-    );
+    Future.microtask(() {
+      if (mounted) context.read<LiveOrdersProvider>().load();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<LiveOrdersProvider>();
+    final narrow = MediaQuery.sizeOf(context).width < 600;
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
@@ -43,21 +45,25 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
               Responsive.pageHorizontal(context),
               context.h(8),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Live Orders',
-                  style: AppTextStyles.heading(context),
-                ),
-                SizedBox(height: context.h(4)),
-                Text(
-                  'Track orders and create orders for customers',
-                  style: AppTextStyles.bodySecondary(context)
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
+            child: narrow
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTitle(context),
+                      SizedBox(height: context.h(12)),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _newOrderButton(context),
+                      ),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildTitle(context)),
+                      _newOrderButton(context),
+                    ],
+                  ),
           ),
           Expanded(
             child: provider.isLoading
@@ -66,6 +72,36 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTitle(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Live Orders', style: AppTextStyles.heading(context)),
+        SizedBox(height: context.h(4)),
+        Text(
+          'Track orders and create orders for customers',
+          style: AppTextStyles.bodySecondary(context)
+              .copyWith(color: AppColors.textSecondary),
+        ),
+      ],
+    );
+  }
+
+  Widget _newOrderButton(BuildContext context) {
+    final liveOrdersProvider = context.read<LiveOrdersProvider>();
+
+    return RdxActionButton(
+      label: 'New Order',
+      leadingIcon: Icons.add,
+      onPressed: () async {
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute(builder: (_) => const PlaceOrderScreen()),
+        );
+        if (mounted) liveOrdersProvider.load();
+      },
     );
   }
 
@@ -377,7 +413,7 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
           borderRadius: BorderRadius.circular(10),
           onTap: () => Navigator.of(context).pushNamed(
             AppRoutes.orderDetail,
-            arguments: order,
+            arguments: order.id,
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(

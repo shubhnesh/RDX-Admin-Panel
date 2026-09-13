@@ -26,18 +26,33 @@ class MenuItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final preparation = item.preparationStyle.name.replaceAll('_', ' ');
+    final preparation = item.preparation;
+    final isNarrow = context.isNarrow;
+
+    // Slightly tighter padding / type on narrow screens so the card
+    // doesn't feel sparse when it's full-width.
+    final outerRadius = context.h(isNarrow ? 12 : 10);
+    final imagePadding = context.w(isNarrow ? 8 : 6);
+    final imageRadius = context.h(isNarrow ? 10 : 8);
+    final contentHPad = context.w(isNarrow ? 12 : 10);
+    final contentTopPad = context.h(isNarrow ? 6 : 4);
+    final bottomPad = EdgeInsets.fromLTRB(
+      contentHPad,
+      context.h(6),
+      context.w(6),
+      context.h(8),
+    );
 
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(outerRadius),
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: context.h(10),
+            offset: Offset(0, context.h(3)),
           ),
         ],
       ),
@@ -45,13 +60,13 @@ class MenuItemCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Image (flexible but capped via aspect ratio) ───────
+          // ── Image ───────────────────────────────────────────────
           AspectRatio(
-            aspectRatio: 1.55,
+            aspectRatio: isNarrow ? 1.7 : 1.55,
             child: Padding(
-              padding: const EdgeInsets.all(6),
+              padding: EdgeInsets.all(imagePadding),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(imageRadius),
                 child: Stack(
                   children: [
                     Positioned.fill(
@@ -61,7 +76,7 @@ class MenuItemCard extends StatelessWidget {
                               child: Icon(
                                 Icons.restaurant_outlined,
                                 color: colors.textMuted,
-                                size: 32,
+                                size: context.h(isNarrow ? 36 : 32),
                               ),
                             )
                           : Image.network(
@@ -72,15 +87,15 @@ class MenuItemCard extends StatelessWidget {
                                 child: Icon(
                                   Icons.restaurant_outlined,
                                   color: colors.textMuted,
-                                  size: 32,
+                                  size: context.h(isNarrow ? 36 : 32),
                                 ),
                               ),
                             ),
                     ),
                     if (item.featuredItem)
                       Positioned(
-                        left: 8,
-                        top: 8,
+                        left: context.w(8),
+                        top: context.h(8),
                         child: _cardBadge(
                           context,
                           'Featured',
@@ -90,8 +105,8 @@ class MenuItemCard extends StatelessWidget {
                       ),
                     if (dietarySelected)
                       Positioned(
-                        right: 8,
-                        bottom: 8,
+                        right: context.w(8),
+                        bottom: context.h(8),
                         child: _dietaryBadge(context, item),
                       ),
                   ],
@@ -100,84 +115,106 @@ class MenuItemCard extends StatelessWidget {
             ),
           ),
 
-          // ── Content ─────────────────────────────────────────
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    categorySelected ? item.category : 'Category',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodyTertiary(context)
-                        .copyWith(color: AppColors.primary, fontSize: 11),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.section(context)
-                        .copyWith(color: colors.textPrimary, fontSize: 14),
-                  ),
-                  if (item.ingredients.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      item.ingredients.join(', '),
-                      style: AppTextStyles.bodyTertiary(context)
-                          .copyWith(fontSize: 11),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  ClipRect(
-                    child: Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: hasTags
-                          ? [
-                              _detailChip(
-                                context,
-                                _titleCase(preparation),
-                                colors.textSecondary,
-                              ),
-                              for (final tag in item.tags
-                                  .where((tag) => tag.toLowerCase() != 'featured')
-                                  .take(item.featuredItem ? 2 : 3))
-                                _detailChip(
-                                  context,
-                                  _titleCase(tag),
-                                  colors.textSecondary,
-                                ),
-                            ]
-                          : [_detailChip(context, 'Tags', colors.textSecondary)],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '₹${item.price.toStringAsFixed(2)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.section(context)
-                        .copyWith(color: colors.primary, fontSize: 14),
-                  ),
-                ],
+          // ── Content ─────────────────────────────────────────────
+Expanded(
+  child: Padding(
+    padding: EdgeInsets.fromLTRB(
+      contentHPad,
+      contentTopPad,
+      contentHPad,
+      0,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Category (left) + Price (right) on one row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                categorySelected ? item.category : 'Category',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodyTertiary(context).copyWith(
+                  color: AppColors.primary,
+                ),
               ),
             ),
+            SizedBox(width: context.w(8)),
+            Text(
+              '₹${item.price.toStringAsFixed(2)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.section(context).copyWith(
+                color: colors.primary,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: context.h(2)),
+        Text(
+          item.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.section(context).copyWith(
+            color: colors.textPrimary,
           ),
+        ),
+        if (item.ingredients.isNotEmpty) ...[
+          SizedBox(height: context.h(2)),
+          Text(
+            item.ingredients.join(', '),
+            style: AppTextStyles.bodyTertiary(context),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+        SizedBox(height: context.h(6)),
+        ClipRect(
+          child: Wrap(
+            spacing: context.w(4),
+            runSpacing: context.h(4),
+            children: hasTags
+                ? [
+                    _detailChip(
+                      context,
+                      _titleCase(preparation),
+                      colors.textSecondary,
+                    ),
+                    for (final tag in item.tags
+                        .where((tag) => tag.toLowerCase() != 'featured')
+                        .take(item.featuredItem ? 2 : 3))
+                      _detailChip(
+                        context,
+                        _titleCase(tag),
+                        colors.textSecondary,
+                      ),
+                  ]
+                : [
+                    _detailChip(
+                      context,
+                      'Tags',
+                      colors.textSecondary,
+                    ),
+                  ],
+          ),
+        ),
+        // Price moved up next to category — no second price here
+      ],
+    ),
+  ),
+),
 
-          // ── Fixed bottom (compact) ─────────────────────────────
+          // ── Fixed bottom ────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 6, 6, 8),
+            padding: bottomPad,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Divider(height: 1, color: colors.divider),
-                const SizedBox(height: 6),
+                SizedBox(height: context.h(6)),
                 Row(
                   children: [
                     RdxToggleButton(
@@ -185,7 +222,7 @@ class MenuItemCard extends StatelessWidget {
                       activeColor: AppColors.primary,
                       onChanged: (_) => onToggleAvailability(),
                     ),
-                    const SizedBox(width: 6),
+                    SizedBox(width: context.w(6)),
                     Expanded(
                       child: Text(
                         item.available ? 'Available' : 'Sold Out',
@@ -195,7 +232,6 @@ class MenuItemCard extends StatelessWidget {
                           color: item.available
                               ? AppColors.success
                               : colors.textMuted,
-                          fontSize: 11,
                         ),
                       ),
                     ),
@@ -203,13 +239,14 @@ class MenuItemCard extends StatelessWidget {
                       builder: (buttonContext) {
                         return InkWell(
                           onTap: () => onActions(buttonContext),
-                          borderRadius: BorderRadius.circular(6),
-                          child: const Padding(
-                            padding: EdgeInsets.all(4),
+                          borderRadius:
+                              BorderRadius.circular(context.h(6)),
+                          child: Padding(
+                            padding: EdgeInsets.all(context.w(4)),
                             child: Icon(
                               Icons.more_vert_rounded,
-                              size: 18,
-                              color: Color(0xFF5D687A),
+                              size: context.h(18),
+                              color: const Color(0xFF5D687A),
                             ),
                           ),
                         );
@@ -244,7 +281,9 @@ class MenuItemCard extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.caption(context).copyWith(color: foreground),
+        style: AppTextStyles.caption(context).copyWith(
+          color: foreground,
+        ),
       ),
     );
   }
@@ -261,7 +300,9 @@ class MenuItemCard extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.caption(context).copyWith(color: color),
+        style: AppTextStyles.caption(context).copyWith(
+          color: color,
+        ),
       ),
     );
   }
@@ -284,7 +325,9 @@ class MenuItemCard extends StatelessWidget {
           SizedBox(width: context.w(5)),
           Text(
             _dietaryLabel(item.dietaryType),
-            style: AppTextStyles.caption(context).copyWith(color: color),
+            style: AppTextStyles.caption(context).copyWith(
+              color: color,
+            ),
           ),
         ],
       ),

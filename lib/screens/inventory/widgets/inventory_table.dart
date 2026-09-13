@@ -239,7 +239,6 @@ class _InventoryRow extends StatelessWidget {
                     Text(_statusLabel(status),
                         style: TextStyle(
                           color: color,
-                          fontSize: context.h(11),
                           fontWeight: FontWeight.w600,
                         )),
                   ],

@@ -1,51 +1,139 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/material.dart';
+
+import '../models/category_model.dart';
 import '../models/menu_item_model.dart';
+import '../services/category_service.dart';
 import '../services/menu_service.dart';
 
-class MenuProvider extends ChangeNotifier {
-  final MenuService _service;
+/// Riverpod replacement for the old `provider`-package `MenuProvider`.
+/// Exposes the same shape (isLoading, categories, selectedCategory,
+/// filteredItems, setSearchQuery, setCategory, load) so screens only
+/// need to swap `context.watch<MenuProvider>()` for
+/// `ref.watch(menuNotifierProvider)` / `ref.read(menuNotifierProvider.notifier)`.
+class MenuState {
+  final bool isLoading;
+  final String? errorMessage;
+  final List<MenuItemModel> items;
+  final String selectedCategory;
+  final String searchQuery;
 
-  MenuProvider(this._service);
-
-  List<MenuItemModel> _items = [];
-
-  bool isLoading = false;
-  String? errorMessage;
-
-  String selectedCategory = 'All';
-  String searchQuery = '';
-
-  List<MenuItemModel> get items => List.unmodifiable(_items);
+  const MenuState({
+    this.isLoading = false,
+    this.errorMessage,
+    this.items = const [],
+    this.selectedCategory = 'All',
+    this.searchQuery = '',
+  });
 
   List<String> get categories {
-    return ['All', ...MenuTaxonomy.categories.map((category) => category.name)];
+    final set = <String>{'All', ...items.map((i) => i.category)};
+    return set.toList();
   }
 
   List<MenuItemModel> get filteredItems {
-    final query = searchQuery.trim().toLowerCase();
+    return items.where((item) {
+      final matchesCategory =
+          selectedCategory == 'All' || item.category == selectedCategory;
+      final matchesSearch = searchQuery.isEmpty ||
+          item.name.toLowerCase().contains(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    }).toList();
+  }
 
-    return _items.where((item) {
-      final selectedId = _categoryId(selectedCategory);
-      final matchesCategory = selectedCategory == 'All' ||
-          MenuTaxonomy.descendantsOf(selectedId)
-              .contains(item.primaryCategoryId);
+  MenuState copyWith({
+    bool? isLoading,
+    String? errorMessage,
+    List<MenuItemModel>? items,
+    String? selectedCategory,
+    String? searchQuery,
+  }) {
+    return MenuState(
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage,
+      items: items ?? this.items,
+      selectedCategory: selectedCategory ?? this.selectedCategory,
+      searchQuery: searchQuery ?? this.searchQuery,
+    );
+  }
+}
 
-      final matchesSearch = query.isEmpty ||
-          item.name.toLowerCase().contains(query) ||
-          item.description.toLowerCase().contains(query);
+class MenuNotifier extends StateNotifier<MenuState> {
+  MenuNotifier(this._service) : super(const MenuState());
+  final MenuService _service;
 
+  Future<void> load() async {
+    if (state.isLoading) return;
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      final items = await _service.fetchMenuItems();
+      state = state.copyWith(isLoading: false, items: items);
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to load menu.',
+      );
+    }
+  }
+
+  void setSearchQuery(String query) {
+    state = state.copyWith(searchQuery: query);
+  }
+
+  void setCategory(String category) {
+    state = state.copyWith(selectedCategory: category);
+  }
+}
+
+final menuServiceProvider = Provider<MenuService>((ref) => MenuService());
+
+final menuNotifierProvider = StateNotifierProvider<MenuNotifier, MenuState>(
+  (ref) => MenuNotifier(ref.watch(menuServiceProvider)),
+);
+
+/// Compatibility provider for the existing menu management screens.
+/// New order screens can use [menuNotifierProvider] directly.
+class MenuProvider extends ChangeNotifier {
+  MenuProvider(this._service);
+
+  final MenuService _service;
+  final CategoryService _categoryService = CategoryService();
+  List<MenuItemModel> items = [];
+  List<CategoryModel> categoryList = [];
+  String selectedCategory = 'All';
+  String searchQuery = '';
+  bool isLoading = false;
+  String? errorMessage;
+
+  List<String> get categories {
+    final set = <String>{'All', ...items.map((item) => item.category)};
+    return set.toList();
+  }
+
+  List<MenuItemModel> get filteredItems {
+    return items.where((item) {
+      final matchesCategory =
+          selectedCategory == 'All' || item.category == selectedCategory;
+      final matchesSearch = searchQuery.isEmpty ||
+          item.name.toLowerCase().contains(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     }).toList();
   }
 
   Future<void> load() async {
+    if (isLoading) return;
     isLoading = true;
     errorMessage = null;
     notifyListeners();
-
     try {
-      _items = await _service.fetchMenuItems();
-    } catch (e) {
+      items = await _service.fetchMenuItems();
+      try {
+        categoryList = await _categoryService.fetchCategories();
+      } catch (_) {
+        // Menu items can still be displayed when taxonomy data is unavailable.
+        categoryList = [];
+      }
+    } catch (_) {
       errorMessage = 'Failed to load menu.';
     } finally {
       isLoading = false;
@@ -53,80 +141,25 @@ class MenuProvider extends ChangeNotifier {
     }
   }
 
-  Future<MenuItemModel> getItemById(String id) {
-    return _service.fetchItemById(id);
+  void setSearchQuery(String query) {
+    searchQuery = query;
+    notifyListeners();
   }
-
-  List<String> subCategoriesFor(String category) {
-    final parentId = _categoryId(category);
-    return MenuTaxonomy.categories
-        .where((item) => item.parentId == parentId)
-        .map((item) => item.name)
-        .toList();
-  }
-
-  String _categoryId(String category) => MenuTaxonomy.categories
-      .firstWhere((item) => item.name == category,
-          orElse: () => MenuCategory(category, category))
-      .id;
 
   void setCategory(String category) {
     selectedCategory = category;
     notifyListeners();
   }
 
-  void setSearchQuery(String query) {
-    searchQuery = query;
-    notifyListeners();
-  }
+  Future<MenuItemModel> getItemById(String id) => _service.fetchItemById(id);
 
   Future<bool> saveItem(MenuItemModel item) async {
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-
     try {
       await _service.saveItem(item);
-
-      // Reload so the newly created Firestore document and
-      // server timestamps are reflected in the provider.
-      _items = await _service.fetchMenuItems();
-
+      await load();
       return true;
-    } catch (e) {
+    } catch (_) {
       errorMessage = 'Failed to save menu item.';
-      return false;
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> toggleAvailability(
-    MenuItemModel item,
-  ) async {
-    try {
-      final newValue = !item.available;
-
-      await _service.toggleAvailability(
-        item.id,
-        newValue,
-      );
-
-      final index = _items.indexWhere(
-        (element) => element.id == item.id,
-      );
-
-      if (index != -1) {
-        _items[index] = item.copyWith(
-          available: newValue,
-        );
-      }
-
-      notifyListeners();
-      return true;
-    } catch (e) {
-      errorMessage = 'Failed to update availability.';
       notifyListeners();
       return false;
     }
@@ -135,49 +168,22 @@ class MenuProvider extends ChangeNotifier {
   Future<bool> deleteItem(String id) async {
     try {
       await _service.deleteItem(id);
-
-      _items.removeWhere(
-        (item) => item.id == id,
-      );
-
+      items = items.where((item) => item.id != id).toList();
       notifyListeners();
       return true;
-    } catch (e) {
+    } catch (_) {
       errorMessage = 'Failed to delete menu item.';
       notifyListeners();
       return false;
     }
   }
 
-  Future<bool> updateDisplaySettings({
-    required MenuItemModel item,
-    required bool showOnMobileApp,
-    required bool featuredItem,
-  }) async {
-    try {
-      await _service.updateDisplaySettings(
-        id: item.id,
-        showOnMobileApp: showOnMobileApp,
-        featuredItem: featuredItem,
-      );
-
-      final index = _items.indexWhere(
-        (element) => element.id == item.id,
-      );
-
-      if (index != -1) {
-        _items[index] = item.copyWith(
-          showOnMobileApp: showOnMobileApp,
-          featuredItem: featuredItem,
-        );
-      }
-
+  Future<void> toggleAvailability(MenuItemModel item) async {
+    await _service.toggleAvailability(item.id, !item.available);
+    final index = items.indexWhere((current) => current.id == item.id);
+    if (index != -1) {
+      items[index] = item.copyWith(available: !item.available);
       notifyListeners();
-      return true;
-    } catch (e) {
-      errorMessage = 'Failed to update display settings.';
-      notifyListeners();
-      return false;
     }
   }
 }

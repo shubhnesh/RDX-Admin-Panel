@@ -183,14 +183,7 @@ class _SupportScreenState extends State<SupportScreen> {
                       SizedBox(width: context.w(8)),
                       Text(
                         c.$1,
-                        // style: TextStyle(
-                        //   color: selected
-                        //       ? colors.textPrimary
-                        //       : colors.textSecondary,
-                        //   fontSize: context.h(13),
-                        //   fontWeight:
-                        //       selected ? FontWeight.w600 : FontWeight.w500,
-                        // ),
+
                         style: selected
                             ? AppTextStyles.label(context)
                                 .copyWith(color: colors.primary)
@@ -361,21 +354,12 @@ class _SupportScreenState extends State<SupportScreen> {
                         size: context.h(18), color: AppColors.primary),
                     SizedBox(width: context.w(8)),
                     Text('Average Response',
-                        // style: TextStyle(
-                        //   color: colors.textPrimary,
-                        //   fontSize: context.h(13),
-                        //   fontWeight: FontWeight.w600,
-                        // ),
                         style: AppTextStyles.bodySecondary(context)
                             .copyWith(color: colors.textPrimary)),
                   ],
                 ),
                 SizedBox(height: context.h(6)),
                 Text('Under 2 hours on business days',
-                    // style: TextStyle(
-                    //   color: colors.textSecondary,
-                    //   fontSize: context.h(12),
-                    // ),
                     style: AppTextStyles.bodySecondary(context)),
               ],
             ),

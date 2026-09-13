@@ -46,7 +46,7 @@ class _MenuScreenState extends State<MenuScreen> {
     }
 
     _stagedCategories = !_hasAppliedCategories
-        ? MenuTaxonomy.mainCategories.map((category) => category.name).toSet()
+        ? provider.categoryList.map((category) => category.name).toSet()
         : Set<String>.from(_appliedCategories);
 
     final buttonContext = _categoryButtonKey.currentContext;
@@ -346,21 +346,28 @@ class _MenuScreenState extends State<MenuScreen> {
 
   Widget _buildCategoryTabs(MenuProvider provider, AppColorScheme colors) {
     final categories = !_hasAppliedCategories
-        ? MenuTaxonomy.mainCategories.map((c) => c.name).toList()
+        ? provider.categoryList.map((c) => c.name).toList()
         : _appliedCategories.toList();
 
-    // Always keep tabs + manage button on ONE row.
-    // Tabs scroll horizontally so they never wrap under the filter button.
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: RdxCategoryTabs(
-            labels: categories,
-            allLabel: 'All',
-            selectedLabel: provider.selectedCategory,
-            onSelected: provider.setCategory,
-            expand: false,
+          child: ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: const [Colors.black, Colors.black, Colors.transparent],
+              stops: const [0.0, 0.9, 1.0],
+            ).createShader(bounds),
+            blendMode: BlendMode.dstIn,
+            child: RdxCategoryTabs(
+              labels: categories,
+              allLabel: 'All',
+              selectedLabel: provider.selectedCategory,
+              onSelected: provider.setCategory,
+              expand: false,
+            ),
           ),
         ),
         SizedBox(width: context.w(8)),
@@ -413,6 +420,7 @@ class _MenuScreenState extends State<MenuScreen> {
     required double maxHeight,
   }) {
     final staged = _stagedCategories ?? <String>{};
+    final categoryOptions = provider.categoryList;
 
     final listHeight =
         (maxHeight - context.h(170)).clamp(context.h(140), context.h(270));
@@ -471,59 +479,71 @@ class _MenuScreenState extends State<MenuScreen> {
               borderRadius: BorderRadius.circular(context.h(7)),
               border: Border.all(color: colors.border),
             ),
-            child: Scrollbar(
-              thumbVisibility: true,
-              child: ListView.separated(
-                padding: EdgeInsets.symmetric(vertical: context.h(5)),
-                itemCount: MenuTaxonomy.mainCategories.length,
-                separatorBuilder: (_, __) => Divider(
-                  height: context.h(1),
-                  indent: context.w(48),
-                  color: colors.divider,
-                ),
-                itemBuilder: (context, index) {
-                  final category = MenuTaxonomy.mainCategories[index];
-                  final selected = staged.contains(category.name);
-
-                  return InkWell(
-                    onTap: () => _toggleStagedCategory(
-                      category.name,
-                      !selected,
-                    ),
+            child: categoryOptions.isEmpty
+                ? Center(
                     child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        context.w(10),
-                        context.h(2),
-                        context.w(8),
-                        context.h(2),
+                      padding: EdgeInsets.all(context.h(14)),
+                      child: Text(
+                        'No categories yet. Create one from the menu item form.',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.bodySecondary(context)
+                            .copyWith(color: colors.textMuted),
                       ),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: selected,
-                            onChanged: (value) {
-                              _toggleStagedCategory(
-                                category.name,
-                                value == true,
-                              );
-                            },
-                            activeColor: AppColors.primary,
-                            visualDensity: VisualDensity.compact,
+                    ),
+                  )
+                : Scrollbar(
+                    thumbVisibility: true,
+                    child: ListView.separated(
+                      padding: EdgeInsets.symmetric(vertical: context.h(5)),
+                      itemCount: categoryOptions.length,
+                      separatorBuilder: (_, __) => Divider(
+                        height: context.h(1),
+                        indent: context.w(48),
+                        color: colors.divider,
+                      ),
+                      itemBuilder: (context, index) {
+                        final category = categoryOptions[index];
+                        final selected = staged.contains(category.name);
+
+                        return InkWell(
+                          onTap: () => _toggleStagedCategory(
+                            category.name,
+                            !selected,
                           ),
-                          Expanded(
-                            child: Text(
-                              category.name,
-                              style: AppTextStyles.label(context)
-                                  .copyWith(color: colors.textPrimary),
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              context.w(10),
+                              context.h(2),
+                              context.w(8),
+                              context.h(2),
+                            ),
+                            child: Row(
+                              children: [
+                                Checkbox(
+                                  value: selected,
+                                  onChanged: (value) {
+                                    _toggleStagedCategory(
+                                      category.name,
+                                      value == true,
+                                    );
+                                  },
+                                  activeColor: AppColors.primary,
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    category.name,
+                                    style: AppTextStyles.label(context)
+                                        .copyWith(color: colors.textPrimary),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-            ),
+                  ),
           ),
           SizedBox(height: context.h(10)),
           Row(
@@ -558,24 +578,32 @@ class _MenuScreenState extends State<MenuScreen> {
     final items = provider.filteredItems;
     final showAddItemTile = provider.selectedCategory == 'All';
 
-    // Desktop/tablet: original-style card size (~240 x 400).
-    // Narrow screens: one card per row so content is easy to read/tap.
     final screenW = MediaQuery.sizeOf(context).width;
-    final isNarrow = screenW < 700;
 
-     final SliverGridDelegate gridDelegate = isNarrow
-        ? const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 1,
-            mainAxisExtent: 360,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-          )
-        : const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 240,
-            mainAxisExtent: 350,
-            mainAxisSpacing: 18,
-            crossAxisSpacing: 18,
-          );
+    final SliverGridDelegate gridDelegate;
+    if (screenW < 600) {
+      // Phones use full-width cards so the image and controls remain readable.
+      gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 1,
+        mainAxisExtent: context.h(420),
+        mainAxisSpacing: context.h(16),
+        crossAxisSpacing: context.w(16),
+      );
+    } else if (screenW < 1200) {
+      gridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: context.w(320),
+        mainAxisExtent: context.h(380),
+        mainAxisSpacing: context.h(18),
+        crossAxisSpacing: context.w(18),
+      );
+    } else {
+      gridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: context.w(260),
+        mainAxisExtent: context.h(390),
+        mainAxisSpacing: context.h(18),
+        crossAxisSpacing: context.w(18),
+      );
+    }
 
     return GridView.builder(
       padding: EdgeInsets.only(bottom: context.h(24)),
@@ -593,9 +621,7 @@ class _MenuScreenState extends State<MenuScreen> {
             },
           );
         }
-
         final item = items[showAddItemTile ? index - 1 : index];
-
         return MenuItemCard(
           item: item,
           onToggleAvailability: () => provider.toggleAvailability(item),

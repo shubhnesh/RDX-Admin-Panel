@@ -2,67 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum DietaryType { veg, nonVeg, egg }
 
-enum PreparationStyle { dry, gravy, fried, steam, tandoori, creamy, other }
-
-class MenuCategory {
-  final String id;
-  final String name;
-  final String? parentId;
-  const MenuCategory(this.id, this.name, {this.parentId});
-}
-
-class MenuTaxonomy {
-  static const categories = <MenuCategory>[
-    MenuCategory('beverages', 'Beverages'),
-    MenuCategory('combos-thalis', 'Combos & Thalis'),
-    MenuCategory('starters', 'Starters'),
-    MenuCategory('rolls', 'Rolls'),
-    MenuCategory('momos', 'Momos'),
-    MenuCategory('noodles', 'Noodles'),
-    MenuCategory('fried-rice', 'Fried Rice'),
-    MenuCategory('thukpa-thenthuk', 'Thukpa & Thenthuk'),
-    MenuCategory('chopsuey', 'Chopsuey'),
-    MenuCategory('soups', 'Soups'),
-    MenuCategory('fries-sides', 'Fries & Sides'),
-    MenuCategory('pasta', 'Pasta'),
-    MenuCategory('burgers', 'Burgers'),
-    MenuCategory('sandwiches', 'Sandwiches'),
-    MenuCategory('shakes', 'Shakes', parentId: 'beverages'),
-    MenuCategory('coolers-mocktails', 'Coolers & Mocktails',
-        parentId: 'beverages'),
-    MenuCategory('veg-starters', 'Veg Starters', parentId: 'starters'),
-    MenuCategory('non-veg-starters', 'Non-Veg Starters', parentId: 'starters'),
-    MenuCategory('kathi-rolls', 'Kathi Rolls', parentId: 'rolls'),
-    MenuCategory('chicken-rolls', 'Chicken Rolls', parentId: 'rolls'),
-    MenuCategory('regular-momos', 'Regular Momos', parentId: 'momos'),
-    MenuCategory('momo-platters', 'Momo Platters', parentId: 'momos'),
-  ];
-
-  static String nameFor(String id) => categories
-      .firstWhere((category) => category.id == id,
-          orElse: () => MenuCategory('', id))
-      .name;
-
-  static List<MenuCategory> get mainCategories =>
-      categories.where((category) => category.parentId == null).toList();
-
-  static Set<String> descendantsOf(String parentId) {
-    final result = <String>{parentId};
-    var changed = true;
-    while (changed) {
-      changed = false;
-      for (final category in categories) {
-        if (category.parentId != null &&
-            result.contains(category.parentId) &&
-            result.add(category.id)) {
-          changed = true;
-        }
-      }
-    }
-    return result;
-  }
-}
-
+/// A menu item. Category/subcategory/preparation/regionality are all
+/// resolved from Firestore-backed collections rather than hardcoded lists
+/// — each `*Id` field links to a document, and the plain-name field
+/// (`category`, `preparation`, etc.) is denormalized at save time so
+/// cards can render without an extra lookup.
 class MenuItemModel {
   final String id;
   final String name;
@@ -72,8 +16,14 @@ class MenuItemModel {
   final bool isFeatured;
   final int sortOrder;
   final DietaryType dietaryType;
-  final PreparationStyle preparationStyle;
+  final String preparationId;
+  final String preparation;
   final String primaryCategoryId;
+  final String category;
+  final String subCategoryId;
+  final String subCategory;
+  final String regionalityId;
+  final String regionality;
   final double price;
   final List<String> tags;
   final List<String> ingredients;
@@ -89,15 +39,19 @@ class MenuItemModel {
     bool? isFeatured,
     this.sortOrder = 0,
     DietaryType? dietaryType,
-    this.preparationStyle = PreparationStyle.other,
-    String? primaryCategoryId,
+    this.preparationId = '',
+    String? preparation,
+    this.primaryCategoryId = '',
+    String? category,
+    this.subCategoryId = '',
+    String? subCategory,
+    this.regionalityId = '',
+    String? regionality,
     this.price = 0,
     this.tags = const [],
     this.ingredients = const [],
     this.createdAt,
     this.updatedAt,
-    String? category,
-    String? subCategory,
     String? imageUrl,
     bool? available,
     bool? featuredItem,
@@ -108,14 +62,15 @@ class MenuItemModel {
         isFeatured = isFeatured ?? featuredItem ?? false,
         dietaryType = dietaryType ??
             (isVeg == true ? DietaryType.veg : DietaryType.nonVeg),
-        primaryCategoryId = primaryCategoryId ?? _categoryId(category);
+        preparation = preparation ?? '',
+        category = category ?? '',
+        subCategory = subCategory ?? '',
+        regionality = regionality ?? '';
 
   String get imageUrl => image;
   bool get available => isAvailable;
   bool get showOnMobileApp => true;
   bool get featuredItem => isFeatured;
-  String get category => MenuTaxonomy.nameFor(primaryCategoryId);
-  String get subCategory => '';
   bool get isVeg => dietaryType == DietaryType.veg;
 
   MenuItemModel copyWith({
@@ -135,8 +90,14 @@ class MenuItemModel {
         isFeatured: isFeatured ?? featuredItem ?? this.isFeatured,
         sortOrder: sortOrder,
         dietaryType: dietaryType,
-        preparationStyle: preparationStyle,
+        preparationId: preparationId,
+        preparation: preparation,
         primaryCategoryId: primaryCategoryId,
+        category: category,
+        subCategoryId: subCategoryId,
+        subCategory: subCategory,
+        regionalityId: regionalityId,
+        regionality: regionality,
         price: price,
         tags: tags,
         ingredients: ingredients ?? this.ingredients,
@@ -163,11 +124,14 @@ class MenuItemModel {
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
       dietaryType: _enumValue(DietaryType.values, json['dietary_type']) ??
           (json['is_veg'] == true ? DietaryType.veg : DietaryType.nonVeg),
-      preparationStyle:
-          _enumValue(PreparationStyle.values, json['preparation_style']) ??
-              PreparationStyle.other,
-      primaryCategoryId: json['primary_category_id']?.toString() ??
-          _categoryId(json['category']?.toString()),
+      preparationId: json['preparation_id']?.toString() ?? '',
+      preparation: json['preparation']?.toString() ?? '',
+      primaryCategoryId: json['primary_category_id']?.toString() ?? '',
+      category: json['category']?.toString() ?? '',
+      subCategoryId: json['sub_category_id']?.toString() ?? '',
+      subCategory: json['sub_category']?.toString() ?? '',
+      regionalityId: json['regionality_id']?.toString() ?? '',
+      regionality: json['regionality']?.toString() ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0,
       tags: _strings(json['tags']),
       ingredients: _strings(json['ingredients']),
@@ -184,8 +148,14 @@ class MenuItemModel {
         'is_featured': isFeatured,
         'sort_order': sortOrder,
         'dietary_type': dietaryType.name,
-        'preparation_style': preparationStyle.name,
+        'preparation_id': preparationId,
+        'preparation': preparation,
         'primary_category_id': primaryCategoryId,
+        'category': category,
+        'sub_category_id': subCategoryId,
+        'sub_category': subCategory,
+        'regionality_id': regionalityId,
+        'regionality': regionality,
         'price': price,
         'tags': tags,
         'ingredients': ingredients,
@@ -206,12 +176,6 @@ class MenuItemModel {
           .where((item) => item.isNotEmpty)
           .toList()
       : const [];
-
-  static String _categoryId(String? category) => MenuTaxonomy.categories
-      .firstWhere(
-          (item) => item.name.toLowerCase() == (category ?? '').toLowerCase(),
-          orElse: () => MenuTaxonomy.categories.first)
-      .id;
 
   static DateTime? _timestamp(dynamic value) => value is Timestamp
       ? value.toDate()

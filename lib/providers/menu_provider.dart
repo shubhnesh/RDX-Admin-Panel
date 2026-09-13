@@ -1,13 +1,18 @@
 import 'package:flutter/foundation.dart';
+import '../models/category_model.dart';
 import '../models/menu_item_model.dart';
+import '../services/category_service.dart';
 import '../services/menu_service.dart';
 
 class MenuProvider extends ChangeNotifier {
   final MenuService _service;
+  final CategoryService _categoryService;
 
-  MenuProvider(this._service);
+  MenuProvider(this._service, {CategoryService? categoryService})
+      : _categoryService = categoryService ?? CategoryService();
 
   List<MenuItemModel> _items = [];
+  List<CategoryModel> _categoryList = [];
 
   bool isLoading = false;
   String? errorMessage;
@@ -17,18 +22,19 @@ class MenuProvider extends ChangeNotifier {
 
   List<MenuItemModel> get items => List.unmodifiable(_items);
 
-  List<String> get categories {
-    return ['All', ...MenuTaxonomy.categories.map((category) => category.name)];
-  }
+  /// Categories as fetched from the `menu_categories` collection, each
+  /// carrying its own (optional) subcategories. No hardcoded taxonomy.
+  List<CategoryModel> get categoryList => List.unmodifiable(_categoryList);
+
+  List<String> get categories =>
+      ['All', ..._categoryList.map((category) => category.name)];
 
   List<MenuItemModel> get filteredItems {
     final query = searchQuery.trim().toLowerCase();
 
     return _items.where((item) {
-      final selectedId = _categoryId(selectedCategory);
       final matchesCategory = selectedCategory == 'All' ||
-          MenuTaxonomy.descendantsOf(selectedId)
-              .contains(item.primaryCategoryId);
+          item.primaryCategoryId == _categoryId(selectedCategory);
 
       final matchesSearch = query.isEmpty ||
           item.name.toLowerCase().contains(query) ||
@@ -44,7 +50,12 @@ class MenuProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _items = await _service.fetchMenuItems();
+      final results = await Future.wait([
+        _service.fetchMenuItems(),
+        _categoryService.fetchCategories(),
+      ]);
+      _items = results[0] as List<MenuItemModel>;
+      _categoryList = results[1] as List<CategoryModel>;
     } catch (e) {
       errorMessage = 'Failed to load menu.';
     } finally {
@@ -53,22 +64,31 @@ class MenuProvider extends ChangeNotifier {
     }
   }
 
+  /// Refreshes just the category list (e.g. after creating one elsewhere)
+  /// without re-fetching every menu item.
+  Future<void> loadCategories() async {
+    try {
+      _categoryList = await _categoryService.fetchCategories();
+      notifyListeners();
+    } catch (_) {
+      // Category refresh is non-critical — keep whatever was loaded before.
+    }
+  }
+
   Future<MenuItemModel> getItemById(String id) {
     return _service.fetchItemById(id);
   }
 
   List<String> subCategoriesFor(String category) {
-    final parentId = _categoryId(category);
-    return MenuTaxonomy.categories
-        .where((item) => item.parentId == parentId)
-        .map((item) => item.name)
-        .toList();
+    final match = _categoryList.where((item) => item.name == category);
+    if (match.isEmpty) return [];
+    return match.first.subcategories.map((sub) => sub.name).toList();
   }
 
-  String _categoryId(String category) => MenuTaxonomy.categories
-      .firstWhere((item) => item.name == category,
-          orElse: () => MenuCategory(category, category))
-      .id;
+  String _categoryId(String category) {
+    final match = _categoryList.where((item) => item.name == category);
+    return match.isEmpty ? category : match.first.id;
+  }
 
   void setCategory(String category) {
     selectedCategory = category;

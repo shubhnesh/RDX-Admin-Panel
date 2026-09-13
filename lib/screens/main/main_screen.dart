@@ -119,7 +119,8 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: colors.background,
         drawer: Drawer(
           backgroundColor: AppColors.lightSidebar,
-          width: MainSideNav.expandedWidth,
+          // Scale drawer width with screen; keep a sensible min/max.
+          width: context.w(MainSideNav.expandedWidth).clamp(260.0, 320.0),
           child: sideNav,
         ),
         body: Column(
@@ -128,9 +129,7 @@ class _MainScreenState extends State<MainScreen> {
               title: _titleForRoute(_currentRoute),
               onMenu: () => _scaffoldKey.currentState?.openDrawer(),
             ),
-            Expanded(
-              child: _content(),
-            ),
+            Expanded(child: _content()),
           ],
         ),
       );
@@ -141,9 +140,7 @@ class _MainScreenState extends State<MainScreen> {
       body: Row(
         children: [
           sideNav,
-          Expanded(
-            child: _content(),
-          ),
+          Expanded(child: _content()),
         ],
       ),
     );
@@ -182,9 +179,10 @@ class _MobileTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+
     return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      height: context.h(56),
+      padding: EdgeInsets.symmetric(horizontal: context.w(8)),
       decoration: BoxDecoration(
         color: colors.background,
         border: Border(bottom: BorderSide(color: colors.border)),
@@ -192,16 +190,28 @@ class _MobileTopBar extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Icons.menu, color: colors.textPrimary),
-            onPressed: onMenu,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            title,
-            style: TextStyle(
+            icon: Icon(
+              Icons.menu,
               color: colors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              size: context.h(24),
+            ),
+            onPressed: onMenu,
+            padding: EdgeInsets.all(context.w(8)),
+            constraints: BoxConstraints(
+              minWidth: context.w(40),
+              minHeight: context.h(40),
+            ),
+          ),
+          SizedBox(width: context.w(4)),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],

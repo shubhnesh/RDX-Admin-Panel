@@ -197,26 +197,12 @@ class MainSideNav extends StatelessWidget {
                         children: [
                           Text(
                             'Admin',
-                            // style: TextStyle(
-                            //   color: textPrimary,
-                            //   fontSize: 17,
-                            //   fontWeight: FontWeight.bold,
-                            //   letterSpacing: 0.2,
-                            //   height: 1.1,
-                            // ),
                             style: AppTextStyles.heading(context),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             'RDX Restaurant',
-                            // style: TextStyle(
-                            //   color: textSecondary,
-                            //   fontSize: 9.5,
-                            //   fontWeight: FontWeight.w600,
-                            //   letterSpacing: 1.0,
-                            //   height: 1.4,
-                            // ),
                             style: AppTextStyles.body(context),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -349,13 +335,6 @@ class _NavTile extends StatelessWidget {
                             opacity: expanded ? 1.0 : 0.0,
                             child: Text(
                               item.label,
-                              // style: TextStyle(
-                              //   color: selected
-                              //       ? AppColors.lightTextPrimary
-                              //       : AppColors.lightTextSecondary,
-                              //   fontSize: 13,
-                              //   fontWeight: FontWeight.w500,
-                              // ),
                               style: AppTextStyles.section(context).copyWith(
                                 color: selected
                                     ? AppColors.primary

@@ -12,6 +12,11 @@ import '../models/notification_model.dart';
 ///
 /// The service is designed to be safely called multiple times.
 /// Once the seed marker exists, it will not create duplicate data.
+///
+/// NOTE: sample menu items are seeded without a category, preparation
+/// style, or regionality — none of those are hardcoded anymore, so assign
+/// each seeded item real ones (created via the "+" options on the menu
+/// item form) from the admin UI after seeding.
 class SeedService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
@@ -42,9 +47,7 @@ class SeedService {
         name: 'Spicy Tuna Roll',
         description:
             'Fresh tuna, spicy mayo, cucumber, wrapped in seasoned rice and nori.',
-        primaryCategoryId: 'rolls',
         dietaryType: DietaryType.nonVeg,
-        preparationStyle: PreparationStyle.other,
         price: 450,
         tags: ['spicy', 'popular'],
       ),
@@ -52,9 +55,7 @@ class SeedService {
         id: '',
         name: 'Chicken Biryani',
         description: 'Aromatic basmati rice slow-cooked with spiced chicken.',
-        primaryCategoryId: 'combos-thalis',
         dietaryType: DietaryType.nonVeg,
-        preparationStyle: PreparationStyle.other,
         tags: ['popular'],
         price: 320,
       ),
@@ -63,18 +64,14 @@ class SeedService {
         name: 'Paneer Tikka',
         description:
             'Char-grilled cottage cheese marinated in tandoori spices.',
-        primaryCategoryId: 'veg-starters',
         dietaryType: DietaryType.veg,
-        preparationStyle: PreparationStyle.tandoori,
         price: 280,
       ),
       MenuItemModel(
         id: '',
         name: 'Butter Naan',
         description: 'Soft leavened bread brushed with butter.',
-        primaryCategoryId: 'combos-thalis',
         dietaryType: DietaryType.veg,
-        preparationStyle: PreparationStyle.other,
         price: 75,
       ),
     ];

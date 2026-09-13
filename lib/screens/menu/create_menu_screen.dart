@@ -4,13 +4,47 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/screens/menu/widgets/menu_item_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
+import '../../models/category_model.dart';
 import '../../models/menu_item_model.dart';
+import '../../models/preparation_model.dart';
+import '../../models/regionality_model.dart';
+import '../../models/tag_model.dart';
 import '../../providers/menu_provider.dart';
+import '../../services/category_service.dart';
+import '../../services/preparation_service.dart';
+import '../../services/regionality_service.dart';
+import '../../services/tag_service.dart';
+import '../../widgets/dialogs/create_category_dialog.dart';
+import '../../widgets/dialogs/create_preparation_dialog.dart';
+import '../../widgets/dialogs/create_regionality_dialog.dart';
+import '../../widgets/dialogs/create_tag_dialog.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/resuable_options/rdx_dropdown.dart';
 import '../../widgets/resuable_options/rdx_text_field.dart';
 import '../../widgets/buttons/rdx_toggle_button.dart';
+import 'manage_taxonomy_screen.dart';
+
+/// Sentinel value placed as the first entry in the category dropdown.
+/// Selecting it opens [CreateCategoryDialog] instead of setting a category.
+const String _kCreateCategoryValue = '__create_category__';
+
+/// Sentinel value placed as the first entry in the regionality dropdown.
+/// Selecting it opens [CreateRegionalityDialog].
+const String _kCreateRegionalityValue = '__create_regionality__';
+
+/// Local-only ID used to represent a regionality the user just typed but
+/// that hasn't been written to Firestore yet. It's swapped for a real
+/// slug ID (via [RegionalityService.createRegionality]) at save time.
+const String _kPendingRegionalityId = '__pending_regionality__';
+
+/// Sentinel value placed as the first entry in the preparation dropdown.
+/// Selecting it opens [CreatePreparationDialog].
+const String _kCreatePreparationValue = '__create_preparation__';
+
+/// Local-only ID for a preparation style typed but not yet persisted —
+/// same deferred-creation contract as [_kPendingRegionalityId].
+const String _kPendingPreparationId = '__pending_preparation__';
 
 class CreateMenuScreen extends StatefulWidget {
   final String? itemId;
@@ -32,12 +66,40 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
   String? _primaryCategory;
   String? _subcategory;
   DietaryType? _dietaryType;
-  PreparationStyle? _preparationStyle;
+  String? _preparation;
   final Set<String> _tags = {};
   final List<String> _ingredients = [];
   bool _available = true;
   bool _loading = false;
   String? _error;
+
+  final _categoryService = CategoryService();
+  List<CategoryModel> _categories = [];
+  bool _categoriesLoading = true;
+
+  final _regionalityService = RegionalityService();
+  List<RegionalityModel> _regionalities = [];
+  bool _regionalitiesLoading = true;
+  String? _regionality;
+
+  /// Name typed into the regionality dialog, held locally and only
+  /// written to Firestore (via [RegionalityService.createRegionality])
+  /// when the menu item itself is saved.
+  String? _pendingRegionalityName;
+
+  final _preparationService = PreparationService();
+  List<PreparationModel> _preparations = [];
+  bool _preparationsLoading = true;
+
+  /// Name typed into the preparation dialog, held locally and only
+  /// written to Firestore (via [PreparationService.createPreparation])
+  /// when the menu item itself is saved. Same contract as
+  /// [_pendingRegionalityName].
+  String? _pendingPreparationName;
+
+  final _tagService = TagService();
+  List<TagModel> _customTags = [];
+  bool _customTagsLoading = true;
 
   static const _tagOptions = [
     'Featured',
@@ -48,11 +110,142 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
 
   bool get _editing => widget.itemId != null;
 
-  List<MenuCategory> get _subcategories {
+  List<SubcategoryModel> get _subcategories {
     if (_primaryCategory == null) return [];
-    return MenuTaxonomy.categories
-        .where((item) => item.parentId == _primaryCategory)
+    final category = _categories
+        .where((item) => item.id == _primaryCategory)
         .toList();
+    return category.isEmpty ? [] : category.first.subcategories;
+  }
+
+  Future<void> _loadCategories() async {
+    setState(() => _categoriesLoading = true);
+    try {
+      final categories = await _categoryService.fetchCategories();
+      if (!mounted) return;
+      setState(() {
+        _categories = categories;
+        _categoriesLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _categoriesLoading = false);
+    }
+  }
+
+  Future<void> _loadRegionalities() async {
+    setState(() => _regionalitiesLoading = true);
+    try {
+      final regionalities = await _regionalityService.fetchRegionalities();
+      if (!mounted) return;
+      setState(() {
+        _regionalities = regionalities;
+        _regionalitiesLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _regionalitiesLoading = false);
+    }
+  }
+
+  Future<void> _openCreateCategoryDialog() async {
+    final created = await CreateCategoryDialog.show(context);
+    if (created == null || !mounted) return;
+    setState(() {
+      _categories = [..._categories, created];
+      _primaryCategory = created.id;
+      _subcategory = null;
+    });
+  }
+
+  /// Opens the regionality dialog and, if the user saves a name, stores it
+  /// purely on this screen's state — nothing is written to Firestore here.
+  /// Only one regionality can be attached to an item, so this replaces
+  /// whatever was previously selected/pending.
+  Future<void> _openCreateRegionalityDialog() async {
+    final enteredName = await CreateRegionalityDialog.show(
+      context,
+      initialValue: _pendingRegionalityName,
+    );
+    if (enteredName == null || enteredName.trim().isEmpty || !mounted) return;
+
+    setState(() {
+      _pendingRegionalityName = enteredName.trim();
+      _regionality = _kPendingRegionalityId;
+    });
+  }
+
+  Future<void> _loadPreparations() async {
+    setState(() => _preparationsLoading = true);
+    try {
+      final preparations = await _preparationService.fetchPreparations();
+      if (!mounted) return;
+      setState(() {
+        _preparations = preparations;
+        _preparationsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _preparationsLoading = false);
+    }
+  }
+
+  /// Same deferred-creation pattern as [_openCreateRegionalityDialog] —
+  /// the typed name is held locally until the item is saved.
+  Future<void> _openCreatePreparationDialog() async {
+    final enteredName = await CreatePreparationDialog.show(
+      context,
+      initialValue: _pendingPreparationName,
+    );
+    if (enteredName == null || enteredName.trim().isEmpty || !mounted) return;
+
+    setState(() {
+      _pendingPreparationName = enteredName.trim();
+      _preparation = _kPendingPreparationId;
+    });
+  }
+
+  Future<void> _loadCustomTags() async {
+    setState(() => _customTagsLoading = true);
+    try {
+      final tags = await _tagService.fetchTags();
+      if (!mounted) return;
+      setState(() {
+        _customTags = tags;
+        _customTagsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _customTagsLoading = false);
+    }
+  }
+
+  /// Unlike regionality/preparation, a custom tag is persisted right away
+  /// since it needs to exist as its own reusable, manageable entity — not
+  /// just something attached to this one item.
+  Future<void> _openCreateTagDialog() async {
+    if (_customTags.length >= TagService.maxCustomTags) {
+      setState(
+        () => _error =
+            'You can only create up to ${TagService.maxCustomTags} custom tags.',
+      );
+      return;
+    }
+
+    final enteredName = await CreateTagDialog.show(context);
+    if (enteredName == null || enteredName.trim().isEmpty || !mounted) return;
+
+    try {
+      final created = await _tagService.createTag(name: enteredName);
+      if (!mounted) return;
+      setState(() {
+        _customTags = [..._customTags, created];
+        _tags.add(created.name);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Failed to save tag. Please try again.');
+    }
   }
 
   MenuItemModel get _previewItem {
@@ -67,11 +260,16 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       featuredItem: _tags.contains('Featured'),
       sortOrder: int.tryParse(_sortOrder.text) ?? 0,
       dietaryType: _dietaryType ?? DietaryType.veg,
-      preparationStyle: _preparationStyle ?? PreparationStyle.values.first,
+      preparationId: _preparation ?? '',
+      preparation: _preparationLabel(_preparation),
       price: price,
       category: _primaryCategory == null
           ? 'Category'
           : _categoryLabel(_primaryCategory!),
+      subCategoryId: _subcategory ?? '',
+      subCategory: _subcategory == null ? '' : _categoryLabel(_subcategory!),
+      regionalityId: _regionality ?? '',
+      regionality: _regionalityLabel(_regionality),
       tags: _tags
           .where((tag) => tag != 'Featured')
           .map((tag) => tag.toLowerCase().replaceAll(' ', '_'))
@@ -83,6 +281,10 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
   @override
   void initState() {
     super.initState();
+    _loadCategories();
+    _loadRegionalities();
+    _loadPreparations();
+    _loadCustomTags();
     if (_editing) _load();
   }
 
@@ -97,8 +299,13 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       _price.text = item.price.toString();
       _sortOrder.text = item.sortOrder.toString();
       _primaryCategory = item.primaryCategoryId;
+      _subcategory = item.subCategoryId.isEmpty ? null : item.subCategoryId;
+      _regionality =
+          item.regionalityId.isEmpty ? null : item.regionalityId;
+      _pendingRegionalityName = null;
       _dietaryType = item.dietaryType;
-      _preparationStyle = item.preparationStyle;
+      _preparation = item.preparationId.isEmpty ? null : item.preparationId;
+      _pendingPreparationName = null;
       final loadedTags = item.tags.map(_titleCase).toList();
       if (item.featuredItem) loadedTags.insert(0, 'Featured');
       _tags
@@ -135,7 +342,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       setState(() => _error = 'Please select a category.');
       return;
     }
-    if (_dietaryType == null || _preparationStyle == null) {
+    if (_dietaryType == null || _preparation == null) {
       setState(
           () => _error = 'Please select a dietary type and preparation style.');
       return;
@@ -152,6 +359,67 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       _error = null;
     });
 
+    // A regionality typed via the dialog is only held locally until now —
+    // persist it (and swap the pending marker for the real ID) right
+    // before the menu item itself is written.
+    var regionalityId = _regionality ?? '';
+    var regionalityName = _regionalityLabel(_regionality);
+
+    if (_regionality == _kPendingRegionalityId &&
+        _pendingRegionalityName != null &&
+        _pendingRegionalityName!.trim().isNotEmpty) {
+      try {
+        final created = await _regionalityService.createRegionality(
+          name: _pendingRegionalityName!,
+        );
+        regionalityId = created.id;
+        regionalityName = created.name;
+        if (mounted) {
+          setState(() {
+            _regionalities = [..._regionalities, created];
+            _regionality = created.id;
+            _pendingRegionalityName = null;
+          });
+        }
+      } catch (_) {
+        setState(() {
+          _loading = false;
+          _error = 'Failed to save regionality. Please try again.';
+        });
+        return;
+      }
+    }
+
+    // Same deferred-creation handling for a preparation typed via its
+    // dialog.
+    var preparationId = _preparation ?? '';
+    var preparationName = _preparationLabel(_preparation);
+
+    if (_preparation == _kPendingPreparationId &&
+        _pendingPreparationName != null &&
+        _pendingPreparationName!.trim().isNotEmpty) {
+      try {
+        final created = await _preparationService.createPreparation(
+          name: _pendingPreparationName!,
+        );
+        preparationId = created.id;
+        preparationName = created.name;
+        if (mounted) {
+          setState(() {
+            _preparations = [..._preparations, created];
+            _preparation = created.id;
+            _pendingPreparationName = null;
+          });
+        }
+      } catch (_) {
+        setState(() {
+          _loading = false;
+          _error = 'Failed to save preparation style. Please try again.';
+        });
+        return;
+      }
+    }
+
     final item = MenuItemModel(
       id: widget.itemId ?? '',
       name: _name.text.trim(),
@@ -161,10 +429,15 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
       featuredItem: _tags.contains('Featured'),
       sortOrder: int.tryParse(_sortOrder.text) ?? 0,
       dietaryType: _dietaryType!,
-      preparationStyle: _preparationStyle!,
+      preparationId: preparationId,
+      preparation: preparationName,
       price: price,
       primaryCategoryId: _primaryCategory!,
       category: _categoryLabel(_primaryCategory!),
+      subCategoryId: _subcategory ?? '',
+      subCategory: _subcategory == null ? '' : _categoryLabel(_subcategory!),
+      regionalityId: regionalityId,
+      regionality: regionalityName,
       tags: _tags
           .where((tag) => tag != 'Featured')
           .map((tag) => tag.toLowerCase().replaceAll(' ', '_'))
@@ -292,7 +565,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
                                                 dietarySelected:
                                                     _dietaryType != null,
                                                 hasTags: _tags.isNotEmpty ||
-                                                    _preparationStyle != null,
+                                                    _preparation != null,
                                                 onToggleAvailability: () {
                                                   setState(() =>
                                                       _available = !_available);
@@ -325,7 +598,7 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
             item: _previewItem,
             categorySelected: _primaryCategory != null,
             dietarySelected: _dietaryType != null,
-            hasTags: _tags.isNotEmpty || _preparationStyle != null,
+            hasTags: _tags.isNotEmpty || _preparation != null,
             onToggleAvailability: () {
               setState(() => _available = !_available);
             },
@@ -460,23 +733,36 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
             ),
           ]),
           SizedBox(height: context.h(16)),
-          _panel(context, colors, 'Item Details', Icons.assignment_outlined, [
+          _panel(
+            context,
+            colors,
+            'Item Details',
+            Icons.assignment_outlined,
+            [
             LayoutBuilder(builder: (context, c) {
               final stack = c.maxWidth < 400;
               final cat = _dropdown(
                 'Category',
                 _primaryCategory,
-                MenuTaxonomy.categories
-                    .where((item) => item.parentId == null)
-                    .map((item) => item.id)
-                    .toList(),
-                (value) => setState(() {
-                  _primaryCategory = value;
-                  _subcategory = null;
-                }),
+                [
+                  _kCreateCategoryValue,
+                  ..._categories.map((item) => item.id),
+                ],
+                (value) {
+                  if (value == _kCreateCategoryValue) {
+                    _openCreateCategoryDialog();
+                    return;
+                  }
+                  setState(() {
+                    _primaryCategory = value;
+                    _subcategory = null;
+                  });
+                },
                 _categoryLabel,
                 required: true,
-                hint: 'Select category',
+                hint: _categoriesLoading
+                    ? 'Loading categories...'
+                    : 'Select category',
               );
               final sub = _dropdown(
                 'Subcategory',
@@ -501,6 +787,35 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
             }),
             SizedBox(height: context.h(15)),
             LayoutBuilder(builder: (context, c) {
+              final regionality = _dropdown(
+                'Regionality',
+                _regionality,
+                [
+                  _kCreateRegionalityValue,
+                  ..._regionalities.map((item) => item.id),
+                  if (_pendingRegionalityName != null) _kPendingRegionalityId,
+                ],
+                (value) {
+                  if (value == _kCreateRegionalityValue) {
+                    _openCreateRegionalityDialog();
+                    return;
+                  }
+                  setState(() {
+                    _regionality = value;
+                    if (value != _kPendingRegionalityId) {
+                      _pendingRegionalityName = null;
+                    }
+                  });
+                },
+                _regionalityLabel,
+                hint: _regionalitiesLoading
+                    ? 'Loading regionalities...'
+                    : 'Select regionality',
+              );
+              return regionality;
+            }),
+            SizedBox(height: context.h(15)),
+            LayoutBuilder(builder: (context, c) {
               final stack = c.maxWidth < 400;
               final diet = _dropdown(
                 'Dietary Type',
@@ -511,10 +826,29 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               );
               final prep = _dropdown(
                 'Preparation Style',
-                _preparationStyle,
-                PreparationStyle.values,
-                (value) => setState(() => _preparationStyle = value),
-                (value) => _titleCase(value.name),
+                _preparation,
+                [
+                  _kCreatePreparationValue,
+                  ..._preparations.map((item) => item.id),
+                  if (_pendingPreparationName != null) _kPendingPreparationId,
+                ],
+                (value) {
+                  if (value == _kCreatePreparationValue) {
+                    _openCreatePreparationDialog();
+                    return;
+                  }
+                  setState(() {
+                    _preparation = value;
+                    if (value != _kPendingPreparationId) {
+                      _pendingPreparationName = null;
+                    }
+                  });
+                },
+                _preparationLabel,
+                required: true,
+                hint: _preparationsLoading
+                    ? 'Loading preparation styles...'
+                    : 'Select preparation style',
               );
               if (stack) {
                 return Column(children: [
@@ -530,11 +864,31 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               ]);
             }),
             SizedBox(height: context.h(15)),
-            Text(
-              'Tags',
-              style: AppTextStyles.bodySecondary(context).copyWith(
-                color: colors.textMuted,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Tags',
+                    style: AppTextStyles.bodySecondary(context).copyWith(
+                      color: colors.textMuted,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: _customTagsLoading ? null : _openCreateTagDialog,
+                  borderRadius: BorderRadius.circular(context.h(6)),
+                  child: Padding(
+                    padding: EdgeInsets.all(context.w(2)),
+                    child: Icon(
+                      Icons.add_circle_outline_rounded,
+                      size: context.h(18),
+                      color: _customTagsLoading
+                          ? colors.textMuted
+                          : AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
             ),
             SizedBox(height: context.h(7)),
             Wrap(
@@ -542,9 +896,31 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               runSpacing: context.h(8),
               children: [
                 for (final tag in _tagOptions) _tagChip(context, colors, tag),
+                for (final tag in _customTags)
+                  _tagChip(context, colors, tag.name),
               ],
             ),
-          ]),
+          ],
+            headerTrailing: TextButton.icon(
+  onPressed: () {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ManageTaxonomyScreen(),
+      ),
+    );
+  },
+  icon: Icon(
+    Icons.add_rounded,
+    size: context.h(18),
+    color: AppColors.primary,
+  ),
+  label: Text(
+    'Create & Manage Taxonomy',
+    style: AppTextStyles.label(context)
+        .copyWith(color: AppColors.primary),
+  ),
+),
+          ),
           SizedBox(height: context.h(16)),
           _panel(context, colors, 'Display Settings',
               Icons.desktop_windows_outlined, [
@@ -595,8 +971,9 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
     AppColorScheme colors,
     String title,
     IconData icon,
-    List<Widget> children,
-  ) =>
+    List<Widget> children, {
+    Widget? headerTrailing,
+  }) =>
       Container(
         width: double.infinity,
         padding: EdgeInsets.all(context.h(14)),
@@ -612,11 +989,14 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
               children: [
                 Icon(icon, size: context.h(18), color: AppColors.primary),
                 SizedBox(width: context.w(8)),
-                Text(
-                  title,
-                  style: AppTextStyles.section(context)
-                      .copyWith(color: colors.textPrimary),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTextStyles.section(context)
+                        .copyWith(color: colors.textPrimary),
+                  ),
                 ),
+                if (headerTrailing != null) headerTrailing,
               ],
             ),
             SizedBox(height: context.h(16)),
@@ -720,11 +1100,47 @@ class _CreateMenuScreenState extends State<CreateMenuScreen> {
         color: const Color(0xFFFFEDEA),
         child: Text(
           _error!,
-          style: TextStyle(color: AppColors.danger, fontSize: context.h(12)),
+          style: TextStyle(color: AppColors.danger),
         ),
       );
 
-  String _categoryLabel(String id) => MenuTaxonomy.nameFor(id);
+  String _categoryLabel(String id) {
+    if (id == _kCreateCategoryValue) return '+ Create your category';
+
+    final match = _categories.where((item) => item.id == id).toList();
+    if (match.isNotEmpty) return match.first.name;
+
+    final subMatch = _subcategories.where((item) => item.id == id).toList();
+    if (subMatch.isNotEmpty) return subMatch.first.name;
+
+    return id;
+  }
+
+  /// Label for the regionality dropdown. Handles the "create" sentinel,
+  /// the not-yet-persisted pending entry, and normal saved regionalities.
+  String _regionalityLabel(String? id) {
+    if (id == null) return '';
+    if (id == _kCreateRegionalityValue) return '+ Add regionality';
+    if (id == _kPendingRegionalityId) {
+      return _pendingRegionalityName ?? '';
+    }
+
+    final match = _regionalities.where((item) => item.id == id).toList();
+    return match.isEmpty ? id : match.first.name;
+  }
+
+  /// Label for the preparation dropdown — same shape as
+  /// [_regionalityLabel] (sentinel, pending entry, saved value).
+  String _preparationLabel(String? id) {
+    if (id == null) return '';
+    if (id == _kCreatePreparationValue) return '+ Add preparation style';
+    if (id == _kPendingPreparationId) {
+      return _pendingPreparationName ?? '';
+    }
+
+    final match = _preparations.where((item) => item.id == id).toList();
+    return match.isEmpty ? id : match.first.name;
+  }
 
   String _titleCase(String value) => value
       .replaceAll('_', ' ')
@@ -766,7 +1182,6 @@ class _IngredientChip extends StatelessWidget {
             label,
             style: TextStyle(
               color: colors.textPrimary,
-              fontSize: context.h(10),
               fontWeight: FontWeight.w600,
             ),
           ),

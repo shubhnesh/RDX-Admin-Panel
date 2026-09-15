@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/widgets/dialogs/taxonomy_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -11,11 +12,6 @@ import '../../services/category_service.dart';
 import '../../services/preparation_service.dart';
 import '../../services/regionality_service.dart';
 import '../../services/tag_service.dart';
-import '../../widgets/dialogs/create_category_dialog.dart';
-import '../../widgets/dialogs/create_preparation_dialog.dart';
-import '../../widgets/dialogs/create_regionality_dialog.dart';
-import '../../widgets/dialogs/create_tag_dialog.dart';
-import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/reusable_widgets/rdx_delete_dialog.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
@@ -94,15 +90,68 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
 
   // ─── Category actions ─────────────────────────────────────────────
 
+  // ─── Category actions ─────────────────────────────────────────────
+
   Future<void> _createCategory() async {
-    final created = await CreateCategoryDialog.show(context);
+    final created = await TaxonomyEntryDialog.show<CategoryModel>(
+      context,
+      title: 'Create Category',
+      editTitle: 'Edit Category',
+      nameLabel: 'Category Name *',
+      nameHint: 'e.g. Beverages',
+      initialSubItems: const [],
+      maxSubItems: CategoryService.maxSubcategories,
+      subItemsLabel:
+          'Subcategories (optional, up to ${CategoryService.maxSubcategories})',
+      subItemHintBuilder: (i) => 'Subcategory ${i + 1}',
+      onSave: (name, subNames) async {
+        final id = await _categoryService.createCategory(
+          name: name,
+          subcategoryNames: subNames,
+        );
+        return CategoryModel(
+          id: id,
+          name: name,
+          subcategories: [
+            for (final subName in subNames)
+              SubcategoryModel(id: subName, name: subName),
+          ],
+        );
+      },
+    );
     if (created == null || !mounted) return;
     setState(() => _categories = [..._categories, created]);
   }
 
   Future<void> _editCategory(CategoryModel category) async {
-    final updated =
-        await CreateCategoryDialog.show(context, existing: category);
+    final updated = await TaxonomyEntryDialog.show<CategoryModel>(
+      context,
+      title: 'Create Category',
+      editTitle: 'Edit Category',
+      nameLabel: 'Category Name *',
+      nameHint: 'e.g. Beverages',
+      initialName: category.name,
+      initialSubItems: category.subcategories.map((s) => s.name).toList(),
+      maxSubItems: CategoryService.maxSubcategories,
+      subItemsLabel:
+          'Subcategories (optional, up to ${CategoryService.maxSubcategories})',
+      subItemHintBuilder: (i) => 'Subcategory ${i + 1}',
+      onSave: (name, subNames) async {
+        final updated = CategoryModel(
+          id: category.id,
+          name: name,
+          subcategories: [
+            for (final subName in subNames)
+              SubcategoryModel(
+                id: '${category.id}-${subName.toLowerCase().replaceAll(RegExp(r'\s+'), '-')}',
+                name: subName,
+              ),
+          ],
+        );
+        await _categoryService.updateCategory(updated);
+        return updated;
+      },
+    );
     if (updated == null || !mounted) return;
     setState(() {
       _categories = [
@@ -152,43 +201,43 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
 
   // ─── Preparation actions ──────────────────────────────────────────
 
+  // ─── Preparation actions ──────────────────────────────────────────
+
   Future<void> _createPreparation() async {
-    final name = await CreatePreparationDialog.show(context);
-    if (name == null || name.trim().isEmpty || !mounted) return;
-    try {
-      final created = await _preparationService.createPreparation(name: name);
-      if (!mounted) return;
-      setState(() => _preparations = [..._preparations, created]);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to create preparation style.')),
-      );
-    }
+    final created = await TaxonomyEntryDialog.show<PreparationModel>(
+      context,
+      title: 'Add Preparation Style',
+      nameLabel: 'Preparation Style',
+      nameHint: 'e.g. Tandoori',
+      description:
+          'e.g. Tandoori, Gravy, Steam. Saved right away for use across items.',
+      onSave: (name, _) => _preparationService.createPreparation(name: name),
+    );
+    if (created == null || !mounted) return;
+    setState(() => _preparations = [..._preparations, created]);
   }
 
   Future<void> _editPreparation(PreparationModel preparation) async {
-    final newName = await CreatePreparationDialog.show(
+    final updated = await TaxonomyEntryDialog.show<PreparationModel>(
       context,
-      initialValue: preparation.name,
+      title: 'Add Preparation Style',
+      editTitle: 'Edit Preparation Style',
+      nameLabel: 'Preparation Style',
+      nameHint: 'e.g. Tandoori',
+      initialName: preparation.name,
+      onSave: (name, _) async {
+        final updated = PreparationModel(id: preparation.id, name: name);
+        await _preparationService.updatePreparation(updated);
+        return updated;
+      },
     );
-    if (newName == null || newName.trim().isEmpty || !mounted) return;
-    final updated = PreparationModel(id: preparation.id, name: newName.trim());
-    try {
-      await _preparationService.updatePreparation(updated);
-      if (!mounted) return;
-      setState(() {
-        _preparations = [
-          for (final item in _preparations)
-            if (item.id == updated.id) updated else item,
-        ];
-      });
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update preparation style.')),
-      );
-    }
+    if (updated == null || !mounted) return;
+    setState(() {
+      _preparations = [
+        for (final item in _preparations)
+          if (item.id == updated.id) updated else item,
+      ];
+    });
   }
 
   Future<void> _deletePreparation(PreparationModel preparation) async {
@@ -226,43 +275,43 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
   // "+ Add regionality" flow on CreateMenuScreen only ever *creates* one,
   // and only persists it once the menu item form is saved.
 
+  // ─── Regionality actions ────────────────────────────────────────────
+
   Future<void> _createRegionality() async {
-    final name = await CreateRegionalityDialog.show(context);
-    if (name == null || name.trim().isEmpty || !mounted) return;
-    try {
-      final created = await _regionalityService.createRegionality(name: name);
-      if (!mounted) return;
-      setState(() => _regionalities = [..._regionalities, created]);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to create regionality.')),
-      );
-    }
+    final created = await TaxonomyEntryDialog.show<RegionalityModel>(
+      context,
+      title: 'Add Regionality',
+      nameLabel: 'Regionality',
+      nameHint: 'e.g. Punjabi',
+      description:
+          'e.g. Punjabi, Indo-Chinese, South Indian. Saved right away for use across items.',
+      onSave: (name, _) => _regionalityService.createRegionality(name: name),
+    );
+    if (created == null || !mounted) return;
+    setState(() => _regionalities = [..._regionalities, created]);
   }
 
   Future<void> _editRegionality(RegionalityModel regionality) async {
-    final newName = await CreateRegionalityDialog.show(
+    final updated = await TaxonomyEntryDialog.show<RegionalityModel>(
       context,
-      initialValue: regionality.name,
+      title: 'Add Regionality',
+      editTitle: 'Edit Regionality',
+      nameLabel: 'Regionality',
+      nameHint: 'e.g. Punjabi',
+      initialName: regionality.name,
+      onSave: (name, _) async {
+        final updated = RegionalityModel(id: regionality.id, name: name);
+        await _regionalityService.updateRegionality(updated);
+        return updated;
+      },
     );
-    if (newName == null || newName.trim().isEmpty || !mounted) return;
-    final updated = RegionalityModel(id: regionality.id, name: newName.trim());
-    try {
-      await _regionalityService.updateRegionality(updated);
-      if (!mounted) return;
-      setState(() {
-        _regionalities = [
-          for (final item in _regionalities)
-            if (item.id == updated.id) updated else item,
-        ];
-      });
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update regionality.')),
-      );
-    }
+    if (updated == null || !mounted) return;
+    setState(() {
+      _regionalities = [
+        for (final item in _regionalities)
+          if (item.id == updated.id) updated else item,
+      ];
+    });
   }
 
   Future<void> _deleteRegionality(RegionalityModel regionality) async {
@@ -295,6 +344,8 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
 
   // ─── Tag actions ───────────────────────────────────────────────────
 
+  // ─── Tag actions ───────────────────────────────────────────────────
+
   Future<void> _createTag() async {
     if (_tags.length >= TagService.maxCustomTags) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -306,39 +357,40 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
       );
       return;
     }
-    final name = await CreateTagDialog.show(context);
-    if (name == null || name.trim().isEmpty || !mounted) return;
-    try {
-      final created = await _tagService.createTag(name: name);
-      if (!mounted) return;
-      setState(() => _tags = [..._tags, created]);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to create tag.')),
-      );
-    }
+    final created = await TaxonomyEntryDialog.show<TagModel>(
+      context,
+      title: 'Create Tag',
+      nameLabel: 'Tag Name',
+      nameHint: "e.g. Chef's Special",
+      description:
+          'Custom tags are saved right away so they can be reused on other items.',
+      onSave: (name, _) => _tagService.createTag(name: name),
+    );
+    if (created == null || !mounted) return;
+    setState(() => _tags = [..._tags, created]);
   }
 
   Future<void> _editTag(TagModel tag) async {
-    final newName = await CreateTagDialog.show(context, initialValue: tag.name);
-    if (newName == null || newName.trim().isEmpty || !mounted) return;
-    final updated = TagModel(id: tag.id, name: newName.trim());
-    try {
-      await _tagService.updateTag(updated);
-      if (!mounted) return;
-      setState(() {
-        _tags = [
-          for (final item in _tags)
-            if (item.id == updated.id) updated else item,
-        ];
-      });
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update tag.')),
-      );
-    }
+    final updated = await TaxonomyEntryDialog.show<TagModel>(
+      context,
+      title: 'Create Tag',
+      editTitle: 'Edit Tag',
+      nameLabel: 'Tag Name',
+      nameHint: "e.g. Chef's Special",
+      initialName: tag.name,
+      onSave: (name, _) async {
+        final updated = TagModel(id: tag.id, name: name);
+        await _tagService.updateTag(updated);
+        return updated;
+      },
+    );
+    if (updated == null || !mounted) return;
+    setState(() {
+      _tags = [
+        for (final item in _tags)
+          if (item.id == updated.id) updated else item,
+      ];
+    });
   }
 
   Future<void> _deleteTag(TagModel tag) async {
@@ -537,12 +589,12 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
 
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Category', minWidth: categoryMin, flex: 2),
+        RdxTableColumn(title: 'Category', minWidth: context.w(categoryMin), flex: 2),
         RdxTableColumn(
-            title: 'Subcategories', minWidth: subcategoriesMin, flex: 3),
+            title: 'Subcategories', minWidth: context.w(subcategoriesMin), flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: actionsMin,
+          minWidth: context.w(actionsMin),
           alignment: Alignment.centerRight,
         ),
       ],
@@ -611,10 +663,10 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
 
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Preparation Style', minWidth: nameMin, flex: 3),
+        RdxTableColumn(title: 'Preparation Style', minWidth: context.w(nameMin), flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: actionsMin,
+          minWidth: context.w(actionsMin),
           alignment: Alignment.centerRight,
         ),
       ],
@@ -671,10 +723,10 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
 
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Regionality', minWidth: nameMin, flex: 3),
+        RdxTableColumn(title: 'Regionality', minWidth: context.w(nameMin), flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: actionsMin,
+          minWidth: context.w(actionsMin),
           alignment: Alignment.centerRight,
         ),
       ],
@@ -740,10 +792,10 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
 
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Tag', minWidth: tagMin, flex: 3),
+        RdxTableColumn(title: 'Tag', minWidth: context.w(tagMin), flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: actionsMin,
+          minWidth: context.w(actionsMin),
           alignment: Alignment.centerRight,
         ),
       ],

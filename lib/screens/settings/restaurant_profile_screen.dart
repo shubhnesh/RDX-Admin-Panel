@@ -189,7 +189,6 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
           // ── Shared header ───────────────────────────────────────
           RdxHeader(
             title: 'Restaurant Profile',
-            subtitle: 'Configure RDX Admin platform details.',
             showBackButton: true,
             actions: [
               RdxActionButton.save(

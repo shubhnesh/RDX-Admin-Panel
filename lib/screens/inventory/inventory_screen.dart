@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/core/utils/formatters.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
@@ -13,7 +14,6 @@ import '../../providers/inventory_provider.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/resuable_options/rdx_search_bar.dart';
 import '../../widgets/resuable_options/rdx_category_tabs.dart';
-import '../../widgets/resuable_options/rdx_dropdown.dart';
 import 'add_material_screen.dart';
 import 'low_stock_screen.dart';
 import 'widgets/inventory_stats_row.dart';
@@ -49,7 +49,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
   ) {
     final renderBox = buttonContext.findRenderObject() as RenderBox;
     final buttonPosition = renderBox.localToGlobal(Offset.zero);
-
     showGeneralDialog<void>(
       context: buttonContext,
       barrierDismissible: true,
@@ -85,7 +84,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final provider = context.watch<InventoryProvider>();
     final colors = AppColors.of(context);
     final isNarrow = MediaQuery.sizeOf(context).width < 900;
-
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
@@ -118,39 +116,40 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        RdxSearchToolbar(
-                          controller: _searchController,
-                          hintText: 'Search materials or categories',
-                          onChanged: provider.setSearch,
-                          actions: [
+                        // ── Header row: title/subtitle + Add Material ───
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Inventory',
+                                    style: AppTextStyles.heading(context),
+                                  ),
+                                  SizedBox(height: context.h(4)),
+                                  Text(
+                                    'Track raw materials, stock levels, and replenishment alerts',
+                                    style: AppTextStyles.bodySecondary(context)
+                                        .copyWith(color: colors.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: context.w(12)),
                             RdxActionButton(
                               label: 'Add Material',
                               leadingIcon: Icons.add,
+                              isPrimary: true,
                               onPressed: () => _openAddMaterial(context),
                             ),
                           ],
                         ),
-                        // ── Header ─────────────────────────────────────
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Inventory',
-                              style: AppTextStyles.heading(context),
-                            ),
-                            SizedBox(height: context.h(4)),
-                            Text(
-                              'Track raw materials, stock levels, and replenishment alerts',
-                              style: AppTextStyles.bodySecondary(context)
-                                  .copyWith(color: colors.textSecondary),
-                            ),
-                          ],
-                        ),
-
                         SizedBox(height: context.h(20)),
-
                         // ── Stats ──────────────────────────────────────
                         InventoryStatsRow(
+                          overallCost: provider.overallCost,
                           total: provider.totalItems,
                           inStock: provider.inStockCount,
                           needsRestock: provider.needsRestockCount,
@@ -158,63 +157,58 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           lowStock: provider.lowStockCount,
                           onNeedsRestockTap: () => _openLowStock(context),
                         ),
-
                         SizedBox(height: context.h(20)),
-
-                        // ── Filters row ────────────────────────────────
+                        // ── Filters row: tabs (left) + search (right) ───
                         if (isNarrow)
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               RdxCategoryTabs(
-                                labels: provider.categories,
-                                selectedLabel: provider.selectedCategory,
+                                labels: const [
+                                  'In Stock',
+                                  'Low Stock',
+                                  'Critical',
+                                ],
+                                selectedLabel: provider.stockLevelFilter,
                                 allLabel: 'All',
-                                onSelected: provider.setCategory,
+                                onSelected: provider.setStockLevelFilter,
                                 expand: false,
                               ),
                               SizedBox(height: context.h(12)),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: RdxSearchBar(
-                                      controller: _searchController,
-                                      hintText: 'Search materials',
-                                      onChanged: provider.setSearch,
-                                      height: context.h(40),
-                                    ),
-                                  ),
-                                  SizedBox(width: context.w(10)),
-                                  _StockLevelDropdown(
-                                    value: provider.stockLevelFilter,
-                                    onChanged: provider.setStockLevelFilter,
-                                  ),
-                                ],
+                              RdxSearchBar(
+                                controller: _searchController,
+                                hintText: 'Search materials or categories',
+                                onChanged: provider.setSearch,
+                                height: context.h(40),
                               ),
                             ],
                           )
                         else
                           Row(
                             children: [
-                              Expanded(
-                                child: RdxCategoryTabs(
-                                  labels: provider.categories,
-                                  selectedLabel: provider.selectedCategory,
-                                  allLabel: 'All',
-                                  onSelected: provider.setCategory,
-                                  expand: false,
-                                ),
+                              RdxCategoryTabs(
+                                labels: const [
+                                  'In Stock',
+                                  'Low Stock',
+                                  'Critical',
+                                ],
+                                selectedLabel: provider.stockLevelFilter,
+                                allLabel: 'All',
+                                onSelected: provider.setStockLevelFilter,
+                                expand: false,
                               ),
-                              SizedBox(width: context.w(10)),
-                              _StockLevelDropdown(
-                                value: provider.stockLevelFilter,
-                                onChanged: provider.setStockLevelFilter,
+                              SizedBox(width: context.w(12)),
+                              Expanded(
+                                child: RdxSearchBar(
+                                  controller: _searchController,
+                                  hintText: 'Search materials or categories',
+                                  onChanged: provider.setSearch,
+                                  height: context.h(40),
+                                ),
                               ),
                             ],
                           ),
-
                         SizedBox(height: context.h(16)),
-
                         // ── Table ──────────────────────────────────────
                         Expanded(
                           child: _buildInventoryTable(
@@ -222,7 +216,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             provider.filteredItems,
                           ),
                         ),
-
                         // ── Footer ─────────────────────────────────────
                         Padding(
                           padding: EdgeInsets.only(
@@ -254,17 +247,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ),
       );
     }
-
     return RdxTable(
       showFooter: false,
-      columns: const [
-        RdxTableColumn(title: 'MATERIAL', minWidth: 180, flex: 3),
-        RdxTableColumn(title: 'CATEGORY', minWidth: 130, flex: 2),
-        RdxTableColumn(title: 'MIN. REQUIRED', minWidth: 130, flex: 2),
-        RdxTableColumn(title: 'STOCK LEVEL', minWidth: 220, flex: 3),
-        RdxTableColumn(title: 'STATUS', minWidth: 140, flex: 2),
-        RdxTableColumn(title: 'UNIT COST', minWidth: 120, flex: 2),
-        RdxTableColumn(title: 'ACTIONS', minWidth: 72, flex: 0),
+      columns: [
+        RdxTableColumn(title: 'MATERIAL', minWidth: context.w(180), flex: 3),
+        RdxTableColumn(title: 'CATEGORY', minWidth: context.w(130), flex: 2),
+        RdxTableColumn(title: 'STOCK LEVEL', minWidth: context.w(220), flex: 3),
+        RdxTableColumn(title: 'UNIT COST', minWidth: context.w(120), flex: 2),
+        RdxTableColumn(title: 'TOTAL COST', minWidth: context.w(120), flex: 2),
+        RdxTableColumn(title: 'ADDED (+)', minWidth: context.w(110), flex: 1),
+        RdxTableColumn(title: 'USED (-)', minWidth: context.w(110), flex: 1),
+        RdxTableColumn(title: 'ACTIONS', minWidth: context.w(72), flex: 0),
       ],
       rows: items.map((item) {
         return [
@@ -296,15 +289,26 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ),
             ),
           ),
-          Text(
-            '${_fmt(item.minRequired)} ${item.unit} min',
-            style: AppTextStyles.bodySecondary(context),
-          ),
           _inventoryStockLevelCell(context, item),
-          _inventoryStatusCell(context, item),
-          Text(
-            '${Formatters.currency(item.unitCost)}/${item.unit}',
-            style: AppTextStyles.bodySecondary(context),
+          _inventoryUnitCostCell(context, item),
+          _inventoryTotalCostCell(context, item),
+          _StockAdjustField(
+            key: ValueKey('${item.id}_added'),
+            hint: '',
+            maxValue: 5000,
+            maxErrorText: 'Cannot add more than 5000 at once',
+            onSubmit: (value) {
+              context.read<InventoryProvider>().addStock(item.id, value);
+            },
+          ),
+          _StockAdjustField(
+            key: ValueKey('${item.id}_used'),
+            hint: '',
+            maxValue: item.quantity,
+            maxErrorText: 'Cannot use more than current stock',
+            onSubmit: (value) {
+              context.read<InventoryProvider>().useStock(item.id, value);
+            },
           ),
           Builder(
             builder: (buttonContext) {
@@ -327,7 +331,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
   ) {
     final colors = AppColors.of(context);
     final status = item.status;
-
     final Color color;
     switch (status) {
       case StockStatus.inStock:
@@ -341,9 +344,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         color = AppColors.danger;
         break;
     }
-
     final pct = item.stockPercent.clamp(0, 100);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -373,63 +374,33 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  Widget _inventoryStatusCell(
+  /// Unit cost, e.g. "₹100/g" — sits where STATUS used to be.
+  Widget _inventoryUnitCostCell(
     BuildContext context,
     InventoryItemModel item,
   ) {
-    final status = item.status;
-    final Color color;
-    final String label;
+    return Text(
+      '${Formatters.currency(item.unitCost)}/${item.unit}',
+      style: AppTextStyles.bodySecondary(context),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
 
-    switch (status) {
-      case StockStatus.inStock:
-        color = AppColors.success;
-        label = 'In Stock';
-        break;
-      case StockStatus.lowStock:
-        color = AppColors.warning;
-        label = 'Low Stock';
-        break;
-      case StockStatus.critical:
-        color = AppColors.danger;
-        label = 'Critical';
-        break;
-      case StockStatus.outOfStock:
-        color = AppColors.danger;
-        label = 'Out of Stock';
-        break;
-    }
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: context.w(10),
-          vertical: context.h(4),
-        ),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: context.w(6),
-              height: context.h(6),
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-              ),
-            ),
-            SizedBox(width: context.w(6)),
-            Text(
-              label,
-              style: AppTextStyles.label(context).copyWith(color: color),
-            ),
-          ],
-        ),
+  /// Total cost (quantity × unit cost), read straight from the value
+  /// persisted in Firestore rather than recomputed on the fly, so it
+  /// stays consistent with whatever was last saved to the database.
+  Widget _inventoryTotalCostCell(
+    BuildContext context,
+    InventoryItemModel item,
+  ) {
+    return Text(
+      Formatters.currency(item.totalCost),
+      style: AppTextStyles.bodySecondary(context).copyWith(
+        fontWeight: FontWeight.w600,
       ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 
@@ -492,8 +463,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
               SizedBox(width: context.w(16)),
               Expanded(
                 child: RdxDeleteMetric(
-                  label: 'Unit Cost',
-                  value: '${Formatters.currency(item.unitCost)} / ${item.unit}',
+                  label: 'Total Cost',
+                  value: Formatters.currency(item.totalCost),
                 ),
               ),
             ],
@@ -506,7 +477,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
             'kitchen queue orders. This cannot be undone.',
       ),
     );
-
     if (confirmed == true && context.mounted) {
       await context.read<InventoryProvider>().deleteItem(item.id);
     }
@@ -520,31 +490,109 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 }
 
-class _StockLevelDropdown extends StatelessWidget {
-  final String value;
-  final ValueChanged<String> onChanged;
+/// Inline numeric entry used by the ADDED / USED table columns. Typing a
+/// quantity and pressing enter/check calls [onSubmit] once, then clears
+/// itself — it doesn't hold any running state of its own, the actual
+/// stock/cost math happens server-side in InventoryService.addStock /
+/// InventoryService.useStock.
+class _StockAdjustField extends StatefulWidget {
+  final String hint;
+  final double maxValue;
+  final String maxErrorText;
+  final ValueChanged<double> onSubmit;
 
-  const _StockLevelDropdown({
-    required this.value,
-    required this.onChanged,
+  const _StockAdjustField({
+    super.key,
+    required this.hint,
+    required this.maxValue,
+    required this.maxErrorText,
+    required this.onSubmit,
   });
 
-  static const _options = ['All', 'In Stock', 'Low Stock', 'Critical'];
+  @override
+  State<_StockAdjustField> createState() => _StockAdjustFieldState();
+}
+
+class _StockAdjustFieldState extends State<_StockAdjustField> {
+  final _controller = TextEditingController();
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = double.tryParse(_controller.text);
+    if (value == null || value <= 0) {
+      setState(() => _errorText = 'Enter a quantity greater than zero');
+      return;
+    }
+    if (value > widget.maxValue) {
+      setState(() => _errorText = widget.maxErrorText);
+      return;
+    }
+    setState(() => _errorText = null);
+    widget.onSubmit(value);
+    _controller.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: context.w(140),
-      child: RdxDropdown<String>(
-        value: value,
-        items: _options,
-        labelBuilder: (option) => option,
-        hint: 'Stock level',
-        isDense: true,
-        onChanged: (selected) {
-          if (selected != null) onChanged(selected);
+      width: context.w(92),
+      height: context.h(36),
+      child: TextField(
+        controller: _controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+          _MaxValueInputFormatter(widget.maxValue),
+        ],
+        style: AppTextStyles.bodySecondary(context),
+        textAlignVertical: TextAlignVertical.center,
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: widget.hint,
+          errorText: _errorText,
+          errorMaxLines: 2,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: context.w(8),
+            vertical: context.h(6),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(context.h(6)),
+          ),
+          suffixIcon: IconButton(
+            icon: Icon(Icons.check, size: context.h(16)),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: _submit,
+          ),
+        ),
+        onChanged: (_) {
+          if (_errorText != null) setState(() => _errorText = null);
         },
+        onSubmitted: (_) => _submit(),
       ),
     );
+  }
+}
+
+class _MaxValueInputFormatter extends TextInputFormatter {
+  final double maxValue;
+
+  _MaxValueInputFormatter(this.maxValue);
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) return newValue;
+    final value = double.tryParse(newValue.text);
+    if (value == null || value > maxValue) return oldValue;
+    return newValue;
   }
 }

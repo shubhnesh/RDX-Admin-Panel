@@ -25,6 +25,13 @@ class InventoryProvider extends ChangeNotifier {
       items.where((e) => e.status == StockStatus.critical).length;
   int get needsRestockCount => lowStockCount + criticalCount;
 
+  /// Overall cost of every material currently in inventory. This is a
+  /// straight sum of each item's `totalCost`, which itself is the value
+  /// persisted in Firestore (quantity x unit cost, computed and saved by
+  /// InventoryService) — not a value recomputed here on the fly.
+  double get overallCost =>
+      items.fold<double>(0, (sum, item) => sum + item.totalCost);
+
   double get restockCostEstimate {
     double total = 0;
     for (final item in items.where((e) => e.needsRestock)) {
@@ -111,6 +118,22 @@ class InventoryProvider extends ChangeNotifier {
 
   Future<void> updateQuantity(String id, double quantity) async {
     await _service.updateQuantity(id, quantity);
+    await load();
+  }
+
+  /// Restock: adds [quantity] to the item's current stock and adds
+  /// (quantity * current unit cost) to its existing totalCost — the
+  /// cost basis of stock already on hand is never re-priced.
+  Future<void> addStock(String id, double quantity) async {
+    await _service.addStock(id, quantity);
+    await load();
+  }
+
+  /// Consumption: subtracts [quantity] from the item's current stock.
+  /// totalCost is left unchanged — using already-paid-for stock isn't a
+  /// new financial transaction.
+  Future<void> useStock(String id, double quantity) async {
+    await _service.useStock(id, quantity);
     await load();
   }
 

@@ -502,15 +502,15 @@ class _LowStockTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return RdxTable(
       showFooter: false,
-      columns: const [
-        RdxTableColumn(title: 'ITEM', minWidth: 180, flex: 3),
-        RdxTableColumn(title: 'IN STOCK', minWidth: 160, flex: 2),
-        RdxTableColumn(title: 'STATUS', minWidth: 130, flex: 2),
-        RdxTableColumn(title: 'SHORTAGE', minWidth: 120, flex: 2),
-        RdxTableColumn(title: 'EST. COST', minWidth: 110, flex: 2),
+      columns: [
+        RdxTableColumn(title: 'ITEM', minWidth: context.w(180), flex: 3),
+        RdxTableColumn(title: 'IN STOCK', minWidth: context.w(160), flex: 2),
+        RdxTableColumn(title: 'STATUS', minWidth: context.w(130), flex: 2),
+        RdxTableColumn(title: 'SHORTAGE', minWidth: context.w(120), flex: 2),
+        RdxTableColumn(title: 'EST. COST', minWidth: context.w(110), flex: 2),
         RdxTableColumn(
           title: 'ACTION',
-          minWidth: 120,
+          minWidth: context.w(120),
           flex: 1,
           alignment: Alignment.center,
         ),

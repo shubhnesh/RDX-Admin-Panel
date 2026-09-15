@@ -299,11 +299,11 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
 
     return RdxTable(
       showFooter: false,
-      columns: const [
-        RdxTableColumn(title: 'STATUS', minWidth: 130, flex: 1),
-        RdxTableColumn(title: 'NOTIFICATION TITLE', minWidth: 300, flex: 4),
-        RdxTableColumn(title: 'DATE / TIME', minWidth: 150, flex: 2),
-        RdxTableColumn(title: 'ACTIONS', minWidth: 90, flex: 1),
+      columns: [
+        RdxTableColumn(title: 'STATUS', minWidth: context.w(130), flex: 1),
+        RdxTableColumn(title: 'NOTIFICATION TITLE', minWidth: context.w(300), flex: 4),
+        RdxTableColumn(title: 'DATE / TIME', minWidth: context.w(150), flex: 2),
+        RdxTableColumn(title: 'ACTIONS', minWidth: context.w(90), flex: 1),
       ],
       rows: notifications.map((item) {
         final status = item.scheduled ? 'Scheduled' : 'Sent';

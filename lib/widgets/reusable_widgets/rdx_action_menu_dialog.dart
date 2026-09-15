@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/utils/responsive_size.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 
@@ -44,13 +45,21 @@ class RdxActionMenuDialog extends StatelessWidget {
   /// The actual width remains content-driven.
   final double? maxWidth;
 
-  /// Optional maximum height.
+  /// Optional maximum height. If null, the menu grows to fit its content
+  /// with no scrolling. Only pass this if you explicitly want the menu
+  /// capped (e.g. a very long list of items) — in that case wrap the
+  /// content in your own scroll view via a custom item list, since this
+  /// widget no longer scrolls internally.
   final double? maxHeight;
 
   /// Padding around the complete menu.
+  /// NOTE: default value below can't call context.h()/context.w() since
+  /// default parameter values must be compile-time constants — it's
+  /// scaled at the point of use in build() instead.
   final EdgeInsetsGeometry contentPadding;
 
   /// Padding inside each action item.
+  /// Same note as [contentPadding] — scaled at point of use.
   final EdgeInsetsGeometry itemPadding;
 
   final bool showCloseButton;
@@ -95,34 +104,41 @@ class RdxActionMenuDialog extends StatelessWidget {
     final menu = IntrinsicWidth(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          minWidth: 0,
-          maxWidth: maxWidth ?? MediaQuery.sizeOf(context).width * 0.9,
-          maxHeight: maxHeight ?? MediaQuery.sizeOf(context).height * 0.7,
+          minWidth: context.w(0),
+          maxWidth: maxWidth ?? context.w(90),
+          // No forced small default anymore — let the menu grow to fit
+          // its content. Only clamp if the caller explicitly passes one.
+          maxHeight: maxHeight ?? double.infinity,
         ),
         child: Material(
           color: backgroundColor ?? colors.surface,
-          elevation: elevation,
+          elevation: context.h(elevation),
           shadowColor: Colors.black26,
-          borderRadius: BorderRadius.circular(borderRadius),
+          borderRadius: BorderRadius.circular(context.w(borderRadius)),
           clipBehavior: Clip.antiAlias,
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: contentPadding,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (title != null || subtitle != null || showCloseButton)
-                    _buildHeader(context),
-                  if ((title != null || subtitle != null || showCloseButton) &&
-                      showDivider)
-                    Divider(
-                      height: 1,
-                      color: colors.divider,
-                    ),
-                  ..._buildItems(context),
-                ],
-              ),
+          child: Padding(
+            padding: contentPadding is EdgeInsets
+                ? EdgeInsets.fromLTRB(
+                    context.w((contentPadding as EdgeInsets).left),
+                    context.h((contentPadding as EdgeInsets).top),
+                    context.w((contentPadding as EdgeInsets).right),
+                    context.h((contentPadding as EdgeInsets).bottom),
+                  )
+                : contentPadding,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (title != null || subtitle != null || showCloseButton)
+                  _buildHeader(context),
+                if ((title != null || subtitle != null || showCloseButton) &&
+                    showDivider)
+                  Divider(
+                    height: context.h(1),
+                    color: colors.divider,
+                  ),
+                ..._buildItems(context),
+              ],
             ),
           ),
         ),
@@ -143,8 +159,8 @@ class RdxActionMenuDialog extends StatelessWidget {
       delegate: _RdxActionMenuPositionDelegate(
         position: position!,
         screenSize: MediaQuery.sizeOf(context),
-        margin: 8,
-        gap: gap,
+        margin: context.w(8),
+        gap: context.w(gap),
       ),
       child: menu,
     );
@@ -154,11 +170,11 @@ class RdxActionMenuDialog extends StatelessWidget {
     final colors = AppColors.of(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        7,
-        5,
-        4,
-        5,
+      padding: EdgeInsets.fromLTRB(
+        context.w(7),
+        context.h(5),
+        context.w(4),
+        context.h(5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -177,7 +193,7 @@ class RdxActionMenuDialog extends StatelessWidget {
                       style: AppTextStyles.section(context),
                     ),
                   if (subtitle != null) ...[
-                    const SizedBox(height: 2),
+                    SizedBox(height: context.h(2)),
                     Text(
                       subtitle!,
                       maxLines: 2,
@@ -191,16 +207,16 @@ class RdxActionMenuDialog extends StatelessWidget {
               ),
             ),
           if (showCloseButton) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: context.w(8)),
             InkWell(
               onTap: () => Navigator.of(context).pop(),
-              borderRadius: BorderRadius.circular(6),
-              child: const SizedBox(
-                width: 28,
-                height: 28,
+              borderRadius: BorderRadius.circular(context.w(6)),
+              child: SizedBox(
+                width: context.w(28),
+                height: context.h(28),
                 child: Icon(
                   Icons.close,
-                  size: 18,
+                  size: context.w(18),
                 ),
               ),
             ),
@@ -219,7 +235,12 @@ class RdxActionMenuDialog extends StatelessWidget {
       widgets.add(
         _RdxActionMenuTile(
           item: item,
-          padding: itemPadding,
+          padding: itemPadding is EdgeInsets
+              ? EdgeInsets.symmetric(
+                  horizontal: context.w((itemPadding as EdgeInsets).horizontal / 2),
+                  vertical: context.h((itemPadding as EdgeInsets).vertical / 2),
+                )
+              : itemPadding,
           onTap: () {
             if (!item.enabled) return;
 
@@ -232,7 +253,7 @@ class RdxActionMenuDialog extends StatelessWidget {
       if (showDivider && index < items.length - 1) {
         widgets.add(
           Divider(
-            height: 1,
+            height: context.h(1),
             color: AppColors.of(context).divider,
           ),
         );
@@ -256,6 +277,11 @@ class _RdxActionMenuPositionDelegate extends SingleChildLayoutDelegate {
     required this.gap,
   });
 
+  // NOTE: SingleChildLayoutDelegate has no BuildContext, so margin/gap
+  // arrive here already pre-scaled by context.w()/context.h() from the
+  // caller in build() above. The 0s below are true zero constraints
+  // (no minimum size), not real "measurements", so there's nothing to
+  // scale — scaling zero is still zero.
   @override
   BoxConstraints getConstraintsForChild(
     BoxConstraints constraints,
@@ -347,10 +373,10 @@ class _RdxActionMenuTile extends StatelessWidget {
 
     return Material(
       color: item.backgroundColor ?? Colors.transparent,
-      borderRadius: BorderRadius.circular(7),
+      borderRadius: BorderRadius.circular(context.w(7)),
       child: InkWell(
         onTap: item.enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(context.w(7)),
         child: Padding(
           padding: padding,
           child: Row(
@@ -359,10 +385,10 @@ class _RdxActionMenuTile extends StatelessWidget {
               if (item.icon != null) ...[
                 Icon(
                   item.icon,
-                  size: 17,
+                  size: context.w(17),
                   color: iconColor,
                 ),
-                const SizedBox(width: 9),
+                SizedBox(width: context.w(9)),
               ],
               Flexible(
                 child: Column(
@@ -374,17 +400,11 @@ class _RdxActionMenuTile extends StatelessWidget {
                         item.title!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        // style: AppTextStyles.bodySecondary(
-                        //   context,
-                        // ).copyWith(
-                        //   color: textColor,
-                        //   fontWeight: FontWeight.w500,
-                        // ),
                         style: AppTextStyles.label(context)
                             .copyWith(color: textColor),
                       ),
                     if (item.subtitle != null) ...[
-                      const SizedBox(height: 2),
+                      SizedBox(height: context.h(2)),
                       Text(
                         item.subtitle!,
                         maxLines: 2,

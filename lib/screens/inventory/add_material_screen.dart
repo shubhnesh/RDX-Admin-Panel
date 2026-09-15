@@ -2,14 +2,62 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
+import 'package:rdx_admin/widgets/dialogs/taxonomy_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
+import '../../models/inventory_category_model.dart';
 import '../../models/inventory_item_model.dart';
+import '../../models/unit_model.dart';
 import '../../providers/inventory_provider.dart';
+import '../../services/inventory_category_service.dart';
+import '../../services/unit_service.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/resuable_options/rdx_text_field.dart';
 import '../../widgets/resuable_options/rdx_dropdown.dart';
+import 'manage_inventory_taxonomy_screen.dart';
+
+/// Sentinel value placed as the first entry in the category dropdown.
+/// Selecting it opens [CreateInventoryCategoryDialog] instead of setting a category.
+const String _kCreateCategoryValue = '__create_category__';
+
+/// Sentinel value placed as the first entry in the unit dropdown.
+/// Selecting it opens [CreateUnitDialog].
+const String _kCreateUnitValue = '__create_unit__';
+
+/// Rejects any edit that would make the number greater than [maxValue].
+/// If [maxValue] is null, all numeric input is allowed.
+class _MaxValueInputFormatter extends TextInputFormatter {
+  final double? maxValue;
+
+  _MaxValueInputFormatter(this.maxValue);
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) return newValue;
+
+    // Allow intermediate typing like "." or "0."
+    if (newValue.text == '.' || newValue.text.endsWith('.')) {
+      return newValue;
+    }
+
+    final parsed = double.tryParse(newValue.text);
+    if (parsed == null) {
+      // Invalid number → keep old value
+      return oldValue;
+    }
+
+    if (maxValue != null && parsed > maxValue!) {
+      // Would exceed limit → reject the keystroke
+      return oldValue;
+    }
+
+    return newValue;
+  }
+}
 
 class AddMaterialScreen extends StatefulWidget {
   final InventoryItemModel? existing;
@@ -28,30 +76,18 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
   late final TextEditingController _maxCtrl;
   late final TextEditingController _costCtrl;
 
-  String _category = 'Dry Pantry';
-  String _unit = 'Cans / Tins';
+  /// Category and unit store **ids** (Firestore document ids).
+  String? _category;
+  String? _unit;
   bool _saving = false;
 
-  static const _categories = [
-    'Proteins & Meats',
-    'Fresh Produce',
-    'Dairy & Cold',
-    'Dry Pantry',
-    'Packaging',
-    'Seafood',
-    'Other',
-  ];
+  final _categoryService = InventoryCategoryService();
+  final _unitService = UnitService();
 
-  static const _units = [
-    'kg',
-    'g',
-    'pcs',
-    'Cans / Tins',
-    'L',
-    'ml',
-    'box',
-    'bag',
-  ];
+  List<InventoryCategoryModel> _categories = [];
+  List<UnitModel> _units = [];
+  bool _categoriesLoading = true;
+  bool _unitsLoading = true;
 
   bool get isEdit => widget.existing != null && widget.existing!.id.isNotEmpty;
 
@@ -68,10 +104,130 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
         TextEditingController(text: e != null ? e.maxCapacity.toString() : '');
     _costCtrl =
         TextEditingController(text: e != null ? e.unitCost.toString() : '');
+
+    // existing.category / existing.unit may be stored as display names.
+    // After lists load we map name → id if needed.
     if (e != null) {
       _category = e.category;
       _unit = e.unit;
     }
+
+    _loadCategories();
+    _loadUnits();
+  }
+
+  Future<void> _loadCategories() async {
+    setState(() => _categoriesLoading = true);
+    try {
+      final list = await _categoryService.fetchCategories();
+      if (!mounted) return;
+      setState(() {
+        _categories = list;
+        _categoriesLoading = false;
+        // If existing value is a name (not an id), resolve to id.
+        if (_category != null && !_categories.any((c) => c.id == _category)) {
+          final byName = _categories.where(
+            (c) => c.name.toLowerCase() == _category!.toLowerCase(),
+          );
+          if (byName.isNotEmpty) {
+            _category = byName.first.id;
+          }
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _categoriesLoading = false);
+    }
+  }
+
+  Future<void> _loadUnits() async {
+    setState(() => _unitsLoading = true);
+    try {
+      final list = await _unitService.fetchUnits();
+      if (!mounted) return;
+      setState(() {
+        _units = list;
+        _unitsLoading = false;
+        if (_unit != null && !_units.any((u) => u.id == _unit)) {
+          final byName = _units.where(
+            (u) => u.name.toLowerCase() == _unit!.toLowerCase(),
+          );
+          if (byName.isNotEmpty) {
+            _unit = byName.first.id;
+          }
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _unitsLoading = false);
+    }
+  }
+
+   Future<void> _openCreateCategoryDialog() async {
+    final created = await TaxonomyEntryDialog.show<InventoryCategoryModel>(
+      context,
+      title: 'Create Category',
+      editTitle: 'Edit Category',
+      nameLabel: 'Category Name *',
+      nameHint: 'e.g. Fresh Produce',
+      onSave: (name, _) => _categoryService.createCategory(name: name),
+    );
+    if (created == null || !mounted) return;
+    setState(() {
+      _categories = [..._categories, created];
+      _category = created.id;
+    });
+  }
+
+  Future<void> _openCreateUnitDialog() async {
+    final created = await TaxonomyEntryDialog.show<UnitModel>(
+      context,
+      title: 'Create Unit of Measurement',
+      editTitle: 'Edit Unit',
+      nameLabel: 'Unit Name *',
+      nameHint: 'e.g. kg, L, box',
+      onSave: (name, _) => _unitService.createUnit(name: name),
+    );
+    if (created == null || !mounted) return;
+    setState(() {
+      _units = [..._units, created];
+      _unit = created.id;
+    });
+  }
+
+  Future<void> _openManageTaxonomy() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ManageInventoryTaxonomyScreen(),
+      ),
+    );
+    if (!mounted) return;
+    // Refresh lists in case user created/edited/deleted entries.
+    await Future.wait([_loadCategories(), _loadUnits()]);
+  }
+
+  String _categoryLabel(String id) {
+    if (id == _kCreateCategoryValue) return '+ Create category';
+    final match = _categories.where((c) => c.id == id);
+    return match.isEmpty ? id : match.first.name;
+  }
+
+  String _unitLabel(String id) {
+    if (id == _kCreateUnitValue) return '+ Create unit';
+    final match = _units.where((u) => u.id == id);
+    return match.isEmpty ? id : match.first.name;
+  }
+
+  String get _categoryDisplayName {
+    if (_category == null) return '';
+    final match = _categories.where((c) => c.id == _category);
+    return match.isEmpty ? _category! : match.first.name;
+  }
+
+  String get _unitDisplayName {
+    if (_unit == null) return '';
+    final match = _units.where((u) => u.id == _unit);
+    return match.isEmpty ? _unit! : match.first.name;
   }
 
   @override
@@ -97,17 +253,40 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_category == null || _unit == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select category and unit')),
+      );
+      return;
+    }
     setState(() => _saving = true);
 
+    // Creating a brand-new material: totalCost is computed fresh by
+    // InventoryService as quantity * unitCost (its initial cost basis).
+    //
+    // Editing an existing material: pass its *existing* totalCost through
+    // unchanged. InventoryService.saveItem keeps it as-is for edits, so
+    // tweaking the unit cost, name, category, min/max, etc. here never
+    // silently re-prices stock that was already bought. Quantity/cost
+    // changes from restocking or usage go through the ADDED/USED fields
+    // in the inventory table (InventoryProvider.addStock / useStock),
+    // not through this form.
+    //
+    // In edit mode, name, category, and quantity (initial stock) are
+    // locked in the UI and always resubmitted unchanged from the
+    // originally-loaded `existing` values, never from user-edited state.
     final item = InventoryItemModel(
       id: widget.existing?.id ?? '',
-      name: _nameCtrl.text.trim(),
-      category: _category,
-      quantity: double.tryParse(_qtyCtrl.text) ?? 0,
+      name: isEdit ? widget.existing!.name : _nameCtrl.text.trim(),
+      category: isEdit ? widget.existing!.category : _categoryDisplayName,
+      quantity: isEdit
+          ? widget.existing!.quantity
+          : (double.tryParse(_qtyCtrl.text) ?? 0),
       minRequired: double.tryParse(_minCtrl.text) ?? 0,
       maxCapacity: double.tryParse(_maxCtrl.text) ?? 0,
-      unit: _unit,
+      unit: _unitDisplayName,
       unitCost: double.tryParse(_costCtrl.text) ?? 0,
+      totalCost: isEdit ? widget.existing!.totalCost : 0,
     );
 
     try {
@@ -147,14 +326,14 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                 'Create a new raw ingredient or packaging item in your inventory catalog.',
             showBackButton: true,
             actions: [
-              RdxActionButton.discard(
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              SizedBox(width: context.w(10)),
               RdxActionButton.save(
                 label: 'Save',
                 onPressed: _save,
                 isLoading: _saving,
+              ),
+              SizedBox(width: context.w(10)),
+              RdxActionButton.discard(
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
@@ -198,41 +377,88 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
   Widget _basicInfoSection(BuildContext context, AppColorScheme colors) {
     return _SectionCard(
       title: 'Basic Information & Category',
-      sectionLabel: 'SECTION 1',
       icon: Icons.badge_outlined,
+      headerTrailing: TextButton.icon(
+        onPressed: _openManageTaxonomy,
+        icon: Icon(
+          Icons.add_rounded,
+          size: context.h(18),
+          color: AppColors.primary,
+        ),
+        label: Text(
+          'Create & Manage Taxonomy',
+          style:
+              AppTextStyles.label(context).copyWith(color: AppColors.primary),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           RdxTextField(
             controller: _nameCtrl,
-            label: 'MATERIAL NAME *',
-            hint: 'e.g., San Marzano Whole Peeled Tomatoes',
+            label: 'Material Name *',
+            hint: 'Enter material name',
+            enabled: !isEdit,
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Required' : null,
           ),
-          Text(
-            'Enter descriptive name recognized by kitchen & receiving staff',
-            style:
-                AppTextStyles.body(context).copyWith(color: colors.textMuted),
-          ),
+          if (isEdit) ...[
+            SizedBox(height: context.h(6)),
+            Text(
+              'Material name cannot be changed after creation.',
+              style: AppTextStyles.bodyTertiary(context)
+                  .copyWith(color: colors.textMuted),
+            ),
+          ],
           SizedBox(height: context.h(16)),
           LayoutBuilder(builder: (context, c) {
             final stack = c.maxWidth < 400;
             final cat = RdxDropdown<String>(
-              label: 'CATEGORY *',
-              value: _category,
-              items: _categories,
-              labelBuilder: (s) => s,
-              onChanged: (v) {
-                if (v != null) setState(() => _category = v);
-              },
+              label: 'Category *',
+              value: _category != null &&
+                      (_categories.any((x) => x.id == _category) ||
+                          _category == _kCreateCategoryValue)
+                  ? _category
+                  : null,
+              items: [
+                _kCreateCategoryValue,
+                ..._categories.map((c) => c.id),
+              ],
+              labelBuilder: _categoryLabel,
+              searchable: true,
+              enabled: !isEdit,
+              hint: _categoriesLoading
+                  ? 'Loading categories...'
+                  : 'Select category',
+              onChanged: isEdit
+                  ? null
+                  : (v) {
+                      if (v == _kCreateCategoryValue) {
+                        _openCreateCategoryDialog();
+                        return;
+                      }
+                      if (v != null) setState(() => _category = v);
+                    },
             );
             final unit = RdxDropdown<String>(
-              label: 'UNIT OF MEASUREMENT *',
-              value: _unit,
-              items: _units,
-              labelBuilder: (s) => s,
+              label: 'Unit of Measurement *',
+              value: _unit != null &&
+                      (_units.any((x) => x.id == _unit) ||
+                          _unit == _kCreateUnitValue)
+                  ? _unit
+                  : null,
+              items: [
+                _kCreateUnitValue,
+                ..._units.map((u) => u.id),
+              ],
+              labelBuilder: _unitLabel,
+              searchable: true,
+              hint: _unitsLoading ? 'Loading units...' : 'Select unit',
               onChanged: (v) {
+                if (v == _kCreateUnitValue) {
+                  _openCreateUnitDialog();
+                  return;
+                }
                 if (v != null) setState(() => _unit = v);
               },
             );
@@ -249,11 +475,19 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
               Expanded(child: unit),
             ]);
           }),
+          if (isEdit) ...[
+            SizedBox(height: context.h(6)),
+            Text(
+              'Category cannot be changed after creation.',
+              style: AppTextStyles.bodyTertiary(context)
+                  .copyWith(color: colors.textMuted),
+            ),
+          ],
           SizedBox(height: context.h(16)),
           RdxTextField(
             controller: _costCtrl,
-            label: 'UNIT COST (\$) *',
-            hint: '0.00',
+            label: 'Unit Cost (₹) *',
+            hint: 'Enter cost per unit',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
@@ -264,82 +498,142 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
               return null;
             },
           ),
-          Text(
-            'Direct cost per unit',
-            style:
-                AppTextStyles.body(context).copyWith(color: colors.textMuted),
-          ),
+          if (isEdit) ...[
+            SizedBox(height: context.h(6)),
+            Text(
+              'Changing this only sets the price for future restocks — it '
+              'won\'t change the cost already recorded for stock on hand.',
+              style: AppTextStyles.bodyTertiary(context)
+                  .copyWith(color: colors.textMuted),
+            ),
+          ],
         ],
       ),
     );
   }
 
   Widget _stockTrackingSection(BuildContext context, AppColorScheme colors) {
+    final maxHasValue = _maxCtrl.text.trim().isNotEmpty &&
+        double.tryParse(_maxCtrl.text.trim()) != null;
+    final maxVal = double.tryParse(_maxCtrl.text);
+    final qtyVal = double.tryParse(_qtyCtrl.text);
+
     return _SectionCard(
       title: 'Stock Tracking & Thresholds',
-      sectionLabel: 'SECTION 2',
       icon: Icons.bar_chart_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LayoutBuilder(builder: (context, c) {
-            final stack = c.maxWidth < 400;
-            final qty = RdxTextField(
-              controller: _qtyCtrl,
-              label: 'CURRENT IN-STOCK QUANTITY',
-              hint: 'e.g., 25.0',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-              ],
-              onChanged: (_) => setState(() {}),
-            );
-            final maxf = RdxTextField(
-              controller: _maxCtrl,
-              label: 'TOTAL STORAGE CAPACITY',
-              hint: 'e.g., 50.0',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-              ],
-              onChanged: (_) => setState(() {}),
-            );
-            if (stack) {
-              return Column(children: [
-                qty,
-                SizedBox(height: context.h(12)),
-                maxf,
-              ]);
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: qty),
-                SizedBox(width: context.w(12)),
-                Expanded(child: maxf),
-              ],
-            );
-          }),
-          SizedBox(height: context.h(16)),
+          // 1. Max Capacity first — always editable.
           RdxTextField(
-            controller: _minCtrl,
-            label: 'MIN. REQUIRED LEVEL',
-            hint: 'e.g., 10.0',
+            controller: _maxCtrl,
+            label: 'Maximum Storage Capacity *',
+            hint: 'Enter maximum storage capacity',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
             ],
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) {
+              // When max is cleared, clear dependent min field
+              // (quantity is locked in edit mode, so leave it alone then).
+              if (_maxCtrl.text.trim().isEmpty) {
+                if (!isEdit) _qtyCtrl.clear();
+                _minCtrl.clear();
+              }
+              setState(() {});
+            },
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Required';
+              if (double.tryParse(v) == null) return 'Invalid number';
+              return null;
+            },
+          ),
+          SizedBox(height: context.h(16)),
+
+          // 2. Initial / Current Stock — locked once created; only
+          //    editable while adding a brand-new material, and even then
+          //    disabled until max is set, with keystrokes that would
+          //    exceed max rejected.
+          RdxTextField(
+            controller: _qtyCtrl,
+            label: isEdit ? 'Current Stock Quantity' : 'Initial Stock Quantity',
+            hint: 'Enter current stock quantity',
+            enabled: !isEdit && maxHasValue,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+              _MaxValueInputFormatter(maxVal),
+            ],
+            onChanged: (!isEdit && maxHasValue)
+                ? (_) {
+                    // If qty drops below current min, clear min.
+                    final q = double.tryParse(_qtyCtrl.text);
+                    final m = double.tryParse(_minCtrl.text);
+                    if (q != null && m != null && m > q) {
+                      _minCtrl.clear();
+                    }
+                    setState(() {});
+                  }
+                : null,
+            validator: (v) {
+              if (isEdit) return null;
+              if (!maxHasValue) return null;
+              if (v == null || v.isEmpty) return null;
+              final qty = double.tryParse(v);
+              if (qty == null) return 'Invalid number';
+              if (maxVal != null && qty > maxVal) {
+                return 'Cannot exceed total storage capacity';
+              }
+              return null;
+            },
+          ),
+          if (isEdit) ...[
+            SizedBox(height: context.h(6)),
+            Text(
+              'Stock quantity is locked here — use the ADDED / USED fields '
+              'in the inventory table to restock or record usage, so the '
+              'cost basis stays accurate.',
+              style: AppTextStyles.bodyTertiary(context)
+                  .copyWith(color: colors.textMuted),
+            ),
+          ],
+          SizedBox(height: context.h(16)),
+
+          // 3. Minimum Required — always editable once max is set;
+          //    keystrokes that would exceed current stock are rejected.
+          RdxTextField(
+            controller: _minCtrl,
+            label: 'Minimum Stock Alert Value',
+            hint: 'Enter minimum stock value',
+            enabled: maxHasValue,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+              _MaxValueInputFormatter(qtyVal),
+            ],
+            onChanged: maxHasValue ? (_) => setState(() {}) : null,
+            validator: (v) {
+              if (!maxHasValue) return null;
+              if (v == null || v.isEmpty) return null;
+              final min = double.tryParse(v);
+              if (min == null) return 'Invalid number';
+              if (qtyVal != null && min > qtyVal) {
+                return 'Cannot exceed initial/current stock quantity';
+              }
+              if (maxVal != null && min > maxVal) {
+                return 'Cannot exceed total storage capacity';
+              }
+              return null;
+            },
           ),
           SizedBox(height: context.h(6)),
           Text(
             'Restock alert triggers when stock falls below this amount — no confusing PAR terminology',
-            style:
-                AppTextStyles.body(context).copyWith(color: colors.textMuted),
+            style: AppTextStyles.bodyTertiary(context)
+                .copyWith(color: colors.textMuted),
           ),
           SizedBox(height: context.h(20)),
+
           // Live preview
           Container(
             padding: EdgeInsets.all(context.h(14)),
@@ -354,38 +648,13 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                 Row(
                   children: [
                     Text(
-                      'LIVE STOCK PREVIEW',
+                      'Live Stock Preview',
                       style: AppTextStyles.bodySecondary(context).copyWith(
                         color: colors.textMuted,
                         letterSpacing: 0.5,
                       ),
                     ),
                     const Spacer(),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: context.w(8),
-                        vertical: context.h(3),
-                      ),
-                      decoration: BoxDecoration(
-                        color: _statusColor(_previewStatus)
-                            .withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _StatusDot(status: _previewStatus),
-                          SizedBox(width: context.w(5)),
-                          Text(
-                            _statusLabel(_previewStatus),
-                            style: AppTextStyles.label(context).copyWith(
-                              color: _statusColor(_previewStatus),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
                 SizedBox(height: context.h(10)),
@@ -398,7 +667,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
                     ),
                     const Spacer(),
                     Text(
-                      '${_previewQty.toStringAsFixed(1)} / ${_previewMax.toStringAsFixed(1)} $_unit',
+                      '$_previewQty / $_previewMax $_unitDisplayName',
                       style: AppTextStyles.body(context)
                           .copyWith(color: colors.textMuted),
                     ),
@@ -421,20 +690,32 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
             ),
           ),
           SizedBox(height: context.h(12)),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.info_outline,
-                  size: context.h(14), color: colors.textMuted),
-              SizedBox(width: context.w(8)),
-              Expanded(
-                child: Text(
-                  'Status badges (In Stock / Low Stock / Critical) are calculated automatically based on your minimum required level.',
-                  style: AppTextStyles.body(context)
-                      .copyWith(color: colors.textMuted),
+
+          // Tip
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(
+              horizontal: context.w(14),
+              vertical: context.h(11),
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF1EA),
+              borderRadius: BorderRadius.circular(context.h(7)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline,
+                    size: context.h(20), color: colors.primary),
+                SizedBox(width: context.w(8)),
+                Expanded(
+                  child: Text(
+                    'Status badges (In Stock / Low Stock / Critical) are calculated automatically based on your minimum required level.',
+                    style: AppTextStyles.bodyTertiary(context)
+                        .copyWith(color: colors.primary),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -452,32 +733,19 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
         return AppColors.danger;
     }
   }
-
-  String _statusLabel(StockStatus s) {
-    switch (s) {
-      case StockStatus.inStock:
-        return 'In Stock';
-      case StockStatus.lowStock:
-        return 'Low Stock';
-      case StockStatus.critical:
-        return 'Critical';
-      case StockStatus.outOfStock:
-        return 'Out of Stock';
-    }
-  }
 }
 
 class _SectionCard extends StatelessWidget {
   final String title;
-  final String sectionLabel;
   final IconData icon;
   final Widget child;
+  final Widget? headerTrailing;
 
   const _SectionCard({
     required this.title,
-    required this.sectionLabel,
     required this.icon,
     required this.child,
+    this.headerTrailing,
   });
 
   @override
@@ -501,44 +769,16 @@ class _SectionCard extends StatelessWidget {
               Expanded(
                 child: Text(title, style: AppTextStyles.section(context)),
               ),
-              Text(
-                sectionLabel,
-                style: AppTextStyles.label(context).copyWith(
-                  color: colors.textMuted,
-                  letterSpacing: 0.8,
-                ),
-              ),
+              if (headerTrailing != null) ...[
+                headerTrailing!,
+                SizedBox(width: context.w(8)),
+              ],
             ],
           ),
           SizedBox(height: context.h(16)),
           child,
         ],
       ),
-    );
-  }
-}
-
-class _StatusDot extends StatelessWidget {
-  final StockStatus status;
-  const _StatusDot({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    Color c;
-    switch (status) {
-      case StockStatus.inStock:
-        c = AppColors.success;
-        break;
-      case StockStatus.lowStock:
-        c = AppColors.warning;
-        break;
-      default:
-        c = AppColors.danger;
-    }
-    return Container(
-      width: context.w(6),
-      height: context.h(6),
-      decoration: BoxDecoration(color: c, shape: BoxShape.circle),
     );
   }
 }

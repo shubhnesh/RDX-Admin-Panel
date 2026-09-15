@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/utils/formatters.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/stat_card.dart';
 import '../../../core/theme/app_colors.dart';
 
 class InventoryStatsRow extends StatelessWidget {
+  final double overallCost;
   final int total;
   final int inStock;
   final int needsRestock;
@@ -13,6 +15,7 @@ class InventoryStatsRow extends StatelessWidget {
 
   const InventoryStatsRow({
     super.key,
+    required this.overallCost,
     required this.total,
     required this.inStock,
     required this.needsRestock,
@@ -26,6 +29,13 @@ class InventoryStatsRow extends StatelessWidget {
     final isNarrow = MediaQuery.sizeOf(context).width < 700;
 
     final cards = [
+      StatCard(
+        label: 'TOTAL EXPENDITURE',
+        value: Formatters.currency(overallCost),
+        subtitle: 'Cost of all materials',
+        icon: Icons.payments_outlined,
+        accentColor: AppColors.primary,
+      ),
       StatCard(
         label: 'TOTAL ITEMS',
         value: '$total',
@@ -68,11 +78,10 @@ class InventoryStatsRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: cards[0]),
-          SizedBox(width: context.w(12)),
-          Expanded(child: cards[1]),
-          SizedBox(width: context.w(12)),
-          Expanded(child: cards[2]),
+          for (int i = 0; i < cards.length; i++) ...[
+            Expanded(child: cards[i]),
+            if (i != cards.length - 1) SizedBox(width: context.w(12)),
+          ],
         ],
       ),
     );

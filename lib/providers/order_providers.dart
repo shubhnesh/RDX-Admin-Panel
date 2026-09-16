@@ -56,24 +56,48 @@ final orderActionsProvider =
 /// Drives the checkout submit button's loading/error state, independent
 /// of the cart's own state (so the cart isn't cleared until the write
 /// actually succeeds).
-class PlaceOrderController extends StateNotifier<AsyncValue<void>> {
-  PlaceOrderController(this._service) : super(const AsyncValue.data(null));
-  final OrderService _service;
+// class PlaceOrderController extends StateNotifier<AsyncValue<void>> {
+//   PlaceOrderController(this._service) : super(const AsyncValue.data(null));
+//   final OrderService _service;
 
-  // Future<bool> submit(OrderModel order) async {
-  //   state = const AsyncValue.loading();
-  //   try {
-  //     await _service.createOrder(order);
-  //     state = const AsyncValue.data(null);
-  //     return true;
-  //   } catch (e, st) {
-  //     state = AsyncValue.error(e, st);
-  //     return false;
-  //   }
-  // }
+//   // Future<bool> submit(OrderModel order) async {
+//   //   state = const AsyncValue.loading();
+//   //   try {
+//   //     await _service.createOrder(order);
+//   //     state = const AsyncValue.data(null);
+//   //     return true;
+//   //   } catch (e, st) {
+//   //     state = AsyncValue.error(e, st);
+//   //     return false;
+//   //   }
+//   // }
+
+//   Future<String?> submit(OrderModel order) async {
+//     state = const AsyncValue.loading();
+//     try {
+//       final id = await _service.createOrder(order);
+//       state = AsyncValue.data(id);
+//       return id;
+//     } catch (e, st) {
+//       state = AsyncValue.error(e, st);
+//       return null;
+//     }
+//   }
+// }
+
+// final placeOrderControllerProvider =
+//     StateNotifierProvider.autoDispose<PlaceOrderController, AsyncValue<void>>(
+//   (ref) => PlaceOrderController(ref.watch(orderServiceProvider)),
+// );
+
+class PlaceOrderController extends StateNotifier<AsyncValue<String?>> {
+  PlaceOrderController(this._service) : super(const AsyncValue.data(null));
+
+  final OrderService _service;
 
   Future<String?> submit(OrderModel order) async {
     state = const AsyncValue.loading();
+
     try {
       final id = await _service.createOrder(order);
       state = AsyncValue.data(id);
@@ -85,9 +109,11 @@ class PlaceOrderController extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final placeOrderControllerProvider =
-    StateNotifierProvider.autoDispose<PlaceOrderController, AsyncValue<void>>(
-  (ref) => PlaceOrderController(ref.watch(orderServiceProvider)),
+final placeOrderControllerProvider = StateNotifierProvider.autoDispose<
+    PlaceOrderController, AsyncValue<String?>>(
+  (ref) => PlaceOrderController(
+    ref.watch(orderServiceProvider),
+  ),
 );
 
 /// Riverpod replacement for the old ChangeNotifier-based OrderDetailProvider.

@@ -108,11 +108,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ),
                   )
                 : Padding(
-                    padding: Responsive.pagePadding(
-                      context,
-                      top: context.h(14),
-                      bottom: context.h(0),
-                    ),
+                    padding: context.defaultScreenPadding(),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -250,14 +246,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return RdxTable(
       showFooter: false,
       columns: [
-        RdxTableColumn(title: 'MATERIAL', minWidth: context.w(180), flex: 3),
-        RdxTableColumn(title: 'CATEGORY', minWidth: context.w(130), flex: 2),
-        RdxTableColumn(title: 'STOCK LEVEL', minWidth: context.w(220), flex: 3),
-        RdxTableColumn(title: 'UNIT COST', minWidth: context.w(120), flex: 2),
-        RdxTableColumn(title: 'TOTAL COST', minWidth: context.w(120), flex: 2),
-        RdxTableColumn(title: 'ADDED (+)', minWidth: context.w(110), flex: 1),
-        RdxTableColumn(title: 'USED (-)', minWidth: context.w(110), flex: 1),
-        RdxTableColumn(title: 'ACTIONS', minWidth: context.w(72), flex: 0),
+        // Trimmed CATEGORY and UNIT COST/TOTAL COST further so STOCK LEVEL
+        // and ADDED/USED/UPDATED pull left too.
+       RdxTableColumn(title: 'MATERIAL', minWidth: context.w(120), flex: 3),
+RdxTableColumn(title: 'CATEGORY', minWidth: context.w(90), flex: 3),
+RdxTableColumn(title: 'STOCK LEVEL', minWidth: context.w(170), flex: 2),
+RdxTableColumn(title: 'UNIT COST', minWidth: context.w(80), flex: 2),   // back to 1 → sits closer to STOCK LEVEL
+RdxTableColumn(title: 'TOTAL COST', minWidth: context.w(80), flex: 2),  // back to 1
+RdxTableColumn(title: 'ADDED (+)', minWidth: context.w(90), flex: 2),   // bumped up to keep ADDED/USED/UPDATED pushed right
+RdxTableColumn(title: 'USED (-)', minWidth: context.w(90), flex: 2),
+RdxTableColumn(title: 'UPDATED', minWidth: context.w(110), flex: 1),
+RdxTableColumn(title: 'ACTIONS', minWidth: context.w(70), flex: 1),
       ],
       rows: items.map((item) {
         return [
@@ -292,24 +291,31 @@ class _InventoryScreenState extends State<InventoryScreen> {
           _inventoryStockLevelCell(context, item),
           _inventoryUnitCostCell(context, item),
           _inventoryTotalCostCell(context, item),
-          _StockAdjustField(
-            key: ValueKey('${item.id}_added'),
-            hint: '',
-            maxValue: 5000,
-            maxErrorText: 'Cannot add more than 5000 at once',
-            onSubmit: (value) {
-              context.read<InventoryProvider>().addStock(item.id, value);
-            },
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _StockAdjustField(
+              key: ValueKey('${item.id}_added'),
+              hint: '',
+              maxValue: 5000,
+              maxErrorText: 'Cannot add more than 5000 at once',
+              onSubmit: (value) {
+                context.read<InventoryProvider>().addStock(item.id, value);
+              },
+            ),
           ),
-          _StockAdjustField(
-            key: ValueKey('${item.id}_used'),
-            hint: '',
-            maxValue: item.quantity,
-            maxErrorText: 'Cannot use more than current stock',
-            onSubmit: (value) {
-              context.read<InventoryProvider>().useStock(item.id, value);
-            },
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _StockAdjustField(
+              key: ValueKey('${item.id}_used'),
+              hint: '',
+              maxValue: item.quantity,
+              maxErrorText: 'Cannot use more than current stock',
+              onSubmit: (value) {
+                context.read<InventoryProvider>().useStock(item.id, value);
+              },
+            ),
           ),
+          _inventoryLastUpdatedCell(context, item),
           Builder(
             builder: (buttonContext) {
               return RdxTableMoreButton(
@@ -379,11 +385,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
     BuildContext context,
     InventoryItemModel item,
   ) {
-    return Text(
-      '${Formatters.currency(item.unitCost)}/${item.unit}',
-      style: AppTextStyles.bodySecondary(context),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        '${Formatters.currency(item.unitCost)}/${item.unit}',
+        style: AppTextStyles.bodySecondary(context),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 
@@ -394,14 +403,103 @@ class _InventoryScreenState extends State<InventoryScreen> {
     BuildContext context,
     InventoryItemModel item,
   ) {
-    return Text(
-      Formatters.currency(item.totalCost),
-      style: AppTextStyles.bodySecondary(context).copyWith(
-        fontWeight: FontWeight.w600,
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        Formatters.currency(item.totalCost),
+        style: AppTextStyles.bodySecondary(context).copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
     );
+  }
+
+  /// Shows whichever of the last "added" or last "used" stock movement
+  /// happened more recently:
+  ///   • if the most recent movement was a restock  -> green "+" + qty
+  ///   • if the most recent movement was a usage     -> red   "−" + qty
+  /// followed by the timestamp as "DD MMM YY, HH:MM".
+  /// Falls back to a dash if the item has never had a movement recorded.
+  Widget _inventoryLastUpdatedCell(
+    BuildContext context,
+    InventoryItemModel item,
+  ) {
+    final colors = AppColors.of(context);
+    final addedAt = item.lastAddedAt;
+    final usedAt = item.lastUsedAt;
+
+    if (addedAt == null && usedAt == null) {
+      return Text(
+        '—',
+        style: AppTextStyles.bodySecondary(context)
+            .copyWith(color: colors.textMuted),
+      );
+    }
+
+    final bool showAdded;
+    if (addedAt != null && usedAt != null) {
+      showAdded = addedAt.isAfter(usedAt);
+    } else {
+      showAdded = addedAt != null;
+    }
+
+    final DateTime when = showAdded ? addedAt! : usedAt!;
+    final double qty = showAdded ? (item.lastAddedQty ?? 0) : (item.lastUsedQty ?? 0);
+    final Color color = showAdded ? AppColors.success : AppColors.danger;
+    final IconData icon = showAdded ? Icons.add : Icons.remove;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Icon sits directly in front of the number, on the same line —
+        // not centered against the two lines as a whole.
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(icon, size: context.h(13), color: color),
+            SizedBox(width: context.w(2)),
+            Flexible(
+              child: Text(
+                '${_fmt(qty)} ${item.unit}',
+                style: AppTextStyles.bodySecondary(context).copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        Text(
+          _formatUpdatedAt(when),
+          style: AppTextStyles.label(context)
+              .copyWith(color: colors.textMuted),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  /// Formats as "DD MMM YY, HH:MM" (24-hour clock), e.g. "16 Sep 26,14:05".
+  String _formatUpdatedAt(DateTime dt) {
+    final local = dt.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final month = _months[local.month - 1];
+    final year = (local.year % 100).toString().padLeft(2, '0');
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$day $month $year, $hour:$minute';
   }
 
   String _fmt(double value) {
@@ -541,7 +639,7 @@ class _StockAdjustFieldState extends State<_StockAdjustField> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: context.w(92),
+      width: context.w(84),
       height: context.h(36),
       child: TextField(
         controller: _controller,

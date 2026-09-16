@@ -261,16 +261,25 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
     }
     setState(() => _saving = true);
 
+    // A single timestamp for this save. It's threaded through to
+    // InventoryProvider.saveItem → InventoryService.saveItem so that,
+    // for a brand-new material, created_at and updated_at are written
+    // with the exact same moment — the "added" time and the "updated"
+    // time from this run of the add-material flow are identical.
+    final now = DateTime.now();
+
     // Creating a brand-new material: totalCost is computed fresh by
     // InventoryService as quantity * unitCost (its initial cost basis).
+    // createdAt/updatedAt are both set to `now`.
     //
-    // Editing an existing material: pass its *existing* totalCost through
-    // unchanged. InventoryService.saveItem keeps it as-is for edits, so
-    // tweaking the unit cost, name, category, min/max, etc. here never
-    // silently re-prices stock that was already bought. Quantity/cost
-    // changes from restocking or usage go through the ADDED/USED fields
-    // in the inventory table (InventoryProvider.addStock / useStock),
-    // not through this form.
+    // Editing an existing material: pass its *existing* totalCost and
+    // createdAt through unchanged. InventoryService.saveItem keeps
+    // totalCost as-is for edits, so tweaking the unit cost, name,
+    // category, min/max, etc. here never silently re-prices stock that
+    // was already bought — only updatedAt advances to `now`. Quantity/
+    // cost changes from restocking or usage go through the ADDED/USED
+    // fields in the inventory table (InventoryProvider.addStock /
+    // useStock), not through this form.
     //
     // In edit mode, name, category, and quantity (initial stock) are
     // locked in the UI and always resubmitted unchanged from the
@@ -287,10 +296,14 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
       unit: _unitDisplayName,
       unitCost: double.tryParse(_costCtrl.text) ?? 0,
       totalCost: isEdit ? widget.existing!.totalCost : 0,
+      createdAt: isEdit ? widget.existing!.createdAt : now,
+      updatedAt: now,
+      lastAddedAt: isEdit ? widget.existing!.lastAddedAt : null,
+      lastUsedAt: isEdit ? widget.existing!.lastUsedAt : null,
     );
 
     try {
-      await context.read<InventoryProvider>().saveItem(item);
+      await context.read<InventoryProvider>().saveItem(item, timestamp: now);
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(

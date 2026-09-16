@@ -117,15 +117,20 @@ class InventoryProvider extends ChangeNotifier {
   }
 
   Future<void> updateQuantity(String id, double quantity) async {
-    await _service.updateQuantity(id, quantity);
+    await _service.updateQuantity(id, quantity, timestamp: DateTime.now());
     await load();
   }
 
   /// Restock: adds [quantity] to the item's current stock and adds
   /// (quantity * current unit cost) to its existing totalCost — the
   /// cost basis of stock already on hand is never re-priced.
+  ///
+  /// A single [DateTime.now()] is captured here and sent down to the
+  /// service so `updated_at` and `last_added_at` are written with the
+  /// exact same value.
   Future<void> addStock(String id, double quantity) async {
-    await _service.addStock(id, quantity);
+    final ts = DateTime.now();
+    await _service.addStock(id, quantity, timestamp: ts);
     await load();
   }
 
@@ -133,12 +138,16 @@ class InventoryProvider extends ChangeNotifier {
   /// totalCost is left unchanged — using already-paid-for stock isn't a
   /// new financial transaction.
   Future<void> useStock(String id, double quantity) async {
-    await _service.useStock(id, quantity);
+    final ts = DateTime.now();
+    await _service.useStock(id, quantity, timestamp: ts);
     await load();
   }
 
-  Future<String> saveItem(InventoryItemModel item) async {
-    final id = await _service.saveItem(item);
+  /// [timestamp] lets the caller (e.g. AddMaterialScreen) pin created_at /
+  /// updated_at to the exact same moment it used to build [item]. Falls
+  /// back to now when not provided.
+  Future<String> saveItem(InventoryItemModel item, {DateTime? timestamp}) async {
+    final id = await _service.saveItem(item, timestamp: timestamp);
     await load();
     return id;
   }

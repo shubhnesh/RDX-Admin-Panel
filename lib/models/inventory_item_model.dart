@@ -12,7 +12,12 @@ class InventoryItemModel {
   final String unit;
   final double unitCost;
   final double totalCost; // persisted: quantity * unitCost
-  final DateTime? lastUpdated;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? lastAddedAt; // timestamp of the most recent restock ("added")
+  final DateTime? lastUsedAt; // timestamp of the most recent consumption ("used")
+  final double? lastAddedQty; // amount added in that most recent restock
+  final double? lastUsedQty; // amount used in that most recent consumption
   final String? notes;
 
   const InventoryItemModel({
@@ -25,12 +30,21 @@ class InventoryItemModel {
     required this.unit,
     this.unitCost = 0,
     this.totalCost = 0,
-    this.lastUpdated,
+    this.createdAt,
+    this.updatedAt,
+    this.lastAddedAt,
+    this.lastUsedAt,
+    this.lastAddedQty,
+    this.lastUsedQty,
     this.notes,
   });
 
   /// Alias kept for older call-sites / seed data that used `lowStockThreshold`.
   double get lowStockThreshold => minRequired;
+
+  /// Backward-compatible alias: previously the model exposed a single
+  /// `lastUpdated` field. It now maps onto [updatedAt].
+  DateTime? get lastUpdated => updatedAt;
 
   /// The correct total cost given current quantity/unitCost. Use this when
   /// you need a guaranteed-fresh value (e.g. right before saving); the
@@ -69,7 +83,12 @@ class InventoryItemModel {
     String? unit,
     double? unitCost,
     double? totalCost,
-    DateTime? lastUpdated,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? lastAddedAt,
+    DateTime? lastUsedAt,
+    double? lastAddedQty,
+    double? lastUsedQty,
     String? notes,
   }) {
     return InventoryItemModel(
@@ -82,7 +101,12 @@ class InventoryItemModel {
       unit: unit ?? this.unit,
       unitCost: unitCost ?? this.unitCost,
       totalCost: totalCost ?? this.totalCost,
-      lastUpdated: lastUpdated ?? this.lastUpdated,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      lastAddedAt: lastAddedAt ?? this.lastAddedAt,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      lastAddedQty: lastAddedQty ?? this.lastAddedQty,
+      lastUsedQty: lastUsedQty ?? this.lastUsedQty,
       notes: notes ?? this.notes,
     );
   }
@@ -99,9 +123,16 @@ class InventoryItemModel {
       'unit': unit,
       'unit_cost': unitCost,
       'total_cost': totalCost,
-      'last_updated': lastUpdated != null
-          ? Timestamp.fromDate(lastUpdated!)
+      'created_at': createdAt != null
+          ? Timestamp.fromDate(createdAt!)
           : FieldValue.serverTimestamp(),
+      'updated_at': updatedAt != null
+          ? Timestamp.fromDate(updatedAt!)
+          : FieldValue.serverTimestamp(),
+      if (lastAddedAt != null) 'last_added_at': Timestamp.fromDate(lastAddedAt!),
+      if (lastUsedAt != null) 'last_used_at': Timestamp.fromDate(lastUsedAt!),
+      if (lastAddedQty != null) 'last_added_qty': lastAddedQty,
+      if (lastUsedQty != null) 'last_used_qty': lastUsedQty,
       if (notes != null) 'notes': notes,
     };
   }
@@ -128,7 +159,16 @@ class InventoryItemModel {
       // shows a blank value.
       totalCost:
           (data['total_cost'] as num?)?.toDouble() ?? (quantity * unitCost),
-      lastUpdated: (data['last_updated'] as Timestamp?)?.toDate(),
+      createdAt: (data['created_at'] as Timestamp?)?.toDate() ??
+          // Older docs only ever wrote `last_updated`; use it as a
+          // best-effort createdAt so nothing shows up blank.
+          (data['last_updated'] as Timestamp?)?.toDate(),
+      updatedAt: (data['updated_at'] as Timestamp?)?.toDate() ??
+          (data['last_updated'] as Timestamp?)?.toDate(),
+      lastAddedAt: (data['last_added_at'] as Timestamp?)?.toDate(),
+      lastUsedAt: (data['last_used_at'] as Timestamp?)?.toDate(),
+      lastAddedQty: (data['last_added_qty'] as num?)?.toDouble(),
+      lastUsedQty: (data['last_used_qty'] as num?)?.toDouble(),
       notes: data['notes'] as String?,
     );
   }

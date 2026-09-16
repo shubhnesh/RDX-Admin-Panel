@@ -22,7 +22,12 @@ class InventoryService {
   /// and consumption — this method recomputes total_cost from scratch
   /// using the *current* unit cost, which is only correct if you truly
   /// mean "this is the new total quantity, re-priced at today's rate".
-  Future<void> updateQuantity(String id, double quantity) async {
+  Future<void> updateQuantity(
+    String id,
+    double quantity, {
+    DateTime? timestamp,
+  }) async {
+    final ts = timestamp ?? DateTime.now();
     final doc = await _col.doc(id).get();
     final data = doc.data() as Map<String, dynamic>? ?? {};
     final unitCost = (data['unit_cost'] as num?)?.toDouble() ?? 0;
@@ -31,7 +36,7 @@ class InventoryService {
       'quantity': quantity,
       'unit_cost': unitCost,
       'total_cost': quantity * unitCost,
-      'last_updated': FieldValue.serverTimestamp(),
+      'updated_at': Timestamp.fromDate(ts),
     });
   }
 
@@ -40,11 +45,21 @@ class InventoryService {
   /// it never recomputes the whole stock at the new/current unit price.
   /// This is what keeps older stock's cost basis intact when the market
   /// price moves.
-  Future<void> addStock(String id, double addedQuantity) async {
+  ///
+  /// [timestamp] is sent explicitly (rather than relying on
+  /// FieldValue.serverTimestamp()) so the same date/time value is used for
+  /// both `updated_at` and `last_added_at` — the caller decides the moment
+  /// this restock happened, and both fields agree on it.
+  Future<void> addStock(
+    String id,
+    double addedQuantity, {
+    DateTime? timestamp,
+  }) async {
     if (addedQuantity <= 0) return;
     if (addedQuantity > 5000) {
       throw ArgumentError('Cannot add more than 5000 units at once');
     }
+    final ts = timestamp ?? DateTime.now();
     final doc = await _col.doc(id).get();
     final data = doc.data() as Map<String, dynamic>? ?? {};
     final currentQty = (data['quantity'] as num?)?.toDouble() ?? 0;
@@ -53,11 +68,14 @@ class InventoryService {
         (data['total_cost'] as num?)?.toDouble() ?? (currentQty * unitCost);
 
     final addedCost = addedQuantity * unitCost;
+    final firestoreTs = Timestamp.fromDate(ts);
 
     await _col.doc(id).update({
       'quantity': currentQty + addedQuantity,
       'total_cost': currentTotalCost + addedCost,
-      'last_updated': FieldValue.serverTimestamp(),
+      'updated_at': firestoreTs,
+      'last_added_at': firestoreTs,
+      'last_added_qty': addedQuantity,
     });
   }
 
@@ -65,8 +83,16 @@ class InventoryService {
   /// total_cost is left untouched on purpose — using material that was
   /// already bought and paid for isn't a new financial transaction, so
   /// it must not reduce the recorded cost of the (remaining) stock.
-  Future<void> useStock(String id, double usedQuantity) async {
+  ///
+  /// [timestamp] is sent explicitly so `updated_at` and `last_used_at`
+  /// share the exact same date/time value for this transaction.
+  Future<void> useStock(
+    String id,
+    double usedQuantity, {
+    DateTime? timestamp,
+  }) async {
     if (usedQuantity <= 0) return;
+    final ts = timestamp ?? DateTime.now();
     final doc = await _col.doc(id).get();
     final data = doc.data() as Map<String, dynamic>? ?? {};
     final currentQty = (data['quantity'] as num?)?.toDouble() ?? 0;
@@ -74,27 +100,44 @@ class InventoryService {
       throw ArgumentError('Cannot use more than current stock');
     }
     final newQty = currentQty - usedQuantity;
+    final firestoreTs = Timestamp.fromDate(ts);
 
     await _col.doc(id).update({
       'quantity': newQty < 0 ? 0 : newQty,
       // total_cost intentionally omitted from this update.
-      'last_updated': FieldValue.serverTimestamp(),
+      'updated_at': firestoreTs,
+      'last_used_at': firestoreTs,
+      'last_used_qty': usedQuantity,
     });
   }
 
   /// Creating vs editing behave differently on purpose:
   /// - New item (empty id): total_cost is computed fresh as
   ///   quantity * unitCost — this is the material's initial cost basis.
+  ///   created_at and updated_at are both set to [timestamp] (or now),
+  ///   so the record's creation moment and its first "updated" moment
+  ///   match exactly.
   /// - Existing item (edit): total_cost is taken as-is from [item]
   ///   (the caller is expected to pass along the existing total_cost
   ///   unchanged), so editing name/category/unit cost/min/max through
   ///   the form never silently re-prices stock that was already bought.
+  ///   Only updated_at advances to [timestamp]; created_at is preserved
+  ///   from the original document.
   ///   Stock quantity changes belong to [addStock] / [useStock], not to
   ///   this general-purpose save.
-  Future<String> saveItem(InventoryItemModel item) async {
+  Future<String> saveItem(
+    InventoryItemModel item, {
+    DateTime? timestamp,
+  }) async {
+    final ts = timestamp ?? DateTime.now();
     final isNew = item.id.isEmpty;
-    final itemToSave =
-        isNew ? item.copyWith(totalCost: item.computedTotalCost) : item;
+    final itemToSave = isNew
+        ? item.copyWith(
+            totalCost: item.computedTotalCost,
+            createdAt: ts,
+            updatedAt: ts,
+          )
+        : item.copyWith(updatedAt: ts);
     final data = itemToSave.toJson();
     if (isNew) {
       final ref = await _col.add(data);

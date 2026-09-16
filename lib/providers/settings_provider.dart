@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/seed_service.dart';
 
 class SettingsProvider extends ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final SeedService _seedService = SeedService();
 
   bool isLoading = false;
   String? errorMessage;
-  bool isSeeding = false;
-  String? seedMessage;
 
   String restaurantName = 'RDX Restaurants';
   String description = 'Best in city, freshly made every morning.';
@@ -25,6 +21,7 @@ class SettingsProvider extends ChangeNotifier {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
+
     try {
       final doc = await _db.collection('settings').doc('restaurant').get();
       if (doc.exists) {
@@ -42,6 +39,7 @@ class SettingsProvider extends ChangeNotifier {
     } catch (e) {
       errorMessage = 'Failed to load settings';
     }
+
     isLoading = false;
     notifyListeners();
   }
@@ -106,6 +104,7 @@ class SettingsProvider extends ChangeNotifier {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
+
     try {
       await _db.collection('settings').doc('restaurant').set({
         'restaurant_name': name,
@@ -125,6 +124,7 @@ class SettingsProvider extends ChangeNotifier {
       address = addr;
       phone = ph;
       email = em;
+
       isLoading = false;
       notifyListeners();
       return true;
@@ -134,25 +134,5 @@ class SettingsProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-  }
-
-  /// One-click seed so client never needs Firebase console for data.
-  Future<void> seedSampleData() async {
-    isSeeding = true;
-    seedMessage = null;
-    notifyListeners();
-    try {
-      final already = await _seedService.isAlreadySeeded();
-      if (already) {
-        seedMessage = 'Data already exists. Seed skipped.';
-      } else {
-        await _seedService.seedAll();
-        seedMessage = 'Sample data created successfully!';
-      }
-    } catch (e) {
-      seedMessage = 'Seed failed: $e';
-    }
-    isSeeding = false;
-    notifyListeners();
   }
 }

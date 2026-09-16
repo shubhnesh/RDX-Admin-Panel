@@ -241,7 +241,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   style: AppTextStyles.heading(context),
                 ),
                 Text(
-                  "Real-time insight into your restaurant's ecosystem.",
+                  "This will be operated by the total orders on each day of the weeks. Real-time insight into your restaurant's ecosystem.",
                   style: AppTextStyles.bodySecondary(context),
                 ),
               ],

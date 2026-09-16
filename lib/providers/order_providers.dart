@@ -60,15 +60,27 @@ class PlaceOrderController extends StateNotifier<AsyncValue<void>> {
   PlaceOrderController(this._service) : super(const AsyncValue.data(null));
   final OrderService _service;
 
-  Future<bool> submit(OrderModel order) async {
+  // Future<bool> submit(OrderModel order) async {
+  //   state = const AsyncValue.loading();
+  //   try {
+  //     await _service.createOrder(order);
+  //     state = const AsyncValue.data(null);
+  //     return true;
+  //   } catch (e, st) {
+  //     state = AsyncValue.error(e, st);
+  //     return false;
+  //   }
+  // }
+
+  Future<String?> submit(OrderModel order) async {
     state = const AsyncValue.loading();
     try {
-      await _service.createOrder(order);
-      state = const AsyncValue.data(null);
-      return true;
+      final id = await _service.createOrder(order);
+      state = AsyncValue.data(id);
+      return id;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return false;
+      return null;
     }
   }
 }
@@ -87,7 +99,8 @@ class OrderDetailState {
   final bool isLoading;
   final String? errorMessage;
 
-  const OrderDetailState({this.order, this.isLoading = false, this.errorMessage});
+  const OrderDetailState(
+      {this.order, this.isLoading = false, this.errorMessage});
 
   OrderDetailState copyWith({
     OrderModel? order,
@@ -103,7 +116,8 @@ class OrderDetailState {
 }
 
 class OrderDetailNotifier extends StateNotifier<OrderDetailState> {
-  OrderDetailNotifier(this._service, this.orderId) : super(const OrderDetailState());
+  OrderDetailNotifier(this._service, this.orderId)
+      : super(const OrderDetailState());
   final OrderService _service;
   final String orderId;
 
@@ -113,7 +127,8 @@ class OrderDetailNotifier extends StateNotifier<OrderDetailState> {
       final order = await _service.fetchOrderById(orderId);
       state = state.copyWith(isLoading: false, order: order);
     } catch (_) {
-      state = state.copyWith(isLoading: false, errorMessage: 'Failed to load order.');
+      state = state.copyWith(
+          isLoading: false, errorMessage: 'Failed to load order.');
     }
   }
 
@@ -127,5 +142,6 @@ class OrderDetailNotifier extends StateNotifier<OrderDetailState> {
 
 final orderDetailProvider = StateNotifierProvider.autoDispose
     .family<OrderDetailNotifier, OrderDetailState, String>(
-  (ref, orderId) => OrderDetailNotifier(ref.watch(orderServiceProvider), orderId),
+  (ref, orderId) =>
+      OrderDetailNotifier(ref.watch(orderServiceProvider), orderId),
 );

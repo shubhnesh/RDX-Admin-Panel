@@ -61,7 +61,6 @@ class MenuState {
 class MenuNotifier extends StateNotifier<MenuState> {
   MenuNotifier(this._service) : super(const MenuState());
   final MenuService _service;
-  final CategoryService _categoryService;
 
   Future<void> load() async {
     if (state.isLoading) return;
@@ -139,17 +138,6 @@ class MenuProvider extends ChangeNotifier {
     } finally {
       isLoading = false;
       notifyListeners();
-    }
-  }
-
-  /// Refreshes just the category list (e.g. after creating one elsewhere)
-  /// without re-fetching every menu item.
-  Future<void> loadCategories() async {
-    try {
-      _categoryList = await _categoryService.fetchCategories();
-      notifyListeners();
-    } catch (_) {
-      // Category refresh is non-critical — keep whatever was loaded before.
     }
   }
 

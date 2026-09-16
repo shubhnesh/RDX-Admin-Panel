@@ -437,8 +437,8 @@ class LiveOrderCard extends ConsumerWidget {
         return (table != null && table.isNotEmpty)
             ? 'Eat In · Table $table'
             : 'Eat In';
-      case OrderType.takeaway:
-        return 'To Go';
+      // case OrderType.takeaway:
+      // return 'To Go';
       case OrderType.delivery:
         return 'Delivery';
     }
@@ -448,8 +448,8 @@ class LiveOrderCard extends ConsumerWidget {
     switch (order.orderType) {
       case OrderType.dineIn:
         return AppColors.primary.withValues(alpha: 0.12);
-      case OrderType.takeaway:
-        return colors.surfaceVariant;
+      // case OrderType.takeaway:
+      // return colors.surfaceVariant;
       case OrderType.delivery:
         return const Color(0xFFE8F5E9);
     }
@@ -459,8 +459,8 @@ class LiveOrderCard extends ConsumerWidget {
     switch (order.orderType) {
       case OrderType.dineIn:
         return AppColors.primary;
-      case OrderType.takeaway:
-        return colors.textSecondary;
+      // case OrderType.takeaway:
+      // return colors.textSecondary;
       case OrderType.delivery:
         return const Color(0xFF2E7D32);
     }

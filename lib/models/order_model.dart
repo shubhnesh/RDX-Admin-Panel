@@ -59,15 +59,13 @@ extension OrderStatusX on OrderStatus {
 
 /// How the order is being served. Drives which extra fields the checkout
 /// form shows (table number for dine-in, address for delivery).
-enum OrderType { dineIn, takeaway, delivery }
+enum OrderType { dineIn, delivery }
 
 extension OrderTypeX on OrderType {
   String get label {
     switch (this) {
       case OrderType.dineIn:
         return 'Dine-in';
-      case OrderType.takeaway:
-        return 'Takeaway';
       case OrderType.delivery:
         return 'Delivery';
     }
@@ -239,7 +237,8 @@ class OrderModel {
       notes: json['notes'],
       orderType: OrderTypeX.fromString(json['order_type'] as String?),
       tableNumber: json['table_number'] as String?,
-      paymentMethod: PaymentMethodX.fromString(json['payment_method'] as String?),
+      paymentMethod:
+          PaymentMethodX.fromString(json['payment_method'] as String?),
     );
   }
 

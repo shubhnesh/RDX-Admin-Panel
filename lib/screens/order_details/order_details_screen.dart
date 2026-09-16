@@ -1444,9 +1444,9 @@ class _ServiceAndCustomer extends StatelessWidget {
             children: [
               _chip(context, colors, 'Eat In',
                   order.orderType == OrderType.dineIn),
-              SizedBox(width: context.w(8)),
-              _chip(context, colors, 'To Go',
-                  order.orderType == OrderType.takeaway),
+              // SizedBox(width: context.w(8)),
+              // _chip(context, colors, 'To Go',
+              //     order.orderType == OrderType.takeaway),
               SizedBox(width: context.w(8)),
               _chip(context, colors, 'Delivery',
                   order.orderType == OrderType.delivery),

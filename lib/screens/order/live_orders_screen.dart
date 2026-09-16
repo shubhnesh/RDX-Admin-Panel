@@ -725,14 +725,14 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       BuildContext context, AppColorScheme colors, List<OrderModel> orders) {
     final all = orders.length;
     final eatIn = orders.where((o) => o.orderType == OrderType.dineIn).length;
-    final toGo = orders.where((o) => o.orderType == OrderType.takeaway).length;
+    // final toGo = orders.where((o) => o.orderType == OrderType.takeaway).length;
     final delivery =
         orders.where((o) => o.orderType == OrderType.delivery).length;
 
     final chips = [
       (null, 'All', all),
       (OrderType.dineIn, 'Eat In', eatIn),
-      (OrderType.takeaway, 'To Go', toGo),
+      // (OrderType.takeaway, 'To Go', toGo),
       (OrderType.delivery, 'Delivery', delivery),
     ];
 

@@ -25,44 +25,32 @@ class LiveOrdersScreen extends ConsumerStatefulWidget {
 class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   OrderType? _typeFilter;
 
-  /// null = All
-  /// pending = New
-  /// preparing = Preparing
-  /// ready = Ready
+  /// null = All, pending = New, preparing = Preparing, ready = Ready
   OrderStatus? _statusFilter;
 
   Future<void> _openPlaceOrder() async {
     final placed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const PlaceOrderScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const PlaceOrderScreen()),
     );
 
     if (!mounted) return;
 
-    // The Firestore stream is already reactive.
-    // Invalidating here also guarantees a fresh provider read
-    // when returning from the order flow.
+    // Firestore stream is already reactive; invalidate to guarantee
+    // a fresh read when returning from the order flow.
     ref.invalidate(liveOrdersStreamProvider);
 
     if (placed == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('New order added to the queue.'),
-        ),
+        const SnackBar(content: Text('New order added to the queue.')),
       );
     }
   }
 
-  List<OrderModel> _filterOrders(
-    List<OrderModel> orders,
-  ) {
+  List<OrderModel> _filterOrders(List<OrderModel> orders) {
     return orders.where((order) {
       final matchesType = _typeFilter == null || order.orderType == _typeFilter;
-
       final matchesStatus =
           _statusFilter == null || order.status == _statusFilter;
-
       return matchesType && matchesStatus;
     }).toList();
   }
@@ -72,55 +60,33 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => OrderDetailsScreen(
-          orderId: orderId,
-        ),
+        builder: (_) => OrderDetailsScreen(orderId: orderId),
       ),
     );
 
     if (!mounted) return;
-
-    // Live orders are already backed by the Firestore stream.
-    // Invalidate so the list is immediately refreshed after
-    // returning from order details/status changes.
     ref.invalidate(liveOrdersStreamProvider);
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    // final ordersAsync = ref.watch(liveOrdersStreamProvider);
-
-    // final allOrders = ordersAsync.valueOrNull ?? const <OrderModel>[];
-
     final ordersAsync = ref.watch(liveOrdersStreamProvider);
 
-    final allOrders = ordersAsync.valueOrNull ?? <OrderModel>[];
+    final allOrders = ordersAsync.value ?? <OrderModel>[];
 
     if (ordersAsync.hasError) {
-      debugPrint(
-        'Live orders stream error: ${ordersAsync.error}',
-      );
+      debugPrint('Live orders stream error: ${ordersAsync.error}');
     }
+
     final visibleOrders = _filterOrders(allOrders);
 
-    final newOrders = allOrders
-        .where(
-          (order) => order.status == OrderStatus.pending,
-        )
-        .toList();
-
-    final preparingOrders = allOrders
-        .where(
-          (order) => order.status == OrderStatus.preparing,
-        )
-        .toList();
-
-    final readyOrders = allOrders
-        .where(
-          (order) => order.status == OrderStatus.ready,
-        )
-        .toList();
+    final newOrders =
+        allOrders.where((o) => o.status == OrderStatus.pending).toList();
+    final preparingOrders =
+        allOrders.where((o) => o.status == OrderStatus.preparing).toList();
+    final readyOrders =
+        allOrders.where((o) => o.status == OrderStatus.ready).toList();
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -134,28 +100,12 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // =========================================================
-              // HEADER
-              // =========================================================
-              const RdxHeader(
-                title: 'Live Orders',
-                showBackButton: false,
-              ),
-
+              const RdxHeader(title: 'Live Orders', showBackButton: false),
               SizedBox(height: context.h(8)),
-
-              // =========================================================
-              // FILTERS + NEW ORDER
-              // =========================================================
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: _buildStatusTabs(
-                      context,
-                      colors,
-                    ),
-                  ),
+                  Expanded(child: _buildStatusTabs(context, colors)),
                   SizedBox(width: context.w(16)),
                   RdxActionButton(
                     label: 'New Order',
@@ -164,31 +114,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   ),
                 ],
               ),
-
               SizedBox(height: context.h(18)),
-
-              // =========================================================
-              // PAGE TITLE
-              // =========================================================
-              Text(
-                'Live Orders',
-                style: AppTextStyles.heading(context),
-              ),
-
+              Text('Live Orders', style: AppTextStyles.heading(context)),
               SizedBox(height: context.h(4)),
-
               Text(
                 'Manage incoming orders and track their current status.',
-                style: AppTextStyles.bodySecondary(context).copyWith(
-                  color: colors.textSecondary,
-                ),
+                style: AppTextStyles.bodySecondary(context)
+                    .copyWith(color: colors.textSecondary),
               ),
-
               SizedBox(height: context.h(18)),
-
-              // =========================================================
-              // SUMMARY CARDS
-              // =========================================================
               _buildSummaryCards(
                 context,
                 colors,
@@ -196,26 +130,13 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 preparingCount: preparingOrders.length,
                 readyCount: readyOrders.length,
               ),
-
               SizedBox(height: context.h(18)),
-
-              // =========================================================
-              // ORDER LIST
-              // =========================================================
               Expanded(
                 child: ordersAsync.when(
-                  loading: () {
-                    // Keep the layout clean while Firestore is loading.
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  },
-                  error: (error, stackTrace) {
-                    return _buildErrorState(
-                      context,
-                      colors,
-                    );
-                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, stackTrace) =>
+                      _buildErrorState(context, colors),
                   data: (_) {
                     if (visibleOrders.isEmpty) {
                       return const EmptyState(
@@ -223,16 +144,10 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                         icon: Icons.receipt_long_outlined,
                       );
                     }
-
-                    return _buildOrderGrid(
-                      context,
-                      colors,
-                      visibleOrders,
-                    );
+                    return _buildOrderGrid(context, colors, visibleOrders);
                   },
                 ),
               ),
-
               SizedBox(height: context.h(4)),
             ],
           ),
@@ -241,31 +156,12 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  // ===================================================================
-  // STATUS TABS
-  // ===================================================================
-
-  Widget _buildStatusTabs(
-    BuildContext context,
-    AppColorScheme colors,
-  ) {
+  Widget _buildStatusTabs(BuildContext context, AppColorScheme colors) {
     final tabs = [
-      const _OrderFilterTab(
-        label: 'All',
-        status: null,
-      ),
-      const _OrderFilterTab(
-        label: 'New',
-        status: OrderStatus.pending,
-      ),
-      const _OrderFilterTab(
-        label: 'Preparing',
-        status: OrderStatus.preparing,
-      ),
-      const _OrderFilterTab(
-        label: 'Ready',
-        status: OrderStatus.ready,
-      ),
+      const _OrderFilterTab(label: 'All', status: null),
+      const _OrderFilterTab(label: 'New', status: OrderStatus.pending),
+      const _OrderFilterTab(label: 'Preparing', status: OrderStatus.preparing),
+      const _OrderFilterTab(label: 'Ready', status: OrderStatus.ready),
     ];
 
     return SingleChildScrollView(
@@ -278,11 +174,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               colors,
               label: tab.label,
               selected: _statusFilter == tab.status,
-              onTap: () {
-                setState(() {
-                  _statusFilter = tab.status;
-                });
-              },
+              onTap: () => setState(() => _statusFilter = tab.status),
             ),
             SizedBox(width: context.w(8)),
           ],
@@ -302,9 +194,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(
-          context.h(20),
-        ),
+        borderRadius: BorderRadius.circular(context.h(20)),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           padding: EdgeInsets.symmetric(
@@ -313,9 +203,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           ),
           decoration: BoxDecoration(
             color: selected ? AppColors.primary : colors.surface,
-            borderRadius: BorderRadius.circular(
-              context.h(20),
-            ),
+            borderRadius: BorderRadius.circular(context.h(20)),
             border: Border.all(
               color: selected ? AppColors.primary : colors.border,
             ),
@@ -332,10 +220,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  // ===================================================================
-  // SUMMARY CARDS
-  // ===================================================================
-
   Widget _buildSummaryCards(
     BuildContext context,
     AppColorScheme colors, {
@@ -347,67 +231,47 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 700;
 
+        final cards = [
+          _summaryCard(
+            context,
+            label: 'New Orders',
+            value: '$newCount orders',
+            icon: Icons.access_time_rounded,
+            accentColor: AppColors.primary,
+          ),
+          _summaryCard(
+            context,
+            label: 'Preparing',
+            value: '$preparingCount orders',
+            icon: Icons.restaurant_rounded,
+            accentColor: AppColors.success,
+          ),
+          _summaryCard(
+            context,
+            label: 'Ready',
+            value: '$readyCount orders',
+            icon: Icons.check_circle_outline_rounded,
+            accentColor: AppColors.primary,
+          ),
+        ];
+
         if (narrow) {
           return Column(
             children: [
-              _summaryCard(
-                context,
-                label: 'New Orders',
-                value: '$newCount orders',
-                icon: Icons.access_time_rounded,
-                accentColor: AppColors.primary,
-              ),
-              SizedBox(height: context.h(10)),
-              _summaryCard(
-                context,
-                label: 'Preparing',
-                value: '$preparingCount orders',
-                icon: Icons.restaurant_rounded,
-                accentColor: AppColors.success,
-              ),
-              SizedBox(height: context.h(10)),
-              _summaryCard(
-                context,
-                label: 'Ready',
-                value: '$readyCount orders',
-                icon: Icons.check_circle_outline_rounded,
-                accentColor: AppColors.primary,
-              ),
+              for (var i = 0; i < cards.length; i++) ...[
+                cards[i],
+                if (i != cards.length - 1) SizedBox(height: context.h(10)),
+              ],
             ],
           );
         }
 
         return Row(
           children: [
-            Expanded(
-              child: _summaryCard(
-                context,
-                label: 'New Orders',
-                value: '$newCount orders',
-                icon: Icons.access_time_rounded,
-                accentColor: AppColors.primary,
-              ),
-            ),
-            SizedBox(width: context.w(16)),
-            Expanded(
-              child: _summaryCard(
-                context,
-                label: 'Preparing',
-                value: '$preparingCount orders',
-                icon: Icons.restaurant_rounded,
-                accentColor: AppColors.success,
-              ),
-            ),
-            SizedBox(width: context.w(16)),
-            Expanded(
-              child: _summaryCard(
-                context,
-                label: 'Ready',
-                value: '$readyCount orders',
-                icon: Icons.check_circle_outline_rounded,
-                accentColor: AppColors.primary,
-              ),
-            ),
+            for (var i = 0; i < cards.length; i++) ...[
+              Expanded(child: cards[i]),
+              if (i != cards.length - 1) SizedBox(width: context.w(16)),
+            ],
           ],
         );
       },
@@ -430,10 +294,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  // ===================================================================
-  // ORDER GRID
-  // ===================================================================
-
   Widget _buildOrderGrid(
     BuildContext context,
     AppColorScheme colors,
@@ -444,7 +304,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         final width = constraints.maxWidth;
 
         int columns;
-
         if (width >= 1050) {
           columns = 4;
         } else if (width >= 760) {
@@ -456,15 +315,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         }
 
         const spacing = 16.0;
-
-        final cardWidth = columns == 1
-            ? width
-            : (width - ((columns - 1) * spacing)) / columns;
+        final cardWidth =
+            columns == 1 ? width : (width - ((columns - 1) * spacing)) / columns;
 
         return SingleChildScrollView(
-          padding: EdgeInsets.only(
-            bottom: context.h(24),
-          ),
+          padding: EdgeInsets.only(bottom: context.h(24)),
           child: Wrap(
             spacing: spacing,
             runSpacing: spacing,
@@ -484,14 +339,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  // ===================================================================
-  // ERROR STATE
-  // ===================================================================
-
-  Widget _buildErrorState(
-    BuildContext context,
-    AppColorScheme colors,
-  ) {
+  Widget _buildErrorState(BuildContext context, AppColorScheme colors) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -500,12 +348,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             width: context.w(48),
             height: context.w(48),
             decoration: BoxDecoration(
-              color: AppColors.danger.withValues(
-                alpha: 0.10,
-              ),
-              borderRadius: BorderRadius.circular(
-                context.h(12),
-              ),
+              color: AppColors.danger.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(context.h(12)),
             ),
             child: Icon(
               Icons.cloud_off_outlined,
@@ -516,24 +360,19 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           SizedBox(height: context.h(12)),
           Text(
             'Unable to load orders',
-            style: AppTextStyles.section(context).copyWith(
-              color: colors.textPrimary,
-            ),
+            style: AppTextStyles.section(context).copyWith(color: colors.textPrimary),
           ),
           SizedBox(height: context.h(5)),
           Text(
             'Please check your connection and try again.',
-            style: AppTextStyles.bodySecondary(context).copyWith(
-              color: colors.textSecondary,
-            ),
+            style: AppTextStyles.bodySecondary(context)
+                .copyWith(color: colors.textSecondary),
           ),
           SizedBox(height: context.h(14)),
           RdxActionButton(
             label: 'Refresh',
             leadingIcon: Icons.refresh_rounded,
-            onPressed: () {
-              ref.invalidate(liveOrdersStreamProvider);
-            },
+            onPressed: () => ref.invalidate(liveOrdersStreamProvider),
           ),
         ],
       ),
@@ -541,16 +380,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   }
 }
 
-// =====================================================================
-// FILTER TAB MODEL
-// =====================================================================
-
 class _OrderFilterTab {
   final String label;
   final OrderStatus? status;
 
-  const _OrderFilterTab({
-    required this.label,
-    required this.status,
-  });
+  const _OrderFilterTab({required this.label, required this.status});
 }

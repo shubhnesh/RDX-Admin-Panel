@@ -68,6 +68,15 @@ class CartNotifier extends StateNotifier<List<CartLineItem>> {
     state = const [];
   }
 
+  /// Total quantity across all cart lines for a given menu item
+  /// (a menu item can appear as several lines with different
+  /// spice/add-on/notes combinations).
+  int quantityForMenuItem(String menuItemId) {
+    return state
+        .where((line) => line.menuItem.id == menuItemId)
+        .fold(0, (sum, line) => sum + line.quantity);
+  }
+
   bool _sameAddOns(List<CartAddOn> a, List<CartAddOn> b) {
     if (a.length != b.length) return false;
     for (final addOn in a) {

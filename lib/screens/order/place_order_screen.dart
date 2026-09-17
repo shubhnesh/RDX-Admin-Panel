@@ -26,28 +26,20 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-
       ref.read(menuNotifierProvider.notifier).load();
     });
   }
 
   /// Moves from the active order/cart screen to checkout.
-  ///
-  /// IMPORTANT:
-  /// This does NOT create the Firestore order.
-  /// CheckoutScreen is responsible for final submission.
+  /// This does NOT create the Firestore order — CheckoutScreen owns that.
   void _goToCheckout() {
     final cart = ref.read(cartProvider);
-
     if (cart.isEmpty) return;
 
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const CheckoutScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
     );
   }
 
@@ -57,18 +49,13 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     final colors = AppColors.of(context);
 
     final width = MediaQuery.sizeOf(context).width;
-
-    // Keep the two-column POS layout on desktop/tablet.
     final isCompact = width < 900;
 
     return Scaffold(
       backgroundColor: colors.background,
       body: Column(
         children: [
-          const RdxHeader(
-            title: 'Create New Order',
-            showBackButton: true,
-          ),
+          const RdxHeader(title: 'Create New Order', showBackButton: true),
           Expanded(
             child: menuState.isLoading
                 ? const LoadingIndicator()
@@ -79,26 +66,14 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                       bottom: context.h(10),
                     ),
                     child: isCompact
-                        ? _buildCompactLayout(
-                            context,
-                            menuState,
-                            colors,
-                          )
-                        : _buildDesktopLayout(
-                            context,
-                            menuState,
-                            colors,
-                          ),
+                        ? _buildCompactLayout(context, menuState, colors)
+                        : _buildDesktopLayout(context, menuState, colors),
                   ),
           ),
         ],
       ),
     );
   }
-
-  // ===========================================================================
-  // DESKTOP / TABLET
-  // ===========================================================================
 
   Widget _buildDesktopLayout(
     BuildContext context,
@@ -108,55 +83,23 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ---------------------------------------------------------------------
-        // LEFT - MENU
-        // ---------------------------------------------------------------------
-
         Expanded(
           child: Padding(
-            padding: EdgeInsets.only(
-              right: context.w(14),
-            ),
-            child: _buildMenuArea(
-              context,
-              menuState,
-              colors,
-            ),
+            padding: EdgeInsets.only(right: context.w(14)),
+            child: _buildMenuArea(context, menuState, colors),
           ),
         ),
-
-        // ---------------------------------------------------------------------
-        // DIVIDER
-        // ---------------------------------------------------------------------
-
-        VerticalDivider(
-          width: context.w(1),
-          thickness: 1,
-          color: colors.border,
-        ),
-
-        // ---------------------------------------------------------------------
-        // RIGHT - ACTIVE ORDER / CART
-        // ---------------------------------------------------------------------
-
+        VerticalDivider(width: context.w(1), thickness: 1, color: colors.border),
         SizedBox(
           width: context.w(350),
           child: Padding(
-            padding: EdgeInsets.only(
-              left: context.w(14),
-            ),
-            child: CartPanel(
-              onProceed: _goToCheckout,
-            ),
+            padding: EdgeInsets.only(left: context.w(14)),
+            child: CartPanel(onProceed: _goToCheckout),
           ),
         ),
       ],
     );
   }
-
-  // ===========================================================================
-  // COMPACT
-  // ===========================================================================
 
   Widget _buildCompactLayout(
     BuildContext context,
@@ -165,33 +108,15 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
   ) {
     return Column(
       children: [
-        // Menu section.
-        Expanded(
-          child: _buildMenuArea(
-            context,
-            menuState,
-            colors,
-          ),
-        ),
-
+        Expanded(child: _buildMenuArea(context, menuState, colors)),
         SizedBox(height: context.h(12)),
-
-        // Cart remains on the same screen.
-        //
-        // No bottom sheet is used.
         SizedBox(
           height: context.h(360),
-          child: CartPanel(
-            onProceed: _goToCheckout,
-          ),
+          child: CartPanel(onProceed: _goToCheckout),
         ),
       ],
     );
   }
-
-  // ===========================================================================
-  // MENU AREA
-  // ===========================================================================
 
   Widget _buildMenuArea(
     BuildContext context,
@@ -203,50 +128,28 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ---------------------------------------------------------------------
-        // SEARCH
-        // ---------------------------------------------------------------------
-
         RdxSearchBar(
           height: RdxTextField.singleLineHeight(context),
           hintText: 'Search menu items...',
           onChanged: notifier.setSearchQuery,
         ),
-
         SizedBox(height: context.h(10)),
-
-        // ---------------------------------------------------------------------
-        // CATEGORY TABS
-        // ---------------------------------------------------------------------
-
         SizedBox(
           height: context.h(38),
           child: RdxCategoryTabs(
-            labels: menuState.categories
-                .where((category) => category != 'All')
-                .toList(),
+            labels: menuState.categories.where((c) => c != 'All').toList(),
             allLabel: 'All',
             selectedLabel: menuState.selectedCategory,
             onSelected: notifier.setCategory,
             expand: false,
           ),
         ),
-
         SizedBox(height: context.h(8)),
-
-        // ---------------------------------------------------------------------
-        // MENU GRID
-        // ---------------------------------------------------------------------
-
         Expanded(
           child: menuState.filteredItems.isEmpty
-              ? const EmptyState(
-                  message: 'No menu items found',
-                )
+              ? const EmptyState(message: 'No menu items found')
               : GridView.builder(
-                  padding: EdgeInsets.only(
-                    bottom: context.h(4),
-                  ),
+                  padding: EdgeInsets.only(bottom: context.h(4)),
                   gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: context.w(220),
                     mainAxisExtent: context.h(116),
@@ -255,130 +158,11 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                   ),
                   itemCount: menuState.filteredItems.length,
                   itemBuilder: (context, index) {
-                    return OrderMenuItemCard(
-                      item: menuState.filteredItems[index],
-                    );
+                    return OrderMenuItemCard(item: menuState.filteredItems[index]);
                   },
                 ),
         ),
       ],
-    );
-  }
-
-  // ===========================================================================
-  // ORDER CONFIGURATION
-  // ===========================================================================
-
-  // Widget _buildOrderConfiguration(
-  //   BuildContext context,
-  //   AppColorScheme colors,
-  // ) {
-  //   return Container(
-  //     width: double.infinity,
-  //     height: context.h(48),
-  //     padding: EdgeInsets.symmetric(
-  //       horizontal: context.w(10),
-  //       vertical: context.h(7),
-  //     ),
-  //     decoration: BoxDecoration(
-  //       color: colors.surface,
-  //       borderRadius: BorderRadius.circular(
-  //         context.h(8),
-  //       ),
-  //       border: Border.all(
-  //         color: colors.border,
-  //       ),
-  //     ),
-  //     child: Row(
-  //       children: [
-  //         Text(
-  //           'ORDER TYPE',
-  //           style: AppTextStyles.caption(context).copyWith(
-  //             fontSize: context.h(9),
-  //             color: colors.textMuted,
-  //             fontWeight: FontWeight.w600,
-  //           ),
-  //         ),
-  //         SizedBox(width: context.w(7)),
-  //         _orderTypeChip(
-  //           context,
-  //           colors,
-  //           'Eat In',
-  //           true,
-  //         ),
-  //         SizedBox(width: context.w(5)),
-  //         _orderTypeChip(
-  //           context,
-  //           colors,
-  //           'To Go',
-  //           false,
-  //         ),
-  //         SizedBox(width: context.w(5)),
-  //         _orderTypeChip(
-  //           context,
-  //           colors,
-  //           'Delivery',
-  //           false,
-  //         ),
-  //         const Spacer(),
-  //         Icon(
-  //           Icons.table_restaurant_outlined,
-  //           size: context.h(13),
-  //           color: colors.textMuted,
-  //         ),
-  //         SizedBox(width: context.w(4)),
-  //         Text(
-  //           'Table',
-  //           style: AppTextStyles.caption(context).copyWith(
-  //             fontSize: context.h(10),
-  //             color: colors.textMuted,
-  //           ),
-  //         ),
-  //         SizedBox(width: context.w(5)),
-  //         Text(
-  //           'No Table (Counter)',
-  //           style: AppTextStyles.caption(context).copyWith(
-  //             fontSize: context.h(10),
-  //             color: colors.textSecondary,
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  // ===========================================================================
-  // ORDER TYPE CHIP
-  // ===========================================================================
-
-  Widget _orderTypeChip(
-    BuildContext context,
-    AppColorScheme colors,
-    String label,
-    bool selected,
-  ) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: context.w(10),
-        vertical: context.h(5),
-      ),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.primary : colors.surfaceVariant,
-        borderRadius: BorderRadius.circular(
-          context.h(6),
-        ),
-        border: Border.all(
-          color: selected ? AppColors.primary : colors.border,
-        ),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.caption(context).copyWith(
-          fontSize: context.h(10),
-          color: selected ? Colors.white : colors.textPrimary,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
     );
   }
 }

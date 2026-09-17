@@ -112,14 +112,12 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                             children: [
                               Text(
                                 widget.item.name,
-                                style: AppTextStyles.section(context)
-                                    .copyWith(color: colors.textPrimary),
+                                style: AppTextStyles.section(context).copyWith(color: colors.textPrimary),
                               ),
                               SizedBox(height: context.h(3)),
                               Text(
                                 '₹${widget.item.price.toStringAsFixed(0)} base price',
-                                style: AppTextStyles.bodySecondary(context)
-                                    .copyWith(color: colors.textSecondary),
+                                style: AppTextStyles.bodySecondary(context).copyWith(color: colors.textSecondary),
                               ),
                             ],
                           ),
@@ -131,9 +129,7 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                       ],
                     ),
                     SizedBox(height: context.h(18)),
-                    Text('Quantity',
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textMuted)),
+                    Text('Quantity', style: AppTextStyles.bodySecondary(context).copyWith(color: colors.textMuted)),
                     SizedBox(height: context.h(8)),
                     Row(
                       children: [
@@ -143,9 +139,7 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                           onTap: _quantity > 1 ? () => setState(() => _quantity--) : null,
                         ),
                         SizedBox(width: context.w(16)),
-                        Text('$_quantity',
-                            style: AppTextStyles.section(context)
-                                .copyWith(color: colors.textPrimary)),
+                        Text('$_quantity', style: AppTextStyles.section(context).copyWith(color: colors.textPrimary)),
                         SizedBox(width: context.w(16)),
                         _stepperButton(
                           colors,
@@ -155,9 +149,7 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                       ],
                     ),
                     SizedBox(height: context.h(20)),
-                    Text('Spice Level',
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textMuted)),
+                    Text('Spice Level', style: AppTextStyles.bodySecondary(context).copyWith(color: colors.textMuted)),
                     SizedBox(height: context.h(8)),
                     Wrap(
                       spacing: context.w(8),
@@ -167,13 +159,10 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                           ChoiceChip(
                             label: Text(level),
                             selected: _spiceLevel == level,
-                            onSelected: (selected) =>
-                                setState(() => _spiceLevel = selected ? level : null),
+                            onSelected: (selected) => setState(() => _spiceLevel = selected ? level : null),
                             selectedColor: AppColors.primary.withValues(alpha: 0.15),
                             labelStyle: AppTextStyles.label(context).copyWith(
-                              color: _spiceLevel == level
-                                  ? AppColors.primary
-                                  : colors.textPrimary,
+                              color: _spiceLevel == level ? AppColors.primary : colors.textPrimary,
                             ),
                             side: BorderSide(
                               color: _spiceLevel == level ? AppColors.primary : colors.border,
@@ -186,16 +175,13 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                     Row(
                       children: [
                         Expanded(
-                          child: Text('Add-ons',
-                              style: AppTextStyles.bodySecondary(context)
-                                  .copyWith(color: colors.textMuted)),
+                          child: Text('Add-ons', style: AppTextStyles.bodySecondary(context).copyWith(color: colors.textMuted)),
                         ),
                         InkWell(
                           onTap: () => setState(() => _addingCustom = !_addingCustom),
                           child: Text(
                             _addingCustom ? 'Cancel' : '+ Custom add-on',
-                            style: AppTextStyles.label(context)
-                                .copyWith(color: AppColors.primary),
+                            style: AppTextStyles.label(context).copyWith(color: AppColors.primary),
                           ),
                         ),
                       ],
@@ -227,10 +213,7 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                         children: [
                           Expanded(
                             flex: 3,
-                            child: RdxTextField(
-                              controller: _customNameController,
-                              hint: 'Add-on name',
-                            ),
+                            child: RdxTextField(controller: _customNameController, hint: 'Add-on name'),
                           ),
                           SizedBox(width: context.w(8)),
                           Expanded(
@@ -238,8 +221,7 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                             child: RdxTextField(
                               controller: _customPriceController,
                               hint: '₹0',
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             ),
                           ),
                           SizedBox(width: context.w(8)),
@@ -255,8 +237,7 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                     ],
                     SizedBox(height: context.h(20)),
                     Text('Special Instructions',
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textMuted)),
+                        style: AppTextStyles.bodySecondary(context).copyWith(color: colors.textMuted)),
                     SizedBox(height: context.h(8)),
                     RdxTextField(
                       controller: _notesController,
@@ -267,31 +248,19 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                 ),
               ),
               Container(
-                padding: EdgeInsets.fromLTRB(
-                  context.w(18),
-                  context.h(12),
-                  context.w(18),
-                  context.h(16),
-                ),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: colors.divider)),
-                ),
+                padding: EdgeInsets.fromLTRB(context.w(18), context.h(12), context.w(18), context.h(16)),
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: colors.divider))),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
                         '₹${(_unitPrice * _quantity).toStringAsFixed(0)}',
-                        style: AppTextStyles.section(context)
-                            .copyWith(color: colors.textPrimary),
+                        style: AppTextStyles.section(context).copyWith(color: colors.textPrimary),
                       ),
                     ),
                     SizedBox(
                       width: context.w(180),
-                      child: RdxActionButton(
-                        label: 'Add to Cart',
-                        isPrimary: true,
-                        onPressed: _submit,
-                      ),
+                      child: RdxActionButton(label: 'Add to Cart', isPrimary: true, onPressed: _submit),
                     ),
                   ],
                 ),
@@ -303,8 +272,7 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
     );
   }
 
-  Widget _stepperButton(AppColorScheme colors,
-      {required IconData icon, required VoidCallback? onTap}) {
+  Widget _stepperButton(AppColorScheme colors, {required IconData icon, required VoidCallback? onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(context.h(18)),
@@ -331,16 +299,8 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
         padding: EdgeInsets.symmetric(vertical: context.h(4)),
         child: Row(
           children: [
-            Checkbox(
-              value: selected,
-              onChanged: onChanged,
-              activeColor: AppColors.primary,
-              visualDensity: VisualDensity.compact,
-            ),
-            Expanded(
-              child: Text(label,
-                  style: AppTextStyles.body(context).copyWith(color: colors.textPrimary)),
-            ),
+            Checkbox(value: selected, onChanged: onChanged, activeColor: AppColors.primary, visualDensity: VisualDensity.compact),
+            Expanded(child: Text(label, style: AppTextStyles.body(context).copyWith(color: colors.textPrimary))),
           ],
         ),
       ),

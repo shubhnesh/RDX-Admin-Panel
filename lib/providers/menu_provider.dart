@@ -1,16 +1,8 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
-import '../models/category_model.dart';
 import '../models/menu_item_model.dart';
-import '../services/category_service.dart';
 import '../services/menu_service.dart';
 
-/// Riverpod replacement for the old `provider`-package `MenuProvider`.
-/// Exposes the same shape (isLoading, categories, selectedCategory,
-/// filteredItems, setSearchQuery, setCategory, load) so screens only
-/// need to swap `context.watch<MenuProvider>()` for
-/// `ref.watch(menuNotifierProvider)` / `ref.read(menuNotifierProvider.notifier)`.
 class MenuState {
   final bool isLoading;
   final String? errorMessage;
@@ -83,73 +75,6 @@ class MenuNotifier extends StateNotifier<MenuState> {
   void setCategory(String category) {
     state = state.copyWith(selectedCategory: category);
   }
-}
-
-final menuServiceProvider = Provider<MenuService>((ref) => MenuService());
-
-final menuNotifierProvider = StateNotifierProvider<MenuNotifier, MenuState>(
-  (ref) => MenuNotifier(ref.watch(menuServiceProvider)),
-);
-
-/// Compatibility provider for the existing menu management screens.
-/// New order screens can use [menuNotifierProvider] directly.
-class MenuProvider extends ChangeNotifier {
-  MenuProvider(this._service);
-
-  final MenuService _service;
-  final CategoryService _categoryService = CategoryService();
-  List<MenuItemModel> items = [];
-  List<CategoryModel> categoryList = [];
-  String selectedCategory = 'All';
-  String searchQuery = '';
-  bool isLoading = false;
-  String? errorMessage;
-
-  List<String> get categories {
-    final set = <String>{'All', ...items.map((item) => item.category)};
-    return set.toList();
-  }
-
-  List<MenuItemModel> get filteredItems {
-    return items.where((item) {
-      final matchesCategory =
-          selectedCategory == 'All' || item.category == selectedCategory;
-      final matchesSearch = searchQuery.isEmpty ||
-          item.name.toLowerCase().contains(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    }).toList();
-  }
-
-  Future<void> load() async {
-    if (isLoading) return;
-    isLoading = true;
-    errorMessage = null;
-    notifyListeners();
-    try {
-      items = await _service.fetchMenuItems();
-      try {
-        categoryList = await _categoryService.fetchCategories();
-      } catch (_) {
-        // Menu items can still be displayed when taxonomy data is unavailable.
-        categoryList = [];
-      }
-    } catch (_) {
-      errorMessage = 'Failed to load menu.';
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  void setSearchQuery(String query) {
-    searchQuery = query;
-    notifyListeners();
-  }
-
-  void setCategory(String category) {
-    selectedCategory = category;
-    notifyListeners();
-  }
 
   Future<MenuItemModel> getItemById(String id) => _service.fetchItemById(id);
 
@@ -159,8 +84,7 @@ class MenuProvider extends ChangeNotifier {
       await load();
       return true;
     } catch (_) {
-      errorMessage = 'Failed to save menu item.';
-      notifyListeners();
+      state = state.copyWith(errorMessage: 'Failed to save menu item.');
       return false;
     }
   }
@@ -168,22 +92,27 @@ class MenuProvider extends ChangeNotifier {
   Future<bool> deleteItem(String id) async {
     try {
       await _service.deleteItem(id);
-      items = items.where((item) => item.id != id).toList();
-      notifyListeners();
+      state = state.copyWith(
+        items: state.items.where((item) => item.id != id).toList(),
+      );
       return true;
     } catch (_) {
-      errorMessage = 'Failed to delete menu item.';
-      notifyListeners();
+      state = state.copyWith(errorMessage: 'Failed to delete menu item.');
       return false;
     }
   }
 
   Future<void> toggleAvailability(MenuItemModel item) async {
     await _service.toggleAvailability(item.id, !item.available);
-    final index = items.indexWhere((current) => current.id == item.id);
-    if (index != -1) {
-      items[index] = item.copyWith(available: !item.available);
-      notifyListeners();
-    }
+    final updated = state.items
+        .map((i) => i.id == item.id ? i.copyWith(available: !item.available) : i)
+        .toList();
+    state = state.copyWith(items: updated);
   }
 }
+
+final menuServiceProvider = Provider<MenuService>((ref) => MenuService());
+
+final menuNotifierProvider = StateNotifierProvider<MenuNotifier, MenuState>(
+  (ref) => MenuNotifier(ref.watch(menuServiceProvider)),
+);

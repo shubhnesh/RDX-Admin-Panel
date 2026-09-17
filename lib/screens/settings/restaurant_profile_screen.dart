@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:rdx_admin/core/theme/text_styles.dart';
 
@@ -14,15 +14,15 @@ import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/buttons/rdx_toggle_button.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 
-class RestaurantProfileScreen extends StatefulWidget {
+class RestaurantProfileScreen extends ConsumerStatefulWidget {
   const RestaurantProfileScreen({super.key});
 
   @override
-  State<RestaurantProfileScreen> createState() =>
+  ConsumerState<RestaurantProfileScreen> createState() =>
       _RestaurantProfileScreenState();
 }
 
-class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
+class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScreen> {
   late final TextEditingController nameController;
   late final TextEditingController descriptionController;
   late final TextEditingController addressController;
@@ -41,7 +41,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
   void initState() {
     super.initState();
 
-    final settings = context.read<SettingsProvider>();
+    final settings = ref.read(settingsProvider);
 
     nameController = TextEditingController(text: settings.restaurantName);
     descriptionController = TextEditingController(text: settings.description);
@@ -155,7 +155,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
   }
 
   Future<void> _save() async {
-    final ok = await context.read<SettingsProvider>().save(
+    final ok = await ref.read(settingsProvider).save(
           name: nameController.text,
           desc: descriptionController.text,
           addr: addressController.text,
@@ -180,7 +180,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final provider = context.watch<SettingsProvider>();
+    final provider = ref.watch(settingsProvider);
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -401,7 +401,7 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
   }
 }
 
-class _ProfileSection extends StatelessWidget {
+class _ProfileSection extends ConsumerWidget {
   final String title;
   final IconData icon;
   final AppColorScheme colors;
@@ -415,7 +415,7 @@ class _ProfileSection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context, WidgetRef ref) => Container(
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(14),
@@ -446,7 +446,7 @@ class _ProfileSection extends StatelessWidget {
       );
 }
 
-class _ProfileTime extends StatelessWidget {
+class _ProfileTime extends ConsumerWidget {
   final String text;
   final AppColorScheme colors;
 
@@ -456,7 +456,7 @@ class _ProfileTime extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context, WidgetRef ref) => Container(
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
@@ -474,7 +474,7 @@ class _ProfileTime extends StatelessWidget {
 }
 
 
-class _HoursRow extends StatelessWidget {
+class _HoursRow extends ConsumerWidget {
   final String label;
   final String openText;
   final String closeText;
@@ -492,7 +492,7 @@ class _HoursRow extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final narrow = MediaQuery.sizeOf(context).width < 520;
     final times = Row(
       children: [

@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -8,28 +8,30 @@ import '../../core/utils/responsive_size.dart';
 import '../../models/order_model.dart';
 import '../../providers/live_orders_provider.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
-import '../../widgets/reusable_widgets/rdx_header.dart';
 
-class LiveOrdersScreen extends StatefulWidget {
+/// Kanban-style Live Orders board (NEW / PREPARING / READY / DELIVERING).
+///
+/// Uses Riverpod [liveOrdersProvider] — no package:provider.
+class LiveOrdersScreen extends ConsumerStatefulWidget {
   const LiveOrdersScreen({super.key});
 
   @override
-  State<LiveOrdersScreen> createState() => _LiveOrdersScreenState();
+  ConsumerState<LiveOrdersScreen> createState() => _LiveOrdersScreenState();
 }
 
-class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
+class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   @override
   void initState() {
     super.initState();
-
-    Future.microtask(
-      () => context.read<LiveOrdersProvider>().load(),
-    );
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.read(liveOrdersProvider).load();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<LiveOrdersProvider>();
+    final provider = ref.watch(liveOrdersProvider);
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
@@ -68,28 +70,6 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
       ),
     );
   }
-
-  // ===========================================================================
-  // LIVE ORDERS BOARD
-  // ===========================================================================
-  //
-  // Every section gets ONE separate column.
-  //
-  // The entire board is horizontally scrollable.
-  //
-  // This means you can add:
-  //
-  // NEW ORDERS
-  // PREPARING
-  // READY
-  // DELIVERING
-  // CANCELLED
-  // PICKUP
-  // SCHEDULED
-  // etc.
-  //
-  // without creating another row.
-  // ===========================================================================
 
   Widget _buildBoard(LiveOrdersProvider provider) {
     final List<Widget> sections = [
@@ -134,8 +114,6 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
         final narrow = constraints.maxWidth < 900;
         final sectionGap = context.w(18);
 
-        // On narrow screens: stack sections vertically so the whole board
-        // is scrollable and every column is fully readable.
         if (narrow) {
           return SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
@@ -156,7 +134,6 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
           );
         }
 
-        // Desktop / wide tablet: equal-width columns in a row.
         final horizontalPadding = context.w(44);
         final sectionWidth = ((constraints.maxWidth -
                     horizontalPadding -
@@ -190,22 +167,6 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
     );
   }
 
-  // ===========================================================================
-  // SINGLE GENERIC SECTION
-  // ===========================================================================
-  //
-  // This is the ONLY section builder.
-  //
-  // Every section uses exactly the same UI.
-  //
-  // Data exists:
-  //     -> normal rounded order cards
-  //
-  // No data:
-  //     -> rounded dashed empty card
-  //
-  // ===========================================================================
-
   Widget _buildSection({
     required String title,
     required int count,
@@ -221,10 +182,6 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // =====================================================================
-        // SECTION HEADER
-        // =====================================================================
-
         Padding(
           padding: EdgeInsets.only(
             left: context.w(3),
@@ -242,9 +199,11 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                 ),
               ),
               SizedBox(width: context.w(9)),
-              Text(title,
-                  style: AppTextStyles.section(context)
-                      .copyWith(color: AppColors.lightTextPrimary)),
+              Text(
+                title,
+                style: AppTextStyles.section(context)
+                    .copyWith(color: AppColors.lightTextPrimary),
+              ),
               const Spacer(),
               Container(
                 constraints: BoxConstraints(
@@ -263,17 +222,14 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                     width: context.h(3),
                   ),
                 ),
-                child:
-                    Text('$count', style: AppTextStyles.bodySecondary(context)),
+                child: Text(
+                  '$count',
+                  style: AppTextStyles.bodySecondary(context),
+                ),
               ),
             ],
           ),
         ),
-
-        // =====================================================================
-        // EMPTY SECTION
-        // =====================================================================
-
         if (isEmpty)
           Container(
             width: double.infinity,
@@ -310,29 +266,24 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                       ),
                       const SizedBox(height: 12),
                     ],
-                    Text(emptyText ?? 'No orders',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: AppColors.textMuted)),
+                    Text(
+                      emptyText ?? 'No orders',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodySecondary(context)
+                          .copyWith(color: AppColors.textMuted),
+                    ),
                   ],
                 ),
               ),
             ),
           )
-
-        // =====================================================================
-        // POPULATED SECTION
-        // =====================================================================
-
         else
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final order in orders)
                 Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: 12,
-                  ),
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: _buildOrderCard(
                     order: order,
                     actionText: actionText,
@@ -344,10 +295,6 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
       ],
     );
   }
-
-  // ===========================================================================
-  // ORDER CARD
-  // ===========================================================================
 
   Widget _buildOrderCard({
     required OrderModel order,
@@ -380,28 +327,21 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
             arguments: order,
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              14,
-              13,
-              14,
-              13,
-            ),
+            padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // =============================================================
-                // ORDER ID + TIME
-                // =============================================================
-
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
-                      child: Text('#RDX-${order.id}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.caption(context)
-                              .copyWith(color: const Color(0xFFE0DCDC))),
+                      child: Text(
+                        '#RDX-${order.id}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption(context)
+                            .copyWith(color: const Color(0xFFE0DCDC)),
+                      ),
                     ),
                     const Icon(
                       Icons.schedule_outlined,
@@ -409,60 +349,39 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                       color: Color(0xFF777070),
                     ),
                     const SizedBox(width: 5),
-                    Text(_formatOrderTime(order.createdAt),
-                        style: AppTextStyles.caption(context)
-                            .copyWith(color: const Color(0xFF888080))),
+                    Text(
+                      _formatOrderTime(order.createdAt),
+                      style: AppTextStyles.caption(context)
+                          .copyWith(color: const Color(0xFF888080)),
+                    ),
                   ],
                 ),
-
                 const SizedBox(height: 10),
-
-                // =============================================================
-                // ITEMS
-                // =============================================================
-
                 Text(
-                    order.items.isEmpty
-                        ? 'Order'
-                        : order.items
-                            .map(
-                              (item) => '${item.quantity}x ${item.name}',
-                            )
-                            .join(', '),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption(context)
-                        .copyWith(color: const Color(0xFFD7D1D1))),
-
+                  order.items.isEmpty
+                      ? 'Order'
+                      : order.items
+                          .map((item) => '${item.quantity}x ${item.name}')
+                          .join(', '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption(context)
+                      .copyWith(color: const Color(0xFFD7D1D1)),
+                ),
                 const SizedBox(height: 6),
-
-                // =============================================================
-                // CUSTOMER
-                // =============================================================
-
-                Text('Customer: ${order.customerName}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption(context)
-                        .copyWith(color: const Color(0xFF858080))),
-
+                Text(
+                  'Customer: ${order.customerName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption(context)
+                      .copyWith(color: const Color(0xFF858080)),
+                ),
                 const SizedBox(height: 12),
-
-                // =============================================================
-                // HORIZONTAL DIVIDER
-                // =============================================================
-
                 Container(
                   height: 1,
                   color: const Color(0xFF292525),
                 ),
-
                 const SizedBox(height: 11),
-
-                // =============================================================
-                // BOTTOM ROW
-                // =============================================================
-
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -479,10 +398,11 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                         ),
                       ),
                       child: Text(
-                          '${order.items.length} '
-                          '${order.items.length == 1 ? 'Item' : 'Items'}',
-                          style: AppTextStyles.caption(context)
-                              .copyWith(color: const Color(0xFFA69D9D))),
+                        '${order.items.length} '
+                        '${order.items.length == 1 ? 'Item' : 'Items'}',
+                        style: AppTextStyles.caption(context)
+                            .copyWith(color: const Color(0xFFA69D9D)),
+                      ),
                     ),
                     const Spacer(),
                     if (actionText != null)
@@ -490,22 +410,20 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(5),
-                          onTap: () {
-                            onAdvance(order);
-                          },
+                          onTap: () => onAdvance(order),
                           child: Container(
                             height: 28,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 11),
                             decoration: BoxDecoration(
                               color: const Color(0xFF214D9B),
                               borderRadius: BorderRadius.circular(5),
                             ),
                             alignment: Alignment.center,
-                            child: Text(actionText,
-                                style: AppTextStyles.caption(context)
-                                    .copyWith(color: Colors.white)),
+                            child: Text(
+                              actionText,
+                              style: AppTextStyles.caption(context)
+                                  .copyWith(color: Colors.white),
+                            ),
                           ),
                         ),
                       ),
@@ -519,38 +437,19 @@ class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
     );
   }
 
-  // ===========================================================================
-  // TIME
-  // ===========================================================================
-
   String _formatOrderTime(DateTime dateTime) {
     final difference = DateTime.now().difference(dateTime);
 
-    if (difference.inMinutes < 1) {
-      return 'now';
-    }
-
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m';
-    }
-
-    if (difference.inHours < 24) {
-      return '${difference.inHours}h';
-    }
+    if (difference.inMinutes < 1) return 'now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m';
+    if (difference.inHours < 24) return '${difference.inHours}h';
 
     final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
-
     final minute = dateTime.minute.toString().padLeft(2, '0');
-
     final period = dateTime.hour >= 12 ? 'PM' : 'AM';
-
     return '$hour:$minute $period';
   }
 }
-
-// =============================================================================
-// DASHED BORDER
-// =============================================================================
 
 class _DashedBorderPainter extends CustomPainter {
   final Color color;
@@ -569,54 +468,28 @@ class _DashedBorderPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final path = Path();
-
-    final rect = Rect.fromLTWH(
-      0.5,
-      0.5,
-      size.width - 1,
-      size.height - 1,
-    );
-
-    path.addRRect(
-      RRect.fromRectAndRadius(
-        rect,
-        Radius.circular(radius),
-      ),
-    );
+    final rect = Rect.fromLTWH(0.5, 0.5, size.width - 1, size.height - 1);
+    path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
 
     final PathMetrics metrics = path.computeMetrics();
-
     const double dashLength = 6;
     const double gapLength = 5;
 
     for (final metric in metrics) {
       double distance = 0;
-
       while (distance < metric.length) {
-        final double nextDistance = (distance + dashLength).clamp(
-          0,
-          metric.length,
-        );
-
-        final Path segment = metric.extractPath(
-          distance,
-          nextDistance.toDouble(),
-        );
-
-        canvas.drawPath(
-          segment,
-          paint,
-        );
-
+        final double nextDistance =
+            (distance + dashLength).clamp(0, metric.length);
+        final Path segment =
+            metric.extractPath(distance, nextDistance.toDouble());
+        canvas.drawPath(segment, paint);
         distance += dashLength + gapLength;
       }
     }
   }
 
   @override
-  bool shouldRepaint(
-    covariant _DashedBorderPainter oldDelegate,
-  ) {
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
     return oldDelegate.color != color || oldDelegate.radius != radius;
   }
 }

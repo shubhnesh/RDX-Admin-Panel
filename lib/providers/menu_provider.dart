@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/category_model.dart';
 import '../models/menu_item_model.dart';
 import '../services/category_service.dart';
@@ -201,3 +202,8 @@ class MenuProvider extends ChangeNotifier {
     }
   }
 }
+
+/// Riverpod provider wrapping [MenuProvider].
+final menuProvider = ChangeNotifierProvider<MenuProvider>(
+  (ref) => MenuProvider(MenuService()),
+);

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -7,13 +7,13 @@ import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
 import '../../widgets/buttons/rdx_toggle_button.dart'; // adjust path if needed
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
-    final provider = context.watch<SettingsProvider>();
+    final provider = ref.watch(settingsProvider);
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -80,13 +80,13 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-class _IdentityCard extends StatelessWidget {
+class _IdentityCard extends ConsumerWidget {
   final AppColorScheme colors;
   const _IdentityCard({required this.colors});
 
   @override
-  Widget build(BuildContext context) {
-    final settings = context.read<SettingsProvider>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.read(settingsProvider);
     return _SettingsCard(
       title: 'Restaurant Identity',
       icon: Icons.storefront_outlined,
@@ -128,13 +128,13 @@ class _IdentityCard extends StatelessWidget {
   }
 }
 
-class _RulesCard extends StatelessWidget {
+class _RulesCard extends ConsumerWidget {
   final SettingsProvider provider;
   final AppColorScheme colors;
   const _RulesCard({required this.provider, required this.colors});
 
   @override
-  Widget build(BuildContext context) => _SettingsCard(
+  Widget build(BuildContext context, WidgetRef ref) => _SettingsCard(
       title: 'Core Operational Rules',
       icon: Icons.tune,
       colors: colors,

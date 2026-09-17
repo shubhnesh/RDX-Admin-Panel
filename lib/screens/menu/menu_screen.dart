@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/screens/menu/widgets/menu_item_card.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_action_menu_dialog.dart';
@@ -15,14 +15,14 @@ import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/resuable_options/rdx_category_tabs.dart';
 import '../../widgets/resuable_options/rdx_search_bar.dart';
 
-class MenuScreen extends StatefulWidget {
+class MenuScreen extends ConsumerStatefulWidget {
   const MenuScreen({super.key});
 
   @override
-  State<MenuScreen> createState() => _MenuScreenState();
+  ConsumerState<MenuScreen> createState() => _MenuScreenState();
 }
 
-class _MenuScreenState extends State<MenuScreen> {
+class _MenuScreenState extends ConsumerState<MenuScreen> {
   final Set<String> _appliedCategories = {};
   Set<String>? _stagedCategories;
   bool _hasAppliedCategories = false;
@@ -35,7 +35,7 @@ class _MenuScreenState extends State<MenuScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<MenuProvider>().load();
+      ref.read(menuProvider).load();
     });
   }
 
@@ -218,7 +218,7 @@ class _MenuScreenState extends State<MenuScreen> {
                   arguments: item.id,
                 );
                 if (context.mounted) {
-                  context.read<MenuProvider>().load();
+                  ref.read(menuProvider).load();
                 }
               },
             ),
@@ -260,7 +260,7 @@ class _MenuScreenState extends State<MenuScreen> {
     );
 
     if (confirmed == true && context.mounted) {
-      final success = await context.read<MenuProvider>().deleteItem(item.id);
+      final success = await ref.read(menuProvider).deleteItem(item.id);
 
       if (!context.mounted) return;
 
@@ -276,7 +276,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<MenuProvider>();
+    final provider = ref.watch(menuProvider);
     final colors = AppColors.of(context);
 
     return Scaffold(
@@ -326,14 +326,14 @@ class _MenuScreenState extends State<MenuScreen> {
   Widget _buildTopBar(BuildContext context, AppColorScheme colors) {
     return RdxSearchToolbar(
       hintText: 'Search menu items',
-      onChanged: (value) => context.read<MenuProvider>().setSearchQuery(value),
+      onChanged: (value) => ref.read(menuProvider).setSearchQuery(value),
       actions: [
         RdxActionButton(
           label: 'Add Item',
           leadingIcon: Icons.add,
           onPressed: () async {
             await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
-            if (context.mounted) context.read<MenuProvider>().load();
+            if (context.mounted) ref.read(menuProvider).load();
           },
         ),
       ],
@@ -633,7 +633,7 @@ class _MenuScreenState extends State<MenuScreen> {
             onTap: () async {
               await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
               if (context.mounted) {
-                context.read<MenuProvider>().load();
+                ref.read(menuProvider).load();
               }
             },
           );
@@ -653,14 +653,14 @@ class _MenuScreenState extends State<MenuScreen> {
 
 // ─── Add Item Tile ────────────────────────────────────────────────────
 
-class _AddItemTile extends StatelessWidget {
+class _AddItemTile extends ConsumerWidget {
   final AppColorScheme colors;
   final VoidCallback onTap;
 
   const _AddItemTile({required this.colors, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(context.h(14)),
@@ -704,7 +704,7 @@ class _AddItemTile extends StatelessWidget {
 
 // ─── Dotted Border helpers ────────────────────────────────────────────
 
-class DottedBorderContainer extends StatelessWidget {
+class DottedBorderContainer extends ConsumerWidget {
   final Color color;
   final double radius;
   final double dashLength;
@@ -723,7 +723,7 @@ class DottedBorderContainer extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return CustomPaint(
       painter: _DashedRRectPainter(
         color: color,

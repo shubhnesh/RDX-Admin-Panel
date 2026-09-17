@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/dialogs/taxonomy_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
@@ -59,16 +59,16 @@ class _MaxValueInputFormatter extends TextInputFormatter {
   }
 }
 
-class AddMaterialScreen extends StatefulWidget {
+class AddMaterialScreen extends ConsumerStatefulWidget {
   final InventoryItemModel? existing;
 
   const AddMaterialScreen({super.key, this.existing});
 
   @override
-  State<AddMaterialScreen> createState() => _AddMaterialScreenState();
+  ConsumerState<AddMaterialScreen> createState() => _AddMaterialScreenState();
 }
 
-class _AddMaterialScreenState extends State<AddMaterialScreen> {
+class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
   late final TextEditingController _qtyCtrl;
@@ -303,7 +303,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
     );
 
     try {
-      await context.read<InventoryProvider>().saveItem(item, timestamp: now);
+      await ref.read(inventoryProvider).saveItem(item, timestamp: now);
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -748,7 +748,7 @@ class _AddMaterialScreenState extends State<AddMaterialScreen> {
   }
 }
 
-class _SectionCard extends StatelessWidget {
+class _SectionCard extends ConsumerWidget {
   final String title;
   final IconData icon;
   final Widget child;
@@ -762,7 +762,7 @@ class _SectionCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     return Container(
       padding: EdgeInsets.all(context.h(20)),

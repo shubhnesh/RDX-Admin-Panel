@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/utils/formatters.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_action_menu_dialog.dart';
@@ -18,14 +18,14 @@ import 'add_material_screen.dart';
 import 'low_stock_screen.dart';
 import 'widgets/inventory_stats_row.dart';
 
-class InventoryScreen extends StatefulWidget {
+class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
 
   @override
-  State<InventoryScreen> createState() => _InventoryScreenState();
+  ConsumerState<InventoryScreen> createState() => _InventoryScreenState();
 }
 
-class _InventoryScreenState extends State<InventoryScreen> {
+class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   final _searchController = TextEditingController();
 
   @override
@@ -33,7 +33,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<InventoryProvider>().load();
+      ref.read(inventoryProvider).load();
     });
   }
 
@@ -81,7 +81,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<InventoryProvider>();
+    final provider = ref.watch(inventoryProvider);
     final colors = AppColors.of(context);
     final isNarrow = MediaQuery.sizeOf(context).width < 900;
     return Scaffold(
@@ -299,7 +299,7 @@ RdxTableColumn(title: 'ACTIONS', minWidth: context.w(70), flex: 1),
               maxValue: 5000,
               maxErrorText: 'Cannot add more than 5000 at once',
               onSubmit: (value) {
-                context.read<InventoryProvider>().addStock(item.id, value);
+                ref.read(inventoryProvider).addStock(item.id, value);
               },
             ),
           ),
@@ -311,7 +311,7 @@ RdxTableColumn(title: 'ACTIONS', minWidth: context.w(70), flex: 1),
               maxValue: item.quantity,
               maxErrorText: 'Cannot use more than current stock',
               onSubmit: (value) {
-                context.read<InventoryProvider>().useStock(item.id, value);
+                ref.read(inventoryProvider).useStock(item.id, value);
               },
             ),
           ),
@@ -576,7 +576,7 @@ RdxTableColumn(title: 'ACTIONS', minWidth: context.w(70), flex: 1),
       ),
     );
     if (confirmed == true && context.mounted) {
-      await context.read<InventoryProvider>().deleteItem(item.id);
+      await ref.read(inventoryProvider).deleteItem(item.id);
     }
   }
 
@@ -593,7 +593,7 @@ RdxTableColumn(title: 'ACTIONS', minWidth: context.w(70), flex: 1),
 /// itself — it doesn't hold any running state of its own, the actual
 /// stock/cost math happens server-side in InventoryService.addStock /
 /// InventoryService.useStock.
-class _StockAdjustField extends StatefulWidget {
+class _StockAdjustField extends ConsumerStatefulWidget {
   final String hint;
   final double maxValue;
   final String maxErrorText;
@@ -608,10 +608,10 @@ class _StockAdjustField extends StatefulWidget {
   });
 
   @override
-  State<_StockAdjustField> createState() => _StockAdjustFieldState();
+  ConsumerState<_StockAdjustField> createState() => _StockAdjustFieldState();
 }
 
-class _StockAdjustFieldState extends State<_StockAdjustField> {
+class _StockAdjustFieldState extends ConsumerState<_StockAdjustField> {
   final _controller = TextEditingController();
   String? _errorText;
 

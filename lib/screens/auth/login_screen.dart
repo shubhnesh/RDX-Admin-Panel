@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/resuable_options/rdx_text_field.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscure = true;
@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
-    final auth = context.read<AuthProvider>();
+    final auth = ref.read(authProvider);
     final ok = _isRegister
         ? await auth.register(_emailCtrl.text, _passCtrl.text)
         : await auth.signIn(_emailCtrl.text, _passCtrl.text);
@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+    final auth = ref.watch(authProvider);
     return Scaffold(
       body: Center(
         child: ConstrainedBox(

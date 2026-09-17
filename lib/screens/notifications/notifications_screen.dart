@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/stat_card.dart';
@@ -9,18 +9,18 @@ import '../../providers/notification_provider.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/resuable_options/rdx_text_field.dart';
 import 'notification_history_screen.dart';
-class NotificationsScreen extends StatefulWidget {
+class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
   @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
+  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
 }
-class _NotificationsScreenState extends State<NotificationsScreen> {
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => context.read<NotificationProvider>().load());
+    Future.microtask(() => ref.read(notificationProvider).load());
   }
   @override
   void dispose() {
@@ -30,7 +30,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<NotificationProvider>();
+    final provider = ref.watch(notificationProvider);
     final colors = AppColors.of(context);
     return Scaffold(
       backgroundColor: colors.background,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SettingsProvider extends ChangeNotifier {
@@ -136,3 +137,8 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 }
+
+/// Riverpod provider wrapping [SettingsProvider].
+final settingsProvider = ChangeNotifierProvider<SettingsProvider>(
+  (ref) => SettingsProvider(),
+);

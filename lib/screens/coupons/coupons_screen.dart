@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/screens/coupons/create_coupon_screen.dart';
 import 'package:rdx_admin/screens/coupons/widgets/coupon_card.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_action_menu_dialog.dart';
@@ -17,14 +17,14 @@ import '../../widgets/resuable_options/rdx_search_bar.dart';
 import '../../widgets/resuable_options/rdx_category_tabs.dart';
 import '../../widgets/reusable_widgets/stat_card.dart';
 
-class CouponsScreen extends StatefulWidget {
+class CouponsScreen extends ConsumerStatefulWidget {
   const CouponsScreen({super.key});
 
   @override
-  State<CouponsScreen> createState() => _CouponsScreenState();
+  ConsumerState<CouponsScreen> createState() => _CouponsScreenState();
 }
 
-class _CouponsScreenState extends State<CouponsScreen> {
+class _CouponsScreenState extends ConsumerState<CouponsScreen> {
   final _searchController = TextEditingController();
   String _query = '';
 
@@ -33,7 +33,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<CouponProvider>().load();
+      ref.read(couponProvider).load();
     });
   }
 
@@ -98,7 +98,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
               title: 'Delete',
               textColor: AppColors.danger,
               onTap: () {
-                // context.read<CouponProvider>().deleteCoupon(coupon.id);
+                // ref.read(couponProvider).deleteCoupon(coupon.id);
                 _confirmDelete(
                   context,
                   coupon,
@@ -117,7 +117,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
   //     builder: (_) => DeleteMaterialDialog(item: coupon),
   //   );
   //   if (confirmed == true && context.mounted) {
-  //     await context.read<CouponProvider>().deleteCoupon(coupon.id);
+  //     await ref.read(couponProvider).deleteCoupon(coupon.id);
   //   }
   // }
 
@@ -175,7 +175,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
     );
 
     if (confirmed == true && context.mounted) {
-      await context.read<CouponProvider>().deleteCoupon(coupon.id);
+      await ref.read(couponProvider).deleteCoupon(coupon.id);
     }
   }
 
@@ -195,7 +195,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final provider = context.watch<CouponProvider>();
+    final provider = ref.watch(couponProvider);
 
     final visibleCoupons = _query.isEmpty
         ? provider.filteredCoupons
@@ -238,13 +238,13 @@ class _CouponsScreenState extends State<CouponsScreen> {
                     //     AppRoutes.createCoupon,
                     //   );
                     //   if (context.mounted) {
-                    //     context.read<CouponProvider>().load();
+                    //     ref.read(couponProvider).load();
                     //   }
                     onPressed: () async {
                       await _openCreateCoupon(context);
 
                       if (context.mounted) {
-                        context.read<CouponProvider>().load();
+                        ref.read(couponProvider).load();
                       }
                     },
                   ),

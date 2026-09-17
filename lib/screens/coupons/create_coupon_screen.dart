@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/screens/coupons/widgets/coupon_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -13,7 +13,7 @@ import '../../widgets/resuable_options/rdx_dropdown.dart';
 import '../../widgets/resuable_options/rdx_text_field.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 
-class CreateCouponScreen extends StatefulWidget {
+class CreateCouponScreen extends ConsumerStatefulWidget {
   final CouponModel? existing;
   const CreateCouponScreen({
     super.key,
@@ -21,10 +21,10 @@ class CreateCouponScreen extends StatefulWidget {
   });
 
   @override
-  State<CreateCouponScreen> createState() => _CreateCouponScreenState();
+  ConsumerState<CreateCouponScreen> createState() => _CreateCouponScreenState();
 }
 
-class _CreateCouponScreenState extends State<CreateCouponScreen> {
+class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   final codeController = TextEditingController();
   final descriptionController = TextEditingController();
   final discountValueController = TextEditingController();
@@ -163,7 +163,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
   //     isLoading = true;
   //     errorMessage = null;
   //   });
-  //   final success = await context.read<CouponProvider>().createCoupon(coupon);
+  //   final success = await ref.read(couponProvider).createCoupon(coupon);
   //   if (!mounted) return;
   //   setState(() => isLoading = false);
   //   if (success) {
@@ -268,7 +268,7 @@ class _CreateCouponScreenState extends State<CreateCouponScreen> {
     });
 
     try {
-      final provider = context.read<CouponProvider>();
+      final provider = ref.read(couponProvider);
 
       final success = isEdit
           ? await provider.updateCoupon(coupon)

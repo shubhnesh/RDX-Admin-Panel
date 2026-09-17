@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
@@ -11,17 +11,17 @@ import '../../providers/notification_provider.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/resuable_options/rdx_dropdown.dart';
 
-class NotificationHistoryScreen extends StatefulWidget {
+class NotificationHistoryScreen extends ConsumerStatefulWidget {
   const NotificationHistoryScreen({
     super.key,
   });
 
   @override
-  State<NotificationHistoryScreen> createState() =>
+  ConsumerState<NotificationHistoryScreen> createState() =>
       _NotificationHistoryScreenState();
 }
 
-class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
+class _NotificationHistoryScreenState extends ConsumerState<NotificationHistoryScreen> {
   String _statusFilter = 'All Statuses';
 
   @override
@@ -29,13 +29,13 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     super.initState();
 
     Future.microtask(
-      () => context.read<NotificationProvider>().load(),
+      () => ref.read(notificationProvider).load(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<NotificationProvider>();
+    final provider = ref.watch(notificationProvider);
     final colors = AppColors.of(context);
 
     final filteredNotifications = _filteredNotifications(
@@ -269,7 +269,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
       onPressed: isLoading
           ? null
           : () async {
-              await context.read<NotificationProvider>().load();
+              await ref.read(notificationProvider).load();
             },
       isPrimary: true,
       isLoading: isLoading,

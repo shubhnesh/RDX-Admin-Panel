@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dashboard_stats_model.dart';
 import '../models/activity_log_model.dart';
 import '../services/dashboard_service.dart';
@@ -26,3 +27,8 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+
+/// Riverpod provider wrapping [DashboardProvider].
+final dashboardProvider = ChangeNotifierProvider<DashboardProvider>(
+  (ref) => DashboardProvider(DashboardService()),
+);

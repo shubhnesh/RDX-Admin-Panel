@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/coupon_model.dart';
 import '../services/coupon_service.dart';
 
@@ -71,3 +72,8 @@ class CouponProvider extends ChangeNotifier {
     }
   }
 }
+
+/// Riverpod provider wrapping [CouponProvider].
+final couponProvider = ChangeNotifierProvider<CouponProvider>(
+  (ref) => CouponProvider(CouponService()),
+);

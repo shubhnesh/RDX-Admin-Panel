@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/inventory_item_model.dart';
 import '../services/inventory_service.dart';
 
@@ -157,3 +158,8 @@ class InventoryProvider extends ChangeNotifier {
     await load();
   }
 }
+
+/// Riverpod provider wrapping [InventoryProvider].
+final inventoryProvider = ChangeNotifierProvider<InventoryProvider>(
+  (ref) => InventoryProvider(InventoryService()),
+);

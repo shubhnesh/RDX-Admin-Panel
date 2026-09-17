@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/order_model.dart';
 import '../services/order_service.dart';
 
@@ -34,7 +36,7 @@ class LiveOrdersProvider extends ChangeNotifier {
     final next = switch (order.status) {
       OrderStatus.pending => OrderStatus.preparing,
       OrderStatus.preparing => OrderStatus.ready,
-      OrderStatus.ready => OrderStatus.delivered, // ready → delivered
+      OrderStatus.ready => OrderStatus.delivered,
       OrderStatus.cancelled => OrderStatus.cancelled,
       OrderStatus.delivered => OrderStatus.delivered,
     };
@@ -42,3 +44,8 @@ class LiveOrdersProvider extends ChangeNotifier {
     await load();
   }
 }
+
+/// Riverpod binding for [LiveOrdersProvider].
+final liveOrdersProvider = ChangeNotifierProvider<LiveOrdersProvider>(
+  (ref) => LiveOrdersProvider(OrderService()),
+);

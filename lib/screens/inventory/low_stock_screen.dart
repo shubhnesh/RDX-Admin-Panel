@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import '../../core/theme/app_colors.dart';
@@ -11,14 +11,14 @@ import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/resuable_options/rdx_search_bar.dart';
 import '../../widgets/reusable_widgets/rdx_table.dart';
 
-class LowStockScreen extends StatefulWidget {
+class LowStockScreen extends ConsumerStatefulWidget {
   const LowStockScreen({super.key});
 
   @override
-  State<LowStockScreen> createState() => _LowStockScreenState();
+  ConsumerState<LowStockScreen> createState() => _LowStockScreenState();
 }
 
-class _LowStockScreenState extends State<LowStockScreen> {
+class _LowStockScreenState extends ConsumerState<LowStockScreen> {
   String _filter = 'ALL'; // ALL | CRITICAL | LOW STOCK
   final _searchController = TextEditingController();
   String _search = '';
@@ -31,7 +31,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<InventoryProvider>();
+    final provider = ref.watch(inventoryProvider);
     final colors = AppColors.of(context);
     final isNarrow = MediaQuery.sizeOf(context).width < 900;
 
@@ -395,7 +395,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
+class _SummaryCard extends ConsumerWidget {
   final String label;
   final String value;
   final String subtitle;
@@ -411,7 +411,7 @@ class _SummaryCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     return Container(
       width: double.infinity,
@@ -453,7 +453,7 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
+class _FilterChip extends ConsumerWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -465,7 +465,7 @@ class _FilterChip extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     return InkWell(
       onTap: onTap,
@@ -494,12 +494,12 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _LowStockTable extends StatelessWidget {
+class _LowStockTable extends ConsumerWidget {
   final List<InventoryItemModel> items;
   const _LowStockTable({required this.items});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return RdxTable(
       showFooter: false,
       columns: [

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/screens/menu/widgets/menu_item_card.dart';
 import 'package:rdx_admin/widgets/dialogs/taxonomy_dialog.dart';
@@ -43,15 +43,15 @@ const String _kCreatePreparationValue = '__create_preparation__';
 /// same deferred-creation contract as [_kPendingRegionalityId].
 const String _kPendingPreparationId = '__pending_preparation__';
 
-class CreateMenuScreen extends StatefulWidget {
+class CreateMenuScreen extends ConsumerStatefulWidget {
   final String? itemId;
   const CreateMenuScreen({super.key, this.itemId});
 
   @override
-  State<CreateMenuScreen> createState() => _CreateMenuScreenState();
+  ConsumerState<CreateMenuScreen> createState() => _CreateMenuScreenState();
 }
 
-class _CreateMenuScreenState extends State<CreateMenuScreen> {
+class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _description = TextEditingController();
@@ -323,7 +323,7 @@ Future<void> _openCreateTagDialog() async {
     setState(() => _loading = true);
     try {
       final item =
-          await context.read<MenuProvider>().getItemById(widget.itemId!);
+          await ref.read(menuProvider).getItemById(widget.itemId!);
       _name.text = item.name;
       _description.text = item.description;
       _image.text = item.imageUrl;
@@ -475,7 +475,7 @@ Future<void> _openCreateTagDialog() async {
       ingredients: List<String>.from(_ingredients),
     );
 
-    final success = await context.read<MenuProvider>().saveItem(item);
+    final success = await ref.read(menuProvider).saveItem(item);
     if (!mounted) return;
 
     if (success) {
@@ -483,7 +483,7 @@ Future<void> _openCreateTagDialog() async {
     } else {
       setState(() {
         _loading = false;
-        _error = context.read<MenuProvider>().errorMessage ??
+        _error = ref.read(menuProvider).errorMessage ??
             'Failed to save menu item.';
       });
     }
@@ -1186,7 +1186,7 @@ Future<void> _openCreateTagDialog() async {
       .join(' ');
 }
 
-class _IngredientChip extends StatelessWidget {
+class _IngredientChip extends ConsumerWidget {
   final String label;
   final AppColorScheme colors;
   final VoidCallback onDeleted;
@@ -1198,7 +1198,7 @@ class _IngredientChip extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: EdgeInsets.only(
         left: context.w(9),

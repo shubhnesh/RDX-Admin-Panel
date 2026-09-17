@@ -5,7 +5,6 @@ import '../../core/utils/responsive_size.dart';
 import '../../widgets/reusable_widgets/main_side_nav.dart';
 import '../../core/router/app_router.dart';
 import '../dashboard/dashboard_screen.dart';
-import '../live_orders/live_orders_screen.dart';
 import '../menu/menu_screen.dart';
 import '../coupons/coupons_screen.dart';
 import '../notifications/notifications_screen.dart';
@@ -37,7 +36,7 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _screens = {
       '/dashboard': DashboardScreen(onNavigate: _navigate),
-      '/live-orders': const LiveOrdersScreen(),
+      '/live-orders': LiveOrdersScreen(),
       '/menu': const MenuScreen(),
       '/coupons': const CouponsScreen(),
       '/notifications': const NotificationsScreen(),

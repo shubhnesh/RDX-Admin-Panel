@@ -204,17 +204,6 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ---------------------------------------------------------------------
-        // ORDER TYPE + TABLE
-        // ---------------------------------------------------------------------
-
-        _buildOrderConfiguration(
-          context,
-          colors,
-        ),
-
-        SizedBox(height: context.h(10)),
-
-        // ---------------------------------------------------------------------
         // SEARCH
         // ---------------------------------------------------------------------
 
@@ -280,83 +269,83 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
   // ORDER CONFIGURATION
   // ===========================================================================
 
-  Widget _buildOrderConfiguration(
-    BuildContext context,
-    AppColorScheme colors,
-  ) {
-    return Container(
-      width: double.infinity,
-      height: context.h(48),
-      padding: EdgeInsets.symmetric(
-        horizontal: context.w(10),
-        vertical: context.h(7),
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(
-          context.h(8),
-        ),
-        border: Border.all(
-          color: colors.border,
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(
-            'ORDER TYPE',
-            style: AppTextStyles.caption(context).copyWith(
-              fontSize: context.h(9),
-              color: colors.textMuted,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(width: context.w(7)),
-          _orderTypeChip(
-            context,
-            colors,
-            'Eat In',
-            true,
-          ),
-          SizedBox(width: context.w(5)),
-          _orderTypeChip(
-            context,
-            colors,
-            'To Go',
-            false,
-          ),
-          SizedBox(width: context.w(5)),
-          _orderTypeChip(
-            context,
-            colors,
-            'Delivery',
-            false,
-          ),
-          const Spacer(),
-          Icon(
-            Icons.table_restaurant_outlined,
-            size: context.h(13),
-            color: colors.textMuted,
-          ),
-          SizedBox(width: context.w(4)),
-          Text(
-            'Table',
-            style: AppTextStyles.caption(context).copyWith(
-              fontSize: context.h(10),
-              color: colors.textMuted,
-            ),
-          ),
-          SizedBox(width: context.w(5)),
-          Text(
-            'No Table (Counter)',
-            style: AppTextStyles.caption(context).copyWith(
-              fontSize: context.h(10),
-              color: colors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildOrderConfiguration(
+  //   BuildContext context,
+  //   AppColorScheme colors,
+  // ) {
+  //   return Container(
+  //     width: double.infinity,
+  //     height: context.h(48),
+  //     padding: EdgeInsets.symmetric(
+  //       horizontal: context.w(10),
+  //       vertical: context.h(7),
+  //     ),
+  //     decoration: BoxDecoration(
+  //       color: colors.surface,
+  //       borderRadius: BorderRadius.circular(
+  //         context.h(8),
+  //       ),
+  //       border: Border.all(
+  //         color: colors.border,
+  //       ),
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         Text(
+  //           'ORDER TYPE',
+  //           style: AppTextStyles.caption(context).copyWith(
+  //             fontSize: context.h(9),
+  //             color: colors.textMuted,
+  //             fontWeight: FontWeight.w600,
+  //           ),
+  //         ),
+  //         SizedBox(width: context.w(7)),
+  //         _orderTypeChip(
+  //           context,
+  //           colors,
+  //           'Eat In',
+  //           true,
+  //         ),
+  //         SizedBox(width: context.w(5)),
+  //         _orderTypeChip(
+  //           context,
+  //           colors,
+  //           'To Go',
+  //           false,
+  //         ),
+  //         SizedBox(width: context.w(5)),
+  //         _orderTypeChip(
+  //           context,
+  //           colors,
+  //           'Delivery',
+  //           false,
+  //         ),
+  //         const Spacer(),
+  //         Icon(
+  //           Icons.table_restaurant_outlined,
+  //           size: context.h(13),
+  //           color: colors.textMuted,
+  //         ),
+  //         SizedBox(width: context.w(4)),
+  //         Text(
+  //           'Table',
+  //           style: AppTextStyles.caption(context).copyWith(
+  //             fontSize: context.h(10),
+  //             color: colors.textMuted,
+  //           ),
+  //         ),
+  //         SizedBox(width: context.w(5)),
+  //         Text(
+  //           'No Table (Counter)',
+  //           style: AppTextStyles.caption(context).copyWith(
+  //             fontSize: context.h(10),
+  //             color: colors.textSecondary,
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   // ===========================================================================
   // ORDER TYPE CHIP

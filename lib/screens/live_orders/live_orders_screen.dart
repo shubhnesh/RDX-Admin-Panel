@@ -1,622 +1,658 @@
-import 'dart:ui';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:rdx_admin/core/theme/text_styles.dart';
-import '../../core/router/app_router.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/utils/responsive_size.dart';
-import '../../models/order_model.dart';
-import '../../providers/live_orders_provider.dart';
-import '../../widgets/reusable_widgets/loading_indicator.dart';
-import '../../widgets/reusable_widgets/rdx_header.dart';
+// import 'dart:ui';
+// import 'package:flutter/material.dart';
+// import 'package:provider/provider.dart';
+// import 'package:rdx_admin/core/theme/text_styles.dart';
+// import '../../core/router/app_router.dart';
+// import '../../core/theme/app_colors.dart';
+// import '../../core/utils/responsive_size.dart';
+// import '../../models/order_model.dart';
+// import '../../providers/live_orders_provider.dart';
+// import '../../widgets/buttons/rdx_action_button.dart';
+// import '../../widgets/reusable_widgets/loading_indicator.dart';
+// import '../order/place_order_screen.dart';
 
-class LiveOrdersScreen extends StatefulWidget {
-  const LiveOrdersScreen({super.key});
+// class LiveOrdersScreen extends StatefulWidget {
+//   const LiveOrdersScreen({super.key});
 
-  @override
-  State<LiveOrdersScreen> createState() => _LiveOrdersScreenState();
-}
+//   @override
+//   State<LiveOrdersScreen> createState() => _LiveOrdersScreenState();
+// }
 
-class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
-  @override
-  void initState() {
-    super.initState();
+// class _LiveOrdersScreenState extends State<LiveOrdersScreen> {
+//   @override
+//   void initState() {
+//     super.initState();
 
-    Future.microtask(
-      () => context.read<LiveOrdersProvider>().load(),
-    );
-  }
+//     Future.microtask(() {
+//       if (mounted) context.read<LiveOrdersProvider>().load();
+//     });
+//   }
 
-  @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<LiveOrdersProvider>();
+//   @override
+//   Widget build(BuildContext context) {
+//     final provider = context.watch<LiveOrdersProvider>();
+//     final narrow = MediaQuery.sizeOf(context).width < 600;
 
-    return Scaffold(
-      backgroundColor: AppColors.lightBackground,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              Responsive.pageHorizontal(context),
-              context.h(16),
-              Responsive.pageHorizontal(context),
-              context.h(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Live Orders',
-                  style: AppTextStyles.heading(context),
-                ),
-                SizedBox(height: context.h(4)),
-                Text(
-                  'Track orders and create orders for customers',
-                  style: AppTextStyles.bodySecondary(context)
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: provider.isLoading
-                ? const LoadingIndicator()
-                : _buildBoard(provider),
-          ),
-        ],
-      ),
-    );
-  }
+//     return Scaffold(
+//       backgroundColor: AppColors.lightBackground,
+//       body: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Padding(
+//             padding: EdgeInsets.fromLTRB(
+//               Responsive.pageHorizontal(context),
+//               context.h(16),
+//               Responsive.pageHorizontal(context),
+//               context.h(8),
+//             ),
+//             child: narrow
+//                 ? Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       _buildTitle(context),
+//                       SizedBox(height: context.h(12)),
+//                       Align(
+//                         alignment: Alignment.centerRight,
+//                         child: _newOrderButton(context),
+//                       ),
+//                     ],
+//                   )
+//                 : Row(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       Expanded(child: _buildTitle(context)),
+//                       _newOrderButton(context),
+//                     ],
+//                   ),
+//           ),
+//           Expanded(
+//             child: provider.isLoading
+//                 ? const LoadingIndicator()
+//                 : _buildBoard(provider),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
 
-  // ===========================================================================
-  // LIVE ORDERS BOARD
-  // ===========================================================================
-  //
-  // Every section gets ONE separate column.
-  //
-  // The entire board is horizontally scrollable.
-  //
-  // This means you can add:
-  //
-  // NEW ORDERS
-  // PREPARING
-  // READY
-  // DELIVERING
-  // CANCELLED
-  // PICKUP
-  // SCHEDULED
-  // etc.
-  //
-  // without creating another row.
-  // ===========================================================================
+//   Widget _buildTitle(BuildContext context) {
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Text('Live Orders', style: AppTextStyles.heading(context)),
+//         SizedBox(height: context.h(4)),
+//         Text(
+//           'Track orders and create orders for customers',
+//           style: AppTextStyles.bodySecondary(context)
+//               .copyWith(color: AppColors.textSecondary),
+//         ),
+//       ],
+//     );
+//   }
 
-  Widget _buildBoard(LiveOrdersProvider provider) {
-    final List<Widget> sections = [
-      _buildSection(
-        title: 'NEW ORDERS',
-        count: provider.pending.length,
-        color: const Color(0xFFE51B3E),
-        orders: provider.pending,
-        actionText: 'Start Preparing',
-        onAdvance: provider.advanceStatus,
-      ),
-      _buildSection(
-        title: 'PREPARING',
-        count: provider.preparing.length,
-        color: const Color(0xFFE9A719),
-        orders: provider.preparing,
-        actionText: 'Mark Ready',
-        onAdvance: provider.advanceStatus,
-      ),
-      _buildSection(
-        title: 'READY',
-        count: provider.ready.length,
-        color: const Color(0xFF20B47A),
-        orders: provider.ready,
-        actionText: null,
-        onAdvance: provider.advanceStatus,
-      ),
-      _buildSection(
-        title: 'DELIVERING',
-        count: 0,
-        color: const Color(0xFF31568E),
-        orders: const <OrderModel>[],
-        actionText: null,
-        onAdvance: provider.advanceStatus,
-        emptyIcon: Icons.delivery_dining_outlined,
-        emptyText: 'No active deliveries',
-      ),
-    ];
+//   Widget _newOrderButton(BuildContext context) {
+//     final liveOrdersProvider = context.read<LiveOrdersProvider>();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 900;
-        final sectionGap = context.w(18);
+//     return RdxActionButton(
+//       label: 'New Order',
+//       leadingIcon: Icons.add,
+//       onPressed: () async {
+//         await Navigator.of(context).push<bool>(
+//           MaterialPageRoute(builder: (_) => const PlaceOrderScreen()),
+//         );
+//         if (mounted) liveOrdersProvider.load();
+//       },
+//     );
+//   }
 
-        // On narrow screens: stack sections vertically so the whole board
-        // is scrollable and every column is fully readable.
-        if (narrow) {
-          return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              Responsive.pageHorizontal(context),
-              context.h(12),
-              Responsive.pageHorizontal(context),
-              context.h(24),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (int i = 0; i < sections.length; i++) ...[
-                  if (i > 0) SizedBox(height: context.h(20)),
-                  sections[i],
-                ],
-              ],
-            ),
-          );
-        }
+//   // ===========================================================================
+//   // LIVE ORDERS BOARD
+//   // ===========================================================================
+//   //
+//   // Every section gets ONE separate column.
+//   //
+//   // The entire board is horizontally scrollable.
+//   //
+//   // This means you can add:
+//   //
+//   // NEW ORDERS
+//   // PREPARING
+//   // READY
+//   // DELIVERING
+//   // CANCELLED
+//   // PICKUP
+//   // SCHEDULED
+//   // etc.
+//   //
+//   // without creating another row.
+//   // ===========================================================================
 
-        // Desktop / wide tablet: equal-width columns in a row.
-        final horizontalPadding = context.w(44);
-        final sectionWidth = ((constraints.maxWidth -
-                    horizontalPadding -
-                    sectionGap * (sections.length - 1)) /
-                sections.length)
-            .clamp(0.0, context.w(320));
+//   Widget _buildBoard(LiveOrdersProvider provider) {
+//     final List<Widget> sections = [
+//       _buildSection(
+//         title: 'NEW ORDERS',
+//         count: provider.pending.length,
+//         color: const Color(0xFFE51B3E),
+//         orders: provider.pending,
+//         actionText: 'Start Preparing',
+//         onAdvance: provider.advanceStatus,
+//       ),
+//       _buildSection(
+//         title: 'PREPARING',
+//         count: provider.preparing.length,
+//         color: const Color(0xFFE9A719),
+//         orders: provider.preparing,
+//         actionText: 'Mark Ready',
+//         onAdvance: provider.advanceStatus,
+//       ),
+//       _buildSection(
+//         title: 'READY',
+//         count: provider.ready.length,
+//         color: const Color(0xFF20B47A),
+//         orders: provider.ready,
+//         actionText: null,
+//         onAdvance: provider.advanceStatus,
+//       ),
+//       _buildSection(
+//         title: 'DELIVERING',
+//         count: 0,
+//         color: const Color(0xFF31568E),
+//         orders: const <OrderModel>[],
+//         actionText: null,
+//         onAdvance: provider.advanceStatus,
+//         emptyIcon: Icons.delivery_dining_outlined,
+//         emptyText: 'No active deliveries',
+//       ),
+//     ];
 
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            context.w(22),
-            context.h(18),
-            context.w(22),
-            context.h(24),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (int i = 0; i < sections.length; i++) ...[
-                Expanded(
-                  child: SizedBox(
-                    width: sectionWidth,
-                    child: sections[i],
-                  ),
-                ),
-                if (i != sections.length - 1) SizedBox(width: sectionGap),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
+//     return LayoutBuilder(
+//       builder: (context, constraints) {
+//         final narrow = constraints.maxWidth < 900;
+//         final sectionGap = context.w(18);
 
-  // ===========================================================================
-  // SINGLE GENERIC SECTION
-  // ===========================================================================
-  //
-  // This is the ONLY section builder.
-  //
-  // Every section uses exactly the same UI.
-  //
-  // Data exists:
-  //     -> normal rounded order cards
-  //
-  // No data:
-  //     -> rounded dashed empty card
-  //
-  // ===========================================================================
+//         // On narrow screens: stack sections vertically so the whole board
+//         // is scrollable and every column is fully readable.
+//         if (narrow) {
+//           return SingleChildScrollView(
+//             padding: EdgeInsets.fromLTRB(
+//               Responsive.pageHorizontal(context),
+//               context.h(12),
+//               Responsive.pageHorizontal(context),
+//               context.h(24),
+//             ),
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.stretch,
+//               children: [
+//                 for (int i = 0; i < sections.length; i++) ...[
+//                   if (i > 0) SizedBox(height: context.h(20)),
+//                   sections[i],
+//                 ],
+//               ],
+//             ),
+//           );
+//         }
 
-  Widget _buildSection({
-    required String title,
-    required int count,
-    required Color color,
-    required List<OrderModel> orders,
-    required String? actionText,
-    required ValueChanged<OrderModel> onAdvance,
-    IconData? emptyIcon,
-    String? emptyText,
-  }) {
-    final bool isEmpty = orders.isEmpty;
+//         // Desktop / wide tablet: equal-width columns in a row.
+//         final horizontalPadding = context.w(44);
+//         final sectionWidth = ((constraints.maxWidth -
+//                     horizontalPadding -
+//                     sectionGap * (sections.length - 1)) /
+//                 sections.length)
+//             .clamp(0.0, context.w(320));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // =====================================================================
-        // SECTION HEADER
-        // =====================================================================
+//         return Padding(
+//           padding: EdgeInsets.fromLTRB(
+//             context.w(22),
+//             context.h(18),
+//             context.w(22),
+//             context.h(24),
+//           ),
+//           child: Row(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               for (int i = 0; i < sections.length; i++) ...[
+//                 Expanded(
+//                   child: SizedBox(
+//                     width: sectionWidth,
+//                     child: sections[i],
+//                   ),
+//                 ),
+//                 if (i != sections.length - 1) SizedBox(width: sectionGap),
+//               ],
+//             ],
+//           ),
+//         );
+//       },
+//     );
+//   }
 
-        Padding(
-          padding: EdgeInsets.only(
-            left: context.w(3),
-            right: context.w(3),
-            bottom: context.h(12),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: context.w(7),
-                height: context.h(7),
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              SizedBox(width: context.w(9)),
-              Text(title,
-                  style: AppTextStyles.section(context)
-                      .copyWith(color: AppColors.lightTextPrimary)),
-              const Spacer(),
-              Container(
-                constraints: BoxConstraints(
-                  minWidth: context.w(21),
-                  minHeight: context.h(21),
-                ),
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.w(6),
-                ),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.lightSurface,
-                  borderRadius: BorderRadius.circular(context.h(15)),
-                  border: Border.all(
-                    color: AppColors.lightBorder,
-                    width: context.h(3),
-                  ),
-                ),
-                child:
-                    Text('$count', style: AppTextStyles.bodySecondary(context)),
-              ),
-            ],
-          ),
-        ),
+//   // ===========================================================================
+//   // SINGLE GENERIC SECTION
+//   // ===========================================================================
+//   //
+//   // This is the ONLY section builder.
+//   //
+//   // Every section uses exactly the same UI.
+//   //
+//   // Data exists:
+//   //     -> normal rounded order cards
+//   //
+//   // No data:
+//   //     -> rounded dashed empty card
+//   //
+//   // ===========================================================================
 
-        // =====================================================================
-        // EMPTY SECTION
-        // =====================================================================
+//   Widget _buildSection({
+//     required String title,
+//     required int count,
+//     required Color color,
+//     required List<OrderModel> orders,
+//     required String? actionText,
+//     required ValueChanged<OrderModel> onAdvance,
+//     IconData? emptyIcon,
+//     String? emptyText,
+//   }) {
+//     final bool isEmpty = orders.isEmpty;
 
-        if (isEmpty)
-          Container(
-            width: double.infinity,
-            height: context.h(170),
-            decoration: BoxDecoration(
-              color: AppColors.lightSurface,
-              borderRadius: BorderRadius.circular(context.h(12)),
-            ),
-            child: CustomPaint(
-              painter: _DashedBorderPainter(
-                color: AppColors.lightBorder,
-                radius: 12,
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (emptyIcon != null) ...[
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF1EA),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFFFFD8C5),
-                          ),
-                        ),
-                        child: Icon(
-                          emptyIcon,
-                          size: 22,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    Text(emptyText ?? 'No orders',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: AppColors.textMuted)),
-                  ],
-                ),
-              ),
-            ),
-          )
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         // =====================================================================
+//         // SECTION HEADER
+//         // =====================================================================
 
-        // =====================================================================
-        // POPULATED SECTION
-        // =====================================================================
+//         Padding(
+//           padding: EdgeInsets.only(
+//             left: context.w(3),
+//             right: context.w(3),
+//             bottom: context.h(12),
+//           ),
+//           child: Row(
+//             children: [
+//               Container(
+//                 width: context.w(7),
+//                 height: context.h(7),
+//                 decoration: BoxDecoration(
+//                   color: color,
+//                   shape: BoxShape.circle,
+//                 ),
+//               ),
+//               SizedBox(width: context.w(9)),
+//               Text(title,
+//                   style: AppTextStyles.section(context)
+//                       .copyWith(color: AppColors.lightTextPrimary)),
+//               const Spacer(),
+//               Container(
+//                 constraints: BoxConstraints(
+//                   minWidth: context.w(21),
+//                   minHeight: context.h(21),
+//                 ),
+//                 padding: EdgeInsets.symmetric(
+//                   horizontal: context.w(6),
+//                 ),
+//                 alignment: Alignment.center,
+//                 decoration: BoxDecoration(
+//                   color: AppColors.lightSurface,
+//                   borderRadius: BorderRadius.circular(context.h(15)),
+//                   border: Border.all(
+//                     color: AppColors.lightBorder,
+//                     width: context.h(3),
+//                   ),
+//                 ),
+//                 child:
+//                     Text('$count', style: AppTextStyles.bodySecondary(context)),
+//               ),
+//             ],
+//           ),
+//         ),
 
-        else
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final order in orders)
-                Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: 12,
-                  ),
-                  child: _buildOrderCard(
-                    order: order,
-                    actionText: actionText,
-                    onAdvance: onAdvance,
-                  ),
-                ),
-            ],
-          ),
-      ],
-    );
-  }
+//         // =====================================================================
+//         // EMPTY SECTION
+//         // =====================================================================
 
-  // ===========================================================================
-  // ORDER CARD
-  // ===========================================================================
+//         if (isEmpty)
+//           Container(
+//             width: double.infinity,
+//             height: context.h(170),
+//             decoration: BoxDecoration(
+//               color: AppColors.lightSurface,
+//               borderRadius: BorderRadius.circular(context.h(12)),
+//             ),
+//             child: CustomPaint(
+//               painter: _DashedBorderPainter(
+//                 color: AppColors.lightBorder,
+//                 radius: 12,
+//               ),
+//               child: Center(
+//                 child: Column(
+//                   mainAxisSize: MainAxisSize.min,
+//                   children: [
+//                     if (emptyIcon != null) ...[
+//                       Container(
+//                         width: 42,
+//                         height: 42,
+//                         decoration: BoxDecoration(
+//                           color: const Color(0xFFFFF1EA),
+//                           shape: BoxShape.circle,
+//                           border: Border.all(
+//                             color: const Color(0xFFFFD8C5),
+//                           ),
+//                         ),
+//                         child: Icon(
+//                           emptyIcon,
+//                           size: 22,
+//                           color: AppColors.primary,
+//                         ),
+//                       ),
+//                       const SizedBox(height: 12),
+//                     ],
+//                     Text(emptyText ?? 'No orders',
+//                         textAlign: TextAlign.center,
+//                         style: AppTextStyles.bodySecondary(context)
+//                             .copyWith(color: AppColors.textMuted)),
+//                   ],
+//                 ),
+//               ),
+//             ),
+//           )
 
-  Widget _buildOrderCard({
-    required OrderModel order,
-    required String? actionText,
-    required ValueChanged<OrderModel> onAdvance,
-  }) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFF151515),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: const Color(0xFF302B2B),
-          width: 1,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () => Navigator.of(context).pushNamed(
-            AppRoutes.orderDetail,
-            arguments: order,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              14,
-              13,
-              14,
-              13,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // =============================================================
-                // ORDER ID + TIME
-                // =============================================================
+//         // =====================================================================
+//         // POPULATED SECTION
+//         // =====================================================================
 
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text('#RDX-${order.id}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.caption(context)
-                              .copyWith(color: const Color(0xFFE0DCDC))),
-                    ),
-                    const Icon(
-                      Icons.schedule_outlined,
-                      size: 12,
-                      color: Color(0xFF777070),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(_formatOrderTime(order.createdAt),
-                        style: AppTextStyles.caption(context)
-                            .copyWith(color: const Color(0xFF888080))),
-                  ],
-                ),
+//         else
+//           Column(
+//             crossAxisAlignment: CrossAxisAlignment.stretch,
+//             children: [
+//               for (final order in orders)
+//                 Padding(
+//                   padding: const EdgeInsets.only(
+//                     bottom: 12,
+//                   ),
+//                   child: _buildOrderCard(
+//                     order: order,
+//                     actionText: actionText,
+//                     onAdvance: onAdvance,
+//                   ),
+//                 ),
+//             ],
+//           ),
+//       ],
+//     );
+//   }
 
-                const SizedBox(height: 10),
+//   // ===========================================================================
+//   // ORDER CARD
+//   // ===========================================================================
 
-                // =============================================================
-                // ITEMS
-                // =============================================================
+//   Widget _buildOrderCard({
+//     required OrderModel order,
+//     required String? actionText,
+//     required ValueChanged<OrderModel> onAdvance,
+//   }) {
+//     return Container(
+//       width: double.infinity,
+//       decoration: BoxDecoration(
+//         color: const Color(0xFF151515),
+//         borderRadius: BorderRadius.circular(10),
+//         border: Border.all(
+//           color: const Color(0xFF302B2B),
+//           width: 1,
+//         ),
+//         boxShadow: const [
+//           BoxShadow(
+//             color: Color(0x22000000),
+//             blurRadius: 8,
+//             offset: Offset(0, 3),
+//           ),
+//         ],
+//       ),
+//       child: Material(
+//         color: Colors.transparent,
+//         child: InkWell(
+//           borderRadius: BorderRadius.circular(10),
+//           onTap: () => Navigator.of(context).pushNamed(
+//             AppRoutes.orderDetail,
+//             arguments: order.id,
+//           ),
+//           child: Padding(
+//             padding: const EdgeInsets.fromLTRB(
+//               14,
+//               13,
+//               14,
+//               13,
+//             ),
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 // =============================================================
+//                 // ORDER ID + TIME
+//                 // =============================================================
 
-                Text(
-                    order.items.isEmpty
-                        ? 'Order'
-                        : order.items
-                            .map(
-                              (item) => '${item.quantity}x ${item.name}',
-                            )
-                            .join(', '),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption(context)
-                        .copyWith(color: const Color(0xFFD7D1D1))),
+//                 Row(
+//                   crossAxisAlignment: CrossAxisAlignment.center,
+//                   children: [
+//                     Expanded(
+//                       child: Text('#RDX-${order.id}',
+//                           maxLines: 1,
+//                           overflow: TextOverflow.ellipsis,
+//                           style: AppTextStyles.caption(context)
+//                               .copyWith(color: const Color(0xFFE0DCDC))),
+//                     ),
+//                     const Icon(
+//                       Icons.schedule_outlined,
+//                       size: 12,
+//                       color: Color(0xFF777070),
+//                     ),
+//                     const SizedBox(width: 5),
+//                     Text(_formatOrderTime(order.createdAt),
+//                         style: AppTextStyles.caption(context)
+//                             .copyWith(color: const Color(0xFF888080))),
+//                   ],
+//                 ),
 
-                const SizedBox(height: 6),
+//                 const SizedBox(height: 10),
 
-                // =============================================================
-                // CUSTOMER
-                // =============================================================
+//                 // =============================================================
+//                 // ITEMS
+//                 // =============================================================
 
-                Text('Customer: ${order.customerName}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption(context)
-                        .copyWith(color: const Color(0xFF858080))),
+//                 Text(
+//                     order.items.isEmpty
+//                         ? 'Order'
+//                         : order.items
+//                             .map(
+//                               (item) => '${item.quantity}x ${item.name}',
+//                             )
+//                             .join(', '),
+//                     maxLines: 2,
+//                     overflow: TextOverflow.ellipsis,
+//                     style: AppTextStyles.caption(context)
+//                         .copyWith(color: const Color(0xFFD7D1D1))),
 
-                const SizedBox(height: 12),
+//                 const SizedBox(height: 6),
 
-                // =============================================================
-                // HORIZONTAL DIVIDER
-                // =============================================================
+//                 // =============================================================
+//                 // CUSTOMER
+//                 // =============================================================
 
-                Container(
-                  height: 1,
-                  color: const Color(0xFF292525),
-                ),
+//                 Text('Customer: ${order.customerName}',
+//                     maxLines: 1,
+//                     overflow: TextOverflow.ellipsis,
+//                     style: AppTextStyles.caption(context)
+//                         .copyWith(color: const Color(0xFF858080))),
 
-                const SizedBox(height: 11),
+//                 const SizedBox(height: 12),
 
-                // =============================================================
-                // BOTTOM ROW
-                // =============================================================
+//                 // =============================================================
+//                 // HORIZONTAL DIVIDER
+//                 // =============================================================
 
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF252020),
-                        borderRadius: BorderRadius.circular(5),
-                        border: Border.all(
-                          color: const Color(0xFF302A2A),
-                        ),
-                      ),
-                      child: Text(
-                          '${order.items.length} '
-                          '${order.items.length == 1 ? 'Item' : 'Items'}',
-                          style: AppTextStyles.caption(context)
-                              .copyWith(color: const Color(0xFFA69D9D))),
-                    ),
-                    const Spacer(),
-                    if (actionText != null)
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(5),
-                          onTap: () {
-                            onAdvance(order);
-                          },
-                          child: Container(
-                            height: 28,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF214D9B),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(actionText,
-                                style: AppTextStyles.caption(context)
-                                    .copyWith(color: Colors.white)),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+//                 Container(
+//                   height: 1,
+//                   color: const Color(0xFF292525),
+//                 ),
 
-  // ===========================================================================
-  // TIME
-  // ===========================================================================
+//                 const SizedBox(height: 11),
 
-  String _formatOrderTime(DateTime dateTime) {
-    final difference = DateTime.now().difference(dateTime);
+//                 // =============================================================
+//                 // BOTTOM ROW
+//                 // =============================================================
 
-    if (difference.inMinutes < 1) {
-      return 'now';
-    }
+//                 Row(
+//                   crossAxisAlignment: CrossAxisAlignment.center,
+//                   children: [
+//                     Container(
+//                       padding: const EdgeInsets.symmetric(
+//                         horizontal: 7,
+//                         vertical: 5,
+//                       ),
+//                       decoration: BoxDecoration(
+//                         color: const Color(0xFF252020),
+//                         borderRadius: BorderRadius.circular(5),
+//                         border: Border.all(
+//                           color: const Color(0xFF302A2A),
+//                         ),
+//                       ),
+//                       child: Text(
+//                           '${order.items.length} '
+//                           '${order.items.length == 1 ? 'Item' : 'Items'}',
+//                           style: AppTextStyles.caption(context)
+//                               .copyWith(color: const Color(0xFFA69D9D))),
+//                     ),
+//                     const Spacer(),
+//                     if (actionText != null)
+//                       Material(
+//                         color: Colors.transparent,
+//                         child: InkWell(
+//                           borderRadius: BorderRadius.circular(5),
+//                           onTap: () {
+//                             onAdvance(order);
+//                           },
+//                           child: Container(
+//                             height: 28,
+//                             padding: const EdgeInsets.symmetric(
+//                               horizontal: 11,
+//                             ),
+//                             decoration: BoxDecoration(
+//                               color: const Color(0xFF214D9B),
+//                               borderRadius: BorderRadius.circular(5),
+//                             ),
+//                             alignment: Alignment.center,
+//                             child: Text(actionText,
+//                                 style: AppTextStyles.caption(context)
+//                                     .copyWith(color: Colors.white)),
+//                           ),
+//                         ),
+//                       ),
+//                   ],
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
 
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m';
-    }
+//   // ===========================================================================
+//   // TIME
+//   // ===========================================================================
 
-    if (difference.inHours < 24) {
-      return '${difference.inHours}h';
-    }
+//   String _formatOrderTime(DateTime dateTime) {
+//     final difference = DateTime.now().difference(dateTime);
 
-    final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
+//     if (difference.inMinutes < 1) {
+//       return 'now';
+//     }
 
-    final minute = dateTime.minute.toString().padLeft(2, '0');
+//     if (difference.inMinutes < 60) {
+//       return '${difference.inMinutes}m';
+//     }
 
-    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+//     if (difference.inHours < 24) {
+//       return '${difference.inHours}h';
+//     }
 
-    return '$hour:$minute $period';
-  }
-}
+//     final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
 
-// =============================================================================
-// DASHED BORDER
-// =============================================================================
+//     final minute = dateTime.minute.toString().padLeft(2, '0');
 
-class _DashedBorderPainter extends CustomPainter {
-  final Color color;
-  final double radius;
+//     final period = dateTime.hour >= 12 ? 'PM' : 'AM';
 
-  const _DashedBorderPainter({
-    required this.color,
-    required this.radius,
-  });
+//     return '$hour:$minute $period';
+//   }
+// }
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
+// // =============================================================================
+// // DASHED BORDER
+// // =============================================================================
 
-    final path = Path();
+// class _DashedBorderPainter extends CustomPainter {
+//   final Color color;
+//   final double radius;
 
-    final rect = Rect.fromLTWH(
-      0.5,
-      0.5,
-      size.width - 1,
-      size.height - 1,
-    );
+//   const _DashedBorderPainter({
+//     required this.color,
+//     required this.radius,
+//   });
 
-    path.addRRect(
-      RRect.fromRectAndRadius(
-        rect,
-        Radius.circular(radius),
-      ),
-    );
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final paint = Paint()
+//       ..color = color
+//       ..strokeWidth = 1
+//       ..style = PaintingStyle.stroke;
 
-    final PathMetrics metrics = path.computeMetrics();
+//     final path = Path();
 
-    const double dashLength = 6;
-    const double gapLength = 5;
+//     final rect = Rect.fromLTWH(
+//       0.5,
+//       0.5,
+//       size.width - 1,
+//       size.height - 1,
+//     );
 
-    for (final metric in metrics) {
-      double distance = 0;
+//     path.addRRect(
+//       RRect.fromRectAndRadius(
+//         rect,
+//         Radius.circular(radius),
+//       ),
+//     );
 
-      while (distance < metric.length) {
-        final double nextDistance = (distance + dashLength).clamp(
-          0,
-          metric.length,
-        );
+//     final PathMetrics metrics = path.computeMetrics();
 
-        final Path segment = metric.extractPath(
-          distance,
-          nextDistance.toDouble(),
-        );
+//     const double dashLength = 6;
+//     const double gapLength = 5;
 
-        canvas.drawPath(
-          segment,
-          paint,
-        );
+//     for (final metric in metrics) {
+//       double distance = 0;
 
-        distance += dashLength + gapLength;
-      }
-    }
-  }
+//       while (distance < metric.length) {
+//         final double nextDistance = (distance + dashLength).clamp(
+//           0,
+//           metric.length,
+//         );
 
-  @override
-  bool shouldRepaint(
-    covariant _DashedBorderPainter oldDelegate,
-  ) {
-    return oldDelegate.color != color || oldDelegate.radius != radius;
-  }
-}
+//         final Path segment = metric.extractPath(
+//           distance,
+//           nextDistance.toDouble(),
+//         );
+
+//         canvas.drawPath(
+//           segment,
+//           paint,
+//         );
+
+//         distance += dashLength + gapLength;
+//       }
+//     }
+//   }
+
+//   @override
+//   bool shouldRepaint(
+//     covariant _DashedBorderPainter oldDelegate,
+//   ) {
+//     return oldDelegate.color != color || oldDelegate.radius != radius;
+//   }
+// }

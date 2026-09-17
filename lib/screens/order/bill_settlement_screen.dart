@@ -170,7 +170,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
     });
 
     try {
-      await ref.read(orderServiceProvider).settleOrder(
+      await ref.read(orderServiceProvider).updatePaymentStatus(
             orderId: widget.bill.orderNumber,
             paymentMethod: paymentMethod,
           );

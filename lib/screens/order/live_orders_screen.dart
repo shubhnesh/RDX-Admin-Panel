@@ -1075,6 +1075,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rdx_admin/screens/order_details/order_details_screen.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -1139,6 +1140,25 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
       return matchesType && matchesStatus;
     }).toList();
+  }
+
+  Future<void> _openOrderDetails(String orderId) async {
+    if (orderId.trim().isEmpty) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => OrderDetailsScreen(
+          orderId: orderId,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    // Live orders are already backed by the Firestore stream.
+    // Invalidate so the list is immediately refreshed after
+    // returning from order details/status changes.
+    ref.invalidate(liveOrdersStreamProvider);
   }
 
   @override
@@ -1529,6 +1549,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   width: cardWidth,
                   child: LiveOrderCard(
                     order: order,
+                    onTap: () => _openOrderDetails(order.id),
                   ),
                 ),
             ],

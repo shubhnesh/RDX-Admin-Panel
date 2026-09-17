@@ -11,10 +11,12 @@ import '../../../widgets/reusable_widgets/rdx_delete_dialog.dart';
 
 class LiveOrderCard extends ConsumerWidget {
   final OrderModel order;
+  final VoidCallback? onTap;
 
   const LiveOrderCard({
     super.key,
     required this.order,
+    this.onTap,
   });
 
   String get _orderIdShort {
@@ -103,225 +105,234 @@ class LiveOrderCard extends ConsumerWidget {
 
     final actionLabel = order.status.advanceActionLabel;
 
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.only(
-        bottom: context.h(12),
-      ),
-      padding: EdgeInsets.all(
-        context.h(14),
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(
           context.h(12),
         ),
-        border: Border.all(
-          color: colors.border,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        child: Container(
+          width: double.infinity,
+          margin: EdgeInsets.only(
+            bottom: context.h(12),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ----------------------------------------------------------
-          // Header
-          // ----------------------------------------------------------
-          Row(
-            children: [
-              Text(
-                '#$_orderIdShort',
-                style: AppTextStyles.section(context).copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(
-                width: context.w(8),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.w(8),
-                  vertical: context.h(3),
-                ),
-                decoration: BoxDecoration(
-                  color: _typeBadgeColor(colors),
-                  borderRadius: BorderRadius.circular(
-                    context.h(6),
-                  ),
-                ),
-                child: Text(
-                  _typeLabel,
-                  style: AppTextStyles.caption(context).copyWith(
-                    color: _typeBadgeText(colors),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                _elapsed,
-                style: AppTextStyles.caption(context).copyWith(
-                  color: colors.textMuted,
-                ),
+          padding: EdgeInsets.all(
+            context.h(14),
+          ),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(
+              context.h(12),
+            ),
+            border: Border.all(
+              color: colors.border,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-
-          SizedBox(
-            height: context.h(10),
-          ),
-
-          // ----------------------------------------------------------
-          // Items
-          // ----------------------------------------------------------
-          for (final item in order.items.take(4))
-            Padding(
-              padding: EdgeInsets.only(
-                bottom: context.h(4),
-              ),
-              child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ----------------------------------------------------------
+              // Header
+              // ----------------------------------------------------------
+              Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      '${item.quantity}x ${item.name}',
-                      style: AppTextStyles.bodySecondary(context).copyWith(
-                        color: colors.textSecondary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  Text(
+                    '#$_orderIdShort',
+                    style: AppTextStyles.section(context).copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   SizedBox(
                     width: context.w(8),
                   ),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.w(8),
+                      vertical: context.h(3),
+                    ),
+                    decoration: BoxDecoration(
+                      color: _typeBadgeColor(colors),
+                      borderRadius: BorderRadius.circular(
+                        context.h(6),
+                      ),
+                    ),
+                    child: Text(
+                      _typeLabel,
+                      style: AppTextStyles.caption(context).copyWith(
+                        color: _typeBadgeText(colors),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
                   Text(
-                    '₹${(item.price * item.quantity).toStringAsFixed(0)}',
+                    _elapsed,
                     style: AppTextStyles.caption(context).copyWith(
                       color: colors.textMuted,
                     ),
                   ),
                 ],
               ),
-            ),
 
-          // Remaining items
-          if (order.items.length > 4)
-            Padding(
-              padding: EdgeInsets.only(
-                top: context.h(2),
+              SizedBox(
+                height: context.h(10),
               ),
-              child: Text(
-                '+${order.items.length - 4} more',
-                style: AppTextStyles.caption(context).copyWith(
-                  color: colors.textMuted,
+
+              // ----------------------------------------------------------
+              // Items
+              // ----------------------------------------------------------
+              for (final item in order.items.take(4))
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: context.h(4),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${item.quantity}x ${item.name}',
+                          style: AppTextStyles.bodySecondary(context).copyWith(
+                            color: colors.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      SizedBox(
+                        width: context.w(8),
+                      ),
+                      Text(
+                        '₹${(item.price * item.quantity).toStringAsFixed(0)}',
+                        style: AppTextStyles.caption(context).copyWith(
+                          color: colors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
 
-          // ----------------------------------------------------------
-          // Order note
-          // ----------------------------------------------------------
-          if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
-            SizedBox(
-              height: context.h(6),
-            ),
-            Text(
-              'Note: ${order.notes!.trim()}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.caption(context).copyWith(
-                color: colors.textMuted,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-
-          SizedBox(
-            height: context.h(10),
-          ),
-
-          Divider(
-            height: 1,
-            color: colors.divider,
-          ),
-
-          SizedBox(
-            height: context.h(10),
-          ),
-
-          // ----------------------------------------------------------
-          // Total + Primary Action
-          // ----------------------------------------------------------
-          Row(
-            children: [
-              Text(
-                '₹${order.total.toStringAsFixed(0)}',
-                style: AppTextStyles.section(context).copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w700,
+              // Remaining items
+              if (order.items.length > 4)
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: context.h(2),
+                  ),
+                  child: Text(
+                    '+${order.items.length - 4} more',
+                    style: AppTextStyles.caption(context).copyWith(
+                      color: colors.textMuted,
+                    ),
+                  ),
                 ),
-              ),
-              const Spacer(),
-              if (actionLabel != null)
+
+              // ----------------------------------------------------------
+              // Order note
+              // ----------------------------------------------------------
+              if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
                 SizedBox(
-                  height: context.h(34),
-                  child: RdxActionButton(
-                    label: updating ? '…' : actionLabel,
-                    isPrimary: true,
+                  height: context.h(6),
+                ),
+                Text(
+                  'Note: ${order.notes!.trim()}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption(context).copyWith(
+                    color: colors.textMuted,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+
+              SizedBox(
+                height: context.h(10),
+              ),
+
+              Divider(
+                height: 1,
+                color: colors.divider,
+              ),
+
+              SizedBox(
+                height: context.h(10),
+              ),
+
+              // ----------------------------------------------------------
+              // Total + Primary Action
+              // ----------------------------------------------------------
+              Row(
+                children: [
+                  Text(
+                    '₹${order.total.toStringAsFixed(0)}',
+                    style: AppTextStyles.section(context).copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (actionLabel != null)
+                    SizedBox(
+                      height: context.h(34),
+                      child: RdxActionButton(
+                        label: updating ? '…' : actionLabel,
+                        isPrimary: true,
+                        onPressed: updating
+                            ? null
+                            : () {
+                                ref
+                                    .read(
+                                      orderActionsProvider.notifier,
+                                    )
+                                    .advanceStatus(order);
+                              },
+                      ),
+                    ),
+                ],
+              ),
+
+              // ----------------------------------------------------------
+              // Cancel
+              // ----------------------------------------------------------
+              if (actionLabel != null) ...[
+                SizedBox(
+                  height: context.h(6),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
                     onPressed: updating
                         ? null
-                        : () {
-                            ref
-                                .read(
-                                  orderActionsProvider.notifier,
-                                )
-                                .advanceStatus(order);
-                          },
+                        : () => _confirmCancel(
+                              context,
+                              ref,
+                            ),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.w(8),
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: AppTextStyles.caption(context).copyWith(
+                        color: AppColors.danger,
+                      ),
+                    ),
                   ),
                 ),
+              ],
             ],
           ),
-
-          // ----------------------------------------------------------
-          // Cancel
-          // ----------------------------------------------------------
-          if (actionLabel != null) ...[
-            SizedBox(
-              height: context.h(6),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: updating
-                    ? null
-                    : () => _confirmCancel(
-                          context,
-                          ref,
-                        ),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.w(8),
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'Cancel',
-                  style: AppTextStyles.caption(context).copyWith(
-                    color: AppColors.danger,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

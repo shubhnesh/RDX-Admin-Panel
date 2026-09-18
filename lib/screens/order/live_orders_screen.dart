@@ -1388,80 +1388,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // SUMMARY STAT CARDS
-  // ---------------------------------------------------------------------------
-
-  // Widget _buildSummaryStats({
-  //   required LiveOrdersProvider provider,
-  //   required int totalOrders,
-  // }) {
-  //   return LayoutBuilder(
-  //     builder: (context, constraints) {
-  //       final width = constraints.maxWidth;
-
-  //       /*
-  //        * IMPORTANT:
-  //        *
-  //        * Do NOT use Responsive.gridColumns() here.
-  //        *
-  //        * That was causing Wrap to become:
-  //        *
-  //        * desktop -> 4 cards
-  //        * mobile  -> 1 card per row
-  //        *
-  //        * We always want the four cards in ONE row.
-  //        */
-
-  //       final narrow = width < 600;
-
-  //       final spacing = narrow ? context.w(7) : context.w(16);
-
-  //       final cards = [
-  //         StatCard(
-  //           label: 'Total Orders',
-  //           value: '$totalOrders orders',
-  //           icon: Icons.receipt_long_outlined,
-  //           minHeight: narrow ? context.h(62) : context.h(72),
-  //         ),
-  //         StatCard(
-  //           label: 'New Orders',
-  //           value: '${provider.pending.length}',
-  //           icon: Icons.fiber_new_outlined,
-  //           accentColor: const Color(0xFFE51B3E),
-  //           minHeight: narrow ? context.h(62) : context.h(72),
-  //         ),
-  //         StatCard(
-  //           label: 'Preparing',
-  //           value: '${provider.preparing.length}',
-  //           icon: Icons.restaurant_outlined,
-  //           accentColor: const Color(0xFFE9A719),
-  //           minHeight: narrow ? context.h(62) : context.h(72),
-  //         ),
-  //         StatCard(
-  //           label: 'Ready',
-  //           value: '${provider.ready.length}',
-  //           icon: Icons.check_circle_outline,
-  //           accentColor: const Color(0xFF20B47A),
-  //           minHeight: narrow ? context.h(62) : context.h(72),
-  //         ),
-  //       ];
-
-  //       return Row(
-  //         crossAxisAlignment: CrossAxisAlignment.stretch,
-  //         children: [
-  //           for (int i = 0; i < cards.length; i++) ...[
-  //             if (i > 0) SizedBox(width: spacing),
-  //             Expanded(
-  //               child: cards[i],
-  //             ),
-  //           ],
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
-
   Widget _buildSummaryStats({
     required LiveOrdersProvider provider,
     required int totalOrders,
@@ -1521,263 +1447,30 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // ORDERS CONTENT
-  // ---------------------------------------------------------------------------
-
-  // Widget _buildOrdersContent(
-  //   LiveOrdersProvider provider,
-  // ) {
-  //   final sections = _buildVisibleSections(provider);
-
-  //   return LayoutBuilder(
-  //     builder: (context, constraints) {
-  //       final narrow = constraints.maxWidth < 900;
-
-  //       final sectionGap = context.w(18);
-
-  //       // =====================================================================
-  //       // NARROW SCREEN
-  //       // =====================================================================
-
-  //       if (narrow) {
-  //         final isFiltered = _selectedStatus != 'All';
-
-  //         /*
-  //          * When All is selected:
-  //          *
-  //          * Keep the existing full-width stacked layout.
-  //          *
-  //          * When a specific status is selected:
-  //          *
-  //          * DO NOT stretch the section to the entire screen.
-  //          *
-  //          * Keep it at a proper Kanban/card width.
-  //          */
-  //         final sectionWidth = isFiltered
-  //             ? _getNarrowKanbanWidth(
-  //                 constraints.maxWidth,
-  //               )
-  //             : double.infinity;
-
-  //         return SingleChildScrollView(
-  //           padding: EdgeInsets.only(
-  //             top: context.h(4),
-  //             bottom: context.h(24),
-  //           ),
-  //           child: Align(
-  //             alignment: Alignment.topLeft,
-  //             child: Column(
-  //               crossAxisAlignment: CrossAxisAlignment.start,
-  //               children: [
-  //                 for (int i = 0; i < sections.length; i++) ...[
-  //                   if (i > 0) SizedBox(height: context.h(20)),
-  //                   SizedBox(
-  //                     width: sectionWidth,
-  //                     child: sections[i],
-  //                   ),
-  //                 ],
-  //               ],
-  //             ),
-  //           ),
-  //         );
-  //       }
-
-  //       // =====================================================================
-  //       // DESKTOP / TABLET
-  //       // =====================================================================
-
-  //       /*
-  //        * IMPORTANT FIX:
-  //        *
-  //        * Never calculate section width from sections.length.
-  //        *
-  //        * Previously:
-  //        *
-  //        *   sections.length == 1
-  //        *          ↓
-  //        *   sectionWidth = full available width
-  //        *
-  //        * That is exactly why New / Preparing / Ready were becoming
-  //        * full-width.
-  //        *
-  //        * Instead, ALWAYS calculate the width as a FOUR-column board.
-  //        */
-
-  //       final horizontalPadding = context.w(8);
-
-  //       final availableWidth =
-  //           constraints.maxWidth - horizontalPadding - (sectionGap * 3);
-
-  //       final fourColumnWidth = availableWidth / 4;
-
-  //       /*
-  //        * Keep a sensible minimum so the Kanban cards do not become
-  //        * excessively compressed at smaller desktop/tablet widths.
-  //        */
-  //       final sectionWidth = fourColumnWidth.clamp(
-  //         context.w(220),
-  //         context.w(320),
-  //       );
-
-  //       return SingleChildScrollView(
-  //         padding: EdgeInsets.fromLTRB(
-  //           horizontalPadding / 2,
-  //           context.h(4),
-  //           horizontalPadding / 2,
-  //           context.h(24),
-  //         ),
-  //         scrollDirection: Axis.horizontal,
-  //         child: Row(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             for (int i = 0; i < sections.length; i++) ...[
-  //               SizedBox(
-  //                 width: sectionWidth,
-  //                 child: sections[i],
-  //               ),
-  //               if (i != sections.length - 1) SizedBox(width: sectionGap),
-  //             ],
-  //           ],
-  //         ),
-  //       );
-  //     },
-  //   );
-  // }
+// ORDERS CONTENT
+// ---------------------------------------------------------------------------
 
   Widget _buildOrdersContent(
     LiveOrdersProvider provider,
   ) {
     final sections = _buildVisibleSections(provider);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 900;
-        final sectionGap = context.w(18);
-
-        // ================================================================
-        // NARROW SCREEN
-        // ================================================================
-
-        if (narrow) {
-          final availableWidth = constraints.maxWidth;
-
-          /*
-         * When All is selected, keep the sections full width.
-         *
-         * When a particular status is selected, don't stretch the
-         * Kanban column unnecessarily.
-         */
-          final filtered = _selectedStatus != 'All';
-
-          final sectionWidth = filtered
-              ? availableWidth.clamp(
-                  280.0,
-                  340.0,
-                )
-              : availableWidth;
-
-          return SingleChildScrollView(
-            padding: EdgeInsets.only(
-              top: context.h(4),
-              bottom: context.h(24),
-            ),
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (int i = 0; i < sections.length; i++) ...[
-                    SizedBox(
-                      width: sectionWidth,
-                      child: sections[i],
-                    ),
-                    if (i < sections.length - 1)
-                      SizedBox(height: context.h(20)),
-                  ],
-                ],
-              ),
-            ),
-          );
-        }
-
-        // ================================================================
-        // DESKTOP / TABLET
-        // ================================================================
-
-        /*
-       * IMPORTANT:
-       *
-       * Always calculate the Kanban width using FOUR columns.
-       *
-       * Do NOT use sections.length here.
-       *
-       * This means:
-       *
-       * All       -> 4 columns
-       * New       -> normal 1-column width
-       * Preparing -> normal 1-column width
-       * Ready     -> normal 1-column width
-       */
-
-        final horizontalPadding = context.w(8);
-
-        final boardWidth = constraints.maxWidth - horizontalPadding;
-
-        final totalGap = sectionGap * 3;
-
-        final calculatedColumnWidth = (boardWidth - totalGap) / 4;
-
-        final sectionWidth = calculatedColumnWidth.clamp(
-          220.0,
-          320.0,
-        );
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.only(
-            left: horizontalPadding / 2,
-            right: horizontalPadding / 2,
-            top: context.h(4),
-            bottom: context.h(24),
-          ),
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (int i = 0; i < sections.length; i++) ...[
-                SizedBox(
-                  width: sectionWidth,
-                  child: sections[i],
-                ),
-                if (i < sections.length - 1) SizedBox(width: sectionGap),
-              ],
-            ],
-          ),
-        );
-      },
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        top: context.h(4),
+        bottom: context.h(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (int i = 0; i < sections.length; i++) ...[
+            sections[i],
+            if (i < sections.length - 1) SizedBox(height: context.h(20)),
+          ],
+        ],
+      ),
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // NARROW KANBAN WIDTH
-  // ---------------------------------------------------------------------------
-
-  double _getNarrowKanbanWidth(double availableWidth) {
-    /*
-     * The filtered status view should behave like a normal Kanban
-     * column instead of becoming a full-width order list.
-     *
-     * On a phone, use the available width only when it is smaller
-     * than the normal card width.
-     */
-    const double preferredWidth = 320;
-
-    final horizontalPadding = context.w(0);
-
-    final usableWidth = availableWidth - horizontalPadding;
-
-    return usableWidth < preferredWidth ? usableWidth : preferredWidth;
-  }
-
   // ---------------------------------------------------------------------------
   // VISIBLE SECTIONS
   // ---------------------------------------------------------------------------
@@ -1844,92 +1537,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     return sections;
   }
 
-  // ---------------------------------------------------------------------------
-  // SECTION
-  // ---------------------------------------------------------------------------
-
-  // Widget _buildSection({
-  //   required String title,
-  //   required Color color,
-  //   required List<OrderModel> orders,
-  //   required String? actionText,
-  //   required ValueChanged<OrderModel> onAdvance,
-  //   IconData? emptyIcon,
-  //   String? emptyText,
-  // }) {
-  //   final isEmpty = orders.isEmpty;
-
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       // ---------------------------------------------------------------------
-  //       // SECTION HEADER
-  //       //
-  //       // The count badge has intentionally been removed.
-  //       // ---------------------------------------------------------------------
-
-  //       Padding(
-  //         padding: EdgeInsets.only(
-  //           left: context.w(3),
-  //           bottom: context.h(12),
-  //         ),
-  //         child: Row(
-  //           children: [
-  //             Container(
-  //               width: context.w(7),
-  //               height: context.h(7),
-  //               decoration: BoxDecoration(
-  //                 color: color,
-  //                 shape: BoxShape.circle,
-  //               ),
-  //             ),
-  //             SizedBox(width: context.w(9)),
-  //             Text(
-  //               title,
-  //               style: AppTextStyles.section(context).copyWith(
-  //                 color: AppColors.lightTextPrimary,
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-
-  //       // ---------------------------------------------------------------------
-  //       // ORDERS / EMPTY STATE
-  //       // ---------------------------------------------------------------------
-
-  //       if (isEmpty)
-  //         _buildEmptySection(
-  //           emptyIcon: emptyIcon,
-  //           emptyText: emptyText,
-  //         )
-  //       else
-  //         Column(
-  //           crossAxisAlignment: CrossAxisAlignment.stretch,
-  //           children: [
-  //             for (final order in orders)
-  //               Padding(
-  //                 padding: EdgeInsets.only(
-  //                   bottom: context.h(12),
-  //                 ),
-  //                 child: LiveOrderCard(
-  //                   order: order,
-  //                   actionText: actionText,
-  //                   onAdvance: onAdvance,
-  //                   onTap: () {
-  //                     Navigator.of(context).pushNamed(
-  //                       AppRoutes.orderDetail,
-  //                       arguments: order,
-  //                     );
-  //                   },
-  //                 ),
-  //               ),
-  //           ],
-  //         ),
-  //     ],
-  //   );
-  // }
-
   Widget _buildSection({
     required String title,
     required Color color,
@@ -1944,13 +1551,14 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ---------------------------------------------------------------
+        // =====================================================================
         // SECTION HEADER
-        // ---------------------------------------------------------------
+        // =====================================================================
 
         Padding(
           padding: EdgeInsets.only(
             left: context.w(3),
+            right: context.w(3),
             bottom: context.h(12),
           ),
           child: Row(
@@ -1974,37 +1582,72 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           ),
         ),
 
-        // ---------------------------------------------------------------
-        // ORDERS
-        // ---------------------------------------------------------------
+        // =====================================================================
+        // EMPTY STATE
+        // =====================================================================
 
         if (isEmpty)
           _buildEmptySection(
             emptyIcon: emptyIcon,
             emptyText: emptyText,
           )
+
+        // =====================================================================
+        // ORDER CARDS
+        // =====================================================================
+
         else
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final order in orders)
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: context.h(12),
-                  ),
-                  child: LiveOrderCard(
-                    order: order,
-                    actionText: actionText,
-                    onAdvance: onAdvance,
-                    onTap: () {
-                      Navigator.of(context).pushNamed(
-                        AppRoutes.orderDetail,
-                        arguments: order,
-                      );
-                    },
-                  ),
-                ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const double cardWidth = 320.0;
+              const double cardGap = 12.0;
+
+              /*
+             * IMPORTANT:
+             *
+             * The section itself is FULL WIDTH.
+             *
+             * Only the ORDER CARD has a maximum width.
+             *
+             * Therefore:
+             *
+             * 1200px -> multiple cards in one row
+             * 700px  -> multiple cards if they fit
+             * 500px  -> one/two depending on available space
+             * 300px  -> one card
+             *
+             * Excess cards automatically move to the next row.
+             */
+
+              final availableWidth = constraints.maxWidth;
+
+              final actualCardWidth =
+                  availableWidth < cardWidth ? availableWidth : cardWidth;
+
+              return Wrap(
+                spacing: cardGap,
+                runSpacing: context.h(12),
+                alignment: WrapAlignment.start,
+                crossAxisAlignment: WrapCrossAlignment.start,
+                children: [
+                  for (final order in orders)
+                    SizedBox(
+                      width: actualCardWidth,
+                      child: LiveOrderCard(
+                        order: order,
+                        actionText: actionText,
+                        onAdvance: onAdvance,
+                        onTap: () {
+                          Navigator.of(context).pushNamed(
+                            AppRoutes.orderDetail,
+                            arguments: order,
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
       ],
     );

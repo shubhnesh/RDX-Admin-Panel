@@ -362,33 +362,33 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
                           ],
                         ),
                       ),
-                      _ProfileSection(
-                        title: 'Operating Hours',
-                        icon: Icons.access_time_outlined,
-                        colors: colors,
-                        child: Column(
-                          children: [
-                            _HoursRow(
-                              label: 'Weekdays',
-                              openText: '08:00 AM',
-                              closeText: '11:00 PM',
-                              isOpen: _weekdaysOpen,
-                              onChanged: (value) =>
-                                  setState(() => _weekdaysOpen = value),
-                              colors: colors,
-                            ),
-                            _HoursRow(
-                              label: 'Weekends',
-                              openText: '10:00 AM',
-                              closeText: '02:00 AM',
-                              isOpen: _weekendsOpen,
-                              onChanged: (value) =>
-                                  setState(() => _weekendsOpen = value),
-                              colors: colors,
-                            ),
-                          ],
-                        ),
-                      ),
+                      // _ProfileSection(
+                      //   title: 'Operating Hours',
+                      //   icon: Icons.access_time_outlined,
+                      //   colors: colors,
+                      //   child: Column(
+                      //     children: [
+                      //       _HoursRow(
+                      //         label: 'Weekdays',
+                      //         openText: '08:00 AM',
+                      //         closeText: '11:00 PM',
+                      //         isOpen: _weekdaysOpen,
+                      //         onChanged: (value) =>
+                      //             setState(() => _weekdaysOpen = value),
+                      //         colors: colors,
+                      //       ),
+                      //       _HoursRow(
+                      //         label: 'Weekends',
+                      //         openText: '10:00 AM',
+                      //         closeText: '02:00 AM',
+                      //         isOpen: _weekendsOpen,
+                      //         onChanged: (value) =>
+                      //             setState(() => _weekendsOpen = value),
+                      //         colors: colors,
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),

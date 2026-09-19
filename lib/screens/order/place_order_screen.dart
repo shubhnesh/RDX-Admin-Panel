@@ -59,7 +59,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     final width = MediaQuery.sizeOf(context).width;
 
     // Keep the two-column POS layout on desktop/tablet.
-    final isCompact = width < 900;
+    final isCompact = Responsive.isNarrow(context);
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -199,6 +199,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     AppColorScheme colors,
   ) {
     final notifier = ref.read(menuProvider);
+    final isCompact = Responsive.isNarrow(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,7 +210,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
 
         RdxSearchBar(
           height: RdxTextField.singleLineHeight(context),
-          hintText: 'Search menu items...',
+          hintText: 'Search menu items',
           onChanged: notifier.setSearchQuery,
         ),
 
@@ -244,12 +245,26 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                   message: 'No menu items found',
                 )
               : GridView.builder(
+                  // Always allow scrolling, even when there are few items,
+                  // so the grid never feels "stuck" on short lists — this is
+                  // what makes the column of cards scroll once there are
+                  // more cards than fit on screen.
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.only(
                     bottom: context.h(4),
                   ),
                   gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: context.w(220),
-                    mainAxisExtent: context.h(116),
+                    // Smaller minimum column width on compact/shrunk screens
+                    // so more cards fit per row instead of collapsing down
+                    // to one very wide column.
+                    maxCrossAxisExtent:
+                        isCompact ? context.w(170) : context.w(220),
+                    // Height now follows width via a ratio instead of a
+                    // fixed pixel value, so cards keep their proportions as
+                    // columns shrink on a narrower screen. This is what
+                    // removes the empty gap that used to appear at the
+                    // bottom of each card when the screen shrinks.
+                    childAspectRatio: 220 / 116,
                     mainAxisSpacing: context.h(10),
                     crossAxisSpacing: context.w(10),
                   ),

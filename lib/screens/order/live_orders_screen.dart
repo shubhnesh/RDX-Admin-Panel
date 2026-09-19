@@ -1447,14 +1447,101 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   }
 
   // ---------------------------------------------------------------------------
-// ORDERS CONTENT
-// ---------------------------------------------------------------------------
+  // ORDERS CONTENT
+  // ---------------------------------------------------------------------------
+  //
+  // RESPONSIVE BOARD
+  //
+  // Wide screens (>= _kColumnsBreakpoint):
+  //   Each state is a COLUMN, laid out side by side in a Row.
+  //   Cards inside a column are stacked VERTICALLY and scroll independently.
+  //
+  // As the screen shrinks below the breakpoint:
+  //   Each state becomes a ROW, stacked vertically one under another.
+  //   Cards inside a row are laid out HORIZONTALLY and scroll sideways.
+  // ---------------------------------------------------------------------------
+
+  static const double _kColumnsBreakpoint = 900;
+  static const double _kRowCardWidth = 280;
 
   Widget _buildOrdersContent(
     LiveOrdersProvider provider,
   ) {
-    final sections = _buildVisibleSections(provider);
+    final sections = _buildVisibleSectionsData(provider);
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= _kColumnsBreakpoint;
+
+        return isWide
+            ? _buildColumnsBoard(sections)
+            : _buildRowsBoard(sections);
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // WIDE LAYOUT — states as columns, cards stacked vertically
+  // ---------------------------------------------------------------------------
+
+  Widget _buildColumnsBoard(List<_SectionData> sections) {
+    final gap = context.w(16);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < sections.length; i++) ...[
+          Expanded(child: _buildColumnSection(sections[i])),
+          if (i != sections.length - 1) SizedBox(width: gap),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildColumnSection(_SectionData data) {
+    final isEmpty = data.orders.isEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader(data),
+        SizedBox(height: context.h(12)),
+        if (isEmpty)
+          // Keep the empty-state box at its normal compact height —
+          // don't stretch it to fill the column.
+          _buildEmptySection(
+            emptyIcon: data.emptyIcon,
+            emptyText: data.emptyText,
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.only(bottom: context.h(4)),
+              itemCount: data.orders.length,
+              itemBuilder: (context, index) {
+                final order = data.orders[index];
+
+                return Padding(
+                  padding: EdgeInsets.only(bottom: context.h(12)),
+                  child: LiveOrderCard(
+                    order: order,
+                    actionText: data.actionText,
+                    onAdvance: data.onAdvance,
+                    onTap: () => _openOrderDetail(order),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // NARROW LAYOUT — states as rows, cards scroll horizontally
+  // ---------------------------------------------------------------------------
+
+  Widget _buildRowsBoard(List<_SectionData> sections) {
     return SingleChildScrollView(
       padding: EdgeInsets.only(
         top: context.h(4),
@@ -1464,25 +1551,137 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (int i = 0; i < sections.length; i++) ...[
-            sections[i],
+            _buildRowSection(sections[i]),
             if (i < sections.length - 1) SizedBox(height: context.h(20)),
           ],
         ],
       ),
     );
   }
+
+  Widget _buildRowSection(_SectionData data) {
+    final isEmpty = data.orders.isEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader(data),
+        SizedBox(height: context.h(12)),
+        if (isEmpty)
+          _buildEmptySection(
+            emptyIcon: data.emptyIcon,
+            emptyText: data.emptyText,
+          )
+        else
+          // IntrinsicHeight sizes this row to whatever its tallest card
+          // actually needs, instead of forcing every card into a fixed
+          // 208px box regardless of how little content it has — that fixed
+          // height was leaving empty space at the bottom of shorter cards.
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (int index = 0; index < data.orders.length; index++)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        right: index == data.orders.length - 1
+                            ? 0
+                            : context.w(12),
+                      ),
+                      child: SizedBox(
+                        width: context.w(_kRowCardWidth),
+                        child: LiveOrderCard(
+                          order: data.orders[index],
+                          actionText: data.actionText,
+                          onAdvance: data.onAdvance,
+                          onTap: () => _openOrderDetail(data.orders[index]),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   // ---------------------------------------------------------------------------
-  // VISIBLE SECTIONS
+  // SHARED HELPERS
   // ---------------------------------------------------------------------------
 
-  List<Widget> _buildVisibleSections(
+  void _openOrderDetail(OrderModel order) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.orderDetail,
+      arguments: order,
+    );
+  }
+
+  Widget _sectionHeader(_SectionData data) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: context.w(3),
+        right: context.w(3),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: context.w(7),
+            height: context.h(7),
+            decoration: BoxDecoration(
+              color: data.color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          SizedBox(width: context.w(9)),
+          Text(
+            data.title,
+            style: AppTextStyles.section(context).copyWith(
+              color: AppColors.lightTextPrimary,
+            ),
+          ),
+          const Spacer(),
+          Container(
+            constraints: BoxConstraints(
+              minWidth: context.w(21),
+              minHeight: context.h(21),
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: context.w(6),
+            ),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.lightSurface,
+              borderRadius: BorderRadius.circular(context.h(15)),
+              border: Border.all(
+                color: AppColors.lightBorder,
+                width: context.h(3),
+              ),
+            ),
+            child: Text(
+              '${data.orders.length}',
+              style: AppTextStyles.bodySecondary(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // VISIBLE SECTIONS (data only — layout decides how to render them)
+  // ---------------------------------------------------------------------------
+
+  List<_SectionData> _buildVisibleSectionsData(
     LiveOrdersProvider provider,
   ) {
-    final sections = <Widget>[];
+    final sections = <_SectionData>[];
 
     if (_selectedStatus == 'All' || _selectedStatus == 'New') {
       sections.add(
-        _buildSection(
+        _SectionData(
           title: 'NEW ORDERS',
           color: const Color(0xFFE51B3E),
           orders: provider.pending,
@@ -1494,7 +1693,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
     if (_selectedStatus == 'All' || _selectedStatus == 'Preparing') {
       sections.add(
-        _buildSection(
+        _SectionData(
           title: 'PREPARING',
           color: const Color(0xFFE9A719),
           orders: provider.preparing,
@@ -1506,7 +1705,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
     if (_selectedStatus == 'All' || _selectedStatus == 'Ready') {
       sections.add(
-        _buildSection(
+        _SectionData(
           title: 'READY',
           color: const Color(0xFF20B47A),
           orders: provider.ready,
@@ -1522,7 +1721,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
      */
     if (_selectedStatus == 'All') {
       sections.add(
-        _buildSection(
+        _SectionData(
           title: 'DELIVERING',
           color: const Color(0xFF31568E),
           orders: const <OrderModel>[],
@@ -1535,122 +1734,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     }
 
     return sections;
-  }
-
-  Widget _buildSection({
-    required String title,
-    required Color color,
-    required List<OrderModel> orders,
-    required String? actionText,
-    required ValueChanged<OrderModel> onAdvance,
-    IconData? emptyIcon,
-    String? emptyText,
-  }) {
-    final isEmpty = orders.isEmpty;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // =====================================================================
-        // SECTION HEADER
-        // =====================================================================
-
-        Padding(
-          padding: EdgeInsets.only(
-            left: context.w(3),
-            right: context.w(3),
-            bottom: context.h(12),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: context.w(7),
-                height: context.h(7),
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              SizedBox(width: context.w(9)),
-              Text(
-                title,
-                style: AppTextStyles.section(context).copyWith(
-                  color: AppColors.lightTextPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // =====================================================================
-        // EMPTY STATE
-        // =====================================================================
-
-        if (isEmpty)
-          _buildEmptySection(
-            emptyIcon: emptyIcon,
-            emptyText: emptyText,
-          )
-
-        // =====================================================================
-        // ORDER CARDS
-        // =====================================================================
-
-        else
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const double cardWidth = 320.0;
-              const double cardGap = 12.0;
-
-              /*
-             * IMPORTANT:
-             *
-             * The section itself is FULL WIDTH.
-             *
-             * Only the ORDER CARD has a maximum width.
-             *
-             * Therefore:
-             *
-             * 1200px -> multiple cards in one row
-             * 700px  -> multiple cards if they fit
-             * 500px  -> one/two depending on available space
-             * 300px  -> one card
-             *
-             * Excess cards automatically move to the next row.
-             */
-
-              final availableWidth = constraints.maxWidth;
-
-              final actualCardWidth =
-                  availableWidth < cardWidth ? availableWidth : cardWidth;
-
-              return Wrap(
-                spacing: cardGap,
-                runSpacing: context.h(12),
-                alignment: WrapAlignment.start,
-                crossAxisAlignment: WrapCrossAlignment.start,
-                children: [
-                  for (final order in orders)
-                    SizedBox(
-                      width: actualCardWidth,
-                      child: LiveOrderCard(
-                        order: order,
-                        actionText: actionText,
-                        onAdvance: onAdvance,
-                        onTap: () {
-                          Navigator.of(context).pushNamed(
-                            AppRoutes.orderDetail,
-                            arguments: order,
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-      ],
-    );
   }
 
   // ---------------------------------------------------------------------------
@@ -1711,6 +1794,34 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       ),
     );
   }
+}
+
+// =============================================================================
+// SECTION DATA
+// =============================================================================
+//
+// Plain data for one order state (NEW / PREPARING / READY / DELIVERING).
+// Kept separate from the widgets so the same data can be rendered either as
+// a column (wide screens) or a row (narrow screens) without duplication.
+
+class _SectionData {
+  final String title;
+  final Color color;
+  final List<OrderModel> orders;
+  final String? actionText;
+  final ValueChanged<OrderModel>? onAdvance;
+  final IconData? emptyIcon;
+  final String? emptyText;
+
+  const _SectionData({
+    required this.title,
+    required this.color,
+    required this.orders,
+    this.actionText,
+    this.onAdvance,
+    this.emptyIcon,
+    this.emptyText,
+  });
 }
 
 // =============================================================================

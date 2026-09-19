@@ -56,8 +56,8 @@ class InventoryService {
     DateTime? timestamp,
   }) async {
     if (addedQuantity <= 0) return;
-    if (addedQuantity > 5000) {
-      throw ArgumentError('Cannot add more than 5000 units at once');
+    if (addedQuantity > 999) {
+      throw ArgumentError('Cannot add more than 999 units at once');
     }
     final ts = timestamp ?? DateTime.now();
     final doc = await _col.doc(id).get();
@@ -66,6 +66,8 @@ class InventoryService {
     final unitCost = (data['unit_cost'] as num?)?.toDouble() ?? 0;
     final currentTotalCost =
         (data['total_cost'] as num?)?.toDouble() ?? (currentQty * unitCost);
+    final currentTotalAdded =
+        (data['total_added'] as num?)?.toDouble() ?? 0;
 
     final addedCost = addedQuantity * unitCost;
     final firestoreTs = Timestamp.fromDate(ts);
@@ -76,6 +78,7 @@ class InventoryService {
       'updated_at': firestoreTs,
       'last_added_at': firestoreTs,
       'last_added_qty': addedQuantity,
+      'total_added': currentTotalAdded + addedQuantity,
     });
   }
 
@@ -100,6 +103,8 @@ class InventoryService {
       throw ArgumentError('Cannot use more than current stock');
     }
     final newQty = currentQty - usedQuantity;
+    final currentTotalUsed =
+        (data['total_used'] as num?)?.toDouble() ?? 0;
     final firestoreTs = Timestamp.fromDate(ts);
 
     await _col.doc(id).update({
@@ -108,6 +113,7 @@ class InventoryService {
       'updated_at': firestoreTs,
       'last_used_at': firestoreTs,
       'last_used_qty': usedQuantity,
+      'total_used': currentTotalUsed + usedQuantity,
     });
   }
 
@@ -134,6 +140,10 @@ class InventoryService {
     final itemToSave = isNew
         ? item.copyWith(
             totalCost: item.computedTotalCost,
+            totalAdded: item.quantity,
+            totalUsed: 0,
+            lastAddedAt: item.quantity > 0 ? ts : null,
+            lastAddedQty: item.quantity > 0 ? item.quantity : null,
             createdAt: ts,
             updatedAt: ts,
           )

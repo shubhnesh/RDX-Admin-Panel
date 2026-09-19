@@ -18,6 +18,10 @@ class InventoryItemModel {
   final DateTime? lastUsedAt; // timestamp of the most recent consumption ("used")
   final double? lastAddedQty; // amount added in that most recent restock
   final double? lastUsedQty; // amount used in that most recent consumption
+  /// Lifetime cumulative quantity ever added (initial stock + all restocks).
+  final double totalAdded;
+  /// Lifetime cumulative quantity ever consumed.
+  final double totalUsed;
   final String? notes;
 
   const InventoryItemModel({
@@ -36,6 +40,8 @@ class InventoryItemModel {
     this.lastUsedAt,
     this.lastAddedQty,
     this.lastUsedQty,
+    this.totalAdded = 0,
+    this.totalUsed = 0,
     this.notes,
   });
 
@@ -89,6 +95,8 @@ class InventoryItemModel {
     DateTime? lastUsedAt,
     double? lastAddedQty,
     double? lastUsedQty,
+    double? totalAdded,
+    double? totalUsed,
     String? notes,
   }) {
     return InventoryItemModel(
@@ -107,6 +115,8 @@ class InventoryItemModel {
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
       lastAddedQty: lastAddedQty ?? this.lastAddedQty,
       lastUsedQty: lastUsedQty ?? this.lastUsedQty,
+      totalAdded: totalAdded ?? this.totalAdded,
+      totalUsed: totalUsed ?? this.totalUsed,
       notes: notes ?? this.notes,
     );
   }
@@ -133,6 +143,8 @@ class InventoryItemModel {
       if (lastUsedAt != null) 'last_used_at': Timestamp.fromDate(lastUsedAt!),
       if (lastAddedQty != null) 'last_added_qty': lastAddedQty,
       if (lastUsedQty != null) 'last_used_qty': lastUsedQty,
+      'total_added': totalAdded,
+      'total_used': totalUsed,
       if (notes != null) 'notes': notes,
     };
   }
@@ -169,6 +181,12 @@ class InventoryItemModel {
       lastUsedAt: (data['last_used_at'] as Timestamp?)?.toDate(),
       lastAddedQty: (data['last_added_qty'] as num?)?.toDouble(),
       lastUsedQty: (data['last_used_qty'] as num?)?.toDouble(),
+      totalAdded: (data['total_added'] as num?)?.toDouble() ??
+          (data['last_added_qty'] as num?)?.toDouble() ??
+          0,
+      totalUsed: (data['total_used'] as num?)?.toDouble() ??
+          (data['last_used_qty'] as num?)?.toDouble() ??
+          0,
       notes: data['notes'] as String?,
     );
   }

@@ -39,7 +39,7 @@ class _MainScreenState extends State<MainScreen> {
       '/live-orders': LiveOrdersScreen(),
       '/menu': const MenuScreen(),
       '/coupons': const CouponsScreen(),
-      '/notifications': const NotificationsScreen(),
+      // '/notifications': const NotificationsScreen(),
       '/inventory': const InventoryScreen(),
       '/settings': const SettingsScreen(),
       '/support': const SupportScreen(),

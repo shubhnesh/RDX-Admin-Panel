@@ -3,26 +3,48 @@ import 'package:rdx_admin/core/utils/formatters.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/stat_card.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../providers/inventory_provider.dart';
 
 class InventoryStatsRow extends StatelessWidget {
-  final double overallCost;
+  final double expenditure;
   final int total;
-  final int inStock;
+
+  /// Number of distinct materials that had at least one restock within
+  /// the selected period (or ever, for "Overall") — a count of items,
+  /// not a sum of quantities.
+  final int addedItemCount;
+
+  /// Number of distinct materials that had at least one consumption
+  /// within the selected period (or ever, for "Overall") — a count of
+  /// items, not a sum of quantities.
+  final int usedItemCount;
+
   final int needsRestock;
-  final int critical;
-  final int lowStock;
+  final StatsPeriod period;
   final VoidCallback? onNeedsRestockTap;
 
   const InventoryStatsRow({
     super.key,
-    required this.overallCost,
+    required this.expenditure,
     required this.total,
-    required this.inStock,
+    required this.addedItemCount,
+    required this.usedItemCount,
     required this.needsRestock,
-    required this.critical,
-    required this.lowStock,
+    required this.period,
     this.onNeedsRestockTap,
   });
+
+  bool get _isOverall => period == StatsPeriod.overall;
+
+  String get _expenditureSubtitle =>
+      _isOverall ? 'Overall' : 'Spent · ${period.label}';
+
+  String get _addedSubtitle => _isOverall
+      ? 'Items restocked (till now)'
+      : 'Items restocked · ${period.label}';
+
+  String get _usedSubtitle =>
+      _isOverall ? 'Items used (till now)' : 'Items used · ${period.label}';
 
   @override
   Widget build(BuildContext context) {
@@ -31,8 +53,8 @@ class InventoryStatsRow extends StatelessWidget {
     final cards = [
       StatCard(
         label: 'TOTAL EXPENDITURE',
-        value: Formatters.currency(overallCost),
-        subtitle: 'Cost of all materials',
+        value: Formatters.currency(expenditure),
+        subtitle: _expenditureSubtitle,
         icon: Icons.payments_outlined,
         accentColor: AppColors.primary,
       ),
@@ -44,10 +66,17 @@ class InventoryStatsRow extends StatelessWidget {
         accentColor: AppColors.primary,
       ),
       StatCard(
-        label: 'IN STOCK',
-        value: '$inStock',
-        subtitle: 'Normal supply',
-        icon: Icons.check_circle_outline,
+        label: 'USED',
+        value: '$usedItemCount',
+        subtitle: _usedSubtitle,
+        icon: Icons.remove_circle_outline,
+        accentColor: AppColors.danger,
+      ),
+      StatCard(
+        label: 'ADDED',
+        value: '$addedItemCount',
+        subtitle: _addedSubtitle,
+        icon: Icons.add_circle_outline,
         accentColor: AppColors.success,
       ),
       InkWell(

@@ -97,25 +97,15 @@ class RdxTable extends StatelessWidget {
                           child: ListView.builder(
                             itemCount: rows.length,
                             itemBuilder: (context, index) {
-                              return Column(
-                                children: [
-                                  _buildRow(
-                                    context,
-                                    colors,
-                                    rows[index],
-                                    tableWidth,
-                                    rowMinHeight: rowMinHeight,
-                                    horizontalPadding: horizontalPadding,
-                                    verticalPadding: rowVerticalPadding,
-                                  ),
-                                  if (showRowDividers &&
-                                      index != rows.length - 1)
-                                    Divider(
-                                      height: 1,
-                                      thickness: 1,
-                                      color: colors.divider,
-                                    ),
-                                ],
+                              return _buildRow(
+                                context,
+                                colors,
+                                rows[index],
+                                tableWidth,
+                                rowMinHeight: rowMinHeight,
+                                horizontalPadding: horizontalPadding,
+                                verticalPadding: rowVerticalPadding,
+                                showBottomBorder: showRowDividers,
                               );
                             },
                           ),
@@ -250,28 +240,50 @@ class RdxTable extends StatelessWidget {
     required double rowMinHeight,
     required double horizontalPadding,
     required double verticalPadding,
+    required bool showBottomBorder,
   }) {
     final widths = _calculateWidths(context, tableWidth);
 
-    return Container(
-      constraints: BoxConstraints(minHeight: rowMinHeight),
-      padding: EdgeInsets.symmetric(
-        horizontal: horizontalPadding,
-        vertical: verticalPadding,
-      ),
-      color: colors.surfaceVariant,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          for (int i = 0; i < columns.length; i++)
-            SizedBox(
-              width: widths[i],
-              child: Align(
-                alignment: columns[i].alignment,
-                child: cells[i],
-              ),
-            ),
-        ],
+    // Rows sit on the table's own `surface` background (set on the outer
+    // Container) rather than a flat `surfaceVariant` fill, so they read
+    // the same as every other card/list surface in the app. A faint
+    // hover tint (desktop/web) gives rows the same interactive feel as
+    // the rest of the UI without a heavier resting-state color. Each row
+    // also carries its own bottom border (like a card), rather than a
+    // Divider inserted only between rows, so the last row is bordered too.
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: null,
+        hoverColor: colors.surfaceVariant.withOpacity(0.35),
+        splashFactory: NoSplash.splashFactory,
+        highlightColor: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(minHeight: rowMinHeight),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
+          ),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            border: showBottomBorder
+                ? Border(bottom: BorderSide(color: colors.divider))
+                : null,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (int i = 0; i < columns.length; i++)
+                SizedBox(
+                  width: widths[i],
+                  child: Align(
+                    alignment: columns[i].alignment,
+                    child: cells[i],
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

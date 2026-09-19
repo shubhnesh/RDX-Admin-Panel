@@ -45,13 +45,13 @@ class SettingsScreen extends ConsumerWidget {
               builder: (context, constraints) {
                 final compact = constraints.maxWidth < 760;
                 final identity = _IdentityCard(colors: colors);
-                final rules = _RulesCard(provider: provider, colors: colors);
+                //  final rules = _RulesCard(provider: provider, colors: colors);
 
                 if (compact) {
                   return Column(children: [
                     identity,
                     SizedBox(height: context.h(14)),
-                    rules,
+                    // rules,
                   ]);
                 }
                 return Column(
@@ -64,7 +64,7 @@ class SettingsScreen extends ConsumerWidget {
                           child: Column(children: [
                             identity,
                             SizedBox(height: context.h(14)),
-                            rules,
+                            // rules,
                           ]),
                         ),
                       ],
@@ -128,39 +128,39 @@ class _IdentityCard extends ConsumerWidget {
   }
 }
 
-class _RulesCard extends ConsumerWidget {
-  final SettingsProvider provider;
-  final AppColorScheme colors;
-  const _RulesCard({required this.provider, required this.colors});
+// class _RulesCard extends ConsumerWidget {
+//   final SettingsProvider provider;
+//   final AppColorScheme colors;
+//   const _RulesCard({required this.provider, required this.colors});
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => _SettingsCard(
-      title: 'Core Operational Rules',
-      icon: Icons.tune,
-      colors: colors,
-      child: Column(children: [
-        _RuleTile(
-            title: 'Auto-Dispatch Orders',
-            subtitle:
-                'Automatically assign accepted orders to available riders within a 2km radius.',
-            value: provider.autoAcceptOrders,
-            onChanged: provider.toggleAutoAccept,
-            colors: colors),
-        _RuleTile(
-            title: 'Require Manager Approval for Refunds',
-            subtitle:
-                'Prevent auto-refunds on canceled orders exceeding \$50.00.',
-            value: provider.requireManagerApprovalForRefunds,
-            onChanged: provider.toggleManagerApproval,
-            colors: colors),
-        _RuleTile(
-            title: 'Source Pricing Automation',
-            subtitle: 'Enable dynamic pricing adjustments during peak hours.',
-            value: provider.keepPricingConsistent,
-            onChanged: provider.toggleKeepPricing,
-            colors: colors),
-      ]));
-}
+//   @override
+//   Widget build(BuildContext context, WidgetRef ref) => _SettingsCard(
+//       title: 'Core Operational Rules',
+//       icon: Icons.tune,
+//       colors: colors,
+//       child: Column(children: [
+//         _RuleTile(
+//             title: 'Auto-Dispatch Orders',
+//             subtitle:
+//                 'Automatically assign accepted orders to available riders within a 2km radius.',
+//             value: provider.autoAcceptOrders,
+//             onChanged: provider.toggleAutoAccept,
+//             colors: colors),
+//         _RuleTile(
+//             title: 'Require Manager Approval for Refunds',
+//             subtitle:
+//                 'Prevent auto-refunds on canceled orders exceeding \$50.00.',
+//             value: provider.requireManagerApprovalForRefunds,
+//             onChanged: provider.toggleManagerApproval,
+//             colors: colors),
+//         _RuleTile(
+//             title: 'Source Pricing Automation',
+//             subtitle: 'Enable dynamic pricing adjustments during peak hours.',
+//             value: provider.keepPricingConsistent,
+//             onChanged: provider.toggleKeepPricing,
+//             colors: colors),
+//       ]));
+// }
 
 class _SettingsCard extends StatelessWidget {
   final String title;

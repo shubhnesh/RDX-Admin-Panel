@@ -12,6 +12,7 @@ import 'package:rdx_admin/widgets/reusable_widgets/loading_indicator.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_delete_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
+import 'package:rdx_admin/widgets/resuable_options/rdx_search_bar.dart';
 
 enum _Section { category, unit }
 
@@ -28,9 +29,21 @@ class _ManageInventoryTaxonomyScreenState
   final _categoryService = InventoryCategoryService();
   final _unitService = UnitService();
 
+  final _tagSearchController = TextEditingController();
+  final _itemSearchController = TextEditingController();
+
   _Section _section = _Section.category;
   bool _loading = true;
   String? _error;
+
+  /// Filters the scrollable tag row on top (searches the section tags,
+  /// e.g. "Categories" / "Units of Measurement" — and, once a taxonomy
+  /// has many categories, each category's own tag).
+  String _tagQuery = '';
+
+  /// Filters the rows shown inside the active table (category or unit
+  /// names), independent from the tag search above.
+  String _itemQuery = '';
 
   List<InventoryCategoryModel> _categories = [];
   List<UnitModel> _units = [];
@@ -39,6 +52,13 @@ class _ManageInventoryTaxonomyScreenState
   void initState() {
     super.initState();
     _loadAll();
+  }
+
+  @override
+  void dispose() {
+    _tagSearchController.dispose();
+    _itemSearchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAll() async {
@@ -194,6 +214,35 @@ class _ManageInventoryTaxonomyScreenState
     }
   }
 
+  // ── Filtering helpers ───────────────────────────────────────────────
+
+  /// Section tags shown in the top scrollable row, filtered by whatever
+  /// has been typed into the top search bar. Today this is just the two
+  /// section tags ("Categories" / "Units of Measurement"), but it is
+  /// built generically so any future per-category tags slot in the same
+  /// way.
+  List<(_Section, String)> get _visibleTags {
+    final all = <(_Section, String)>[
+      (_Section.category, 'Categories'),
+      (_Section.unit, 'Units of Measurement'),
+    ];
+    if (_tagQuery.trim().isEmpty) return all;
+    final q = _tagQuery.trim().toLowerCase();
+    return all.where((t) => t.$2.toLowerCase().contains(q)).toList();
+  }
+
+  List<InventoryCategoryModel> get _filteredCategories {
+    if (_itemQuery.trim().isEmpty) return _categories;
+    final q = _itemQuery.trim().toLowerCase();
+    return _categories.where((c) => c.name.toLowerCase().contains(q)).toList();
+  }
+
+  List<UnitModel> get _filteredUnits {
+    if (_itemQuery.trim().isEmpty) return _units;
+    final q = _itemQuery.trim().toLowerCase();
+    return _units.where((u) => u.name.toLowerCase().contains(q)).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -211,13 +260,33 @@ class _ManageInventoryTaxonomyScreenState
           SizedBox(height: context.h(isNarrow ? 10 : 14)),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: horizontal),
-            child: Row(
-              children: [
-                Expanded(child: _tabs(context, colors)),
-                SizedBox(width: context.w(8)),
-                _addButton(context),
-              ],
-            ),
+            child: isNarrow
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _tabs(context, colors),
+                      SizedBox(height: context.h(10)),
+                      Row(
+                        children: [
+                          Expanded(child: _tagSearchBar(context)),
+                          SizedBox(width: context.w(8)),
+                          _addButton(context),
+                        ],
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(child: _tabs(context, colors)),
+                      SizedBox(width: context.w(8)),
+                      SizedBox(
+                        width: context.w(220),
+                        child: _tagSearchBar(context),
+                      ),
+                      SizedBox(width: context.w(8)),
+                      _addButton(context),
+                    ],
+                  ),
           ),
           SizedBox(height: context.h(isNarrow ? 10 : 14)),
           Expanded(
@@ -232,9 +301,18 @@ class _ManageInventoryTaxonomyScreenState
                           horizontal,
                           context.h(20),
                         ),
-                        child: _section == _Section.category
-                            ? _categoryContent(context, colors, isNarrow)
-                            : _unitContent(context, colors, isNarrow),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _itemSearchBar(context),
+                            SizedBox(height: context.h(12)),
+                            Expanded(
+                              child: _section == _Section.category
+                                  ? _categoryContent(context, colors, isNarrow)
+                                  : _unitContent(context, colors, isNarrow),
+                            ),
+                          ],
+                        ),
                       ),
           ),
         ],
@@ -242,15 +320,60 @@ class _ManageInventoryTaxonomyScreenState
     );
   }
 
+  /// Search bar that filters the scrollable tag row on top of the screen.
+  Widget _tagSearchBar(BuildContext context) {
+    return RdxSearchBar(
+      controller: _tagSearchController,
+      hintText: 'Search categories',
+      height: context.h(40),
+      onChanged: (value) => setState(() => _tagQuery = value),
+    );
+  }
+
+  /// Search bar that filters the rows inside the active table.
+  Widget _itemSearchBar(BuildContext context) {
+    return RdxSearchBar(
+      controller: _itemSearchController,
+      hintText: 'Search materials',
+      height: context.h(40),
+      onChanged: (value) => setState(() => _itemQuery = value),
+    );
+  }
+
+  /// Scrollable row of section tags. Fades out on the trailing edge —
+  /// the same treatment used for the category tags on the Menu screen —
+  /// so it reads cleanly against whatever sits to its right (the tag
+  /// search bar / Add button).
   Widget _tabs(BuildContext context, AppColorScheme colors) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _tab(context, colors, _Section.category, 'Categories'),
-          SizedBox(width: context.w(8)),
-          _tab(context, colors, _Section.unit, 'Units of Measurement'),
-        ],
+    final tags = _visibleTags;
+    return ShaderMask(
+      shaderCallback: (bounds) => LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: const [Colors.black, Colors.black, Colors.transparent],
+        stops: const [0.0, 0.9, 1.0],
+      ).createShader(bounds),
+      blendMode: BlendMode.dstIn,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.only(right: context.w(24)),
+        child: Row(
+          children: [
+            for (int i = 0; i < tags.length; i++) ...[
+              _tab(context, colors, tags[i].$1, tags[i].$2),
+              if (i != tags.length - 1) SizedBox(width: context.w(8)),
+            ],
+            if (tags.isEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: context.h(9)),
+                child: Text(
+                  'No tags match your search.',
+                  style: AppTextStyles.label(context)
+                      .copyWith(color: colors.textMuted),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -308,14 +431,19 @@ class _ManageInventoryTaxonomyScreenState
     AppColorScheme colors,
     bool isNarrow,
   ) {
-    if (_categories.isEmpty) {
-      return const EmptyState(message: 'No categories yet.');
+    final categories = _filteredCategories;
+    if (categories.isEmpty) {
+      return EmptyState(
+        message: _categories.isEmpty
+            ? 'No categories yet.'
+            : 'No categories match your search.',
+      );
     }
     return isNarrow
         ? _simpleCards(
             context,
             colors,
-            items: _categories.map((c) => (c.name, c as Object)).toList(),
+            items: categories.map((c) => (c.name, c as Object)).toList(),
             onEdit: (c) => _editCategory(c as InventoryCategoryModel),
             onDelete: (c) => _deleteCategory(c as InventoryCategoryModel),
           )
@@ -329,7 +457,7 @@ class _ManageInventoryTaxonomyScreenState
               ),
             ],
             rows: [
-              for (final c in _categories)
+              for (final c in categories)
                 [
                   Text(c.name, style: AppTextStyles.body(context)),
                   _actions(
@@ -346,14 +474,18 @@ class _ManageInventoryTaxonomyScreenState
     AppColorScheme colors,
     bool isNarrow,
   ) {
-    if (_units.isEmpty) {
-      return const EmptyState(message: 'No units yet.');
+    final units = _filteredUnits;
+    if (units.isEmpty) {
+      return EmptyState(
+        message:
+            _units.isEmpty ? 'No units yet.' : 'No units match your search.',
+      );
     }
     return isNarrow
         ? _simpleCards(
             context,
             colors,
-            items: _units.map((u) => (u.name, u as Object)).toList(),
+            items: units.map((u) => (u.name, u as Object)).toList(),
             onEdit: (u) => _editUnit(u as UnitModel),
             onDelete: (u) => _deleteUnit(u as UnitModel),
           )
@@ -368,7 +500,7 @@ class _ManageInventoryTaxonomyScreenState
               ),
             ],
             rows: [
-              for (final u in _units)
+              for (final u in units)
                 [
                   Text(u.name, style: AppTextStyles.body(context)),
                   _actions(

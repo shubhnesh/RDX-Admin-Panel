@@ -3,6 +3,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/inventory_item_model.dart';
 import '../services/inventory_service.dart';
 
+/// Time window used to scope the stats row + Used/Added table filters.
+enum StatsPeriod { overall, today, yesterday, thisWeek, thisMonth }
+
+extension StatsPeriodLabel on StatsPeriod {
+  String get label {
+    switch (this) {
+      case StatsPeriod.overall:
+        return 'Overall';
+      case StatsPeriod.today:
+        return 'Today';
+      case StatsPeriod.yesterday:
+        return 'Yesterday';
+      case StatsPeriod.thisWeek:
+        return 'This Week';
+      case StatsPeriod.thisMonth:
+        return 'This Month';
+    }
+  }
+}
+
 class InventoryProvider extends ChangeNotifier {
   final InventoryService _service;
   InventoryProvider(this._service);
@@ -14,7 +34,10 @@ class InventoryProvider extends ChangeNotifier {
   // ── Filters / search ────────────────────────────────────────────────
   String searchQuery = '';
   String selectedCategory = 'All';
-  String stockLevelFilter = 'All'; // All | In Stock | Low Stock | Critical
+  String stockLevelFilter = 'All'; // All | Low Stock | Critical | Used | Added
+
+  // ── Stats period (drives the stats row + Used/Added filters) ────────
+  StatsPeriod periodFilter = StatsPeriod.overall;
 
   // ── Derived counts ──────────────────────────────────────────────────
   int get totalItems => items.length;
@@ -42,6 +65,105 @@ class InventoryProvider extends ChangeNotifier {
     return total;
   }
 
+  // ── Period-scoped stats ───────────────────────────────────────────
+  //
+  // The model only persists each item's *most recent* add/use event
+  // (lastAddedAt/lastAddedQty, lastUsedAt/lastUsedQty) rather than a
+  // full transaction history, so "Today" / "Yesterday" / "This Week" /
+  // "This Month" are computed from that last event: an item counts
+  // toward a given window only if its most recent add (or use)
+  // happened inside that window. "Overall" ignores dates entirely and
+  // falls back to each item's lifetime totals (totalAdded / totalUsed).
+
+  bool _inPeriod(DateTime? dt, StatsPeriod period) {
+    if (dt == null) return false;
+    if (period == StatsPeriod.overall) return true;
+    final now = DateTime.now();
+    final d = dt.toLocal();
+    switch (period) {
+      case StatsPeriod.overall:
+        return true;
+      case StatsPeriod.today:
+        return d.year == now.year && d.month == now.month && d.day == now.day;
+      case StatsPeriod.yesterday:
+        final y = now.subtract(const Duration(days: 1));
+        return d.year == y.year && d.month == y.month && d.day == y.day;
+      case StatsPeriod.thisWeek:
+        final startOfWeek =
+            DateTime(now.year, now.month, now.day)
+                .subtract(Duration(days: now.weekday - 1));
+        final endOfWeek = startOfWeek.add(const Duration(days: 7));
+        return !d.isBefore(startOfWeek) && d.isBefore(endOfWeek);
+      case StatsPeriod.thisMonth:
+        return d.year == now.year && d.month == now.month;
+    }
+  }
+
+  /// Whether [dt] falls inside the currently selected [periodFilter].
+  /// Exposed so the table UI can decide, per row, whether an item's last
+  /// add/use event belongs to the active window (used to swap the ADDED /
+  /// USED column's date stamp for a period label like "Today").
+  bool isInCurrentPeriod(DateTime? dt) => _inPeriod(dt, periodFilter);
+
+  /// Total cost of stock added within [periodFilter]. For "Overall" this
+  /// is the same as [overallCost] (current value of everything on hand).
+  /// For a specific window it's the cost of the restocks that happened
+  /// in that window, i.e. the spend for that period.
+  double get periodExpenditure {
+    if (periodFilter == StatsPeriod.overall) return overallCost;
+    double total = 0;
+    for (final item in items) {
+      if (_inPeriod(item.lastAddedAt, periodFilter)) {
+        total += (item.lastAddedQty ?? 0) * item.unitCost;
+      }
+    }
+    return total;
+  }
+
+  /// Total quantity added within [periodFilter], summed across items.
+  /// "Overall" uses each item's lifetime totalAdded.
+  double get periodAddedQty {
+    if (periodFilter == StatsPeriod.overall) {
+      return items.fold<double>(0, (sum, item) => sum + item.totalAdded);
+    }
+    double total = 0;
+    for (final item in items) {
+      if (_inPeriod(item.lastAddedAt, periodFilter)) {
+        total += item.lastAddedQty ?? 0;
+      }
+    }
+    return total;
+  }
+
+  /// Total quantity used within [periodFilter], summed across items.
+  /// "Overall" uses each item's lifetime totalUsed.
+  double get periodUsedQty {
+    if (periodFilter == StatsPeriod.overall) {
+      return items.fold<double>(0, (sum, item) => sum + item.totalUsed);
+    }
+    double total = 0;
+    for (final item in items) {
+      if (_inPeriod(item.lastUsedAt, periodFilter)) {
+        total += item.lastUsedQty ?? 0;
+      }
+    }
+    return total;
+  }
+
+  /// Number of distinct materials that had an add/use event within
+  /// [periodFilter] — used for the Added/Used stat card subtitles.
+  int get periodAddedItemCount => items
+      .where((item) => periodFilter == StatsPeriod.overall
+          ? item.totalAdded > 0
+          : _inPeriod(item.lastAddedAt, periodFilter))
+      .length;
+
+  int get periodUsedItemCount => items
+      .where((item) => periodFilter == StatsPeriod.overall
+          ? item.totalUsed > 0
+          : _inPeriod(item.lastUsedAt, periodFilter))
+      .length;
+
   /// Categories present in the current inventory (for filter chips).
   List<String> get categories {
     final set = <String>{};
@@ -67,16 +189,25 @@ class InventoryProvider extends ChangeNotifier {
       if (selectedCategory != 'All' && item.category != selectedCategory) {
         return false;
       }
-      // Stock level
+      // Stock level / activity
       switch (stockLevelFilter) {
-        case 'In Stock':
-          if (item.status != StockStatus.inStock) return false;
-          break;
         case 'Low Stock':
           if (item.status != StockStatus.lowStock) return false;
           break;
         case 'Critical':
           if (item.status != StockStatus.critical) return false;
+          break;
+        case 'Added':
+          final added = periodFilter == StatsPeriod.overall
+              ? item.totalAdded > 0
+              : _inPeriod(item.lastAddedAt, periodFilter);
+          if (!added) return false;
+          break;
+        case 'Used':
+          final used = periodFilter == StatsPeriod.overall
+              ? item.totalUsed > 0
+              : _inPeriod(item.lastUsedAt, periodFilter);
+          if (!used) return false;
           break;
         default:
           break;
@@ -114,6 +245,11 @@ class InventoryProvider extends ChangeNotifier {
 
   void setStockLevelFilter(String level) {
     stockLevelFilter = level;
+    notifyListeners();
+  }
+
+  void setPeriodFilter(StatsPeriod period) {
+    periodFilter = period;
     notifyListeners();
   }
 

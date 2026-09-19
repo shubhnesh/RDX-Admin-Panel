@@ -391,19 +391,21 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     return _SectionCard(
       title: 'Basic Information & Category',
       icon: Icons.badge_outlined,
-      headerTrailing: TextButton.icon(
-        onPressed: _openManageTaxonomy,
-        icon: Icon(
-          Icons.add_rounded,
-          size: context.h(18),
-          color: AppColors.primary,
-        ),
-        label: Text(
-          'Create & Manage Taxonomy',
-          style:
-              AppTextStyles.label(context).copyWith(color: AppColors.primary),
-        ),
-      ),
+      headerTrailing: isEdit
+          ? null
+          : TextButton.icon(
+              onPressed: _openManageTaxonomy,
+              icon: Icon(
+                Icons.add_rounded,
+                size: context.h(18),
+                color: AppColors.primary,
+              ),
+              label: Text(
+                'Create & Manage Taxonomy',
+                style: AppTextStyles.label(context)
+                    .copyWith(color: AppColors.primary),
+              ),
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

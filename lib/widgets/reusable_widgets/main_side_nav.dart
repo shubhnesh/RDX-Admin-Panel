@@ -114,13 +114,13 @@ class MainSideNav extends StatelessWidget {
                         selected: currentRoute == '/settings',
                         onTap: () => onNavigate('/settings'),
                       ),
-                      _FooterTile(
-                        icon: Icons.notifications_outlined,
-                        label: 'Notifications',
-                        expanded: expanded,
-                        selected: currentRoute == '/notifications',
-                        onTap: () => onNavigate('/notifications'),
-                      ),
+                      // _FooterTile(
+                      //   icon: Icons.notifications_outlined,
+                      //   label: 'Notifications',
+                      //   expanded: expanded,
+                      //   selected: currentRoute == '/notifications',
+                      //   onTap: () => onNavigate('/notifications'),
+                      // ),
                       _FooterTile(
                         icon: Icons.support_agent_outlined,
                         label: 'Support',

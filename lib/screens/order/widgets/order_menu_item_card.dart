@@ -685,23 +685,25 @@ class OrderMenuItemCard extends ConsumerWidget {
                     ),
                   ],
 
-                  const Spacer(),
-
                   // ---------------------------------------------------------
                   // ADD BUTTON
                   // ---------------------------------------------------------
-                  if (!unavailable)
-                    Align(
-                      alignment: Alignment.bottomLeft,
-                      child: SizedBox(
-                        height: context.h(25),
-                        child: RdxActionButton(
-                          label: '+ Add',
-                          isPrimary: true,
-                          onPressed: () => _addItem(ref),
-                        ),
+                  // A fixed small gap (instead of a Spacer that stretched to
+                  // fill whatever height was left) keeps the button right
+                  // under the content, so there's no dead space at the
+                  // bottom of the card on a shrunk screen — the card now
+                  // sizes to its content instead of to a leftover gap.
+                  if (!unavailable) ...[
+                    SizedBox(height: context.h(8)),
+                    SizedBox(
+                      height: context.h(25),
+                      child: RdxActionButton(
+                        label: '+ Add',
+                        isPrimary: true,
+                        onPressed: () => _addItem(ref),
                       ),
                     ),
+                  ],
                 ],
               ),
 

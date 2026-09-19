@@ -4,6 +4,7 @@ import 'package:rdx_admin/screens/coupons/create_coupon_screen.dart';
 import 'package:rdx_admin/screens/coupons/widgets/coupon_card.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_action_menu_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_delete_dialog.dart';
+import 'package:rdx_admin/widgets/buttons/stats_collapse_button.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/formatters.dart';
@@ -27,6 +28,10 @@ class CouponsScreen extends ConsumerStatefulWidget {
 class _CouponsScreenState extends ConsumerState<CouponsScreen> {
   final _searchController = TextEditingController();
   String _query = '';
+
+  /// Whether the summary stat card row is hidden, giving the coupon grid
+  /// below more vertical room. Toggled by [StatsCollapseButton].
+  bool _statsCollapsed = false;
 
   @override
   void initState() {
@@ -305,29 +310,51 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
 
               SizedBox(height: context.h(20)),
 
-              // ── Summary stat cards ──────────────────────────────
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: StatCard(
-                        label: 'Total Active',
-                        value: '${provider.activeCount} coupons',
-                        icon: Icons.local_offer_outlined,
-                      ),
-                    ),
-                    SizedBox(width: context.w(16)),
-                    Expanded(
-                      child: StatCard(
-                        label: 'Total Usages Today',
-                        value: '$totalUsageToday',
-                        icon: Icons.trending_up_rounded,
-                        accentColor: AppColors.success,
-                      ),
-                    ),
-                  ],
+              // ── Stats collapse toggle ───────────────────────────
+              // Sits above the summary stat cards' left edge; collapsing
+              // hides the row entirely so the coupon grid below gets
+              // more vertical space.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: StatsCollapseButton(
+                  collapsed: _statsCollapsed,
+                  onPressed: () => setState(
+                    () => _statsCollapsed = !_statsCollapsed,
+                  ),
                 ),
+              ),
+              SizedBox(height: context.h(8)),
+
+              // ── Summary stat cards ──────────────────────────────
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                alignment: Alignment.topCenter,
+                child: _statsCollapsed
+                    ? const SizedBox(width: double.infinity)
+                    : IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: StatCard(
+                                label: 'Total Active',
+                                value: '${provider.activeCount} coupons',
+                                icon: Icons.local_offer_outlined,
+                              ),
+                            ),
+                            SizedBox(width: context.w(16)),
+                            Expanded(
+                              child: StatCard(
+                                label: 'Total Usages Today',
+                                value: '$totalUsageToday',
+                                icon: Icons.trending_up_rounded,
+                                accentColor: AppColors.success,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
               ),
 
               SizedBox(height: context.h(20)),

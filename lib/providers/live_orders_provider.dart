@@ -18,6 +18,8 @@ class LiveOrdersProvider extends ChangeNotifier {
       _orders.where((o) => o.status == OrderStatus.preparing).toList();
   List<OrderModel> get ready =>
       _orders.where((o) => o.status == OrderStatus.ready).toList();
+  List<OrderModel> get delivered =>
+      _orders.where((o) => o.status == OrderStatus.delivered).toList();
 
   Future<void> load() async {
     isLoading = true;

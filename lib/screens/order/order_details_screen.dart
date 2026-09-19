@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rdx_admin/providers/live_orders_provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/order_model.dart';
-import '../../providers/order_providers.dart';
 import '../../services/order_service.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
@@ -229,7 +229,7 @@ class _ServiceAndCustomer extends StatelessWidget {
           SizedBox(height: context.h(14)),
           Text(
             'SERVICE OPTION',
-            style: AppTextStyles.caption(context).copyWith(
+            style: AppTextStyles.bodySecondary(context).copyWith(
               color: colors.textMuted,
               letterSpacing: 0.6,
             ),
@@ -393,7 +393,7 @@ class _OrderItemsSection extends StatelessWidget {
               const Spacer(),
               Text(
                 '${order.items.length} Lines',
-                style: AppTextStyles.caption(context).copyWith(
+                style: AppTextStyles.label(context).copyWith(
                   color: colors.textMuted,
                 ),
               ),
@@ -564,7 +564,7 @@ class _KitchenNotes extends StatelessWidget {
               SizedBox(width: context.w(5)),
               Text(
                 'KITCHEN NOTES',
-                style: AppTextStyles.caption(context).copyWith(
+                style: AppTextStyles.section(context).copyWith(
                   color: colors.textMuted,
                   letterSpacing: 0.6,
                 ),
@@ -962,10 +962,8 @@ class _PaymentStatusBadge extends StatelessWidget {
       ),
       child: Text(
         paid ? 'PAID' : 'UNPAID',
-        style: AppTextStyles.caption(context).copyWith(
-          fontSize: context.h(8),
+        style: AppTextStyles.label(context).copyWith(
           color: paid ? AppColors.primary : colors.textMuted,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -1082,10 +1080,6 @@ class _BillRow extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// WORKFLOW
-// =============================================================================
-
 class _WorkflowSection extends ConsumerWidget {
   final OrderModel order;
 
@@ -1096,8 +1090,15 @@ class _WorkflowSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
-
     final nextStatus = order.status.nextStatus;
+
+    final buttonLabel = switch (order.status) {
+      OrderStatus.pending => 'Move to Preparing',
+      OrderStatus.preparing => 'Mark Ready',
+      OrderStatus.ready => 'Mark Delivered',
+      OrderStatus.delivered => 'Delivered',
+      OrderStatus.cancelled => 'Current Stage',
+    };
 
     return _Panel(
       context: context,
@@ -1115,24 +1116,39 @@ class _WorkflowSection extends ConsumerWidget {
               Expanded(
                 child: _WorkflowButton(
                   context: context,
-                  label: order.status == OrderStatus.pending
-                      ? 'Move to Preparing'
-                      : order.status == OrderStatus.preparing
-                          ? 'Mark Ready'
-                          : 'Current Stage',
+                  label: buttonLabel,
                   icon: Icons.arrow_forward_outlined,
                   enabled: nextStatus != null,
                   onPressed: nextStatus == null
                       ? null
                       : () async {
                           try {
+                            // 1. Update the status in Firestore.
                             await OrderService().updateOrderStatus(
                               order.id,
                               nextStatus,
                             );
 
+                            if (!context.mounted) return;
+
+                            // 2. Refresh this order's details.
                             ref.invalidate(
                               orderDetailProvider(order.id),
+                            );
+
+                            // 3. IMPORTANT:
+                            // Refresh the same LiveOrdersProvider instance
+                            // used by the Live Orders screen.
+                            await ref.read(liveOrdersProvider).load();
+
+                            if (!context.mounted) return;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Order moved to ${nextStatus.label}.',
+                                ),
+                              ),
                             );
                           } catch (e) {
                             if (!context.mounted) return;
@@ -1167,8 +1183,7 @@ class _WorkflowSection extends ConsumerWidget {
               children: [
                 Text(
                   'CURRENT STAGE',
-                  style: AppTextStyles.caption(context).copyWith(
-                    fontSize: context.h(8),
+                  style: AppTextStyles.bodySecondary(context).copyWith(
                     color: colors.textMuted,
                     letterSpacing: 0.5,
                   ),
@@ -1176,9 +1191,8 @@ class _WorkflowSection extends ConsumerWidget {
                 const Spacer(),
                 Text(
                   order.status.label,
-                  style: AppTextStyles.caption(context).copyWith(
+                  style: AppTextStyles.label(context).copyWith(
                     color: colors.textPrimary,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -1265,12 +1279,8 @@ class _BottomActionBar extends StatelessWidget {
             ),
             SizedBox(width: context.w(10)),
             Expanded(
-              child: RdxActionButton(
-                label: 'Close',
-                leadingIcon: Icons.close,
-                onPressed: () {
-                  Navigator.of(context).pop(true);
-                },
+              child: RdxActionButton.discard(
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ),
           ],
@@ -1341,10 +1351,9 @@ class _SectionTitle extends StatelessWidget {
         SizedBox(width: context.w(5)),
         Text(
           title,
-          style: AppTextStyles.caption(context).copyWith(
+          style: AppTextStyles.section(context).copyWith(
             color: colors.textMuted,
             letterSpacing: 0.6,
-            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -1413,8 +1422,7 @@ class _InfoBlock extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.caption(context).copyWith(
-            fontSize: context.h(8),
+          style: AppTextStyles.bodyTertiary(context).copyWith(
             color: colors.textMuted,
             letterSpacing: 0.5,
           ),

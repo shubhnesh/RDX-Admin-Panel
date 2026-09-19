@@ -21,6 +21,7 @@ class OrderService {
     OrderStatus.pending,
     OrderStatus.preparing,
     OrderStatus.ready,
+    OrderStatus.delivered,
   ];
 
   static const _historyStatuses = [

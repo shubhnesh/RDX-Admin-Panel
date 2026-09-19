@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
@@ -62,11 +61,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   // STATUS FILTER
   // ---------------------------------------------------------------------------
 
-  List<String> get _statusLabels => const [
-        'New',
-        'Preparing',
-        'Ready',
-      ];
+  List<String> get _statusLabels =>
+      const ['New', 'Preparing', 'Ready', 'Delivered'];
 
   void _onStatusSelected(String label) {
     if (_selectedStatus == label) return;
@@ -87,7 +83,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
     final totalOrders = provider.pending.length +
         provider.preparing.length +
-        provider.ready.length;
+        provider.ready.length +
+        provider.delivered.length;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -251,6 +248,13 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               accentColor: const Color(0xFF20B47A),
               minHeight: isNarrow ? context.h(62) : context.h(72),
             ),
+            StatCard(
+              label: 'Delivered',
+              value: '${provider.delivered.length}',
+              icon: Icons.check_circle_outline,
+              accentColor: const Color(0xFF20B47A),
+              minHeight: isNarrow ? context.h(62) : context.h(72),
+            ),
           ];
 
           return Row(
@@ -262,6 +266,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               Expanded(child: cards[2]),
               SizedBox(width: spacing),
               Expanded(child: cards[3]),
+              SizedBox(width: spacing),
+              Expanded(child: cards[4]),
             ],
           );
         },
@@ -409,9 +415,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   for (int index = 0; index < data.orders.length; index++)
                     Padding(
                       padding: EdgeInsets.only(
-                        right: index == data.orders.length - 1
-                            ? 0
-                            : context.w(12),
+                        right:
+                            index == data.orders.length - 1 ? 0 : context.w(12),
                       ),
                       child: SizedBox(
                         width: context.w(_kRowCardWidth),
@@ -435,12 +440,12 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   // SHARED HELPERS
   // ---------------------------------------------------------------------------
 
-void _openOrderDetail(OrderModel order) {
-  Navigator.of(context).pushNamed(
-    AppRoutes.orderDetail,
-    arguments: order.id,
-  );
-}
+  void _openOrderDetail(OrderModel order) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.orderDetail,
+      arguments: order.id,
+    );
+  }
 
   Widget _sectionHeader(_SectionData data) {
     return Padding(
@@ -462,32 +467,32 @@ void _openOrderDetail(OrderModel order) {
           Text(
             data.title,
             style: AppTextStyles.section(context).copyWith(
-              color: AppColors.lightTextPrimary,
+              color: AppColors.primary,
             ),
           ),
-          const Spacer(),
-          Container(
-            constraints: BoxConstraints(
-              minWidth: context.w(21),
-              minHeight: context.h(21),
-            ),
-            padding: EdgeInsets.symmetric(
-              horizontal: context.w(6),
-            ),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.lightSurface,
-              borderRadius: BorderRadius.circular(context.h(15)),
-              border: Border.all(
-                color: AppColors.lightBorder,
-                width: context.h(3),
-              ),
-            ),
-            child: Text(
-              '${data.orders.length}',
-              style: AppTextStyles.bodySecondary(context),
-            ),
-          ),
+          // const Spacer(),
+          // Container(
+          //   constraints: BoxConstraints(
+          //     minWidth: context.w(21),
+          //     minHeight: context.h(21),
+          //   ),
+          //   padding: EdgeInsets.symmetric(
+          //     horizontal: context.w(6),
+          //   ),
+          //   alignment: Alignment.center,
+          //   decoration: BoxDecoration(
+          //     color: AppColors.lightSurface,
+          //     borderRadius: BorderRadius.circular(context.h(15)),
+          //     border: Border.all(
+          //       color: AppColors.lightBorder,
+          //       width: context.h(3),
+          //     ),
+          //   ),
+          //   child: Text(
+          //     '${data.orders.length}',
+          //     style: AppTextStyles.bodySecondary(context),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -532,7 +537,7 @@ void _openOrderDetail(OrderModel order) {
           title: 'READY',
           color: const Color(0xFF20B47A),
           orders: provider.ready,
-          actionText: null,
+          actionText: 'Mark Delivered',
           onAdvance: provider.advanceStatus,
         ),
       );
@@ -542,14 +547,14 @@ void _openOrderDetail(OrderModel order) {
      * Delivering is intentionally kept only in All,
      * exactly as in your current implementation.
      */
-    if (_selectedStatus == 'All') {
+    if (_selectedStatus == 'All' || _selectedStatus == 'Delivered') {
       sections.add(
         _SectionData(
-          title: 'DELIVERING',
+          title: 'DELIVERED',
           color: const Color(0xFF31568E),
-          orders: const <OrderModel>[],
+          orders: provider.delivered,
           actionText: null,
-          onAdvance: provider.advanceStatus,
+          onAdvance: null,
           emptyIcon: Icons.delivery_dining_outlined,
           emptyText: 'No active deliveries',
         ),

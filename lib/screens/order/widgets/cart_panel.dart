@@ -1113,19 +1113,21 @@ class CartPanel extends ConsumerWidget {
               children: [
                 Text(
                   'Active Order',
-                  style: AppTextStyles.section(context).copyWith(
-                    fontSize: context.h(14),
-                    fontWeight: FontWeight.w600,
-                  ),
+                  // style: AppTextStyles.section(context).copyWith(
+                  //   fontSize: context.h(14),
+                  //   fontWeight: FontWeight.w600,
+                  // ),
+                  style: AppTextStyles.section(context)
+                      .copyWith(color: colors.textPrimary),
                 ),
-                SizedBox(width: context.w(5)),
-                Text(
-                  '#206',
-                  style: AppTextStyles.caption(context).copyWith(
-                    fontSize: context.h(9),
-                    color: colors.textMuted,
-                  ),
-                ),
+                // SizedBox(width: context.w(5)),
+                // Text(
+                //   '#206',
+                //   style: AppTextStyles.caption(context).copyWith(
+                //     fontSize: context.h(9),
+                //     color: colors.textMuted,
+                //   ),
+                // ),
                 const Spacer(),
                 Container(
                   padding: EdgeInsets.symmetric(
@@ -1140,11 +1142,13 @@ class CartPanel extends ConsumerWidget {
                   ),
                   child: Text(
                     'NEW',
-                    style: AppTextStyles.caption(context).copyWith(
-                      fontSize: context.h(7),
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    // style: AppTextStyles.caption(context).copyWith(
+                    //   fontSize: context.h(7),
+                    //   color: Colors.white,
+                    //   fontWeight: FontWeight.w700,
+                    // ),
+                    style: AppTextStyles.bodySecondary(context)
+                        .copyWith(color: Colors.white),
                   ),
                 ),
               ],
@@ -1159,43 +1163,43 @@ class CartPanel extends ConsumerWidget {
           // -----------------------------------------------------------------
           // ORDER TYPE / TABLE
           // -----------------------------------------------------------------
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: context.w(12),
-              vertical: context.h(7),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.table_restaurant_outlined,
-                  size: context.h(12),
-                  color: colors.textMuted,
-                ),
-                SizedBox(width: context.w(4)),
-                Text(
-                  'Eat In • Table 4',
-                  style: AppTextStyles.caption(context).copyWith(
-                    fontSize: context.h(9),
-                    color: colors.textSecondary,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'CHANGE',
-                  style: AppTextStyles.caption(context).copyWith(
-                    fontSize: context.h(8),
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Padding(
+          //   padding: EdgeInsets.symmetric(
+          //     horizontal: context.w(12),
+          //     vertical: context.h(7),
+          //   ),
+          //   child: Row(
+          //     children: [
+          //       Icon(
+          //         Icons.table_restaurant_outlined,
+          //         size: context.h(12),
+          //         color: colors.textMuted,
+          //       ),
+          //       SizedBox(width: context.w(4)),
+          //       Text(
+          //         'Eat In • Table 4',
+          //         style: AppTextStyles.caption(context).copyWith(
+          //           fontSize: context.h(9),
+          //           color: colors.textSecondary,
+          //         ),
+          //       ),
+          //       const Spacer(),
+          //       Text(
+          //         'CHANGE',
+          //         style: AppTextStyles.caption(context).copyWith(
+          //           fontSize: context.h(8),
+          //           color: AppColors.primary,
+          //           fontWeight: FontWeight.w600,
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
 
-          Divider(
-            height: 1,
-            color: colors.divider,
-          ),
+          // Divider(
+          //   height: 1,
+          //   color: colors.divider,
+          // ),
 
           // -----------------------------------------------------------------
           // CART ITEMS
@@ -1250,11 +1254,11 @@ class CartPanel extends ConsumerWidget {
                   children: [
                     Text(
                       'Subtotal',
-                      style: AppTextStyles.caption(context),
+                      style: AppTextStyles.bodySecondary(context),
                     ),
                     Text(
                       '₹${subtotal.toStringAsFixed(2)}',
-                      style: AppTextStyles.caption(context),
+                      style: AppTextStyles.bodySecondary(context),
                     ),
                   ],
                 ),
@@ -1267,11 +1271,11 @@ class CartPanel extends ConsumerWidget {
                   children: [
                     Text(
                       'Tax (8%)',
-                      style: AppTextStyles.caption(context),
+                      style: AppTextStyles.bodySecondary(context),
                     ),
                     Text(
                       '₹${tax.toStringAsFixed(2)}',
-                      style: AppTextStyles.caption(context),
+                      style: AppTextStyles.bodySecondary(context),
                     ),
                   ],
                 ),
@@ -1288,9 +1292,9 @@ class CartPanel extends ConsumerWidget {
                     ),
                     Text(
                       '₹${total.toStringAsFixed(2)}',
-                      style: AppTextStyles.heading(context).copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
+                      style: AppTextStyles.section(context).copyWith(
+                        color: colors.primary,
+                        // fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -1318,21 +1322,28 @@ class CartPanel extends ConsumerWidget {
                 ),
 
                 SizedBox(
-                  height: context.h(2),
+                  height: context.h(5),
                 ),
 
                 // CANCEL
-                SizedBox(
-                  width: double.infinity,
-                  child: RdxActionButton(
-                    label: 'Cancel',
-                    isPrimary: true,
-                    onPressed: cart.isEmpty
-                        ? null
-                        : () {
-                            ref.read(cartProvider.notifier).clear();
-                          },
-                  ),
+                // SizedBox(
+                //   width: double.infinity,
+                //   child: RdxActionButton(
+                //     label: 'Cancel',
+                //     // isPrimary: true,
+                // onPressed: cart.isEmpty
+                //     ? null
+                //     : () {
+                //         ref.read(cartProvider.notifier).clear();
+                //       },
+                //   ),
+                // ),
+                RdxActionButton.discard(
+                  onPressed: cart.isEmpty
+                      ? null
+                      : () {
+                          ref.read(cartProvider.notifier).clear();
+                        },
                 ),
               ],
             ),
@@ -1371,7 +1382,7 @@ class CartPanel extends ConsumerWidget {
             Text(
               'Select items from the menu',
               textAlign: TextAlign.center,
-              style: AppTextStyles.caption(context).copyWith(
+              style: AppTextStyles.bodySecondary(context).copyWith(
                 color: colors.textMuted,
               ),
             ),
@@ -1412,10 +1423,8 @@ class _CartItem extends ConsumerWidget {
                 line.menuItem.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.label(context).copyWith(
-                  fontSize: context.h(10),
+                style: AppTextStyles.section(context).copyWith(
                   color: colors.textPrimary,
-                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -1424,34 +1433,34 @@ class _CartItem extends ConsumerWidget {
 
             Text(
               '₹${line.subtotal.toStringAsFixed(2)}',
-              style: AppTextStyles.caption(context).copyWith(
-                fontSize: context.h(9),
+              style: AppTextStyles.label(context).copyWith(
+                // fontSize: context.h(9),
                 color: colors.textPrimary,
-                fontWeight: FontWeight.w600,
+                // fontWeight: FontWeight.w600,
               ),
             ),
 
             // -----------------------------------------------------------------
             // DELETE BUTTON
             // -----------------------------------------------------------------
-            SizedBox(
-              width: context.w(24),
-              height: context.h(20),
-              child: IconButton(
-                onPressed: () {
-                  cartNotifier.removeLine(line.id);
-                },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                splashRadius: context.h(12),
-                tooltip: 'Remove item',
-                icon: Icon(
-                  Icons.delete_outline,
-                  size: context.h(13),
-                  color: colors.textSecondary,
-                ),
-              ),
-            ),
+            // SizedBox(
+            //   width: context.w(24),
+            //   height: context.h(20),
+            //   child: IconButton(
+            //     onPressed: () {
+            //       cartNotifier.removeLine(line.id);
+            //     },
+            //     padding: EdgeInsets.zero,
+            //     constraints: const BoxConstraints(),
+            //     splashRadius: context.h(12),
+            //     tooltip: 'Remove item',
+            //     icon: Icon(
+            //       Icons.delete_outline,
+            //       size: context.h(13),
+            //       color: colors.textSecondary,
+            //     ),
+            //   ),
+            // ),
           ],
         ),
 
@@ -1462,8 +1471,8 @@ class _CartItem extends ConsumerWidget {
         // ---------------------------------------------------------------------
         Text(
           '₹${line.menuItem.price.toStringAsFixed(2)} each',
-          style: AppTextStyles.caption(context).copyWith(
-            fontSize: context.h(8),
+          style: AppTextStyles.body(context).copyWith(
+            // fontSize: context.h(8),
             color: colors.textMuted,
           ),
         ),
@@ -1493,10 +1502,8 @@ class _CartItem extends ConsumerWidget {
               alignment: Alignment.center,
               child: Text(
                 '${line.quantity}',
-                style: AppTextStyles.caption(context).copyWith(
-                  fontSize: context.h(9),
+                style: AppTextStyles.bodySecondary(context).copyWith(
                   color: colors.textPrimary,
-                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -1517,12 +1524,29 @@ class _CartItem extends ConsumerWidget {
                   line.spiceLevel!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.caption(context).copyWith(
-                    fontSize: context.h(8),
+                  style: AppTextStyles.bodySecondary(context).copyWith(
                     color: colors.textMuted,
                   ),
                 ),
               ),
+            SizedBox(
+              width: context.w(24),
+              height: context.h(20),
+              child: IconButton(
+                onPressed: () {
+                  cartNotifier.removeLine(line.id);
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                splashRadius: context.h(12),
+                tooltip: 'Remove item',
+                icon: Icon(
+                  Icons.delete,
+                  size: context.h(22),
+                  color: AppColors.danger,
+                ),
+              ),
+            ),
           ],
         ),
 
@@ -1535,8 +1559,7 @@ class _CartItem extends ConsumerWidget {
             line.addOns.join(', '),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.caption(context).copyWith(
-              fontSize: context.h(8),
+            style: AppTextStyles.bodySecondary(context).copyWith(
               color: colors.textSecondary,
             ),
           ),
@@ -1551,10 +1574,8 @@ class _CartItem extends ConsumerWidget {
             line.notes!,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.caption(context).copyWith(
-              fontSize: context.h(8),
+            style: AppTextStyles.bodySecondary(context).copyWith(
               color: colors.textMuted,
-              fontStyle: FontStyle.italic,
             ),
           ),
         ],
@@ -1575,8 +1596,8 @@ class _CartItem extends ConsumerWidget {
         context.h(4),
       ),
       child: Container(
-        width: context.w(23),
-        height: context.h(23),
+        width: context.w(28),
+        height: context.h(28),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: colors.surfaceVariant,
@@ -1589,7 +1610,7 @@ class _CartItem extends ConsumerWidget {
         ),
         child: Icon(
           icon,
-          size: context.h(12),
+          size: context.h(14),
           color: colors.textPrimary,
         ),
       ),

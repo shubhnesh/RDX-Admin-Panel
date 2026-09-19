@@ -628,15 +628,15 @@ class OrderMenuItemCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: context.h(7),
-                        height: context.h(7),
+                        width: context.h(9),
+                        height: context.h(9),
                         margin: EdgeInsets.only(
-                          top: context.h(3),
+                          top: context.h(6),
                         ),
                         decoration: BoxDecoration(
                           color: _looksVeg ? Colors.green : AppColors.danger,
                           borderRadius: BorderRadius.circular(
-                            context.h(1.5),
+                            context.h(5),
                           ),
                         ),
                       ),
@@ -646,21 +646,24 @@ class OrderMenuItemCard extends ConsumerWidget {
                           item.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.label(context).copyWith(
-                            fontSize: context.h(11),
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          // style: AppTextStyles.label(context).copyWith(
+                          //   fontSize: context.h(11),
+                          //   color: colors.textPrimary,
+                          //   fontWeight: FontWeight.w600,
+                          // ),
+                          style: AppTextStyles.heading(context),
                         ),
                       ),
                       SizedBox(width: context.w(4)),
                       Text(
                         '₹${item.price.toStringAsFixed(0)}',
-                        style: AppTextStyles.caption(context).copyWith(
-                          fontSize: context.h(9),
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        // style: AppTextStyles.caption(context).copyWith(
+                        //   fontSize: context.h(9),
+                        //   color: colors.textPrimary,
+                        //   fontWeight: FontWeight.w600,
+                        // ),
+                        style: AppTextStyles.section(context)
+                            .copyWith(color: AppColors.primary),
                       ),
                     ],
                   ),
@@ -677,11 +680,12 @@ class OrderMenuItemCard extends ConsumerWidget {
                           : item.preparation,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.caption(context).copyWith(
-                        fontSize: context.h(8.5),
-                        height: 1.15,
-                        color: colors.textSecondary,
-                      ),
+                      // style: AppTextStyles.caption(context).copyWith(
+                      //   fontSize: context.h(8.5),
+                      //   height: 1.15,
+                      //   color: colors.textSecondary,
+                      // ),
+                      style: AppTextStyles.bodySecondary(context),
                     ),
                   ],
 
@@ -692,7 +696,7 @@ class OrderMenuItemCard extends ConsumerWidget {
                   // ---------------------------------------------------------
                   if (!unavailable)
                     Align(
-                      alignment: Alignment.bottomLeft,
+                      alignment: Alignment.bottomCenter,
                       child: SizedBox(
                         height: context.h(25),
                         child: RdxActionButton(
@@ -714,8 +718,8 @@ class OrderMenuItemCard extends ConsumerWidget {
                   right: 0,
                   child: Container(
                     constraints: BoxConstraints(
-                      minWidth: context.h(18),
-                      minHeight: context.h(18),
+                      minWidth: context.h(21),
+                      minHeight: context.h(21),
                     ),
                     alignment: Alignment.center,
                     padding: EdgeInsets.symmetric(
@@ -724,16 +728,18 @@ class OrderMenuItemCard extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(
-                        context.h(9),
+                        context.h(25),
                       ),
                     ),
                     child: Text(
                       '$quantityInCart',
-                      style: AppTextStyles.caption(context).copyWith(
-                        fontSize: context.h(8),
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      // style: AppTextStyles.caption(context).copyWith(
+                      //   fontSize: context.h(8),
+                      //   color: Colors.white,
+                      //   fontWeight: FontWeight.w700,
+                      // ),
+                      style: AppTextStyles.section(context)
+                          .copyWith(color: Colors.white),
                     ),
                   ),
                 ),
@@ -759,11 +765,13 @@ class OrderMenuItemCard extends ConsumerWidget {
                       ),
                       child: Text(
                         'Unavailable',
-                        style: AppTextStyles.caption(context).copyWith(
-                          fontSize: context.h(9),
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        // style: AppTextStyles.caption(context).copyWith(
+                        //   fontSize: context.h(9),
+                        //   color: Colors.white,
+                        //   fontWeight: FontWeight.w600,
+                        // ),
+                        style: AppTextStyles.section(context)
+                            .copyWith(color: Colors.white),
                       ),
                     ),
                   ),

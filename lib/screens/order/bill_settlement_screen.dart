@@ -3016,15 +3016,6 @@ class _BillingCalculationCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              // const Spacer(),
-              // Text(
-              //   'CURRENCY: USD (\$)',
-              //   style: AppTextStyles.caption(context).copyWith(
-              //     fontSize: 8,
-              //     color: colors.textMuted,
-              //     fontWeight: FontWeight.w600,
-              //   ),
-              // ),
             ],
           ),
           const SizedBox(height: 12),
@@ -3269,32 +3260,6 @@ class _CustomerDetailsCard extends StatelessWidget {
               ),
             ],
           ),
-          // const SizedBox(height: 10),
-          // InkWell(
-          //   onTap: () {
-          //     onDigitalReceiptChanged(
-          //       !sendDigitalReceipt,
-          //     );
-          //   },
-          //   borderRadius: BorderRadius.circular(5),
-          //   child: Row(
-          //     children: [
-          //       SizedBox(
-          //         width: 20,
-          //         height: 20,
-          //         child: Checkbox(
-          //           value: sendDigitalReceipt,
-          //           onChanged: (value) {
-          //             onDigitalReceiptChanged(
-          //               value ?? false,
-          //             );
-          //           },
-          //           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/providers/live_orders_provider.dart';
+import 'package:rdx_admin/screens/order/bill_settlement_screen.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -249,7 +250,8 @@ class _ServiceAndCustomer extends StatelessWidget {
                 child: _OptionTile(
                   context: context,
                   label: 'To Go',
-                  selected: false,
+                  // selected: false,
+                  selected: order.orderType == OrderType.takeaway,
                 ),
               ),
               SizedBox(width: context.w(8)),
@@ -611,7 +613,8 @@ class _PaymentSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
 
-    final isPaid = order.paymentMethod != null;
+    // final isPaid = order.paymentMethod != null;
+    final isPaid = order.paymentStatus == PaymentStatus.paid;
 
     return _Panel(
       context: context,
@@ -728,6 +731,212 @@ class _PaidPayment extends StatelessWidget {
   }
 }
 
+// class _UnpaidPayment extends ConsumerWidget {
+//   final OrderModel order;
+
+//   const _UnpaidPayment({
+//     required this.order,
+//   });
+
+//   @override
+//   Widget build(
+//     BuildContext context,
+//     WidgetRef ref,
+//   ) {
+//     final colors = AppColors.of(context);
+
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Container(
+//           width: double.infinity,
+//           padding: EdgeInsets.all(
+//             context.h(11),
+//           ),
+//           decoration: BoxDecoration(
+//             color: colors.surfaceVariant,
+//             borderRadius: BorderRadius.circular(
+//               context.h(8),
+//             ),
+//             border: Border.all(
+//               color: colors.border,
+//             ),
+//           ),
+//           child: Row(
+//             children: [
+//               Icon(
+//                 Icons.pending_outlined,
+//                 size: context.h(17),
+//                 color: colors.textMuted,
+//               ),
+//               SizedBox(width: context.w(8)),
+//               Expanded(
+//                 child: Text(
+//                   'Payment is pending',
+//                   style: AppTextStyles.bodySecondary(context).copyWith(
+//                     color: colors.textSecondary,
+//                   ),
+//                 ),
+//               ),
+//               Text(
+//                 '₹${order.total.toStringAsFixed(2)}',
+//                 style: AppTextStyles.body(context).copyWith(
+//                   color: colors.textPrimary,
+//                   fontWeight: FontWeight.w700,
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//         SizedBox(height: context.h(10)),
+//         SizedBox(
+//           width: double.infinity,
+//           child: RdxActionButton(
+//             label: 'Make Payment',
+//             leadingIcon: Icons.payments_outlined,
+//             isPrimary: true,
+//             onPressed: () {
+//               _showPaymentDialog(
+//                 context,
+//                 ref,
+//                 order,
+//               );
+//             },
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+
+//   Future<void> _showPaymentDialog(
+//     BuildContext context,
+//     WidgetRef ref,
+//     OrderModel order,
+//   ) async {
+//     // Prevent making the same payment again.
+//     if (order.paymentStatus == PaymentStatus.paid) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(
+//           content: Text('This order has already been paid.'),
+//         ),
+//       );
+//       return;
+//     }
+
+//     final method = await showDialog<PaymentMethod>(
+//       context: context,
+//       builder: (dialogContext) {
+//         final colors = AppColors.of(dialogContext);
+
+//         return AlertDialog(
+//           backgroundColor: colors.surface,
+//           title: Text(
+//             'Make Payment',
+//             style: AppTextStyles.section(dialogContext).copyWith(
+//               color: colors.textPrimary,
+//             ),
+//           ),
+//           content: ConstrainedBox(
+//             constraints: BoxConstraints(
+//               maxHeight: MediaQuery.sizeOf(dialogContext).height * 0.6,
+//             ),
+//             child: SingleChildScrollView(
+//               child: Column(
+//                 mainAxisSize: MainAxisSize.min,
+//                 children: [
+//                   Text(
+//                     'Select payment method for '
+//                     '₹${order.total.toStringAsFixed(2)}',
+//                     style: AppTextStyles.bodySecondary(
+//                       dialogContext,
+//                     ).copyWith(
+//                       color: colors.textSecondary,
+//                     ),
+//                   ),
+//                   SizedBox(
+//                     height: dialogContext.h(14),
+//                   ),
+//                   for (final method in PaymentMethod.values)
+//                     Padding(
+//                       padding: EdgeInsets.only(
+//                         bottom: dialogContext.h(8),
+//                       ),
+//                       child: SizedBox(
+//                         width: double.infinity,
+//                         child: RdxActionButton(
+//                           label: method.label,
+//                           leadingIcon: _paymentIcon(method),
+//                           onPressed: () {
+//                             Navigator.of(dialogContext).pop(method);
+//                           },
+//                         ),
+//                       ),
+//                     ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//         );
+//       },
+//     );
+
+//     if (method == null) {
+//       return;
+//     }
+
+//     try {
+//       await OrderService().updatePaymentStatus(
+//         orderId: order.id,
+//         paymentMethod: method,
+//       );
+
+//       if (!context.mounted) {
+//         return;
+//       }
+
+//       // Refresh the order details from Firestore.
+//       ref.invalidate(
+//         orderDetailProvider(order.id),
+//       );
+
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(
+//           content: Text(
+//             'Payment completed via ${method.label}.',
+//           ),
+//         ),
+//       );
+//     } catch (e) {
+//       if (!context.mounted) {
+//         return;
+//       }
+
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(
+//           content: Text(
+//             'Payment failed. ${e.toString()}',
+//           ),
+//         ),
+//       );
+//     }
+//   }
+
+//   IconData _paymentIcon(PaymentMethod method) {
+//     switch (method) {
+//       case PaymentMethod.cash:
+//         return Icons.payments_outlined;
+//       case PaymentMethod.card:
+//         return Icons.credit_card_outlined;
+//       case PaymentMethod.upi:
+//         return Icons.qr_code_2_outlined;
+//       case PaymentMethod.online:
+//         return Icons.language_outlined;
+//       case PaymentMethod.split:
+//         return Icons.call_split_outlined;
+//     }
+//   }
+// }
+
 class _UnpaidPayment extends ConsumerWidget {
   final OrderModel order;
 
@@ -792,144 +1001,162 @@ class _UnpaidPayment extends ConsumerWidget {
             label: 'Make Payment',
             leadingIcon: Icons.payments_outlined,
             isPrimary: true,
-            onPressed: () {
-              _showPaymentDialog(
-                context,
-                ref,
-                order,
-              );
-            },
+            onPressed: () => _openBillSettlement(
+              context,
+              ref,
+            ),
           ),
         ),
       ],
     );
   }
 
-  Future<void> _showPaymentDialog(
+  Future<void> _openBillSettlement(
     BuildContext context,
     WidgetRef ref,
-    OrderModel order,
   ) async {
-    // Prevent making the same payment again.
+    // Always use the payment status received from the backend.
+    // Do not open the settlement screen if the order is already paid.
     if (order.paymentStatus == PaymentStatus.paid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('This order has already been paid.'),
         ),
       );
-      return;
-    }
 
-    final method = await showDialog<PaymentMethod>(
-      context: context,
-      builder: (dialogContext) {
-        final colors = AppColors.of(dialogContext);
-
-        return AlertDialog(
-          backgroundColor: colors.surface,
-          title: Text(
-            'Make Payment',
-            style: AppTextStyles.section(dialogContext).copyWith(
-              color: colors.textPrimary,
-            ),
-          ),
-          content: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(dialogContext).height * 0.6,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Select payment method for '
-                    '₹${order.total.toStringAsFixed(2)}',
-                    style: AppTextStyles.bodySecondary(
-                      dialogContext,
-                    ).copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                  SizedBox(
-                    height: dialogContext.h(14),
-                  ),
-                  for (final method in PaymentMethod.values)
-                    Padding(
-                      padding: EdgeInsets.only(
-                        bottom: dialogContext.h(8),
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: RdxActionButton(
-                          label: method.label,
-                          leadingIcon: _paymentIcon(method),
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop(method);
-                          },
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-    if (method == null) {
-      return;
-    }
-
-    try {
-      await OrderService().updatePaymentStatus(
-        orderId: order.id,
-        paymentMethod: method,
-      );
-
-      if (!context.mounted) {
-        return;
-      }
-
-      // Refresh the order details from Firestore.
       ref.invalidate(
         orderDetailProvider(order.id),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Payment completed via ${method.label}.',
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Payment failed. ${e.toString()}',
-          ),
-        ),
-      );
+      return;
     }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BillSettlementScreen(
+          bill: BillSettlementData(
+            orderNumber: order.id,
+
+            // Keep the existing restaurant display value.
+            restaurantName: 'RDX CORE RESTAURANT & BAR',
+
+            orderType: _orderTypeLabel(
+              order.orderType,
+            ),
+
+            tableNumber: order.tableNumber,
+
+            billingMode: _orderTypeLabel(
+              order.orderType,
+            ),
+
+            // These fields are not currently available
+            // from OrderModel, so keep them empty.
+            cashier: '',
+            server: '',
+            kitchenName: '',
+
+            // BillSettlementData expects int?.
+            sequence: null,
+
+            // OrderModel does not currently expose covers.
+            covers: 1,
+
+            items: [
+              for (final item in order.items)
+                BillItemData(
+                  name: item.name,
+                  quantity: item.quantity,
+                  amount: item.price * item.quantity,
+                  modifiers: [
+                    if (item.spiceLevel != null &&
+                        item.spiceLevel!.trim().isNotEmpty)
+                      item.spiceLevel!,
+                    ...item.addOns,
+                  ],
+                ),
+            ],
+
+            // BillSettlementData expects String?,
+            // while OrderModel stores PaymentMethod?.
+            paymentMethod: order.paymentMethod?.label,
+
+            cardLastFour: null,
+
+            subtotal: _calculateSubtotal(),
+
+            taxPercentage: _calculateTaxPercentage(),
+
+            guestName: order.customerName,
+
+            phoneNumber: order.customerPhone,
+
+            sendDigitalReceipt: false,
+
+            invoiceReference: order.id,
+
+            // BillSettlementData requires a non-null DateTime.
+            receiptDateTime: DateTime.now(),
+          ),
+
+          // The settlement screen uses this callback when it closes.
+          // Returning normally lets this screen refresh its backend data.
+          onClose: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    // Re-fetch this order from Firestore so paymentStatus/paymentMethod
+    // reflect the latest backend state.
+    ref.invalidate(
+      orderDetailProvider(order.id),
+    );
+
+    // Refresh Live Orders as well.
+    await ref.read(liveOrdersProvider).load();
   }
 
-  IconData _paymentIcon(PaymentMethod method) {
-    switch (method) {
-      case PaymentMethod.cash:
-        return Icons.payments_outlined;
-      case PaymentMethod.card:
-        return Icons.credit_card_outlined;
-      case PaymentMethod.upi:
-        return Icons.qr_code_2_outlined;
-      case PaymentMethod.online:
-        return Icons.language_outlined;
-      case PaymentMethod.split:
-        return Icons.call_split_outlined;
+  double _calculateSubtotal() {
+    double subtotal = 0;
+
+    for (final item in order.items) {
+      subtotal += item.price * item.quantity;
+    }
+
+    return subtotal;
+  }
+
+  double _calculateTaxPercentage() {
+    final subtotal = _calculateSubtotal();
+
+    if (subtotal <= 0) {
+      return 0.0;
+    }
+
+    final tax = (order.total - subtotal).clamp(
+      0.0,
+      double.infinity,
+    );
+
+    return (tax / subtotal) * 100;
+  }
+
+  String _orderTypeLabel(OrderType type) {
+    switch (type) {
+      case OrderType.dineIn:
+        return 'Eat In';
+
+      case OrderType.delivery:
+        return 'Delivery';
+
+      case OrderType.takeaway:
+        return 'To Go';
     }
   }
 }
@@ -1080,6 +1307,130 @@ class _BillRow extends StatelessWidget {
   }
 }
 
+// class _WorkflowSection extends ConsumerWidget {
+//   final OrderModel order;
+
+//   const _WorkflowSection({
+//     required this.order,
+//   });
+
+//   @override
+//   Widget build(BuildContext context, WidgetRef ref) {
+//     final colors = AppColors.of(context);
+//     final nextStatus = order.status.nextStatus;
+
+//     final buttonLabel = switch (order.status) {
+//       OrderStatus.pending => 'Move to Preparing',
+//       OrderStatus.preparing => 'Mark Ready',
+//       OrderStatus.ready => 'Mark Delivered',
+//       OrderStatus.delivered => 'Delivered',
+//       OrderStatus.cancelled => 'Current Stage',
+//     };
+
+//     return _Panel(
+//       context: context,
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           _SectionTitle(
+//             context: context,
+//             title: 'WORKFLOW',
+//             icon: Icons.sync_alt_outlined,
+//           ),
+//           SizedBox(height: context.h(12)),
+//           Row(
+//             children: [
+//               Expanded(
+//                 child: _WorkflowButton(
+//                   context: context,
+//                   label: buttonLabel,
+//                   icon: Icons.arrow_forward_outlined,
+//                   enabled: nextStatus != null,
+//                   onPressed: nextStatus == null
+//                       ? null
+//                       : () async {
+//                           try {
+//                             // 1. Update the status in Firestore.
+//                             await OrderService().updateOrderStatus(
+//                               order.id,
+//                               nextStatus,
+//                             );
+
+//                             if (!context.mounted) return;
+
+//                             // 2. Refresh this order's details.
+//                             ref.invalidate(
+//                               orderDetailProvider(order.id),
+//                             );
+
+//                             // 3. IMPORTANT:
+//                             // Refresh the same LiveOrdersProvider instance
+//                             // used by the Live Orders screen.
+//                             await ref.read(liveOrdersProvider).load();
+
+//                             if (!context.mounted) return;
+
+//                             ScaffoldMessenger.of(context).showSnackBar(
+//                               SnackBar(
+//                                 content: Text(
+//                                   'Order moved to ${nextStatus.label}.',
+//                                 ),
+//                               ),
+//                             );
+//                           } catch (e) {
+//                             if (!context.mounted) return;
+
+//                             ScaffoldMessenger.of(context).showSnackBar(
+//                               SnackBar(
+//                                 content: Text(
+//                                   'Failed to update status. $e',
+//                                 ),
+//                               ),
+//                             );
+//                           }
+//                         },
+//                 ),
+//               ),
+//             ],
+//           ),
+//           SizedBox(height: context.h(8)),
+//           Container(
+//             width: double.infinity,
+//             padding: EdgeInsets.symmetric(
+//               horizontal: context.w(10),
+//               vertical: context.h(8),
+//             ),
+//             decoration: BoxDecoration(
+//               color: colors.surfaceVariant,
+//               borderRadius: BorderRadius.circular(
+//                 context.h(7),
+//               ),
+//             ),
+//             child: Row(
+//               children: [
+//                 Text(
+//                   'CURRENT STAGE',
+//                   style: AppTextStyles.bodySecondary(context).copyWith(
+//                     color: colors.textMuted,
+//                     letterSpacing: 0.5,
+//                   ),
+//                 ),
+//                 const Spacer(),
+//                 Text(
+//                   order.status.label,
+//                   style: AppTextStyles.label(context).copyWith(
+//                     color: colors.textPrimary,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
 class _WorkflowSection extends ConsumerWidget {
   final OrderModel order;
 
@@ -1089,7 +1440,6 @@ class _WorkflowSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColors.of(context);
     final nextStatus = order.status.nextStatus;
 
     final buttonLabel = switch (order.status) {
@@ -1097,7 +1447,7 @@ class _WorkflowSection extends ConsumerWidget {
       OrderStatus.preparing => 'Mark Ready',
       OrderStatus.ready => 'Mark Delivered',
       OrderStatus.delivered => 'Delivered',
-      OrderStatus.cancelled => 'Current Stage',
+      OrderStatus.cancelled => 'Cancelled',
     };
 
     return _Panel(
@@ -1111,6 +1461,12 @@ class _WorkflowSection extends ConsumerWidget {
             icon: Icons.sync_alt_outlined,
           ),
           SizedBox(height: context.h(12)),
+
+          // Order workflow action only.
+          //
+          // The current-stage row has intentionally been removed.
+          // The workflow is responsible only for moving the order:
+          // Pending -> Preparing -> Ready -> Delivered.
           Row(
             children: [
               Expanded(
@@ -1123,7 +1479,7 @@ class _WorkflowSection extends ConsumerWidget {
                       ? null
                       : () async {
                           try {
-                            // 1. Update the status in Firestore.
+                            // Update the order state in the backend.
                             await OrderService().updateOrderStatus(
                               order.id,
                               nextStatus,
@@ -1131,14 +1487,12 @@ class _WorkflowSection extends ConsumerWidget {
 
                             if (!context.mounted) return;
 
-                            // 2. Refresh this order's details.
+                            // Refresh this order's details from Firestore.
                             ref.invalidate(
                               orderDetailProvider(order.id),
                             );
 
-                            // 3. IMPORTANT:
-                            // Refresh the same LiveOrdersProvider instance
-                            // used by the Live Orders screen.
+                            // Refresh Live Orders as well.
                             await ref.read(liveOrdersProvider).load();
 
                             if (!context.mounted) return;
@@ -1165,38 +1519,6 @@ class _WorkflowSection extends ConsumerWidget {
                 ),
               ),
             ],
-          ),
-          SizedBox(height: context.h(8)),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(
-              horizontal: context.w(10),
-              vertical: context.h(8),
-            ),
-            decoration: BoxDecoration(
-              color: colors.surfaceVariant,
-              borderRadius: BorderRadius.circular(
-                context.h(7),
-              ),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  'CURRENT STAGE',
-                  style: AppTextStyles.bodySecondary(context).copyWith(
-                    color: colors.textMuted,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  order.status.label,
-                  style: AppTextStyles.label(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),

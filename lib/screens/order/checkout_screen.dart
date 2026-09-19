@@ -484,7 +484,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               child: RdxActionButton.save(
                 isLoading: placing,
                 onPressed: cart.isEmpty ? null : _placeOrder,
-                backgroundColor: Colors.red,
               ),
             ),
           ),
@@ -547,15 +546,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 icon: Icon(
-                  Icons.edit_outlined,
-                  size: context.h(16),
+                  Icons.edit,
+                  size: context.h(18),
                   color: AppColors.primary,
                 ),
                 label: Text(
                   'Edit Order',
                   style: AppTextStyles.label(context).copyWith(
                     color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -684,44 +682,44 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
           Text(
             '₹${line.unitPrice.toStringAsFixed(2)} each',
-            style: AppTextStyles.caption(context).copyWith(
+            style: AppTextStyles.body(context).copyWith(
               color: colors.textSecondary,
             ),
           ),
-          if (line.spiceLevel != null &&
-              line.spiceLevel!.trim().isNotEmpty) ...[
-            SizedBox(
-              height: context.h(3),
-            ),
-            Text(
-              'Spice: ${line.spiceLevel}',
-              style: AppTextStyles.caption(context).copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ],
-          if (line.addOns.isNotEmpty) ...[
-            SizedBox(
-              height: context.h(3),
-            ),
-            Text(
-              'Add-ons: ${line.addOns.map((a) => a.displayLabel).join(', ')}',
-              style: AppTextStyles.caption(context).copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ],
-          if (line.notes != null && line.notes!.trim().isNotEmpty) ...[
-            SizedBox(
-              height: context.h(3),
-            ),
-            Text(
-              'Note: ${line.notes}',
-              style: AppTextStyles.caption(context).copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ],
+          // if (line.spiceLevel != null &&
+          //     line.spiceLevel!.trim().isNotEmpty) ...[
+          //   SizedBox(
+          //     height: context.h(3),
+          //   ),
+          //   Text(
+          //     'Spice: ${line.spiceLevel}',
+          //     style: AppTextStyles.caption(context).copyWith(
+          //       color: colors.textSecondary,
+          //     ),
+          //   ),
+          // ],
+          // if (line.addOns.isNotEmpty) ...[
+          //   SizedBox(
+          //     height: context.h(3),
+          //   ),
+          //   Text(
+          //     'Add-ons: ${line.addOns.map((a) => a.displayLabel).join(', ')}',
+          //     style: AppTextStyles.caption(context).copyWith(
+          //       color: colors.textSecondary,
+          //     ),
+          //   ),
+          // ],
+          // if (line.notes != null && line.notes!.trim().isNotEmpty) ...[
+          //   SizedBox(
+          //     height: context.h(3),
+          //   ),
+          //   Text(
+          //     'Note: ${line.notes}',
+          //     style: AppTextStyles.bodyTertiary(context).copyWith(
+          //       color: colors.textSecondary,
+          //     ),
+          //   ),
+          // ],
         ],
       ),
     );
@@ -742,14 +740,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         Expanded(
           child: Text(
             label,
-            style: AppTextStyles.caption(context).copyWith(
+            style: AppTextStyles.bodySecondary(context).copyWith(
               color: colors.textSecondary,
             ),
           ),
         ),
         Text(
           '₹${amount.toStringAsFixed(2)}',
-          style: AppTextStyles.caption(context).copyWith(
+          style: AppTextStyles.bodySecondary(context).copyWith(
             color: colors.textPrimary,
           ),
         ),

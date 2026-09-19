@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../screens/main/main_screen.dart';
-import '../../screens/order_details/order_details_screen.dart';
+import '../../screens/order/order_details_screen.dart';
 import '../../screens/menu/create_menu_screen.dart';
 import '../../screens/coupons/create_coupon_screen.dart';
 import '../../screens/settings/restaurant_profile_screen.dart';

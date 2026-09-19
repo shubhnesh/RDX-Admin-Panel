@@ -33,9 +33,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     });
   }
 
-  // ---------------------------------------------------------------------------
   // CREATE ORDER
-  // ---------------------------------------------------------------------------
 
   Future<void> _openPlaceOrder() async {
     final placed = await Navigator.of(context).push<bool>(
@@ -57,12 +55,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     }
   }
 
-  // ---------------------------------------------------------------------------
   // STATUS FILTER
-  // ---------------------------------------------------------------------------
 
-  List<String> get _statusLabels =>
-      const ['New', 'Preparing', 'Ready', 'Delivered'];
+  List<String> get _statusLabels => const [
+        'New',
+        'Preparing',
+        'Ready',
+        'Pending Payment',
+        'Delivered',
+      ];
 
   void _onStatusSelected(String label) {
     if (_selectedStatus == label) return;
@@ -72,9 +73,33 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     });
   }
 
-  // ---------------------------------------------------------------------------
+  // Getter for pending-payment orders
+  List<OrderModel> _getPendingPaymentOrders(
+    LiveOrdersProvider provider,
+  ) {
+    final allOrders = <OrderModel>[
+      ...provider.pending,
+      ...provider.preparing,
+      ...provider.ready,
+      ...provider.delivered,
+    ];
+
+    final seenIds = <String>{};
+
+    return allOrders.where((order) {
+      if (order.paymentStatus == PaymentStatus.paid) {
+        return false;
+      }
+
+      if (!seenIds.add(order.id)) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
   // BUILD
-  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +110,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         provider.preparing.length +
         provider.ready.length +
         provider.delivered.length;
+
+    final pendingPaymentOrders = _getPendingPaymentOrders(provider);
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -188,6 +215,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               _buildSummaryStats(
                 provider: provider,
                 totalOrders: totalOrders,
+                pendingPaymentCount: pendingPaymentOrders.length,
               ),
 
               SizedBox(height: context.h(20)),
@@ -211,6 +239,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   Widget _buildSummaryStats({
     required LiveOrdersProvider provider,
     required int totalOrders,
+    required int pendingPaymentCount,
   }) {
     return SizedBox(
       width: double.infinity,
@@ -223,7 +252,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           final cards = <Widget>[
             StatCard(
               label: 'Total Orders',
-              value: '$totalOrders orders',
+              value: '$totalOrders',
               icon: Icons.receipt_long_outlined,
               minHeight: isNarrow ? context.h(62) : context.h(72),
             ),
@@ -249,6 +278,13 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               minHeight: isNarrow ? context.h(62) : context.h(72),
             ),
             StatCard(
+              label: 'Pending Payment',
+              value: '$pendingPaymentCount',
+              icon: Icons.pending_actions_outlined,
+              accentColor: const Color(0xFFE9A719),
+              minHeight: isNarrow ? context.h(62) : context.h(72),
+            ),
+            StatCard(
               label: 'Delivered',
               value: '${provider.delivered.length}',
               icon: Icons.check_circle_outline,
@@ -259,15 +295,21 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
           return Row(
             children: [
-              Expanded(child: cards[0]),
-              SizedBox(width: spacing),
-              Expanded(child: cards[1]),
-              SizedBox(width: spacing),
-              Expanded(child: cards[2]),
-              SizedBox(width: spacing),
-              Expanded(child: cards[3]),
-              SizedBox(width: spacing),
-              Expanded(child: cards[4]),
+              // Expanded(child: cards[0]),
+              // SizedBox(width: spacing),
+              // Expanded(child: cards[1]),
+              // SizedBox(width: spacing),
+              // Expanded(child: cards[2]),
+              // SizedBox(width: spacing),
+              // Expanded(child: cards[3]),
+              // SizedBox(width: spacing),
+              // Expanded(child: cards[4]),
+              for (int index = 0; index < cards.length; index++) ...[
+                Expanded(
+                  child: cards[index],
+                ),
+                if (index != cards.length - 1) SizedBox(width: spacing),
+              ],
             ],
           );
         },
@@ -470,29 +512,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               color: AppColors.primary,
             ),
           ),
-          // const Spacer(),
-          // Container(
-          //   constraints: BoxConstraints(
-          //     minWidth: context.w(21),
-          //     minHeight: context.h(21),
-          //   ),
-          //   padding: EdgeInsets.symmetric(
-          //     horizontal: context.w(6),
-          //   ),
-          //   alignment: Alignment.center,
-          //   decoration: BoxDecoration(
-          //     color: AppColors.lightSurface,
-          //     borderRadius: BorderRadius.circular(context.h(15)),
-          //     border: Border.all(
-          //       color: AppColors.lightBorder,
-          //       width: context.h(3),
-          //     ),
-          //   ),
-          //   child: Text(
-          //     '${data.orders.length}',
-          //     style: AppTextStyles.bodySecondary(context),
-          //   ),
-          // ),
         ],
       ),
     );
@@ -506,6 +525,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     LiveOrdersProvider provider,
   ) {
     final sections = <_SectionData>[];
+    final pendingPaymentOrders = _getPendingPaymentOrders(provider);
 
     if (_selectedStatus == 'All' || _selectedStatus == 'New') {
       sections.add(
@@ -543,10 +563,20 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       );
     }
 
-    /*
-     * Delivering is intentionally kept only in All,
-     * exactly as in your current implementation.
-     */
+    if (_selectedStatus == 'All' || _selectedStatus == 'Pending Payment') {
+      sections.add(
+        _SectionData(
+          title: 'PENDING PAYMENT',
+          color: const Color(0xFFE9A719),
+          orders: pendingPaymentOrders,
+          actionText: null,
+          onAdvance: null,
+          emptyIcon: Icons.payments_outlined,
+          emptyText: 'No pending payments',
+        ),
+      );
+    }
+
     if (_selectedStatus == 'All' || _selectedStatus == 'Delivered') {
       sections.add(
         _SectionData(

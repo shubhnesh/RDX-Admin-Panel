@@ -293,6 +293,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
             children: [
               _buildTopBar(context, colors),
               SizedBox(height: context.h(16)),
+              _buildHeading(context, colors),
+              SizedBox(height: context.h(20)),
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(vertical: context.h(10)),
@@ -335,6 +337,31 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
             await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
             if (context.mounted) ref.read(menuProvider).load();
           },
+        ),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // HEADING
+  //
+  // Same title + subheading pattern as CouponsScreen ("Coupons & Offers").
+  // ═══════════════════════════════════════════════════════════════
+
+  Widget _buildHeading(BuildContext context, AppColorScheme colors) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Menu Items',
+          style: AppTextStyles.heading(context),
+        ),
+        SizedBox(height: context.h(4)),
+        Text(
+          'Manage your menu items, pricing and categories.',
+          style: AppTextStyles.bodySecondary(context).copyWith(
+            color: colors.textSecondary,
+          ),
         ),
       ],
     );
@@ -496,13 +523,13 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                     child: ListView.separated(
                       padding: EdgeInsets.symmetric(vertical: context.h(5)),
                       itemCount: categoryOptions.length,
-                     separatorBuilder: (_, __) => Divider(
-  height: context.h(1),
-  thickness: 1,
-  indent: 0,          // touches left side
-  endIndent: 0,       // touches right side
-  color: colors.divider,
-),
+                      separatorBuilder: (_, __) => Divider(
+                        height: context.h(1),
+                        thickness: 1,
+                        indent: 0,
+                        endIndent: 0,
+                        color: colors.divider,
+                      ),
                       itemBuilder: (context, index) {
                         final category = categoryOptions[index];
                         final selected = staged.contains(category.name);
@@ -521,32 +548,36 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                             ),
                             child: Row(
                               children: [
-                              Checkbox(
-  value: selected,
-  onChanged: (value) {
-    _toggleStagedCategory(
-      category.name,
-      value == true,
-    );
-  },
-  activeColor: AppColors.primary,
-  checkColor: colors.surface,
-  fillColor: WidgetStateProperty.resolveWith((states) {
-    if (states.contains(WidgetState.selected)) {
-      return AppColors.primary;
-    }
-    return Colors.transparent;
-  }),
-  side: BorderSide(
-    width: 1.2,
-    color: selected ? AppColors.primary : colors.border,
-  ),
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(3.5),
-  ),
-  visualDensity: VisualDensity.compact,
-  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-),
+                                Checkbox(
+                                  value: selected,
+                                  onChanged: (value) {
+                                    _toggleStagedCategory(
+                                      category.name,
+                                      value == true,
+                                    );
+                                  },
+                                  activeColor: AppColors.primary,
+                                  checkColor: colors.surface,
+                                  fillColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                    if (states.contains(WidgetState.selected)) {
+                                      return AppColors.primary;
+                                    }
+                                    return Colors.transparent;
+                                  }),
+                                  side: BorderSide(
+                                    width: 1.2,
+                                    color: selected
+                                        ? AppColors.primary
+                                        : colors.border,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(3.5),
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
                                 Expanded(
                                   child: Text(
                                     category.name,

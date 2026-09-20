@@ -542,18 +542,22 @@ class StatCard extends StatelessWidget {
     required double iconSize,
     required double radius,
   }) {
+    // Use the same scale for both dimensions so the container is always 1:1
+    final double s = context.w(size);
+
     return Container(
-      width: context.w(size),
-      height: context.h(size),
+      width: s,
+      height: s,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(context.h(radius)),
+        borderRadius:
+            BorderRadius.circular(context.w(radius)), // same scale as size
       ),
       alignment: Alignment.center,
       child: Icon(
         icon,
         color: color,
-        size: context.h(iconSize),
+        size: context.w(iconSize), // keep icon size on the same scale
       ),
     );
   }

@@ -1,4 +1,4 @@
-// lib/widgets/dialogs/taxonomy_entry_dialog.dart
+// lib/widgets/dialogs/category_entry_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
@@ -6,7 +6,7 @@ import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/resuable_options/rdx_text_field.dart';
 
-/// One dialog mechanism for every "create/edit a taxonomy value" case in
+/// One dialog mechanism for every "create/edit a category value" case in
 /// the app: categories, subcategories, preparation styles, regionalities,
 /// tags, inventory categories, units — anything that boils down to
 /// "type a name (optionally with a list of sub-names), then either hand
@@ -26,8 +26,8 @@ import 'package:rdx_admin/widgets/resuable_options/rdx_text_field.dart';
 ///
 /// [T] is whatever [onSave] returns — `String`, `CategoryModel`,
 /// `UnitModel`, etc. It's popped via `Navigator.pop` as-is.
-class TaxonomyEntryDialog<T> extends StatefulWidget {
-  const TaxonomyEntryDialog({
+class CategoryEntryDialog<T> extends StatefulWidget {
+  const CategoryEntryDialog({
     super.key,
     required this.title,
     required this.onSave,
@@ -97,7 +97,7 @@ class TaxonomyEntryDialog<T> extends StatefulWidget {
     return showDialog<T>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => TaxonomyEntryDialog<T>(
+      builder: (_) => CategoryEntryDialog<T>(
         title: title,
         editTitle: editTitle,
         nameLabel: nameLabel,
@@ -116,10 +116,10 @@ class TaxonomyEntryDialog<T> extends StatefulWidget {
   }
 
   @override
-  State<TaxonomyEntryDialog<T>> createState() => _TaxonomyEntryDialogState<T>();
+  State<CategoryEntryDialog<T>> createState() => _CategoryEntryDialogState<T>();
 }
 
-class _TaxonomyEntryDialogState<T> extends State<TaxonomyEntryDialog<T>> {
+class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
   final _formKey = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.initialName ?? '');
   late final List<TextEditingController> _subControllers = widget._hasSubItems

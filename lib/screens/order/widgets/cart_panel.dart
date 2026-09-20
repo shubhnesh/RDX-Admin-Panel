@@ -1129,28 +1129,6 @@ class CartPanel extends ConsumerWidget {
                 //   ),
                 // ),
                 const Spacer(),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.w(7),
-                    vertical: context.h(3),
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(
-                      context.h(7),
-                    ),
-                  ),
-                  child: Text(
-                    'NEW',
-                    // style: AppTextStyles.caption(context).copyWith(
-                    //   fontSize: context.h(7),
-                    //   color: Colors.white,
-                    //   fontWeight: FontWeight.w700,
-                    // ),
-                    style: AppTextStyles.bodySecondary(context)
-                        .copyWith(color: Colors.white),
-                  ),
-                ),
               ],
             ),
           ),

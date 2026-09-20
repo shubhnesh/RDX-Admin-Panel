@@ -1,231 +1,10 @@
-// import 'package:flutter/material.dart';
-// import 'package:rdx_admin/core/theme/text_styles.dart';
-// import 'package:rdx_admin/core/utils/responsive_size.dart';
-// import 'package:rdx_admin/models/order_model.dart';
-
-// class LiveOrderCard extends StatelessWidget {
-//   final OrderModel order;
-//   final String? actionText;
-//   final ValueChanged<OrderModel>? onAdvance;
-//   final VoidCallback? onTap;
-
-//   const LiveOrderCard({
-//     super.key,
-//     required this.order,
-//     this.actionText,
-//     this.onAdvance,
-//     this.onTap,
-//   });
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       width: double.infinity,
-//       decoration: BoxDecoration(
-//         color: const Color(0xFF151515),
-//         borderRadius: BorderRadius.circular(context.h(10)),
-//         border: Border.all(
-//           color: const Color(0xFF302B2B),
-//           width: 1,
-//         ),
-//         boxShadow: const [
-//           BoxShadow(
-//             color: Color(0x22000000),
-//             blurRadius: 8,
-//             offset: Offset(0, 3),
-//           ),
-//         ],
-//       ),
-//       child: Material(
-//         color: Colors.transparent,
-//         child: InkWell(
-//           borderRadius: BorderRadius.circular(context.h(10)),
-//           onTap: onTap,
-//           child: Padding(
-//             padding: EdgeInsets.fromLTRB(
-//               context.w(14),
-//               context.h(13),
-//               context.w(14),
-//               context.h(13),
-//             ),
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 // ---------------------------------------------------------
-//                 // ORDER ID + TIME
-//                 // ---------------------------------------------------------
-//                 Row(
-//                   crossAxisAlignment: CrossAxisAlignment.center,
-//                   children: [
-//                     Expanded(
-//                       child: Text(
-//                         '#RDX-${order.id}',
-//                         maxLines: 1,
-//                         overflow: TextOverflow.ellipsis,
-//                         style: AppTextStyles.caption(context).copyWith(
-//                           color: const Color(0xFFE0DCDC),
-//                         ),
-//                       ),
-//                     ),
-//                     Icon(
-//                       Icons.schedule_outlined,
-//                       size: context.h(12),
-//                       color: const Color(0xFF777070),
-//                     ),
-//                     SizedBox(width: context.w(5)),
-//                     Text(
-//                       _formatOrderTime(order.createdAt),
-//                       style: AppTextStyles.caption(context).copyWith(
-//                         color: const Color(0xFF888080),
-//                       ),
-//                     ),
-//                   ],
-//                 ),
-
-//                 SizedBox(height: context.h(10)),
-
-//                 // ---------------------------------------------------------
-//                 // ITEMS
-//                 // ---------------------------------------------------------
-//                 Text(
-//                   order.items.isEmpty
-//                       ? 'Order'
-//                       : order.items
-//                           .map(
-//                             (item) => '${item.quantity}x ${item.name}',
-//                           )
-//                           .join(', '),
-//                   maxLines: 2,
-//                   overflow: TextOverflow.ellipsis,
-//                   style: AppTextStyles.caption(context).copyWith(
-//                     color: const Color(0xFFD7D1D1),
-//                   ),
-//                 ),
-
-//                 SizedBox(height: context.h(6)),
-
-//                 // ---------------------------------------------------------
-//                 // CUSTOMER
-//                 // ---------------------------------------------------------
-//                 Text(
-//                   'Customer: ${order.customerName}',
-//                   maxLines: 1,
-//                   overflow: TextOverflow.ellipsis,
-//                   style: AppTextStyles.caption(context).copyWith(
-//                     color: const Color(0xFF858080),
-//                   ),
-//                 ),
-
-//                 SizedBox(height: context.h(12)),
-
-//                 // ---------------------------------------------------------
-//                 // DIVIDER
-//                 // ---------------------------------------------------------
-//                 Container(
-//                   height: 1,
-//                   color: const Color(0xFF292525),
-//                 ),
-
-//                 SizedBox(height: context.h(11)),
-
-//                 // ---------------------------------------------------------
-//                 // ITEMS COUNT + ACTION
-//                 // ---------------------------------------------------------
-//                 Row(
-//                   crossAxisAlignment: CrossAxisAlignment.center,
-//                   children: [
-//                     Container(
-//                       padding: EdgeInsets.symmetric(
-//                         horizontal: context.w(7),
-//                         vertical: context.h(5),
-//                       ),
-//                       decoration: BoxDecoration(
-//                         color: const Color(0xFF252020),
-//                         borderRadius: BorderRadius.circular(
-//                           context.h(5),
-//                         ),
-//                         border: Border.all(
-//                           color: const Color(0xFF302A2A),
-//                         ),
-//                       ),
-//                       child: Text(
-//                         '${order.items.length} '
-//                         '${order.items.length == 1 ? 'Item' : 'Items'}',
-//                         style: AppTextStyles.caption(context).copyWith(
-//                           color: const Color(0xFFA69D9D),
-//                         ),
-//                       ),
-//                     ),
-//                     const Spacer(),
-//                     if (actionText != null && onAdvance != null)
-//                       Material(
-//                         color: Colors.transparent,
-//                         child: InkWell(
-//                           borderRadius: BorderRadius.circular(
-//                             context.h(5),
-//                           ),
-//                           onTap: () => onAdvance!(order),
-//                           child: Container(
-//                             height: context.h(28),
-//                             padding: EdgeInsets.symmetric(
-//                               horizontal: context.w(11),
-//                             ),
-//                             decoration: BoxDecoration(
-//                               color: const Color(0xFF214D9B),
-//                               borderRadius: BorderRadius.circular(
-//                                 context.h(5),
-//                               ),
-//                             ),
-//                             alignment: Alignment.center,
-//                             child: Text(
-//                               actionText!,
-//                               style: AppTextStyles.caption(context).copyWith(
-//                                 color: Colors.white,
-//                               ),
-//                             ),
-//                           ),
-//                         ),
-//                       ),
-//                   ],
-//                 ),
-//               ],
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-
-//   String _formatOrderTime(DateTime dateTime) {
-//     final difference = DateTime.now().difference(dateTime);
-
-//     if (difference.inMinutes < 1) {
-//       return 'now';
-//     }
-
-//     if (difference.inMinutes < 60) {
-//       return '${difference.inMinutes}m';
-//     }
-
-//     if (difference.inHours < 24) {
-//       return '${difference.inHours}h';
-//     }
-
-//     final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
-//     final minute = dateTime.minute.toString().padLeft(2, '0');
-//     final period = dateTime.hour >= 12 ? 'PM' : 'AM';
-
-//     return '$hour:$minute $period';
-//   }
-// }
-
 import 'package:flutter/material.dart';
-
+import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/order_model.dart';
 
-class LiveOrderCard extends StatelessWidget {
+class LiveOrderCard extends StatefulWidget {
   final OrderModel order;
   final String? actionText;
   final ValueChanged<OrderModel>? onAdvance;
@@ -240,25 +19,40 @@ class LiveOrderCard extends StatelessWidget {
   });
 
   @override
+  State<LiveOrderCard> createState() => _LiveOrderCardState();
+}
+
+class _LiveOrderCardState extends State<LiveOrderCard> {
+  bool _itemsExpanded = false;
+  bool _itemsHovering = false;
+
+  OrderModel get order => widget.order;
+  String? get actionText => widget.actionText;
+  ValueChanged<OrderModel>? get onAdvance => widget.onAdvance;
+  VoidCallback? get onTap => widget.onTap;
+
+  @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final primaryTitle = _getPrimaryTitle();
     final primaryIcon = _getPrimaryIcon();
-    final showOrderIdAsSecondary = _hasTableNumber || _hasCustomerName;
+    final isPaid = order.paymentStatus == PaymentStatus.paid;
+    final hasMultipleItems = order.items.length > 1;
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF151515),
+        color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(10)),
         border: Border.all(
-          color: const Color(0xFF302B2B),
+          color: colors.border,
           width: 1,
         ),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x22000000),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 8,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -279,27 +73,26 @@ class LiveOrderCard extends StatelessWidget {
               children: [
                 // ---------------------------------------------------------
                 // PRIMARY ORDER INFORMATION
-                // Table Number -> Customer Name -> Order ID
                 // ---------------------------------------------------------
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                       width: context.w(28),
-                      height: context.h(28),
+                      height: context.w(28), // same scale → 1:1
                       decoration: BoxDecoration(
-                        color: const Color(0xFF252020),
+                        color: colors.surfaceVariant,
                         borderRadius: BorderRadius.circular(
-                          context.h(7),
+                          context.w(7), // keep radius on the same scale
                         ),
                         border: Border.all(
-                          color: const Color(0xFF302A2A),
+                          color: colors.border,
                         ),
                       ),
                       child: Icon(
                         primaryIcon,
-                        size: context.h(15),
-                        color: const Color(0xFFE8E1E1),
+                        size: context.w(15), // icon size on the same scale
+                        color: colors.textPrimary,
                       ),
                     ),
                     SizedBox(width: context.w(9)),
@@ -311,30 +104,21 @@ class LiveOrderCard extends StatelessWidget {
                             primaryTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.caption(context).copyWith(
-                              color: const Color(0xFFE8E1E1),
+                            style:
+                                AppTextStyles.bodySecondary(context).copyWith(
+                              color: colors.textPrimary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          if (showOrderIdAsSecondary) ...[
-                            SizedBox(height: context.h(2)),
-                            Text(
-                              '#RDX-${order.id}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.caption(context).copyWith(
-                                color: const Color(0xFF777070),
-                                fontSize: context.h(10),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
+                    SizedBox(width: context.w(6)),
+                    _orderTypeBadge(context, colors),
                   ],
                 ),
 
-                SizedBox(height: context.h(9)),
+                SizedBox(height: context.h(15)),
 
                 // ---------------------------------------------------------
                 // ORDER DATE + TIME
@@ -343,37 +127,177 @@ class LiveOrderCard extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.calendar_today_outlined,
-                      size: context.h(11),
-                      color: const Color(0xFF777070),
+                      size: context.h(15),
+                      color: colors.textMuted,
                     ),
                     SizedBox(width: context.w(5)),
-                    Text(
-                      _formatOrderDateTime(order.createdAt),
-                      style: AppTextStyles.caption(context).copyWith(
-                        color: const Color(0xFF888080),
+                    Expanded(
+                      child: Text(
+                        _formatOrderDateTime(order.createdAt),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodyTertiary(context).copyWith(
+                          color: colors.textSecondary,
+                        ),
                       ),
                     ),
                   ],
                 ),
 
+                // ---------------------------------------------------------
+                // PHONE NUMBER
+                // ---------------------------------------------------------
+                if (_hasCustomerPhone) ...[
+                  SizedBox(height: context.h(6)),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.call_outlined,
+                        size: context.h(15),
+                        color: colors.textMuted,
+                      ),
+                      SizedBox(width: context.w(5)),
+                      Expanded(
+                        child: Text(
+                          order.customerPhone.trim(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.bodyTertiary(context).copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
                 SizedBox(height: context.h(9)),
 
                 // ---------------------------------------------------------
-                // ITEMS
+                // ITEMS (always column; circular expand button when > 1)
                 // ---------------------------------------------------------
-                Text(
-                  order.items.isEmpty
-                      ? 'Order'
-                      : order.items
-                          .map(
-                            (item) => '${item.quantity}x ${item.name}',
-                          )
-                          .join(', '),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.caption(context).copyWith(
-                    color: const Color(0xFFD7D1D1),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: AnimatedSize(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        alignment: Alignment.topLeft,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (order.items.isEmpty)
+                              Text(
+                                'Order',
+                                style: AppTextStyles.bodySecondary(context)
+                                    .copyWith(
+                                  color: colors.textSecondary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              )
+                            else if (!_itemsExpanded && hasMultipleItems)
+                              // Collapsed: first item + "and more..."
+                              Text(
+                                '${order.items.first.quantity}x '
+                                '${order.items.first.name} and more...',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.bodySecondary(context)
+                                    .copyWith(
+                                  color: colors.textSecondary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              )
+                            else
+                              // Expanded (or only 1 item): full column list
+                              for (final item in order.items)
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom: context.h(3),
+                                  ),
+                                  child: Text(
+                                    '${item.quantity}x ${item.name}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.bodySecondary(context)
+                                        .copyWith(
+                                      color: colors.textSecondary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (hasMultipleItems) ...[
+                      SizedBox(width: context.w(6)),
+                      // Same concept as StatsCollapseButton:
+                      // circular surface → primary on hover, icon flips.
+                      MouseRegion(
+                        onEnter: (_) => setState(() => _itemsHovering = true),
+                        onExit: (_) => setState(() => _itemsHovering = false),
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            setState(() {
+                              _itemsExpanded = !_itemsExpanded;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 160),
+                            curve: Curves.easeOut,
+                            width: context.h(28),
+                            height: context.h(28),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _itemsHovering
+                                  ? AppColors.primary
+                                  : colors.surface,
+                              border: Border.all(
+                                color: _itemsHovering
+                                    ? AppColors.primary
+                                    : colors.border,
+                              ),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                _itemsExpanded
+                                    ? Icons.keyboard_arrow_up_rounded
+                                    : Icons.keyboard_arrow_down_rounded,
+                                size: context.h(18),
+                                color: _itemsHovering
+                                    ? AppColors.surface
+                                    : AppColors.lightTextPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+
+                SizedBox(height: context.h(10)),
+
+                // ---------------------------------------------------------
+                // TOTAL + PAYMENT STATUS
+                // ---------------------------------------------------------
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '₹${_orderTotal.toStringAsFixed(0)}',
+                      style: AppTextStyles.section(context).copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    _paymentStatusBadge(context, isPaid: isPaid),
+                  ],
                 ),
 
                 SizedBox(height: context.h(12)),
@@ -383,7 +307,7 @@ class LiveOrderCard extends StatelessWidget {
                 // ---------------------------------------------------------
                 Container(
                   height: 1,
-                  color: const Color(0xFF292525),
+                  color: colors.divider,
                 ),
 
                 SizedBox(height: context.h(11)),
@@ -400,19 +324,19 @@ class LiveOrderCard extends StatelessWidget {
                         vertical: context.h(5),
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF252020),
+                        color: colors.surfaceVariant,
                         borderRadius: BorderRadius.circular(
                           context.h(5),
                         ),
                         border: Border.all(
-                          color: const Color(0xFF302A2A),
+                          color: colors.border,
                         ),
                       ),
                       child: Text(
                         '${order.items.length} '
                         '${order.items.length == 1 ? 'Item' : 'Items'}',
                         style: AppTextStyles.caption(context).copyWith(
-                          color: const Color(0xFFA69D9D),
+                          color: colors.textSecondary,
                         ),
                       ),
                     ),
@@ -431,7 +355,7 @@ class LiveOrderCard extends StatelessWidget {
                               horizontal: context.w(11),
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF214D9B),
+                              color: AppColors.primary,
                               borderRadius: BorderRadius.circular(
                                 context.h(5),
                               ),
@@ -457,6 +381,71 @@ class LiveOrderCard extends StatelessWidget {
   }
 
   // -------------------------------------------------------------------------
+  // ORDER TOTAL
+  // -------------------------------------------------------------------------
+
+  double get _orderTotal => order.items.fold<double>(
+        0,
+        (sum, item) => sum + (item.price * item.quantity),
+      );
+
+  // -------------------------------------------------------------------------
+  // ORDER TYPE BADGE
+  // -------------------------------------------------------------------------
+
+  Widget _orderTypeBadge(BuildContext context, AppColorScheme colors) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: context.w(7),
+        vertical: context.h(4),
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(context.h(20)),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Text(
+        _formatEnumLabel(order.orderType.name),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTextStyles.caption(context).copyWith(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // PAYMENT STATUS BADGE
+  // -------------------------------------------------------------------------
+
+  Widget _paymentStatusBadge(BuildContext context, {required bool isPaid}) {
+    final color = isPaid ? const Color(0xFF20B47A) : const Color(0xFFE9A719);
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: context.w(7),
+        vertical: context.h(4),
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(context.h(20)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        isPaid ? 'Paid' : 'Unpaid',
+        style: AppTextStyles.caption(context).copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // PRIMARY INFORMATION
   // -------------------------------------------------------------------------
 
@@ -467,7 +456,12 @@ class LiveOrderCard extends StatelessWidget {
 
   bool get _hasCustomerName {
     final customerName = order.customerName;
-    return customerName != null && customerName.trim().isNotEmpty;
+    return customerName.trim().isNotEmpty;
+  }
+
+  bool get _hasCustomerPhone {
+    final phone = order.customerPhone;
+    return phone.trim().isNotEmpty;
   }
 
   String _getPrimaryTitle() {
@@ -527,5 +521,28 @@ class LiveOrderCard extends StatelessWidget {
     ];
 
     return months[month - 1];
+  }
+
+  // -------------------------------------------------------------------------
+  // ENUM LABEL FORMATTING (e.g. dineIn -> "Dine In")
+  // -------------------------------------------------------------------------
+
+  String _formatEnumLabel(String raw) {
+    if (raw.isEmpty) return raw;
+
+    final buffer = StringBuffer();
+
+    for (var i = 0; i < raw.length; i++) {
+      final char = raw[i];
+      final isUpper = char == char.toUpperCase() && char != char.toLowerCase();
+
+      if (i > 0 && isUpper) {
+        buffer.write(' ');
+      }
+
+      buffer.write(i == 0 ? char.toUpperCase() : char);
+    }
+
+    return buffer.toString();
   }
 }

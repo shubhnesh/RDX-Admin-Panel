@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
-import 'package:rdx_admin/widgets/dialogs/taxonomy_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -15,7 +15,7 @@ import '../../services/unit_service.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/resuable_options/rdx_text_field.dart';
 import '../../widgets/resuable_options/rdx_dropdown.dart';
-import 'manage_inventory_taxonomy_screen.dart';
+import 'inventory_manage_category_screen.dart';
 
 /// Sentinel value placed as the first entry in the category dropdown.
 /// Selecting it opens [CreateInventoryCategoryDialog] instead of setting a category.
@@ -163,8 +163,8 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     }
   }
 
-   Future<void> _openCreateCategoryDialog() async {
-    final created = await TaxonomyEntryDialog.show<InventoryCategoryModel>(
+  Future<void> _openCreateCategoryDialog() async {
+    final created = await CategoryEntryDialog.show<InventoryCategoryModel>(
       context,
       title: 'Create Category',
       editTitle: 'Edit Category',
@@ -180,7 +180,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
   }
 
   Future<void> _openCreateUnitDialog() async {
-    final created = await TaxonomyEntryDialog.show<UnitModel>(
+    final created = await CategoryEntryDialog.show<UnitModel>(
       context,
       title: 'Create Unit of Measurement',
       editTitle: 'Edit Unit',
@@ -195,10 +195,10 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     });
   }
 
-  Future<void> _openManageTaxonomy() async {
+  Future<void> _openManageCategory() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const ManageInventoryTaxonomyScreen(),
+        builder: (_) => const InventoryManageCategoryScreen(),
       ),
     );
     if (!mounted) return;
@@ -394,14 +394,14 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
       headerTrailing: isEdit
           ? null
           : TextButton.icon(
-              onPressed: _openManageTaxonomy,
+              onPressed: _openManageCategory,
               icon: Icon(
                 Icons.add_rounded,
                 size: context.h(18),
                 color: AppColors.primary,
               ),
               label: Text(
-                'Create & Manage Taxonomy',
+                'Create & Manage Category',
                 style: AppTextStyles.label(context)
                     .copyWith(color: AppColors.primary),
               ),

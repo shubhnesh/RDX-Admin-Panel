@@ -8,7 +8,7 @@ import '../models/preparation_model.dart';
 /// form is deferred — the "+ Add preparation" dialog on the form does NOT
 /// call [createPreparation] itself. A newly typed preparation is only
 /// persisted once the surrounding menu item form is actually submitted.
-/// [updatePreparation]/[deletePreparation] are used by the manage-taxonomy
+/// [updatePreparation]/[deletePreparation] are used by the manage-category
 /// screen, where edits/deletes are immediate.
 class PreparationService {
   PreparationService({FirebaseFirestore? firestore})

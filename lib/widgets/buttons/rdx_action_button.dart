@@ -54,7 +54,7 @@ class RdxActionButton extends StatelessWidget {
 
   const RdxActionButton.save({
     super.key,
-    this.label = 'Save',
+    this.label = 'Done',
     required this.onPressed,
     this.isLoading = false,
     this.height,

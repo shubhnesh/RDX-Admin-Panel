@@ -6,7 +6,7 @@ import 'package:rdx_admin/models/inventory_category_model.dart';
 import 'package:rdx_admin/models/unit_model.dart';
 import 'package:rdx_admin/services/inventory_category_service.dart';
 import 'package:rdx_admin/services/unit_service.dart';
-import 'package:rdx_admin/widgets/dialogs/taxonomy_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/empty_state.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/loading_indicator.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_delete_dialog.dart';
@@ -16,16 +16,16 @@ import 'package:rdx_admin/widgets/resuable_options/rdx_search_bar.dart';
 
 enum _Section { category, unit }
 
-class ManageInventoryTaxonomyScreen extends StatefulWidget {
-  const ManageInventoryTaxonomyScreen({super.key});
+class InventoryManageCategoryScreen extends StatefulWidget {
+  const InventoryManageCategoryScreen({super.key});
 
   @override
-  State<ManageInventoryTaxonomyScreen> createState() =>
-      _ManageInventoryTaxonomyScreenState();
+  State<InventoryManageCategoryScreen> createState() =>
+      _InventoryManageCategoryScreenState();
 }
 
-class _ManageInventoryTaxonomyScreenState
-    extends State<ManageInventoryTaxonomyScreen> {
+class _InventoryManageCategoryScreenState
+    extends State<InventoryManageCategoryScreen> {
   final _categoryService = InventoryCategoryService();
   final _unitService = UnitService();
 
@@ -37,7 +37,7 @@ class _ManageInventoryTaxonomyScreenState
   String? _error;
 
   /// Filters the scrollable tag row on top (searches the section tags,
-  /// e.g. "Categories" / "Units of Measurement" — and, once a taxonomy
+  /// e.g. "Categories" / "Units of Measurement" — and, once a category
   /// has many categories, each category's own tag).
   String _tagQuery = '';
 
@@ -89,7 +89,7 @@ class _ManageInventoryTaxonomyScreenState
   // ── Category actions ──────────────────────────────────────────────
 
   Future<void> _createCategory() async {
-    final created = await TaxonomyEntryDialog.show<InventoryCategoryModel>(
+    final created = await CategoryEntryDialog.show<InventoryCategoryModel>(
       context,
       title: 'Create Category',
       editTitle: 'Edit Category',
@@ -102,7 +102,7 @@ class _ManageInventoryTaxonomyScreenState
   }
 
   Future<void> _editCategory(InventoryCategoryModel category) async {
-    final updated = await TaxonomyEntryDialog.show<InventoryCategoryModel>(
+    final updated = await CategoryEntryDialog.show<InventoryCategoryModel>(
       context,
       title: 'Create Category',
       editTitle: 'Edit Category',
@@ -153,7 +153,7 @@ class _ManageInventoryTaxonomyScreenState
   // ── Unit actions ──────────────────────────────────────────────────
 
   Future<void> _createUnit() async {
-    final created = await TaxonomyEntryDialog.show<UnitModel>(
+    final created = await CategoryEntryDialog.show<UnitModel>(
       context,
       title: 'Create Unit of Measurement',
       editTitle: 'Edit Unit',
@@ -166,7 +166,7 @@ class _ManageInventoryTaxonomyScreenState
   }
 
   Future<void> _editUnit(UnitModel unit) async {
-    final updated = await TaxonomyEntryDialog.show<UnitModel>(
+    final updated = await CategoryEntryDialog.show<UnitModel>(
       context,
       title: 'Create Unit of Measurement',
       editTitle: 'Edit Unit',
@@ -254,7 +254,7 @@ class _ManageInventoryTaxonomyScreenState
       body: Column(
         children: [
           const RdxHeader(
-            title: 'Manage Inventory Taxonomy',
+            title: 'Manage Inventory Category',
             showBackButton: true,
           ),
           SizedBox(height: context.h(isNarrow ? 10 : 14)),
@@ -418,7 +418,8 @@ class _ManageInventoryTaxonomyScreenState
 
     return TextButton.icon(
       onPressed: onTap,
-      icon: Icon(Icons.add_rounded, size: context.h(18), color: AppColors.primary),
+      icon: Icon(Icons.add_rounded,
+          size: context.h(18), color: AppColors.primary),
       label: Text(
         label,
         style: AppTextStyles.label(context).copyWith(color: AppColors.primary),
@@ -449,7 +450,8 @@ class _ManageInventoryTaxonomyScreenState
           )
         : RdxTable(
             columns: [
-              RdxTableColumn(title: 'Category', minWidth: context.w(180), flex: 3),
+              RdxTableColumn(
+                  title: 'Category', minWidth: context.w(180), flex: 3),
               RdxTableColumn(
                 title: 'Actions',
                 minWidth: context.w(90),
@@ -492,7 +494,9 @@ class _ManageInventoryTaxonomyScreenState
         : RdxTable(
             columns: [
               RdxTableColumn(
-                  title: 'Unit of Measurement', minWidth: context.w(180), flex: 3),
+                  title: 'Unit of Measurement',
+                  minWidth: context.w(180),
+                  flex: 3),
               RdxTableColumn(
                 title: 'Actions',
                 minWidth: context.w(90),

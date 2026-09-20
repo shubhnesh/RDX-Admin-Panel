@@ -24,7 +24,7 @@ class MenuProvider extends ChangeNotifier {
   List<MenuItemModel> get items => List.unmodifiable(_items);
 
   /// Categories as fetched from the `menu_categories` collection, each
-  /// carrying its own (optional) subcategories. No hardcoded taxonomy.
+  /// carrying its own (optional) subcategories. No hardcoded category.
   List<CategoryModel> get categoryList => List.unmodifiable(_categoryList);
 
   List<String> get categories =>

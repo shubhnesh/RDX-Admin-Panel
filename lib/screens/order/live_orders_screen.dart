@@ -1,10 +1,9 @@
-// Hello
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/screens/order/bill_settlement_screen.dart';
 import 'package:rdx_admin/screens/order/widgets/live_order_card.dart';
+import 'package:rdx_admin/widgets/buttons/stats_collapse_button.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
@@ -25,6 +24,10 @@ class LiveOrdersScreen extends ConsumerStatefulWidget {
 
 class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   String _selectedStatus = 'All';
+
+  /// Whether the stat card row is hidden, giving the order board below more
+  /// vertical room. Toggled by [StatsCollapseButton].
+  bool _statsCollapsed = false;
 
   @override
   void initState() {
@@ -173,18 +176,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       backgroundColor: colors.background,
       body: SafeArea(
         child: Padding(
-          padding: Responsive.pagePadding(
-            context,
-            top: context.h(14),
-            bottom: context.h(0),
-          ),
+          padding: context.defaultScreenPadding(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ----------------------------------------------------------------
-              // HEADER
-              // ----------------------------------------------------------------
-
+              // ── Header row: title/subtitle + New Order ─────────────────
               Builder(
                 builder: (context) {
                   final narrow = MediaQuery.sizeOf(context).width < 900;
@@ -206,37 +202,17 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                     ],
                   );
 
-                  final tabs = RdxCategoryTabs(
-                    expand: false,
-                    labels: _statusLabels,
-                    allLabel: 'All',
-                    selectedLabel: _selectedStatus,
-                    onSelected: _onStatusSelected,
-                  );
-
                   if (narrow) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: titleBlock,
-                            ),
-                            SizedBox(width: context.w(12)),
-                            RdxActionButton(
-                              label: 'New Order',
-                              leadingIcon: Icons.add,
-                              isPrimary: true,
-                              onPressed: _openPlaceOrder,
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: context.h(12)),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: tabs,
+                        Expanded(child: titleBlock),
+                        SizedBox(width: context.w(12)),
+                        RdxActionButton(
+                          label: 'New Order',
+                          leadingIcon: Icons.add,
+                          isPrimary: true,
+                          onPressed: _openPlaceOrder,
                         ),
                       ],
                     );
@@ -245,12 +221,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: titleBlock,
-                      ),
-                      SizedBox(width: context.w(18)),
-                      tabs,
-                      SizedBox(width: context.w(18)),
+                      Expanded(child: titleBlock),
+                      SizedBox(width: context.w(12)),
                       RdxActionButton(
                         label: 'New Order',
                         leadingIcon: Icons.add,
@@ -262,24 +234,53 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 },
               ),
 
-              SizedBox(height: context.h(16)),
+              SizedBox(height: context.h(20)),
 
-              // ----------------------------------------------------------------
-              // SUMMARY STAT CARDS
-              // ----------------------------------------------------------------
+              // ── Stats collapse toggle ──────────────────────────────────
+              // Sits above the stat row's left edge; collapsing hides the
+              // row entirely so the order board below gets more vertical space.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: StatsCollapseButton(
+                  collapsed: _statsCollapsed,
+                  onPressed: () => setState(
+                    () => _statsCollapsed = !_statsCollapsed,
+                  ),
+                ),
+              ),
+              SizedBox(height: context.h(8)),
 
-              _buildSummaryStats(
-                provider: provider,
-                totalOrders: totalOrders,
-                pendingPaymentCount: pendingPaymentOrders.length,
+              // ── Stats ──────────────────────────────────────────────────
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                alignment: Alignment.topCenter,
+                child: _statsCollapsed
+                    ? const SizedBox(width: double.infinity)
+                    : _buildSummaryStats(
+                        provider: provider,
+                        totalOrders: totalOrders,
+                        pendingPaymentCount: pendingPaymentOrders.length,
+                      ),
               ),
 
               SizedBox(height: context.h(20)),
 
-              // ----------------------------------------------------------------
-              // ORDERS
-              // ----------------------------------------------------------------
+              // ── Status tabs ────────────────────────────────────────────
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: RdxCategoryTabs(
+                  expand: false,
+                  labels: _statusLabels,
+                  allLabel: 'All',
+                  selectedLabel: _selectedStatus,
+                  onSelected: _onStatusSelected,
+                ),
+              ),
 
+              SizedBox(height: context.h(16)),
+
+              // ── Orders board ───────────────────────────────────────────
               Expanded(
                 child: provider.isLoading
                     ? const LoadingIndicator()
@@ -320,28 +321,28 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             StatCard(
               label: 'New Orders',
               value: '${provider.pending.length}',
-              icon: Icons.fiber_new_outlined,
-              accentColor: const Color(0xFFE51B3E),
+              icon: Icons.star_outline_rounded,
+              accentColor: const Color(0xFF5AC8FA), // light blue
               minHeight: isNarrow ? context.h(62) : context.h(72),
             ),
             StatCard(
               label: 'Preparing',
               value: '${provider.preparing.length}',
-              icon: Icons.restaurant_outlined,
+              icon: Icons.access_time_rounded, // or Icons.schedule_outlined
               accentColor: const Color(0xFFE9A719),
               minHeight: isNarrow ? context.h(62) : context.h(72),
             ),
             StatCard(
               label: 'Ready',
               value: '${provider.ready.length}',
-              icon: Icons.check_circle_outline,
+              icon: Icons.check_rounded, // or Icons.check
               accentColor: const Color(0xFF20B47A),
               minHeight: isNarrow ? context.h(62) : context.h(72),
             ),
             StatCard(
               label: 'Pending Payment',
               value: '$pendingPaymentCount',
-              icon: Icons.pending_actions_outlined,
+              icon: Icons.payments_outlined, // cash / payments style
               accentColor: const Color(0xFFE9A719),
               minHeight: isNarrow ? context.h(62) : context.h(72),
             ),
@@ -356,15 +357,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
           return Row(
             children: [
-              // Expanded(child: cards[0]),
-              // SizedBox(width: spacing),
-              // Expanded(child: cards[1]),
-              // SizedBox(width: spacing),
-              // Expanded(child: cards[2]),
-              // SizedBox(width: spacing),
-              // Expanded(child: cards[3]),
-              // SizedBox(width: spacing),
-              // Expanded(child: cards[4]),
               for (int index = 0; index < cards.length; index++) ...[
                 Expanded(
                   child: cards[index],
@@ -464,7 +456,10 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
   Widget _buildSingleSectionGrid(_SectionData data) {
     final isEmpty = data.orders.isEmpty;
-    final gap = context.w(12);
+    // Same gap as _buildColumnsBoard (the "All" view) so the card width
+    // comes out pixel-identical between the two — otherwise switching
+    // tabs visibly resized the cards.
+    final gap = context.w(16);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -482,9 +477,12 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               _sectionHeader(data),
               SizedBox(height: context.h(12)),
               if (isEmpty)
-                _buildEmptySection(
-                  emptyIcon: data.emptyIcon,
-                  emptyText: data.emptyText,
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildEmptySection(
+                    emptyIcon: data.emptyIcon,
+                    emptyText: data.emptyText,
+                  ),
                 )
               else
                 Wrap(
@@ -677,7 +675,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       sections.add(
         _SectionData(
           title: 'NEW ORDERS',
-          color: const Color(0xFFE51B3E),
+          color: const Color(0xFF5AC8FA),
           orders: provider.pending,
           actionText: 'Start Preparing',
           onAdvance: provider.advanceStatus,
@@ -727,7 +725,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       sections.add(
         _SectionData(
           title: 'DELIVERED',
-          color: const Color(0xFF31568E),
+          color: const Color(0xFF20B47A),
           orders: deliveredPaidOrders,
           actionText: null,
           onAdvance: null,

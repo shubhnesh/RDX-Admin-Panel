@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:rdx_admin/widgets/dialogs/taxonomy_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -17,7 +17,7 @@ import '../../widgets/reusable_widgets/rdx_header.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 
-enum _TaxonomySection { category, preparation, regionality, tag }
+enum _CategorySection { category, preparation, regionality, tag }
 
 /// "View all" screen for managing Category, Preparation Style,
 /// Regionality, and Tag entries in one place. Editing reuses the same
@@ -26,25 +26,26 @@ enum _TaxonomySection { category, preparation, regionality, tag }
 /// Every create/edit/delete on THIS screen is immediate — unlike the
 /// dropdown "+" on [CreateMenuScreen], where Regionality and Preparation
 /// are deferred until the menu item form itself is saved. Here, all four
-/// taxonomy types are standalone entities managed independently of any
+/// category types are standalone entities managed independently of any
 /// menu item, so they persist to Firestore right away.
 ///
 /// On narrow screens the data is shown as stacked cards (one per row)
 /// instead of a wide table so nothing overflows or breaks the layout.
-class ManageTaxonomyScreen extends StatefulWidget {
-  const ManageTaxonomyScreen({super.key});
+class MenuManageCategoryScreen extends StatefulWidget {
+  const MenuManageCategoryScreen({super.key});
 
   @override
-  State<ManageTaxonomyScreen> createState() => _ManageTaxonomyScreenState();
+  State<MenuManageCategoryScreen> createState() =>
+      _MenuManageCategoryScreenState();
 }
 
-class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
+class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   final _categoryService = CategoryService();
   final _preparationService = PreparationService();
   final _regionalityService = RegionalityService();
   final _tagService = TagService();
 
-  _TaxonomySection _section = _TaxonomySection.category;
+  _CategorySection _section = _CategorySection.category;
   bool _loading = true;
   String? _error;
 
@@ -93,7 +94,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
   // ─── Category actions ─────────────────────────────────────────────
 
   Future<void> _createCategory() async {
-    final created = await TaxonomyEntryDialog.show<CategoryModel>(
+    final created = await CategoryEntryDialog.show<CategoryModel>(
       context,
       title: 'Create Category',
       editTitle: 'Edit Category',
@@ -124,7 +125,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
   }
 
   Future<void> _editCategory(CategoryModel category) async {
-    final updated = await TaxonomyEntryDialog.show<CategoryModel>(
+    final updated = await CategoryEntryDialog.show<CategoryModel>(
       context,
       title: 'Create Category',
       editTitle: 'Edit Category',
@@ -204,7 +205,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
   // ─── Preparation actions ──────────────────────────────────────────
 
   Future<void> _createPreparation() async {
-    final created = await TaxonomyEntryDialog.show<PreparationModel>(
+    final created = await CategoryEntryDialog.show<PreparationModel>(
       context,
       title: 'Add Preparation Style',
       nameLabel: 'Preparation Style',
@@ -218,7 +219,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
   }
 
   Future<void> _editPreparation(PreparationModel preparation) async {
-    final updated = await TaxonomyEntryDialog.show<PreparationModel>(
+    final updated = await CategoryEntryDialog.show<PreparationModel>(
       context,
       title: 'Add Preparation Style',
       editTitle: 'Edit Preparation Style',
@@ -278,7 +279,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
   // ─── Regionality actions ────────────────────────────────────────────
 
   Future<void> _createRegionality() async {
-    final created = await TaxonomyEntryDialog.show<RegionalityModel>(
+    final created = await CategoryEntryDialog.show<RegionalityModel>(
       context,
       title: 'Add Regionality',
       nameLabel: 'Regionality',
@@ -292,7 +293,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
   }
 
   Future<void> _editRegionality(RegionalityModel regionality) async {
-    final updated = await TaxonomyEntryDialog.show<RegionalityModel>(
+    final updated = await CategoryEntryDialog.show<RegionalityModel>(
       context,
       title: 'Add Regionality',
       editTitle: 'Edit Regionality',
@@ -357,7 +358,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
       );
       return;
     }
-    final created = await TaxonomyEntryDialog.show<TagModel>(
+    final created = await CategoryEntryDialog.show<TagModel>(
       context,
       title: 'Create Tag',
       nameLabel: 'Tag Name',
@@ -371,7 +372,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
   }
 
   Future<void> _editTag(TagModel tag) async {
-    final updated = await TaxonomyEntryDialog.show<TagModel>(
+    final updated = await CategoryEntryDialog.show<TagModel>(
       context,
       title: 'Create Tag',
       editTitle: 'Edit Tag',
@@ -431,7 +432,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
       body: Column(
         children: [
           const RdxHeader(
-            title: 'Manage Taxonomy',
+            title: 'Manage Category',
             showBackButton: true,
           ),
           SizedBox(height: context.h(isNarrow ? 10 : 14)),
@@ -473,11 +474,11 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
   }
 
   Widget _sectionTabs(BuildContext context, AppColorScheme colors) {
-    final entries = <_TaxonomySection, String>{
-      _TaxonomySection.category: 'Categories',
-      _TaxonomySection.preparation: 'Preparation Styles',
-      _TaxonomySection.regionality: 'Regionalities',
-      _TaxonomySection.tag: 'Tags',
+    final entries = <_CategorySection, String>{
+      _CategorySection.category: 'Categories',
+      _CategorySection.preparation: 'Preparation Styles',
+      _CategorySection.regionality: 'Regionalities',
+      _CategorySection.tag: 'Tags',
     };
 
     return SingleChildScrollView(
@@ -496,7 +497,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
   Widget _sectionTab(
     BuildContext context,
     AppColorScheme colors,
-    _TaxonomySection section,
+    _CategorySection section,
     String label,
   ) {
     final selected = _section == section;
@@ -527,11 +528,13 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
 
   Widget _currentAddButton(BuildContext context) {
     final (String label, VoidCallback onTap) = switch (_section) {
-      _TaxonomySection.category => ('Add category', _createCategory),
-      _TaxonomySection.preparation =>
-        ('Add preparation style', _createPreparation),
-      _TaxonomySection.regionality => ('Add regionality', _createRegionality),
-      _TaxonomySection.tag => ('Add tag', _createTag),
+      _CategorySection.category => ('Add category', _createCategory),
+      _CategorySection.preparation => (
+          'Add preparation style',
+          _createPreparation
+        ),
+      _CategorySection.regionality => ('Add regionality', _createRegionality),
+      _CategorySection.tag => ('Add tag', _createTag),
     };
 
     return TextButton.icon(
@@ -554,13 +557,13 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
     bool isNarrow,
   ) {
     switch (_section) {
-      case _TaxonomySection.category:
+      case _CategorySection.category:
         return _categorySection(context, colors, isNarrow);
-      case _TaxonomySection.preparation:
+      case _CategorySection.preparation:
         return _preparationSection(context, colors, isNarrow);
-      case _TaxonomySection.regionality:
+      case _CategorySection.regionality:
         return _regionalitySection(context, colors, isNarrow);
-      case _TaxonomySection.tag:
+      case _CategorySection.tag:
         return _tagSection(context, colors, isNarrow);
     }
   }
@@ -583,15 +586,30 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
     final isMobile = Responsive.isMobile(context);
     final isNarrow = Responsive.isNarrow(context);
 
-    final categoryMin = isMobile ? 140.0 : isNarrow ? 160.0 : 180.0;
-    final subcategoriesMin = isMobile ? 150.0 : isNarrow ? 170.0 : 200.0;
-    final actionsMin = isMobile ? 80.0 : isNarrow ? 85.0 : 90.0;
+    final categoryMin = isMobile
+        ? 140.0
+        : isNarrow
+            ? 160.0
+            : 180.0;
+    final subcategoriesMin = isMobile
+        ? 150.0
+        : isNarrow
+            ? 170.0
+            : 200.0;
+    final actionsMin = isMobile
+        ? 80.0
+        : isNarrow
+            ? 85.0
+            : 90.0;
 
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Category', minWidth: context.w(categoryMin), flex: 2),
         RdxTableColumn(
-            title: 'Subcategories', minWidth: context.w(subcategoriesMin), flex: 3),
+            title: 'Category', minWidth: context.w(categoryMin), flex: 2),
+        RdxTableColumn(
+            title: 'Subcategories',
+            minWidth: context.w(subcategoriesMin),
+            flex: 3),
         RdxTableColumn(
           title: 'Actions',
           minWidth: context.w(actionsMin),
@@ -628,7 +646,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
             ? 'No subcategories'
             : category.subcategories.map((s) => s.name).join(', ');
 
-        return _taxonomyCard(
+        return _categoryCard(
           context: context,
           colors: colors,
           title: category.name,
@@ -658,12 +676,21 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
     final isMobile = Responsive.isMobile(context);
     final isNarrow = Responsive.isNarrow(context);
 
-    final nameMin = isMobile ? 160.0 : isNarrow ? 190.0 : 220.0;
-    final actionsMin = isMobile ? 80.0 : isNarrow ? 85.0 : 90.0;
+    final nameMin = isMobile
+        ? 160.0
+        : isNarrow
+            ? 190.0
+            : 220.0;
+    final actionsMin = isMobile
+        ? 80.0
+        : isNarrow
+            ? 85.0
+            : 90.0;
 
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Preparation Style', minWidth: context.w(nameMin), flex: 3),
+        RdxTableColumn(
+            title: 'Preparation Style', minWidth: context.w(nameMin), flex: 3),
         RdxTableColumn(
           title: 'Actions',
           minWidth: context.w(actionsMin),
@@ -689,7 +716,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
       separatorBuilder: (_, __) => SizedBox(height: context.h(10)),
       itemBuilder: (context, index) {
         final preparation = _preparations[index];
-        return _taxonomyCard(
+        return _categoryCard(
           context: context,
           colors: colors,
           title: preparation.name,
@@ -718,12 +745,21 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
     final isMobile = Responsive.isMobile(context);
     final isNarrow = Responsive.isNarrow(context);
 
-    final nameMin = isMobile ? 160.0 : isNarrow ? 190.0 : 220.0;
-    final actionsMin = isMobile ? 80.0 : isNarrow ? 85.0 : 90.0;
+    final nameMin = isMobile
+        ? 160.0
+        : isNarrow
+            ? 190.0
+            : 220.0;
+    final actionsMin = isMobile
+        ? 80.0
+        : isNarrow
+            ? 85.0
+            : 90.0;
 
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Regionality', minWidth: context.w(nameMin), flex: 3),
+        RdxTableColumn(
+            title: 'Regionality', minWidth: context.w(nameMin), flex: 3),
         RdxTableColumn(
           title: 'Actions',
           minWidth: context.w(actionsMin),
@@ -749,7 +785,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
       separatorBuilder: (_, __) => SizedBox(height: context.h(10)),
       itemBuilder: (context, index) {
         final regionality = _regionalities[index];
-        return _taxonomyCard(
+        return _categoryCard(
           context: context,
           colors: colors,
           title: regionality.name,
@@ -772,13 +808,13 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
       children: [
         // Helper text only on wider screens (add button already lives in the tabs row)
         if (!isNarrow)
-        Expanded(
-          child: _tags.isEmpty
-              ? const EmptyState(message: 'No custom tags yet.')
-              : isNarrow
-                  ? _tagCards(context, colors)
-                  : _tagTable(context, colors),
-        ),
+          Expanded(
+            child: _tags.isEmpty
+                ? const EmptyState(message: 'No custom tags yet.')
+                : isNarrow
+                    ? _tagCards(context, colors)
+                    : _tagTable(context, colors),
+          ),
       ],
     );
   }
@@ -787,8 +823,16 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
     final isMobile = Responsive.isMobile(context);
     final isNarrow = Responsive.isNarrow(context);
 
-    final tagMin = isMobile ? 150.0 : isNarrow ? 170.0 : 200.0;
-    final actionsMin = isMobile ? 80.0 : isNarrow ? 85.0 : 90.0;
+    final tagMin = isMobile
+        ? 150.0
+        : isNarrow
+            ? 170.0
+            : 200.0;
+    final actionsMin = isMobile
+        ? 80.0
+        : isNarrow
+            ? 85.0
+            : 90.0;
 
     return RdxTable(
       columns: [
@@ -818,7 +862,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
       separatorBuilder: (_, __) => SizedBox(height: context.h(10)),
       itemBuilder: (context, index) {
         final tag = _tags[index];
-        return _taxonomyCard(
+        return _categoryCard(
           context: context,
           colors: colors,
           title: tag.name,
@@ -831,7 +875,7 @@ class _ManageTaxonomyScreenState extends State<ManageTaxonomyScreen> {
 
   // ─── Shared mobile card ─────────────────────────────────────────────
 
-  Widget _taxonomyCard({
+  Widget _categoryCard({
     required BuildContext context,
     required AppColorScheme colors,
     required String title,

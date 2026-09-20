@@ -6,7 +6,7 @@ import '../models/tag_model.dart';
 ///
 /// Unlike [PreparationService]/[RegionalityService], a custom tag is
 /// persisted immediately when created — tags are managed as their own
-/// pool (editable/deletable from the manage-taxonomy screen) independent
+/// pool (editable/deletable from the manage-category screen) independent
 /// of any single menu item, the same way categories are.
 class TagService {
   TagService({FirebaseFirestore? firestore})

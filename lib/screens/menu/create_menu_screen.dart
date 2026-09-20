@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
+import 'package:rdx_admin/screens/menu/menu_manage_category_screen.dart';
 import 'package:rdx_admin/screens/menu/widgets/menu_item_card.dart';
-import 'package:rdx_admin/widgets/dialogs/taxonomy_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/category_model.dart';
@@ -20,7 +21,6 @@ import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/resuable_options/rdx_dropdown.dart';
 import '../../widgets/resuable_options/rdx_text_field.dart';
 import '../../widgets/buttons/rdx_toggle_button.dart';
-import 'manage_taxonomy_screen.dart';
 
 /// Sentinel value placed as the first entry in the category dropdown.
 /// Selecting it opens [CreateCategoryDialog] instead of setting a category.
@@ -144,111 +144,111 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     }
   }
 
- Future<void> _openCreateCategoryDialog() async {
-  final created = await TaxonomyEntryDialog.show<CategoryModel>(
-    context,
-    title: 'Create Category',
-    editTitle: 'Edit Category',
-    nameLabel: 'Category Name *',
-    nameHint: 'e.g. Beverages',
-    initialSubItems: const [],
-    maxSubItems: CategoryService.maxSubcategories,
-    subItemsLabel:
-        'Subcategories (optional, up to ${CategoryService.maxSubcategories})',
-    subItemHintBuilder: (i) => 'Subcategory ${i + 1}',
-    onSave: (name, subNames) async {
-      final id = await _categoryService.createCategory(
-        name: name,
-        subcategoryNames: subNames,
-      );
-      return CategoryModel(
-        id: id,
-        name: name,
-        subcategories: [
-          for (final subName in subNames)
-            SubcategoryModel(id: subName, name: subName),
-        ],
-      );
-    },
-  );
-  if (created == null || !mounted) return;
-  setState(() {
-    _categories = [..._categories, created];
-    _primaryCategory = created.id;
-    _subcategory = null;
-  });
-}
-
-Future<void> _openCreateRegionalityDialog() async {
-  final enteredName = await TaxonomyEntryDialog.show<String>(
-    context,
-    title: 'Add Regionality',
-    nameLabel: 'Regionality',
-    nameHint: 'e.g. Punjabi',
-    description: 'e.g. Punjabi, Indo-Chinese, South Indian. Saved along '
-        'with this item once you submit the form.',
-    initialName: _pendingRegionalityName,
-    // Local-only: no service call here, the menu item form persists it
-    // once the item itself is saved.
-    onSave: (name, _) async => name,
-  );
-  if (enteredName == null || enteredName.trim().isEmpty || !mounted) return;
-
-  setState(() {
-    _pendingRegionalityName = enteredName.trim();
-    _regionality = _kPendingRegionalityId;
-  });
-}
-
-Future<void> _openCreatePreparationDialog() async {
-  final enteredName = await TaxonomyEntryDialog.show<String>(
-    context,
-    title: 'Add Preparation Style',
-    editTitle: 'Edit Preparation Style',
-    nameLabel: 'Preparation Style',
-    nameHint: 'e.g. Tandoori',
-    description: 'e.g. Tandoori, Gravy, Steam. Saved along with this '
-        'item once you submit the form.',
-    initialName: _pendingPreparationName,
-    onSave: (name, _) async => name,
-  );
-  if (enteredName == null || enteredName.trim().isEmpty || !mounted) return;
-
-  setState(() {
-    _pendingPreparationName = enteredName.trim();
-    _preparation = _kPendingPreparationId;
-  });
-}
-
-Future<void> _openCreateTagDialog() async {
-  if (_customTags.length >= TagService.maxCustomTags) {
-    setState(
-      () => _error =
-          'You can only create up to ${TagService.maxCustomTags} custom tags.',
+  Future<void> _openCreateCategoryDialog() async {
+    final created = await CategoryEntryDialog.show<CategoryModel>(
+      context,
+      title: 'Create Category',
+      editTitle: 'Edit Category',
+      nameLabel: 'Category Name *',
+      nameHint: 'e.g. Beverages',
+      initialSubItems: const [],
+      maxSubItems: CategoryService.maxSubcategories,
+      subItemsLabel:
+          'Subcategories (optional, up to ${CategoryService.maxSubcategories})',
+      subItemHintBuilder: (i) => 'Subcategory ${i + 1}',
+      onSave: (name, subNames) async {
+        final id = await _categoryService.createCategory(
+          name: name,
+          subcategoryNames: subNames,
+        );
+        return CategoryModel(
+          id: id,
+          name: name,
+          subcategories: [
+            for (final subName in subNames)
+              SubcategoryModel(id: subName, name: subName),
+          ],
+        );
+      },
     );
-    return;
+    if (created == null || !mounted) return;
+    setState(() {
+      _categories = [..._categories, created];
+      _primaryCategory = created.id;
+      _subcategory = null;
+    });
   }
 
-  final created = await TaxonomyEntryDialog.show<TagModel>(
-    context,
-    title: 'Create Tag',
-    nameLabel: 'Tag Name',
-    nameHint: "e.g. Chef's Special",
-    description:
-        'Custom tags are saved right away so they can be reused on other items.',
-    onSave: (name, _) => _tagService.createTag(name: name),
-  );
-  if (created == null || !mounted) return;
+  Future<void> _openCreateRegionalityDialog() async {
+    final enteredName = await CategoryEntryDialog.show<String>(
+      context,
+      title: 'Add Regionality',
+      nameLabel: 'Regionality',
+      nameHint: 'e.g. Punjabi',
+      description: 'e.g. Punjabi, Indo-Chinese, South Indian. Saved along '
+          'with this item once you submit the form.',
+      initialName: _pendingRegionalityName,
+      // Local-only: no service call here, the menu item form persists it
+      // once the item itself is saved.
+      onSave: (name, _) async => name,
+    );
+    if (enteredName == null || enteredName.trim().isEmpty || !mounted) return;
 
-  setState(() {
-    _customTags = [..._customTags, created];
-    _tags.add(created.name);
-  });
-}
+    setState(() {
+      _pendingRegionalityName = enteredName.trim();
+      _regionality = _kPendingRegionalityId;
+    });
+  }
+
+  Future<void> _openCreatePreparationDialog() async {
+    final enteredName = await CategoryEntryDialog.show<String>(
+      context,
+      title: 'Add Preparation Style',
+      editTitle: 'Edit Preparation Style',
+      nameLabel: 'Preparation Style',
+      nameHint: 'e.g. Tandoori',
+      description: 'e.g. Tandoori, Gravy, Steam. Saved along with this '
+          'item once you submit the form.',
+      initialName: _pendingPreparationName,
+      onSave: (name, _) async => name,
+    );
+    if (enteredName == null || enteredName.trim().isEmpty || !mounted) return;
+
+    setState(() {
+      _pendingPreparationName = enteredName.trim();
+      _preparation = _kPendingPreparationId;
+    });
+  }
+
+  Future<void> _openCreateTagDialog() async {
+    if (_customTags.length >= TagService.maxCustomTags) {
+      setState(
+        () => _error =
+            'You can only create up to ${TagService.maxCustomTags} custom tags.',
+      );
+      return;
+    }
+
+    final created = await CategoryEntryDialog.show<TagModel>(
+      context,
+      title: 'Create Tag',
+      nameLabel: 'Tag Name',
+      nameHint: "e.g. Chef's Special",
+      description:
+          'Custom tags are saved right away so they can be reused on other items.',
+      onSave: (name, _) => _tagService.createTag(name: name),
+    );
+    if (created == null || !mounted) return;
+
+    setState(() {
+      _customTags = [..._customTags, created];
+      _tags.add(created.name);
+    });
+  }
 
 //Fetching options is done in parallel, so they can fail independently.
-    
-    Future<void> _loadPreparations() async {
+
+  Future<void> _loadPreparations() async {
     setState(() => _preparationsLoading = true);
     try {
       final preparations = await _preparationService.fetchPreparations();
@@ -277,7 +277,6 @@ Future<void> _openCreateTagDialog() async {
       setState(() => _customTagsLoading = false);
     }
   }
-
 
   MenuItemModel get _previewItem {
     final price = double.tryParse(_price.text.trim()) ?? 0.0;
@@ -322,8 +321,7 @@ Future<void> _openCreateTagDialog() async {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final item =
-          await ref.read(menuProvider).getItemById(widget.itemId!);
+      final item = await ref.read(menuProvider).getItemById(widget.itemId!);
       _name.text = item.name;
       _description.text = item.description;
       _image.text = item.imageUrl;
@@ -483,8 +481,8 @@ Future<void> _openCreateTagDialog() async {
     } else {
       setState(() {
         _loading = false;
-        _error = ref.read(menuProvider).errorMessage ??
-            'Failed to save menu item.';
+        _error =
+            ref.read(menuProvider).errorMessage ?? 'Failed to save menu item.';
       });
     }
   }
@@ -939,7 +937,7 @@ Future<void> _openCreateTagDialog() async {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const ManageTaxonomyScreen(),
+                    builder: (_) => const MenuManageCategoryScreen(),
                   ),
                 );
               },
@@ -949,7 +947,7 @@ Future<void> _openCreateTagDialog() async {
                 color: AppColors.primary,
               ),
               label: Text(
-                'Create & Manage Taxonomy',
+                'Create & Manage Category',
                 style: AppTextStyles.label(context)
                     .copyWith(color: AppColors.primary),
               ),

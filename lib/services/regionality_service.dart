@@ -11,7 +11,7 @@ import '../models/regionality_model.dart';
 /// is actually submitted, since a regionality only has meaning attached
 /// to a dish.
 ///
-/// [updateRegionality]/[deleteRegionality] are used by the manage-taxonomy
+/// [updateRegionality]/[deleteRegionality] are used by the manage-category
 /// screen, where edits/deletes are immediate — same contract as
 /// [PreparationService].
 class RegionalityService {
@@ -57,7 +57,7 @@ class RegionalityService {
   }
 
   /// Renames an existing regionality in place (keeps the same doc/slug
-  /// ID). Used by the manage-taxonomy screen's immediate-edit flow.
+  /// ID). Used by the manage-category screen's immediate-edit flow.
   Future<void> updateRegionality(RegionalityModel regionality) async {
     if (regionality.id.trim().isEmpty) {
       throw ArgumentError('Cannot update a regionality without an ID.');

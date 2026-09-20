@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
+import 'package:rdx_admin/screens/order/bill_settlement_screen.dart';
 import 'package:rdx_admin/screens/order/widgets/live_order_card.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -99,6 +100,59 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
       return true;
     }).toList();
+  }
+
+  void _openPayment(OrderModel order) {
+    final items = order.items.map((item) {
+      final modifiers = <String>[
+        if (item.spiceLevel != null && item.spiceLevel!.trim().isNotEmpty)
+          'Spice: ${item.spiceLevel}',
+        ...item.addOns,
+        if (item.notes != null && item.notes!.trim().isNotEmpty)
+          'Note: ${item.notes}',
+      ];
+
+      return BillItemData(
+        name: item.name,
+        quantity: item.quantity,
+        amount: item.price * item.quantity,
+        modifiers: modifiers,
+      );
+    }).toList();
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BillSettlementScreen(
+          bill: BillSettlementData(
+            orderNumber: order.id,
+            restaurantName: 'RDX Restaurant',
+            orderType: order.orderType.name,
+            tableNumber: order.tableNumber,
+            billingMode: order.orderType.name,
+            cashier: 'Admin',
+            server: 'Admin',
+            kitchenName: 'Main Kitchen',
+            sequence: null,
+            covers: 1,
+            items: items,
+            paymentMethod: null,
+            cardLastFour: null,
+            subtotal: order.items.fold<double>(
+              0,
+              (sum, item) => sum + (item.price * item.quantity),
+            ),
+            taxPercentage: 0,
+            guestName: order.customerName?.trim().isNotEmpty == true
+                ? order.customerName!
+                : 'Walk-in Customer',
+            phoneNumber: order.customerPhone,
+            sendDigitalReceipt: false,
+            invoiceReference: order.id,
+            receiptDateTime: DateTime.now(),
+          ),
+        ),
+      ),
+    );
   }
 
   // BUILD
@@ -243,6 +297,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     required int totalOrders,
     required int pendingPaymentCount,
   }) {
+    final deliveredPaidCount = provider.delivered
+        .where(
+          (order) => order.paymentStatus == PaymentStatus.paid,
+        )
+        .length;
     return SizedBox(
       width: double.infinity,
       child: LayoutBuilder(
@@ -288,7 +347,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             ),
             StatCard(
               label: 'Delivered',
-              value: '${provider.delivered.length}',
+              value: '$deliveredPaidCount',
               icon: Icons.check_circle_outline,
               accentColor: const Color(0xFF20B47A),
               minHeight: isNarrow ? context.h(62) : context.h(72),
@@ -337,37 +396,117 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   static const double _kColumnsBreakpoint = 900;
   static const double _kRowCardWidth = 280;
 
+  // ---------------------------------------------------------------------------
+  // WIDE LAYOUT — states as columns, cards stacked vertically
+  // ---------------------------------------------------------------------------
+  //
+  // Column width is always computed as if all 4 states (New / Preparing /
+  // Ready / Delivering) were visible, so a single filtered-in section keeps
+  // the same "normal" card width as the All view instead of stretching to
+  // fill the row when fewer sections are shown.
+  // ---------------------------------------------------------------------------
+
+  static const int _kTotalColumns = 5;
+
+  Widget _buildColumnsBoard(List<_SectionData> sections, double maxWidth) {
+    final gap = context.w(16);
+    final columnWidth =
+        (maxWidth - gap * (_kTotalColumns - 1)) / _kTotalColumns;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        for (int i = 0; i < sections.length; i++) ...[
+          SizedBox(
+            width: columnWidth,
+            child: _buildColumnSection(sections[i]),
+          ),
+          if (i != sections.length - 1) SizedBox(width: gap),
+        ],
+      ],
+    );
+  }
+
   Widget _buildOrdersContent(
     LiveOrdersProvider provider,
   ) {
     final sections = _buildVisibleSectionsData(provider);
+
+    // A specific status filter (New / Preparing / Ready) always yields a
+    // single section — show it as a wrapping grid of normal-sized cards
+    // that flows to the next row instead of the board layout, and scrolls
+    // vertically once it overflows.
+    if (_selectedStatus != 'All') {
+      return _buildSingleSectionGrid(sections.first);
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= _kColumnsBreakpoint;
 
         return isWide
-            ? _buildColumnsBoard(sections)
+            ? _buildColumnsBoard(sections, constraints.maxWidth)
             : _buildRowsBoard(sections);
       },
     );
   }
 
   // ---------------------------------------------------------------------------
-  // WIDE LAYOUT — states as columns, cards stacked vertically
+  // SINGLE-SECTION GRID — used when a specific status filter is selected
+  // ---------------------------------------------------------------------------
+  //
+  // Card width matches the board's per-column width (maxWidth split across
+  // _kTotalColumns, same gap), so a row here naturally holds as many cards
+  // as the "All" board has columns — currently 4 — without hardcoding a
+  // card count.
   // ---------------------------------------------------------------------------
 
-  Widget _buildColumnsBoard(List<_SectionData> sections) {
-    final gap = context.w(16);
+  Widget _buildSingleSectionGrid(_SectionData data) {
+    final isEmpty = data.orders.isEmpty;
+    final gap = context.w(12);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (int i = 0; i < sections.length; i++) ...[
-          Expanded(child: _buildColumnSection(sections[i])),
-          if (i != sections.length - 1) SizedBox(width: gap),
-        ],
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (constraints.maxWidth - gap * (_kTotalColumns - 1)) /
+            _kTotalColumns;
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.only(
+            top: context.h(4),
+            bottom: context.h(24),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionHeader(data),
+              SizedBox(height: context.h(12)),
+              if (isEmpty)
+                _buildEmptySection(
+                  emptyIcon: data.emptyIcon,
+                  emptyText: data.emptyText,
+                )
+              else
+                Wrap(
+                  spacing: gap,
+                  runSpacing: context.h(12),
+                  children: [
+                    for (final order in data.orders)
+                      SizedBox(
+                        width: cardWidth,
+                        child: LiveOrderCard(
+                          order: order,
+                          actionText: data.actionText,
+                          onAdvance: data.onAdvance,
+                          onTap: () => _openOrderDetail(order),
+                        ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -528,6 +667,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   ) {
     final sections = <_SectionData>[];
     final pendingPaymentOrders = _getPendingPaymentOrders(provider);
+    final deliveredPaidOrders = provider.delivered
+        .where(
+          (order) => order.paymentStatus == PaymentStatus.paid,
+        )
+        .toList();
 
     if (_selectedStatus == 'All' || _selectedStatus == 'New') {
       sections.add(
@@ -559,7 +703,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           title: 'READY',
           color: const Color(0xFF20B47A),
           orders: provider.ready,
-          actionText: 'Mark Delivered',
+          actionText: 'Out for delivery',
           onAdvance: provider.advanceStatus,
         ),
       );
@@ -571,8 +715,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           title: 'PENDING PAYMENT',
           color: const Color(0xFFE9A719),
           orders: pendingPaymentOrders,
-          actionText: null,
-          onAdvance: null,
+          actionText: 'Pay Now',
+          onAdvance: _openPayment,
           emptyIcon: Icons.payments_outlined,
           emptyText: 'No pending payments',
         ),
@@ -584,7 +728,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         _SectionData(
           title: 'DELIVERED',
           color: const Color(0xFF31568E),
-          orders: provider.delivered,
+          orders: deliveredPaidOrders,
           actionText: null,
           onAdvance: null,
           emptyIcon: Icons.delivery_dining_outlined,

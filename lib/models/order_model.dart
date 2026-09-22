@@ -32,6 +32,8 @@ extension OrderStatusX on OrderStatus {
     }
   }
 
+  /// Default label when no order context is available.
+  /// Prefer [OrderModel.boardAdvanceLabel] on the live board.
   String? get advanceActionLabel {
     switch (this) {
       case OrderStatus.pending:
@@ -41,7 +43,7 @@ extension OrderStatusX on OrderStatus {
         return 'Mark Ready';
 
       case OrderStatus.ready:
-        return 'Mark Delivered';
+        return 'Mark Completed';
 
       case OrderStatus.cancelled:
       case OrderStatus.delivered:
@@ -111,6 +113,64 @@ extension OrderTypeX on OrderType {
       (type) => type.name == value,
       orElse: () => OrderType.dineIn,
     );
+  }
+}
+
+// =============================================================================
+// ORDER SOURCE (staff POS vs customer app)
+// =============================================================================
+//
+// Distinguishes orders created by restaurant staff in the admin/POS panel
+// from orders placed by customers through the mobile/web app.
+//
+// Firestore field: `order_source` (`staff` | `app`).
+// Missing field defaults to [OrderSource.staff] so existing POS orders stay
+// visible under restaurant workflow; the customer app must write `app`.
+
+enum OrderSource {
+  staff,
+  app,
+}
+
+extension OrderSourceX on OrderSource {
+  String get label {
+    switch (this) {
+      case OrderSource.staff:
+        return 'Restaurant';
+
+      case OrderSource.app:
+        return 'App';
+    }
+  }
+
+  static OrderSource fromString(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return OrderSource.staff;
+    }
+
+    final normalized = value.trim().toLowerCase();
+
+    for (final source in OrderSource.values) {
+      if (source.name == normalized) {
+        return source;
+      }
+    }
+
+    // Aliases sometimes used by other clients.
+    if (normalized == 'pos' ||
+        normalized == 'admin' ||
+        normalized == 'local' ||
+        normalized == 'restaurant') {
+      return OrderSource.staff;
+    }
+
+    if (normalized == 'customer' ||
+        normalized == 'customer_app' ||
+        normalized == 'mobile') {
+      return OrderSource.app;
+    }
+
+    return OrderSource.staff;
   }
 }
 
@@ -398,6 +458,10 @@ class OrderModel {
   final PaymentMethod? paymentMethod;
   final PaymentStatus paymentStatus;
 
+  /// Whether this order was placed by restaurant staff (POS) or by a
+  /// customer through the app. See [OrderSource].
+  final OrderSource orderSource;
+
   const OrderModel({
     required this.id,
     required this.customerName,
@@ -415,6 +479,7 @@ class OrderModel {
     this.tableNumber,
     this.paymentMethod,
     this.paymentStatus = PaymentStatus.unpaid,
+    this.orderSource = OrderSource.staff,
   });
 
   // ===========================================================================
@@ -429,6 +494,42 @@ class OrderModel {
     return paymentStatus == PaymentStatus.unpaid;
   }
 
+  /// True when this order needs a courier / out-for-delivery step.
+  bool get needsDelivery {
+    return orderType == OrderType.delivery;
+  }
+
+  /// True for walk-in style orders (dine-in or takeaway) — no courier step.
+  bool get isWalkIn {
+    return orderType == OrderType.dineIn || orderType == OrderType.takeaway;
+  }
+
+  /// Primary board button label based on status, order type, and payment.
+  ///
+  /// Ready stage branches:
+  /// - **Delivery** → "Out for delivery" (app or staff delivery orders)
+  /// - **Walk-in + prepaid** → "Mark Completed" (already paid; just finish)
+  /// - **Walk-in + unpaid** → "Serve Order" (then collect payment)
+  String? get boardAdvanceLabel {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'Start Preparing';
+      case OrderStatus.preparing:
+        return 'Mark Ready';
+      case OrderStatus.ready:
+        if (needsDelivery) {
+          return 'Out for delivery';
+        }
+        if (isPaid) {
+          return 'Mark Completed';
+        }
+        return 'Serve Order';
+      case OrderStatus.cancelled:
+      case OrderStatus.delivered:
+        return null;
+    }
+  }
+
   // ===========================================================================
   // COPY WITH
   // ===========================================================================
@@ -439,6 +540,7 @@ class OrderModel {
     List<OrderItemModel>? items,
     PaymentMethod? paymentMethod,
     PaymentStatus? paymentStatus,
+    OrderSource? orderSource,
 
     // Allows paymentMethod to actually be cleared.
     bool clearPaymentMethod = false,
@@ -461,6 +563,7 @@ class OrderModel {
       paymentMethod:
           clearPaymentMethod ? null : paymentMethod ?? this.paymentMethod,
       paymentStatus: paymentStatus ?? this.paymentStatus,
+      orderSource: orderSource ?? this.orderSource,
     );
   }
 
@@ -525,6 +628,9 @@ class OrderModel {
       paymentStatus: PaymentStatusX.fromString(
         json['payment_status']?.toString(),
       ),
+      orderSource: OrderSourceX.fromString(
+        json['order_source']?.toString(),
+      ),
     );
   }
 
@@ -555,6 +661,7 @@ class OrderModel {
       'table_number': tableNumber,
       'payment_method': paymentMethod?.name,
       'payment_status': paymentStatus.name,
+      'order_source': orderSource.name,
       'updated_at': FieldValue.serverTimestamp(),
     };
   }

@@ -143,7 +143,7 @@ class LiveOrderMenuCard extends ConsumerWidget {
                           item.category,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.bodyTertiary(context)
+                          style: AppTextStyles.caption(context)
                               .copyWith(
                             color: AppColors.primary,
                           ),
@@ -385,29 +385,29 @@ class LiveOrderMenuCard extends ConsumerWidget {
 
   // ── Badges ─────────────────────────────────────────────────────
 
-  Widget _cardBadge(
-    BuildContext context,
-    String label,
-    Color background,
-    Color foreground,
-  ) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: context.w(5),
-        vertical: context.h(2),
+Widget _cardBadge(
+  BuildContext context,
+  String label,
+  Color background,
+  Color foreground,
+) {
+  return Container(
+    padding: EdgeInsets.symmetric(
+      horizontal: context.w(4),   // was 5
+      vertical: context.h(1),     // was 2
+    ),
+    decoration: BoxDecoration(
+      color: background,
+      borderRadius: BorderRadius.circular(context.h(4)), // was 5
+    ),
+    child: Text(
+      label,
+      style: AppTextStyles.caption(context).copyWith(
+        color: foreground,
       ),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(context.h(5)),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.caption(context).copyWith(
-          color: foreground,
-        ),
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _dietaryBadge(BuildContext context, MenuItemModel item) {
     final color = item.isVeg ? AppColors.success : AppColors.danger;

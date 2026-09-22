@@ -178,11 +178,12 @@ Expanded(
             runSpacing: context.h(4),
             children: hasTags
                 ? [
-                    _detailChip(
-                      context,
-                      _titleCase(preparation),
-                      colors.textSecondary,
-                    ),
+                    if (preparation.trim().isNotEmpty)
+                      _detailChip(
+                        context,
+                        _titleCase(preparation),
+                        colors.textSecondary,
+                      ),
                     for (final tag in item.tags
                         .where((tag) => tag.toLowerCase() != 'featured')
                         .take(item.featuredItem ? 2 : 3))

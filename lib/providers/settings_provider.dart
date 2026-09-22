@@ -8,7 +8,7 @@ class SettingsProvider extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  String restaurantName = 'RDX Restaurants';
+  String restaurantName = 'RDX Fast Foods';
   String description = 'Best in city, freshly made every morning.';
   String address = 'Chandigarh';
   String phone = '+91 98765 43210';

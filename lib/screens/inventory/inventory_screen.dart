@@ -182,8 +182,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                   usedItemCount: provider.periodUsedItemCount,
                                   needsRestock: provider.needsRestockCount,
                                   period: provider.periodFilter,
-                                  onNeedsRestockTap: () =>
-                                      _openLowStock(context),
+                                  // onNeedsRestockTap: () =>
+                                  //     _openLowStock(context),
                                 ),
                         ),
                         SizedBox(height: context.h(20)),
@@ -775,11 +775,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     );
   }
 
-  void _openLowStock(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const LowStockScreen()),
-    );
-  }
+  // void _openLowStock(BuildContext context) {
+  //   Navigator.of(context).push(
+  //     MaterialPageRoute(builder: (_) => const LowStockScreen()),
+  //   );
+  // }
 
   Future<void> _confirmDelete(
     BuildContext context,

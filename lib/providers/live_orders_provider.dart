@@ -14,12 +14,23 @@ class LiveOrdersProvider extends ChangeNotifier {
 
   List<OrderModel> get pending =>
       _orders.where((o) => o.status == OrderStatus.pending).toList();
+
+  /// Same as [pending] — UI labels this column "Live Orders".
+  List<OrderModel> get live => pending;
   List<OrderModel> get preparing =>
       _orders.where((o) => o.status == OrderStatus.preparing).toList();
   List<OrderModel> get ready =>
       _orders.where((o) => o.status == OrderStatus.ready).toList();
   List<OrderModel> get delivered =>
       _orders.where((o) => o.status == OrderStatus.delivered).toList();
+
+  /// Orders placed by customers through the app (not staff POS).
+  List<OrderModel> get appOrders =>
+      _orders.where((o) => o.orderSource == OrderSource.app).toList();
+
+  /// Staff / restaurant POS orders only.
+  List<OrderModel> get staffOrders =>
+      _orders.where((o) => o.orderSource == OrderSource.staff).toList();
 
   Future<void> load() async {
     isLoading = true;

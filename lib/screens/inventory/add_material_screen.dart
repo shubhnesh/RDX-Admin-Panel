@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
+import 'package:rdx_admin/screens/widgets/dialogs/rdx_notice_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -251,14 +252,86 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     return StockStatus.inStock;
   }
 
+  Future<void> _showNotice(String message) async {
+    if (!mounted) return;
+    await RdxNoticeDialog.show(context, message: message);
+  }
+
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_category == null || _unit == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select category and unit')),
+    final name = _nameCtrl.text.trim();
+    final qtyText = _qtyCtrl.text.trim();
+    final minText = _minCtrl.text.trim();
+    final maxText = _maxCtrl.text.trim();
+    final costText = _costCtrl.text.trim();
+
+    if (!isEdit && name.isEmpty) {
+      await _showNotice('Please enter a material name.');
+      return;
+    }
+    if (!isEdit && _category == null) {
+      await _showNotice('Please select a category.');
+      return;
+    }
+    if (_unit == null) {
+      await _showNotice('Please select a unit of measurement.');
+      return;
+    }
+    if (costText.isEmpty || double.tryParse(costText) == null) {
+      await _showNotice('Please enter a valid unit cost.');
+      return;
+    }
+    if (maxText.isEmpty || double.tryParse(maxText) == null) {
+      await _showNotice('Please enter maximum storage capacity.');
+      return;
+    }
+    final maxVal = double.parse(maxText);
+    if (maxVal <= 0) {
+      await _showNotice('Maximum storage capacity must be greater than 0.');
+      return;
+    }
+
+    // Initial stock is required when creating; on edit quantity is locked.
+    if (!isEdit) {
+      if (qtyText.isEmpty || double.tryParse(qtyText) == null) {
+        await _showNotice('Please enter initial stock quantity.');
+        return;
+      }
+      final qty = double.parse(qtyText);
+      if (qty < 0) {
+        await _showNotice('Initial stock quantity cannot be negative.');
+        return;
+      }
+      if (qty > maxVal) {
+        await _showNotice(
+            'Initial stock cannot exceed maximum storage capacity.');
+        return;
+      }
+    }
+
+    if (minText.isEmpty || double.tryParse(minText) == null) {
+      await _showNotice('Please enter minimum stock alert value.');
+      return;
+    }
+    final minVal = double.parse(minText);
+    if (minVal < 0) {
+      await _showNotice('Minimum stock alert value cannot be negative.');
+      return;
+    }
+    if (minVal > maxVal) {
+      await _showNotice(
+          'Minimum stock cannot exceed maximum storage capacity.');
+      return;
+    }
+    final qtyForMin = isEdit
+        ? (widget.existing?.quantity ?? 0)
+        : (double.tryParse(qtyText) ?? 0);
+    if (minVal > qtyForMin && qtyForMin > 0) {
+      await _showNotice(
+        'Minimum stock cannot exceed initial/current stock quantity.',
       );
       return;
     }
+
     setState(() => _saving = true);
 
     // A single timestamp for this save. It's threaded through to
@@ -314,9 +387,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save material')),
-        );
+        await _showNotice('Failed to save material.');
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -340,7 +411,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
             showBackButton: true,
             actions: [
               RdxActionButton.save(
-                label: 'Save',
+                label: 'Done',
                 onPressed: _save,
                 isLoading: _saving,
               ),
@@ -414,8 +485,6 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
             label: 'Material Name *',
             hint: 'Enter material name',
             enabled: !isEdit,
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Required' : null,
           ),
           if (isEdit) ...[
             SizedBox(height: context.h(6)),
@@ -507,11 +576,6 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
             ],
-            validator: (v) {
-              if (v == null || v.isEmpty) return 'Required';
-              if (double.tryParse(v) == null) return 'Invalid number';
-              return null;
-            },
           ),
           if (isEdit) ...[
             SizedBox(height: context.h(6)),
@@ -557,11 +621,6 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
               }
               setState(() {});
             },
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Required';
-              if (double.tryParse(v) == null) return 'Invalid number';
-              return null;
-            },
           ),
           SizedBox(height: context.h(16)),
 
@@ -571,7 +630,8 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           //    exceed max rejected.
           RdxTextField(
             controller: _qtyCtrl,
-            label: isEdit ? 'Current Stock Quantity' : 'Initial Stock Quantity',
+            label:
+                isEdit ? 'Current Stock Quantity' : 'Initial Stock Quantity *',
             hint: 'Enter current stock quantity',
             enabled: !isEdit && maxHasValue,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -590,17 +650,6 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
                     setState(() {});
                   }
                 : null,
-            validator: (v) {
-              if (isEdit) return null;
-              if (!maxHasValue) return null;
-              if (v == null || v.isEmpty) return null;
-              final qty = double.tryParse(v);
-              if (qty == null) return 'Invalid number';
-              if (maxVal != null && qty > maxVal) {
-                return 'Cannot exceed total storage capacity';
-              }
-              return null;
-            },
           ),
           if (isEdit) ...[
             SizedBox(height: context.h(6)),
@@ -618,7 +667,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           //    keystrokes that would exceed current stock are rejected.
           RdxTextField(
             controller: _minCtrl,
-            label: 'Minimum Stock Alert Value',
+            label: 'Minimum Stock Alert Value *',
             hint: 'Enter minimum stock value',
             enabled: maxHasValue,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -627,19 +676,6 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
               _MaxValueInputFormatter(qtyVal),
             ],
             onChanged: maxHasValue ? (_) => setState(() {}) : null,
-            validator: (v) {
-              if (!maxHasValue) return null;
-              if (v == null || v.isEmpty) return null;
-              final min = double.tryParse(v);
-              if (min == null) return 'Invalid number';
-              if (qtyVal != null && min > qtyVal) {
-                return 'Cannot exceed initial/current stock quantity';
-              }
-              if (maxVal != null && min > maxVal) {
-                return 'Cannot exceed total storage capacity';
-              }
-              return null;
-            },
           ),
           SizedBox(height: context.h(6)),
           Text(

@@ -4,6 +4,7 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/screens/menu/menu_manage_category_screen.dart';
 import 'package:rdx_admin/screens/menu/widgets/menu_item_card.dart';
 import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
+import 'package:rdx_admin/screens/widgets/dialogs/rdx_notice_dialog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/category_model.dart';
@@ -220,11 +221,15 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     });
   }
 
+  Future<void> _showErrorDialog(String message) async {
+    if (!mounted) return;
+    await RdxNoticeDialog.show(context, message: message);
+  }
+
   Future<void> _openCreateTagDialog() async {
     if (_customTags.length >= TagService.maxCustomTags) {
-      setState(
-        () => _error =
-            'You can only create up to ${TagService.maxCustomTags} custom tags.',
+      await _showErrorDialog(
+        'You can only create up to ${TagService.maxCustomTags} custom tags.',
       );
       return;
     }
@@ -344,7 +349,11 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
         ..addAll(item.ingredients);
       _available = item.available;
     } catch (_) {
-      _error = 'Failed to load menu item.';
+      if (mounted) {
+        setState(() => _loading = false);
+        await _showErrorDialog('Failed to load menu item.');
+        return;
+      }
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -364,21 +373,24 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_primaryCategory == null) {
-      setState(() => _error = 'Please select a category.');
-      return;
-    }
-    if (_dietaryType == null || _preparation == null) {
-      setState(
-          () => _error = 'Please select a dietary type and preparation style.');
+    if (_name.text.trim().isEmpty) {
+      await _showErrorDialog('Please enter an item name.');
       return;
     }
 
     final price = double.tryParse(_price.text.trim());
     if (price == null || price < 0) {
-      setState(() => _error = 'Please enter a valid price.');
+      await _showErrorDialog('Please enter a valid price.');
+      return;
+    }
+
+    if (_primaryCategory == null) {
+      await _showErrorDialog('Please select a category.');
+      return;
+    }
+
+    if (_dietaryType == null) {
+      await _showErrorDialog('Please select a dietary type.');
       return;
     }
 
@@ -410,10 +422,8 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
           });
         }
       } catch (_) {
-        setState(() {
-          _loading = false;
-          _error = 'Failed to save regionality. Please try again.';
-        });
+        if (mounted) setState(() => _loading = false);
+        await _showErrorDialog('Failed to save regionality. Please try again.');
         return;
       }
     }
@@ -440,10 +450,10 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
           });
         }
       } catch (_) {
-        setState(() {
-          _loading = false;
-          _error = 'Failed to save preparation style. Please try again.';
-        });
+        if (mounted) setState(() => _loading = false);
+        await _showErrorDialog(
+          'Failed to save preparation style. Please try again.',
+        );
         return;
       }
     }
@@ -479,11 +489,10 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     if (success) {
       Navigator.pop(context, true);
     } else {
-      setState(() {
-        _loading = false;
-        _error =
-            ref.read(menuProvider).errorMessage ?? 'Failed to save menu item.';
-      });
+      if (mounted) setState(() => _loading = false);
+      await _showErrorDialog(
+        ref.read(menuProvider).errorMessage ?? 'Failed to save menu item.',
+      );
     }
   }
 
@@ -526,8 +535,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                             ),
                             child: Column(
                               children: [
-                                if (_error != null)
-                                  _errorBanner(context, colors),
                                 _mainColumn(context, colors),
                                 SizedBox(height: context.h(16)),
                                 _previewCard(context),
@@ -552,8 +559,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                                         EdgeInsets.only(right: context.w(22)),
                                     child: Column(
                                       children: [
-                                        if (_error != null)
-                                          _errorBanner(context, colors),
                                         _mainColumn(context, colors),
                                       ],
                                     ),
@@ -592,7 +597,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                                                     _primaryCategory != null,
                                                 dietarySelected:
                                                     _dietaryType != null,
-                                                hasTags: _tags.isNotEmpty ||
+                                                hasTags: _tags.any((t) => t != 'Featured') ||
                                                     _preparation != null,
                                                 onToggleAvailability: () {
                                                   setState(() =>
@@ -626,7 +631,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
             item: _previewItem,
             categorySelected: _primaryCategory != null,
             dietarySelected: _dietaryType != null,
-            hasTags: _tags.isNotEmpty || _preparation != null,
+            hasTags: _tags.any((t) => t != 'Featured') || _preparation != null,
             onToggleAvailability: () {
               setState(() => _available = !_available);
             },
@@ -663,8 +668,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 label: 'Item Name *',
                 hint: 'Enter item name',
                 onChanged: (_) => setState(() {}),
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Required' : null,
               );
               final priceField = RdxTextField(
                 controller: _price,
@@ -674,8 +677,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                     const TextInputType.numberWithOptions(decimal: true),
                 prefixText: '₹',
                 onChanged: (_) => setState(() {}),
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Required' : null,
               );
               if (stack) {
                 return Column(
@@ -854,6 +855,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                   DietaryType.values,
                   (value) => setState(() => _dietaryType = value),
                   (value) => _titleCase(value.name),
+                  required: true,
                 );
                 final prep = _dropdown(
                   'Preparation Style',
@@ -876,7 +878,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                     });
                   },
                   _preparationLabel,
-                  required: true,
                   searchable: true,
                   hint: _preparationsLoading
                       ? 'Loading preparation styles...'
@@ -898,14 +899,13 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
               SizedBox(height: context.h(15)),
               Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      'Tags',
-                      style: AppTextStyles.bodySecondary(context).copyWith(
-                        color: colors.textMuted,
-                      ),
+                  Text(
+                    'Tags',
+                    style: AppTextStyles.bodySecondary(context).copyWith(
+                      color: colors.textMuted,
                     ),
                   ),
+                  SizedBox(width: context.w(6)),
                   InkWell(
                     onTap: _customTagsLoading ? null : _openCreateTagDialog,
                     borderRadius: BorderRadius.circular(context.h(6)),
@@ -1125,17 +1125,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                     _tags.remove(tag);
                   }
                 }),
-      );
-
-  Widget _errorBanner(BuildContext context, AppColorScheme colors) => Container(
-        width: double.infinity,
-        margin: EdgeInsets.only(bottom: context.h(12)),
-        padding: EdgeInsets.all(context.h(12)),
-        color: const Color(0xFFFFEDEA),
-        child: Text(
-          _error!,
-          style: TextStyle(color: AppColors.danger),
-        ),
       );
 
   String _categoryLabel(String id) {

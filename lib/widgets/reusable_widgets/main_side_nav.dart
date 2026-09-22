@@ -1,34 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
+import 'package:rdx_admin/core/utils/responsive_size.dart';
 import '../../core/theme/app_colors.dart';
 
 class SidebarItem {
   final String label;
   final IconData icon;
   final String route;
-  const SidebarItem(
-      {required this.label, required this.icon, required this.route});
+
+  const SidebarItem({
+    required this.label,
+    required this.icon,
+    required this.route,
+  });
 }
 
 const List<SidebarItem> kPrimaryNavItems = [
   SidebarItem(
-      label: 'Dashboard', icon: Icons.dashboard_outlined, route: '/dashboard'),
+    label: 'Dashboard',
+    icon: Icons.dashboard_outlined,
+    route: '/dashboard',
+  ),
   SidebarItem(
-      label: 'Live Orders',
-      icon: Icons.receipt_long_outlined,
-      route: '/live-orders'),
+    label: 'Live Orders',
+    icon: Icons.receipt_long_outlined,
+    route: '/live-orders',
+  ),
   SidebarItem(
-      label: 'Menu', icon: Icons.restaurant_menu_outlined, route: '/menu'),
+    label: 'Menu',
+    icon: Icons.restaurant_menu_outlined,
+    route: '/menu',
+  ),
   SidebarItem(
-      label: 'Coupons', icon: Icons.local_offer_outlined, route: '/coupons'),
+    label: 'Coupons',
+    icon: Icons.local_offer_outlined,
+    route: '/coupons',
+  ),
   SidebarItem(
-      label: 'Inventory',
-      icon: Icons.inventory_2_outlined,
-      route: '/inventory'),
+    label: 'Inventory',
+    icon: Icons.inventory_2_outlined,
+    route: '/inventory',
+  ),
 ];
 
 /// Professional collapsible side navigation rail.
-/// Expanded width ~240, collapsed ~72. Smooth width + fade animation.
+/// Expanded width ~240, collapsed ~78. Smooth width + fade animation.
 class MainSideNav extends StatelessWidget {
   final String currentRoute;
   final ValueChanged<String> onNavigate;
@@ -37,8 +54,10 @@ class MainSideNav extends StatelessWidget {
   final VoidCallback? onLogout;
   final VoidCallback? onAddOrder;
 
+  /// Design-time widths (scaled at runtime via [context.w]).
   static const double expandedWidth = 240;
-  static const double collapsedWidth = 72;
+  static const double collapsedWidth = 78;
+
   static const Duration _animDuration = Duration(milliseconds: 280);
   static const Curve _animCurve = Curves.easeInOutCubic;
 
@@ -58,31 +77,39 @@ class MainSideNav extends StatelessWidget {
     const textPrimary = AppColors.lightTextPrimary;
     const textSecondary = AppColors.lightTextSecondary;
 
+    final expandedW = context.w(expandedWidth);
+    final collapsedW = context.w(collapsedWidth);
+    final currentW = expanded ? expandedW : collapsedW;
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
         AnimatedContainer(
           duration: _animDuration,
           curve: _animCurve,
-          width: expanded ? expandedWidth : collapsedWidth,
+          width: currentW,
           decoration: const BoxDecoration(
             color: sidebarBg,
             border: Border(
-                right: BorderSide(color: AppColors.lightBorder, width: 1)),
+              right: BorderSide(color: AppColors.lightBorder, width: 1),
+            ),
           ),
-          // Clip everything so nothing paints outside during the width animation.
+          // ClipRect prevents any mid-animation overflow from ever
+          // painting outside the rail's current (animating) width.
           child: ClipRect(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // ── Header / brand ────────────────────────────────────
                 _buildHeader(context, textPrimary, textSecondary),
-                const SizedBox(height: 8),
+                SizedBox(height: context.h(8)),
                 // ── Primary nav ───────────────────────────────────────
                 Expanded(
                   child: ListView(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.w(expanded ? 10 : 8),
+                      vertical: context.h(10),
+                    ),
                     children: [
                       for (final item in kPrimaryNavItems)
                         _NavTile(
@@ -96,15 +123,19 @@ class MainSideNav extends StatelessWidget {
                 ),
                 // ── Footer actions ────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.w(expanded ? 10 : 8),
+                  ),
                   child: Divider(
                     color: AppColors.lightDivider.withOpacity(0.8),
                     height: 1,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: context.h(8)),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.w(expanded ? 10 : 8),
+                  ),
                   child: Column(
                     children: [
                       _FooterTile(
@@ -114,13 +145,6 @@ class MainSideNav extends StatelessWidget {
                         selected: currentRoute == '/settings',
                         onTap: () => onNavigate('/settings'),
                       ),
-                      // _FooterTile(
-                      //   icon: Icons.notifications_outlined,
-                      //   label: 'Notifications',
-                      //   expanded: expanded,
-                      //   selected: currentRoute == '/notifications',
-                      //   onTap: () => onNavigate('/notifications'),
-                      // ),
                       _FooterTile(
                         icon: Icons.support_agent_outlined,
                         label: 'Support',
@@ -138,7 +162,7 @@ class MainSideNav extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: context.h(16)),
               ],
             ),
           ),
@@ -147,8 +171,8 @@ class MainSideNav extends StatelessWidget {
         AnimatedPositioned(
           duration: _animDuration,
           curve: _animCurve,
-          top: 28,
-          left: (expanded ? expandedWidth : collapsedWidth) - 14,
+          top: context.h(28),
+          left: currentW - context.w(14),
           child: _EdgeToggleButton(
             expanded: expanded,
             onTap: onToggleExpand,
@@ -159,59 +183,57 @@ class MainSideNav extends StatelessWidget {
   }
 
   Widget _buildHeader(
-      BuildContext context, Color textPrimary, Color textSecondary) {
+    BuildContext context,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        expanded ? 16 : 12,
-        20,
-        expanded ? 16 : 12,
-        12,
+        context.w(expanded ? 16 : 12),
+        context.h(20),
+        context.w(expanded ? 16 : 12),
+        context.h(12),
       ),
       child: Row(
+        mainAxisAlignment:
+            expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
         children: [
-          // Logo stays fixed size so it never causes overflow.
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
+          SvgPicture.asset(
+            'assets/images/logo/rdx_logo_picture.svg',
+            colorFilter: const ColorFilter.mode(
+              Colors.black,
+              BlendMode.srcIn,
             ),
-            child: const Icon(Icons.restaurant,
-                color: AppColors.primary, size: 20),
+            width: context.w(50),
+            height: context.h(35),
           ),
-          // Text fades + size-animates instead of being crushed.
-          AnimatedSize(
-            duration: _animDuration,
-            curve: _animCurve,
-            alignment: Alignment.centerLeft,
-            child: expanded
-                ? Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      opacity: expanded ? 1.0 : 0.0,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Admin',
-                            style: AppTextStyles.heading(context),
+          Flexible(
+            child: AnimatedSize(
+              duration: _animDuration,
+              curve: _animCurve,
+              alignment: Alignment.centerLeft,
+              child: ClipRect(
+                child: expanded
+                    ? Padding(
+                        padding: EdgeInsets.only(left: context.w(10)),
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          opacity: expanded ? 1.0 : 0.0,
+                          child: Text(
+                            'Admin Panel',
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            overflow: TextOverflow.clip,
+                            softWrap: false,
+                            style: AppTextStyles.heading(context).copyWith(
+                              color: textPrimary,
+                              fontSize: context.h(20),
+                            ),
                           ),
-                          Text(
-                            'RDX Restaurant',
-                            style: AppTextStyles.body(context),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : const SizedBox.shrink(),
+                        ),
+                      )
+                    : const SizedBox(width: 0, height: 0),
+              ),
+            ),
           ),
         ],
       ),
@@ -223,6 +245,7 @@ class MainSideNav extends StatelessWidget {
 class _EdgeToggleButton extends StatefulWidget {
   final bool expanded;
   final VoidCallback onTap;
+
   const _EdgeToggleButton({required this.expanded, required this.onTap});
 
   @override
@@ -234,6 +257,9 @@ class _EdgeToggleButtonState extends State<_EdgeToggleButton> {
 
   @override
   Widget build(BuildContext context) {
+    // Single scale factor for both dimensions so the button stays a true circle.
+    final size = context.w(28);
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovering = true),
@@ -248,8 +274,8 @@ class _EdgeToggleButtonState extends State<_EdgeToggleButton> {
             scale: _hovering ? 1.1 : 1.0,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: 28,
-              height: 28,
+              width: size,
+              height: size,
               decoration: BoxDecoration(
                 color: _hovering ? AppColors.primary : AppColors.lightSurface,
                 shape: BoxShape.circle,
@@ -257,21 +283,16 @@ class _EdgeToggleButtonState extends State<_EdgeToggleButton> {
                   color: _hovering ? AppColors.primary : AppColors.lightBorder,
                   width: 1.5,
                 ),
-                // boxShadow: [
-                //   BoxShadow(
-                //     color: Colors.black.withOpacity(0.4),
-                //     blurRadius: 8,
-                //     offset: const Offset(0, 2),
-                //   ),
-                // ],
               ),
-              // Clear directional icons instead of a rotating chevron.
-              child: Icon(
-                widget.expanded
-                    ? Icons.keyboard_double_arrow_left_rounded
-                    : Icons.keyboard_double_arrow_right_rounded,
-                size: 18,
-                color: _hovering ? Colors.white : AppColors.lightTextSecondary,
+              child: AnimatedRotation(
+                duration: const Duration(milliseconds: 280),
+                turns: widget.expanded ? 0 : 0.5,
+                child: Icon(
+                  Icons.keyboard_double_arrow_left_rounded,
+                  size: size * (18 / 28),
+                  color:
+                      _hovering ? Colors.white : AppColors.lightTextSecondary,
+                ),
               ),
             ),
           ),
@@ -305,52 +326,81 @@ class _NavTile extends StatelessWidget {
         selected ? AppColors.primary.withOpacity(0.15) : Colors.transparent;
     final color = selected ? AppColors.primary : AppColors.lightTextSecondary;
 
+    final tileHeight = context.h(42);
+    final squareSide = tileHeight;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Material(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: SizedBox(
-            height: 42,
-            child: Row(
-              mainAxisAlignment:
-                  expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(left: expanded ? 12 : 0),
-                  child: Icon(item.icon, size: 20, color: color),
-                ),
-                AnimatedSize(
-                  duration: _d,
-                  curve: _c,
-                  alignment: Alignment.centerLeft,
-                  child: expanded
-                      ? Padding(
-                          padding: const EdgeInsets.only(left: 12, right: 8),
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 180),
-                            opacity: expanded ? 1.0 : 0.0,
-                            child: Text(
-                              item.label,
-                              style: AppTextStyles.section(context).copyWith(
-                                color: selected
-                                    ? AppColors.primary
-                                    : AppColors.lightTextSecondary,
+      padding: EdgeInsets.symmetric(vertical: context.h(6)),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // constraints.maxWidth is the real, concrete width available
+          // (the ListView's content width), so we can animate to it
+          // instead of jumping to double.infinity.
+          final fullWidth = constraints.maxWidth;
+          final targetWidth = expanded ? fullWidth : squareSide;
+
+          return Center(
+            child: AnimatedContainer(
+              duration: _d,
+              curve: _c,
+              width: targetWidth,
+              height: tileHeight,
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(context.h(10)),
+              ),
+              // Clip so children never paint/measure outside the
+              // currently-animating width — this is what kills the
+              // overflow exception during the collapse transition.
+              clipBehavior: Clip.antiAlias,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  child: Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      // Icon: pinned at a fixed left inset when expanded,
+                      // dead-centered in the square when collapsed.
+                      Positioned(
+                        left: expanded ? context.w(12) : null,
+                        child: expanded
+                            ? Icon(item.icon, size: context.h(20), color: color)
+                            : SizedBox(
+                                width: squareSide,
+                                child: Icon(
+                                  item.icon,
+                                  size: context.h(20),
+                                  color: color,
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      ),
+                      Positioned(
+                        left: context.w(44),
+                        right: context.w(8),
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 180),
+                          opacity: expanded ? 1.0 : 0.0,
+                          child: Text(
+                            item.label,
+                            style: AppTextStyles.section(context).copyWith(
+                              color: selected
+                                  ? AppColors.primary
+                                  : AppColors.lightTextSecondary,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            softWrap: false,
                           ),
-                        )
-                      : const SizedBox.shrink(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -386,49 +436,70 @@ class _FooterTile extends StatelessWidget {
     final bg =
         selected ? AppColors.primary.withOpacity(0.15) : Colors.transparent;
 
+    final tileHeight = context.h(42);
+    final squareSide = tileHeight;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Material(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: SizedBox(
-            height: 42,
-            child: Row(
-              mainAxisAlignment:
-                  expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(left: expanded ? 12 : 0),
-                  child: Icon(icon, size: 20, color: color),
-                ),
-                AnimatedSize(
-                  duration: _d,
-                  curve: _c,
-                  alignment: Alignment.centerLeft,
-                  child: expanded
-                      ? Padding(
-                          padding: const EdgeInsets.only(left: 12, right: 8),
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 180),
-                            opacity: expanded ? 1.0 : 0.0,
-                            child: Text(
-                              label,
-                              style: AppTextStyles.section(context)
-                                  .copyWith(color: color),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+      padding: EdgeInsets.symmetric(vertical: context.h(6)),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final fullWidth = constraints.maxWidth;
+          final targetWidth = expanded ? fullWidth : squareSide;
+
+          return Center(
+            child: AnimatedContainer(
+              duration: _d,
+              curve: _c,
+              width: targetWidth,
+              height: tileHeight,
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(context.h(10)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  child: Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      Positioned(
+                        left: expanded ? context.w(12) : null,
+                        child: expanded
+                            ? Icon(icon, size: context.h(20), color: color)
+                            : SizedBox(
+                                width: squareSide,
+                                child: Icon(
+                                  icon,
+                                  size: context.h(20),
+                                  color: color,
+                                ),
+                              ),
+                      ),
+                      Positioned(
+                        left: context.w(44),
+                        right: context.w(8),
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 180),
+                          opacity: expanded ? 1.0 : 0.0,
+                          child: Text(
+                            label,
+                            style: AppTextStyles.section(context)
+                                .copyWith(color: color),
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            softWrap: false,
                           ),
-                        )
-                      : const SizedBox.shrink(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

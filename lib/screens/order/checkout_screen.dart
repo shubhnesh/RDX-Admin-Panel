@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/screens/order/bill_settlement_screen.dart';
-import 'package:rdx_admin/screens/order/place_order_screen.dart';
+import 'package:rdx_admin/screens/widgets/dialogs/rdx_notice_dialog.dart';
 import 'package:rdx_admin/services/table_config_service.dart';
 import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import '../../core/theme/app_colors.dart';
@@ -81,7 +81,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       nameLabel: 'Total tables *',
       nameHint: 'Enter count',
       initialName: _totalTables?.toString(),
-      saveButtonLabel: 'Save',
+      saveButtonLabel: 'Done',
       onSave: (name, _) async {
         final n = int.tryParse(name.trim());
         if (n == null ||
@@ -125,18 +125,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   // ===========================================================================
 
   Future<void> _placeOrder() async {
-    if (!_formKey.currentState!.validate()) return;
-
+    // Same pattern as CreateCouponScreen: one notice dialog per missing
+    // mandatory field (no inline Form validators for these checks).
     final cart = ref.read(cartProvider);
 
     if (cart.isEmpty) {
-      _showMessage('Your order is empty. Please add items first.');
+      await _showNotice('Your order is empty. Please add items first.');
       return;
     }
 
     if (_orderType == OrderType.dineIn &&
         (_selectedTable == null || _selectedTable!.isEmpty)) {
-      _showMessage('Please select a table number.');
+      await _showNotice('Please select a table number.');
+      return;
+    }
+
+    if (_orderType == OrderType.delivery &&
+        _deliveryAddress.text.trim().isEmpty) {
+      await _showNotice('Please enter a delivery address.');
       return;
     }
 
@@ -169,6 +175,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       notes: _orderNotes.text.trim().isEmpty ? null : _orderNotes.text.trim(),
       orderType: _orderType,
       tableNumber: _orderType == OrderType.dineIn ? _selectedTable : null,
+      // Admin / POS checkout always creates a staff (restaurant) order.
+      orderSource: OrderSource.staff,
     );
 
     try {
@@ -178,7 +186,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       if (!mounted) return;
 
       if (newOrderId == null || newOrderId.isEmpty) {
-        _showMessage('Failed to place order. Please try again.');
+        await _showNotice('Failed to place order. Please try again.');
         return;
       }
 
@@ -215,7 +223,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           builder: (_) => BillSettlementScreen(
             bill: BillSettlementData(
               orderNumber: newOrderId,
-              restaurantName: 'RDX Restaurant',
+              restaurantName: 'RDX Fast Food',
               orderType: _orderType.label,
               tableNumber: tableNumber,
               billingMode: _orderType.label,
@@ -240,23 +248,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       );
     } catch (_) {
       if (!mounted) return;
-      _showMessage('Failed to place order. Please try again.');
+      await _showNotice('Failed to place order. Please try again.');
     }
   }
 
-  void _editOrder() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const PlaceOrderScreen(),
-      ),
-    );
-  }
-
-  void _showMessage(String message) {
+  /// Same notice-dialog pattern as [CreateCouponScreen].
+  Future<void> _showNotice(String message) async {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    await RdxNoticeDialog.show(context, message: message);
   }
 
   // ===========================================================================
@@ -299,28 +298,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       colors,
                       title: 'Order Summary',
                       icon: Icons.receipt_long_outlined,
-                      headerTrailing: TextButton.icon(
-                        onPressed: _editOrder,
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: context.w(8),
-                            vertical: context.h(6),
-                          ),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        icon: Icon(
-                          Icons.edit_outlined,
-                          size: context.h(18),
-                          color: AppColors.primary,
-                        ),
-                        label: Text(
-                          'Edit Order',
-                          style: AppTextStyles.label(context).copyWith(
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
                       children: [
                         if (cart.isEmpty)
                           Text(
@@ -330,8 +307,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             ),
                           )
                         else
-                          for (final line in cart)
-                            _buildSummaryItem(context, colors, line),
+                          for (final line in cart) ...[
+                            _CheckoutItemCard(line: line),
+                            SizedBox(height: context.h(10)),
+                          ],
                         Divider(
                           color: colors.divider,
                           height: context.h(20),
@@ -421,7 +400,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       icon: Icons.room_service_outlined,
                       children: [
                         RdxDropdown<OrderType>(
-                          label: 'Order Type',
+                          label: 'Order Type *',
                           value: _orderType,
                           items: OrderType.values,
                           labelBuilder: (type) => type.label,
@@ -482,12 +461,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             label: 'Delivery Address *',
                             hint: 'Enter delivery address',
                             maxLines: 3,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Required';
-                              }
-                              return null;
-                            },
                           ),
                         ],
                       ],
@@ -547,52 +520,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   // ===========================================================================
-  // SUMMARY ITEM
+  // SUMMARY AMOUNTS
   // ===========================================================================
-
-  Widget _buildSummaryItem(
-    BuildContext context,
-    AppColorScheme colors,
-    CartLineItem line,
-  ) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: context.h(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  '${line.quantity}x ${line.menuItem.name}',
-                  style: AppTextStyles.body(context).copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              SizedBox(width: context.w(12)),
-              Text(
-                '₹${line.subtotal.toStringAsFixed(2)}',
-                style: AppTextStyles.body(context).copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: context.h(4)),
-          Text(
-            '₹${line.unitPrice.toStringAsFixed(2)} each',
-            style: AppTextStyles.body(context).copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _summaryAmountRow(
     BuildContext context,
@@ -660,6 +589,153 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
           SizedBox(height: context.h(16)),
           ...children,
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// CHECKOUT ITEM CARD — same layout as cart panel (image + details)
+// but Qty text instead of quantity stepper (read-only on checkout).
+// =============================================================================
+
+class _CheckoutItemCard extends StatelessWidget {
+  final CartLineItem line;
+
+  const _CheckoutItemCard({required this.line});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final imageUrl = line.menuItem.imageUrl.trim();
+
+    return Container(
+      padding: EdgeInsets.all(context.w(10)),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(context.h(10)),
+        border: Border.all(color: colors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: context.h(10),
+            offset: Offset(0, context.h(3)),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Thumbnail
+          ClipRRect(
+            borderRadius: BorderRadius.circular(context.h(8)),
+            child: SizedBox(
+              width: context.w(64),
+              height: context.w(64),
+              child: imageUrl.isEmpty
+                  ? Container(
+                      color: colors.surfaceVariant,
+                      child: Icon(
+                        Icons.restaurant_outlined,
+                        color: colors.textMuted,
+                        size: context.h(22),
+                      ),
+                    )
+                  : Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: colors.surfaceVariant,
+                        child: Icon(
+                          Icons.restaurant_outlined,
+                          color: colors.textMuted,
+                          size: context.h(22),
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          SizedBox(width: context.w(10)),
+          // Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        line.menuItem.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.section(context).copyWith(
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: context.w(8)),
+                    Text(
+                      '₹${line.subtotal.toStringAsFixed(2)}',
+                      style: AppTextStyles.section(context).copyWith(
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: context.h(2)),
+                Text(
+                  '₹${line.unitPrice.toStringAsFixed(2)} each',
+                  style: AppTextStyles.bodyTertiary(context).copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
+                SizedBox(height: context.h(6)),
+                Text(
+                  'Qty: ${line.quantity}',
+                  style: AppTextStyles.caption(context).copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+                if (line.spiceLevel != null &&
+                    line.spiceLevel!.trim().isNotEmpty) ...[
+                  SizedBox(height: context.h(4)),
+                  Text(
+                    line.spiceLevel!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption(context).copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+                if (line.addOns.isNotEmpty) ...[
+                  SizedBox(height: context.h(2)),
+                  Text(
+                    line.addOns.map((a) => a.displayLabel).join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption(context).copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+                if (line.notes != null && line.notes!.trim().isNotEmpty) ...[
+                  SizedBox(height: context.h(2)),
+                  Text(
+                    line.notes!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption(context).copyWith(
+                      color: colors.textMuted,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );

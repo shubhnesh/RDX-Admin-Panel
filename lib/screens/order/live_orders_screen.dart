@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
@@ -13,7 +14,7 @@ import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/reusable_widgets/stat_card.dart';
 import '../../widgets/resuable_options/rdx_category_tabs.dart';
-import 'place_order_screen.dart';
+import 'create_order_screen.dart';
 
 class LiveOrdersScreen extends ConsumerStatefulWidget {
   const LiveOrdersScreen({super.key});
@@ -29,6 +30,18 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   /// vertical room. Toggled by [StatsCollapseButton].
   bool _statsCollapsed = false;
 
+  /// Horizontal scroll for the kanban board (All view).
+  final ScrollController _boardScrollController = ScrollController();
+
+  /// Column index whose order list is under the cursor, or null.
+  /// When non-null, mouse wheel scrolls that list vertically and only that
+  /// column's scrollbar is visible.
+  /// When null, mouse wheel scrolls the board horizontally.
+  int? _hoveredListColumnIndex;
+
+  /// True while the pointer is over the horizontal kanban board area.
+  bool _boardHovered = false;
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +50,12 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       if (!mounted) return;
       ref.read(liveOrdersProvider).load();
     });
+  }
+
+  @override
+  void dispose() {
+    _boardScrollController.dispose();
+    super.dispose();
   }
 
   // CREATE ORDER
@@ -64,7 +83,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   // STATUS FILTER
 
   List<String> get _statusLabels => const [
-        'New',
+        'Live',
+        'App Orders',
         'Preparing',
         'Ready',
         'Pending Payment',
@@ -79,20 +99,14 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     });
   }
 
-  // Getter for pending-payment orders
+  /// Unpaid orders after kitchen flow (status == delivered).
+  /// Shown under PENDING PAYMENT until settled; then they move to DELIVERED.
   List<OrderModel> _getPendingPaymentOrders(
     LiveOrdersProvider provider,
   ) {
-    final allOrders = <OrderModel>[
-      ...provider.pending,
-      ...provider.preparing,
-      ...provider.ready,
-      ...provider.delivered,
-    ];
-
     final seenIds = <String>{};
 
-    return allOrders.where((order) {
+    return provider.delivered.where((order) {
       if (order.paymentStatus == PaymentStatus.paid) {
         return false;
       }
@@ -128,7 +142,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         builder: (_) => BillSettlementScreen(
           bill: BillSettlementData(
             orderNumber: order.id,
-            restaurantName: 'RDX Restaurant',
+            restaurantName: 'RDX Fast Food',
             orderType: order.orderType.name,
             tableNumber: order.tableNumber,
             billingMode: order.orderType.name,
@@ -165,7 +179,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     final colors = AppColors.of(context);
     final provider = ref.watch(liveOrdersProvider);
 
-    final totalOrders = provider.pending.length +
+    final totalOrders = provider.live.length +
         provider.preparing.length +
         provider.ready.length +
         provider.delivered.length;
@@ -261,6 +275,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                         provider: provider,
                         totalOrders: totalOrders,
                         pendingPaymentCount: pendingPaymentOrders.length,
+                        appOrdersCount: provider.appOrders.length,
                       ),
               ),
 
@@ -297,6 +312,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     required LiveOrdersProvider provider,
     required int totalOrders,
     required int pendingPaymentCount,
+    required int appOrdersCount,
   }) {
     final deliveredPaidCount = provider.delivered
         .where(
@@ -319,10 +335,17 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               minHeight: isNarrow ? context.h(62) : context.h(72),
             ),
             StatCard(
-              label: 'New Orders',
-              value: '${provider.pending.length}',
+              label: 'Live Orders',
+              value: '${provider.live.length}',
               icon: Icons.star_outline_rounded,
               accentColor: const Color(0xFF5AC8FA), // light blue
+              minHeight: isNarrow ? context.h(62) : context.h(72),
+            ),
+            StatCard(
+              label: 'App Orders',
+              value: '$appOrdersCount',
+              icon: Icons.phone_android_outlined,
+              accentColor: const Color(0xFF7C5CFC),
               minHeight: isNarrow ? context.h(62) : context.h(72),
             ),
             StatCard(
@@ -392,31 +415,115 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   // WIDE LAYOUT — states as columns, cards stacked vertically
   // ---------------------------------------------------------------------------
   //
-  // Column width is always computed as if all 4 states (New / Preparing /
-  // Ready / Delivering) were visible, so a single filtered-in section keeps
+  // Column width is always computed as if all board states were visible, so a single filtered-in section keeps
   // the same "normal" card width as the All view instead of stretching to
   // fill the row when fewer sections are shown.
   // ---------------------------------------------------------------------------
 
+  // All-board columns: Live / App / Preparing / Ready / Pending Payment.
+  // Delivered is NOT on the All board — only via the "Delivered" filter chip.
   static const int _kTotalColumns = 5;
+  static const int _kVisibleColumns = 5;
 
-  Widget _buildColumnsBoard(List<_SectionData> sections, double maxWidth) {
+  Widget _buildColumnsBoard(
+    List<_SectionData> sections, {
+    required double maxWidth,
+    required double maxHeight,
+  }) {
     final gap = context.w(16);
+    // 5 columns fill the width; the 6th is outside and scrollable into view.
     final columnWidth =
-        (maxWidth - gap * (_kTotalColumns - 1)) / _kTotalColumns;
+        (maxWidth - gap * (_kVisibleColumns - 1)) / _kVisibleColumns;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        for (int i = 0; i < sections.length; i++) ...[
-          SizedBox(
-            width: columnWidth,
-            child: _buildColumnSection(sections[i]),
+    // Bounded height is required so each column's Expanded + ListView works
+    // inside a horizontal scroll view.
+    final boardHeight =
+        maxHeight.isFinite && maxHeight > 0 ? maxHeight : context.h(520);
+
+    final colors = AppColors.of(context);
+
+    // Board horizontal scrollbar only while the pointer is over the board
+    // and not inside a specific column list.
+    final showBoardScrollbar = _boardHovered && _hoveredListColumnIndex == null;
+
+    final boardTheme = Theme.of(context).copyWith(
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: WidgetStatePropertyAll(showBoardScrollbar ? 6.0 : 0.0),
+        radius: const Radius.circular(8),
+        thumbVisibility: WidgetStatePropertyAll(showBoardScrollbar),
+        trackVisibility: const WidgetStatePropertyAll(false),
+        thumbColor: WidgetStatePropertyAll(
+          colors.textMuted.withValues(alpha: 0.35),
+        ),
+        trackColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+    );
+
+    return Theme(
+      data: boardTheme,
+      child: MouseRegion(
+        onEnter: (_) {
+          if (!_boardHovered) setState(() => _boardHovered = true);
+        },
+        onExit: (_) {
+          if (_boardHovered) {
+            setState(() {
+              _boardHovered = false;
+              _hoveredListColumnIndex = null;
+            });
+          }
+        },
+        child: Listener(
+          onPointerSignal: (signal) {
+            // Convert vertical mouse-wheel / trackpad to horizontal board scroll
+            // when the cursor is NOT over a column's order list.
+            if (signal is! PointerScrollEvent) return;
+            if (_hoveredListColumnIndex != null) return;
+            if (!_boardScrollController.hasClients) return;
+
+            final pos = _boardScrollController.position;
+            final delta = signal.scrollDelta.dy != 0
+                ? signal.scrollDelta.dy
+                : signal.scrollDelta.dx;
+            final next = (pos.pixels + delta).clamp(
+              pos.minScrollExtent,
+              pos.maxScrollExtent,
+            );
+            if (next != pos.pixels) {
+              _boardScrollController.jumpTo(next);
+            }
+          },
+          child: Scrollbar(
+            controller: _boardScrollController,
+            thumbVisibility: showBoardScrollbar,
+            trackVisibility: false,
+            thickness: showBoardScrollbar ? 6 : 0,
+            child: SingleChildScrollView(
+              controller: _boardScrollController,
+              scrollDirection: Axis.horizontal,
+              primary: false,
+              padding: EdgeInsets.only(bottom: context.h(12)),
+              child: SizedBox(
+                height: boardHeight,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    for (int i = 0; i < sections.length; i++) ...[
+                      SizedBox(
+                        width: columnWidth,
+                        height: boardHeight,
+                        child: _buildColumnSection(sections[i], columnIndex: i),
+                      ),
+                      if (i != sections.length - 1) SizedBox(width: gap),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
-          if (i != sections.length - 1) SizedBox(width: gap),
-        ],
-      ],
+        ),
+      ),
     );
   }
 
@@ -425,11 +532,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   ) {
     final sections = _buildVisibleSectionsData(provider);
 
-    // A specific status filter (New / Preparing / Ready) always yields a
-    // single section — show it as a wrapping grid of normal-sized cards
-    // that flows to the next row instead of the board layout, and scrolls
-    // vertically once it overflows.
+    // A specific status filter always yields a single section — grid layout.
     if (_selectedStatus != 'All') {
+      if (sections.isEmpty) {
+        return const SizedBox.shrink();
+      }
       return _buildSingleSectionGrid(sections.first);
     }
 
@@ -437,9 +544,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= _kColumnsBreakpoint;
 
-        return isWide
-            ? _buildColumnsBoard(sections, constraints.maxWidth)
-            : _buildRowsBoard(sections);
+        if (!isWide) {
+          return _buildRowsBoard(sections);
+        }
+
+        return _buildColumnsBoard(
+          sections,
+          maxWidth: constraints.maxWidth,
+          maxHeight: constraints.maxHeight,
+        );
       },
     );
   }
@@ -463,8 +576,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cardWidth = (constraints.maxWidth - gap * (_kTotalColumns - 1)) /
-            _kTotalColumns;
+        final cardWidth =
+            (constraints.maxWidth - gap * (_kVisibleColumns - 1)) /
+                _kVisibleColumns;
 
         return SingleChildScrollView(
           padding: EdgeInsets.only(
@@ -494,7 +608,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                         width: cardWidth,
                         child: LiveOrderCard(
                           order: order,
-                          actionText: data.actionText,
+                          actionText: data.actionTextFor(order),
                           onAdvance: data.onAdvance,
                           onTap: () => _openOrderDetail(order),
                         ),
@@ -508,8 +622,13 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  Widget _buildColumnSection(_SectionData data) {
+  Widget _buildColumnSection(
+    _SectionData data, {
+    required int columnIndex,
+  }) {
     final isEmpty = data.orders.isEmpty;
+    final colors = AppColors.of(context);
+    final listHovered = _hoveredListColumnIndex == columnIndex;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,39 +636,69 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         _sectionHeader(data),
         SizedBox(height: context.h(12)),
         if (isEmpty)
-          // Keep the empty-state box at its normal compact height —
-          // don't stretch it to fill the column.
+          // Empty columns do not capture wheel — board scrolls horizontally.
           _buildEmptySection(
             emptyIcon: data.emptyIcon,
             emptyText: data.emptyText,
           )
         else
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.only(bottom: context.h(4)),
-              itemCount: data.orders.length,
-              itemBuilder: (context, index) {
-                final order = data.orders[index];
-
-                return Padding(
-                  padding: EdgeInsets.only(bottom: context.h(12)),
-                  child: LiveOrderCard(
-                    order: order,
-                    actionText: data.actionText,
-                    onAdvance: data.onAdvance,
-                    onTap: () => _openOrderDetail(order),
-                  ),
-                );
+            child: MouseRegion(
+              onEnter: (_) {
+                if (_hoveredListColumnIndex != columnIndex) {
+                  setState(() => _hoveredListColumnIndex = columnIndex);
+                }
               },
+              onExit: (_) {
+                if (_hoveredListColumnIndex == columnIndex) {
+                  setState(() => _hoveredListColumnIndex = null);
+                }
+              },
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  scrollbarTheme: ScrollbarThemeData(
+                    // Fully hide when this column is not under the cursor.
+                    thickness: WidgetStatePropertyAll(listHovered ? 6.0 : 0.0),
+                    radius: const Radius.circular(8),
+                    thumbVisibility: WidgetStatePropertyAll(listHovered),
+                    trackVisibility: const WidgetStatePropertyAll(false),
+                    thumbColor: WidgetStatePropertyAll(
+                      colors.textMuted.withValues(alpha: 0.35),
+                    ),
+                    trackColor:
+                        const WidgetStatePropertyAll(Colors.transparent),
+                  ),
+                ),
+                child: Scrollbar(
+                  thumbVisibility: listHovered,
+                  trackVisibility: false,
+                  thickness: listHovered ? 6 : 0,
+                  radius: const Radius.circular(8),
+                  child: ListView.builder(
+                    primary: false,
+                    padding: EdgeInsets.only(bottom: context.h(4)),
+                    itemCount: data.orders.length,
+                    itemBuilder: (context, index) {
+                      final order = data.orders[index];
+
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: context.h(12)),
+                        child: LiveOrderCard(
+                          order: order,
+                          actionText: data.actionTextFor(order),
+                          onAdvance: data.onAdvance,
+                          onTap: () => _openOrderDetail(order),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
           ),
       ],
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // NARROW LAYOUT — states as rows, cards scroll horizontally
-  // ---------------------------------------------------------------------------
 
   Widget _buildRowsBoard(List<_SectionData> sections) {
     return SingleChildScrollView(
@@ -603,7 +752,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                         width: context.w(_kRowCardWidth),
                         child: LiveOrderCard(
                           order: data.orders[index],
-                          actionText: data.actionText,
+                          actionText: data.actionTextFor(data.orders[index]),
                           onAdvance: data.onAdvance,
                           onTap: () => _openOrderDetail(data.orders[index]),
                         ),
@@ -659,26 +808,47 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   // ---------------------------------------------------------------------------
   // VISIBLE SECTIONS (data only — layout decides how to render them)
   // ---------------------------------------------------------------------------
+  //
+  // Flow after Ready (type + payment aware):
+  //   "Out for delivery" → status = delivered
+  //   unpaid  → PENDING PAYMENT (board column on All)
+  //   paid    → DELIVERED (only when the "Delivered" chip is selected)
+  // ---------------------------------------------------------------------------
 
   List<_SectionData> _buildVisibleSectionsData(
     LiveOrdersProvider provider,
   ) {
     final sections = <_SectionData>[];
-    final pendingPaymentOrders = _getPendingPaymentOrders(provider);
-    final deliveredPaidOrders = provider.delivered
-        .where(
-          (order) => order.paymentStatus == PaymentStatus.paid,
-        )
-        .toList();
 
-    if (_selectedStatus == 'All' || _selectedStatus == 'New') {
+    // Restaurant (staff) workflow columns — exclude app-sourced orders so
+    // POS and customer-app queues stay separate.
+    List<OrderModel> staffOnly(List<OrderModel> list) =>
+        list.where((o) => o.orderSource == OrderSource.staff).toList();
+
+    if (_selectedStatus == 'All' || _selectedStatus == 'Live') {
       sections.add(
         _SectionData(
-          title: 'NEW ORDERS',
+          title: 'LIVE ORDERS',
           color: const Color(0xFF5AC8FA),
-          orders: provider.pending,
+          orders: staffOnly(provider.live),
           actionText: 'Start Preparing',
           onAdvance: provider.advanceStatus,
+        ),
+      );
+    }
+
+    // App orders sit directly beside Live Orders on the board.
+    if (_selectedStatus == 'All' || _selectedStatus == 'App Orders') {
+      sections.add(
+        _SectionData(
+          title: 'APP ORDERS',
+          color: const Color(0xFF7C5CFC),
+          orders: provider.appOrders,
+          actionText: null,
+          onAdvance: provider.advanceStatus,
+          emptyIcon: Icons.phone_android_outlined,
+          emptyText: 'No app orders',
+          usePerOrderAction: true,
         ),
       );
     }
@@ -688,31 +858,38 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         _SectionData(
           title: 'PREPARING',
           color: const Color(0xFFE9A719),
-          orders: provider.preparing,
+          orders: staffOnly(provider.preparing),
           actionText: 'Mark Ready',
           onAdvance: provider.advanceStatus,
         ),
       );
     }
 
+    // Ready: action depends on type + payment (OrderModel.boardAdvanceLabel).
+    // Delivery → "Out for delivery"; walk-in paid → "Mark Completed";
+    // walk-in unpaid → "Serve Order".
     if (_selectedStatus == 'All' || _selectedStatus == 'Ready') {
       sections.add(
         _SectionData(
           title: 'READY',
           color: const Color(0xFF20B47A),
-          orders: provider.ready,
-          actionText: 'Out for delivery',
+          orders: staffOnly(provider.ready),
+          actionText: null,
           onAdvance: provider.advanceStatus,
+          usePerOrderAction: true,
         ),
       );
     }
 
+    // After Ready advance → status becomes delivered.
+    // Unpaid (pay-at-end) → stay here until Pay Now.
+    // Prepaid (already paid) skip this column; only under Delivered chip.
     if (_selectedStatus == 'All' || _selectedStatus == 'Pending Payment') {
       sections.add(
         _SectionData(
           title: 'PENDING PAYMENT',
           color: const Color(0xFFE9A719),
-          orders: pendingPaymentOrders,
+          orders: _getPendingPaymentOrders(provider),
           actionText: 'Pay Now',
           onAdvance: _openPayment,
           emptyIcon: Icons.payments_outlined,
@@ -721,16 +898,24 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       );
     }
 
-    if (_selectedStatus == 'All' || _selectedStatus == 'Delivered') {
+    // Delivered is chip-only — not shown on the All board.
+    // Only paid + status delivered orders appear here.
+    if (_selectedStatus == 'Delivered') {
       sections.add(
         _SectionData(
           title: 'DELIVERED',
           color: const Color(0xFF20B47A),
-          orders: deliveredPaidOrders,
+          orders: staffOnly(
+            provider.delivered
+                .where(
+                  (order) => order.paymentStatus == PaymentStatus.paid,
+                )
+                .toList(),
+          ),
           actionText: null,
           onAdvance: null,
           emptyIcon: Icons.delivery_dining_outlined,
-          emptyText: 'No active deliveries',
+          emptyText: 'No delivered orders',
         ),
       );
     }
@@ -802,7 +987,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 // SECTION DATA
 // =============================================================================
 //
-// Plain data for one order state (NEW / PREPARING / READY / DELIVERING).
+// Plain data for one order state (LIVE / PREPARING / READY / DELIVERING).
 // Kept separate from the widgets so the same data can be rendered either as
 // a column (wide screens) or a row (narrow screens) without duplication.
 
@@ -815,6 +1000,10 @@ class _SectionData {
   final IconData? emptyIcon;
   final String? emptyText;
 
+  /// When true (e.g. App Orders with mixed statuses), each card uses
+  /// [OrderStatus.advanceActionLabel] instead of the section-level [actionText].
+  final bool usePerOrderAction;
+
   const _SectionData({
     required this.title,
     required this.color,
@@ -823,7 +1012,16 @@ class _SectionData {
     this.onAdvance,
     this.emptyIcon,
     this.emptyText,
+    this.usePerOrderAction = false,
   });
+
+  String? actionTextFor(OrderModel order) {
+    if (usePerOrderAction) {
+      // Type + payment aware label (delivery vs walk-in, prepaid vs unpaid).
+      return order.boardAdvanceLabel;
+    }
+    return actionText;
+  }
 }
 
 // =============================================================================

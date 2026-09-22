@@ -74,10 +74,10 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   Widget _buildBoard(LiveOrdersProvider provider) {
     final List<Widget> sections = [
       _buildSection(
-        title: 'NEW ORDERS',
-        count: provider.pending.length,
+        title: 'LIVE ORDERS',
+        count: provider.live.length,
         color: const Color(0xFFE51B3E),
-        orders: provider.pending,
+        orders: provider.live,
         actionText: 'Start Preparing',
         onAdvance: provider.advanceStatus,
       ),

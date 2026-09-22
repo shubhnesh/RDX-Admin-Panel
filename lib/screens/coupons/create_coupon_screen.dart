@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/screens/coupons/widgets/coupon_card.dart';
+import 'package:rdx_admin/screens/widgets/dialogs/rdx_notice_dialog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/formatters.dart';
@@ -173,6 +174,11 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   //   }
   // }
 
+  Future<void> _showNotice(String message) async {
+    if (!mounted) return;
+    await RdxNoticeDialog.show(context, message: message);
+  }
+
   Future<void> _save() async {
     final code = codeController.text.trim();
     final description = descriptionController.text.trim();
@@ -182,63 +188,62 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
 
     final discountValue = double.tryParse(discountText);
     final minOrderValue = double.tryParse(minOrderText);
-    final usageLimit = int.tryParse(usageLimitText);
+    // Usage limit is optional — empty means unlimited.
+    final usageLimit =
+        usageLimitText.isEmpty ? null : int.tryParse(usageLimitText);
 
-    // Every field is mandatory.
-    if (code.isEmpty ||
-        description.isEmpty ||
-        discountValue == null ||
-        minOrderValue == null ||
-        usageLimit == null ||
-        startDate == null ||
-        endDate == null) {
-      setState(() {
-        errorMessage =
-            'All fields are mandatory. Please fill coupon code, description, '
-            'discount value, minimum order value, usage limit, start date and expiry date.';
-      });
+    if (code.isEmpty) {
+      await _showNotice('Please enter a coupon code.');
+      return;
+    }
+    if (description.isEmpty) {
+      await _showNotice('Please enter a description.');
+      return;
+    }
+    if (discountValue == null) {
+      await _showNotice('Please enter a discount value.');
+      return;
+    }
+    if (minOrderValue == null) {
+      await _showNotice('Please enter a minimum order value.');
+      return;
+    }
+    if (startDate == null) {
+      await _showNotice('Please select a start date.');
+      return;
+    }
+    if (endDate == null) {
+      await _showNotice('Please select an expiry date.');
       return;
     }
 
     if (code.length > 15) {
-      setState(() {
-        errorMessage = 'Coupon code cannot be longer than 15 characters.';
-      });
+      await _showNotice('Coupon code cannot be longer than 15 characters.');
       return;
     }
 
     if (discountType == DiscountType.percentage && discountValue > 100) {
-      setState(() {
-        errorMessage = 'Discount percentage cannot be more than 100.';
-      });
+      await _showNotice('Discount percentage cannot be more than 100.');
       return;
     }
 
     if (discountValue <= 0) {
-      setState(() {
-        errorMessage = 'Discount value must be greater than 0.';
-      });
+      await _showNotice('Discount value must be greater than 0.');
       return;
     }
 
     if (minOrderValue < 0) {
-      setState(() {
-        errorMessage = 'Minimum order value cannot be negative.';
-      });
+      await _showNotice('Minimum order value cannot be negative.');
       return;
     }
 
-    if (usageLimit <= 0) {
-      setState(() {
-        errorMessage = 'Usage limit must be greater than 0.';
-      });
+    if (usageLimitText.isNotEmpty && (usageLimit == null || usageLimit <= 0)) {
+      await _showNotice('Usage limit must be greater than 0 when provided.');
       return;
     }
 
     if (endDate!.isBefore(startDate!)) {
-      setState(() {
-        errorMessage = 'Expiry date cannot be before the start date.';
-      });
+      await _showNotice('Expiry date cannot be before the start date.');
       return;
     }
 
@@ -281,19 +286,16 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       if (success) {
         Navigator.of(context).pop();
       } else {
-        setState(() {
-          errorMessage =
-              isEdit ? 'Failed to update coupon.' : 'Failed to create coupon.';
-        });
+        await _showNotice(
+          isEdit ? 'Failed to update coupon.' : 'Failed to create coupon.',
+        );
       }
     } catch (e) {
       if (!mounted) return;
-
-      setState(() {
-        isLoading = false;
-        errorMessage =
-            isEdit ? 'Failed to update coupon.' : 'Failed to create coupon.';
-      });
+      setState(() => isLoading = false);
+      await _showNotice(
+        isEdit ? 'Failed to update coupon.' : 'Failed to create coupon.',
+      );
     }
   }
 
@@ -434,25 +436,6 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (errorMessage != null) ...[
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: context.w(12),
-              vertical: context.h(10),
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.danger.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(context.h(8)),
-              border: Border.all(color: AppColors.danger.withOpacity(0.4)),
-            ),
-            child: Text(
-              errorMessage!,
-              style:
-                  AppTextStyles.body(context).copyWith(color: AppColors.danger),
-            ),
-          ),
-          SizedBox(height: context.h(16)),
-        ],
         _sectionCard(
           context,
           icon: Icons.local_offer_outlined,
@@ -460,7 +443,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
           children: [
             RdxTextField(
               controller: codeController,
-              label: 'Coupon Code',
+              label: 'Coupon Code *',
               hint: 'Create coupon code',
               maxLength: 15,
               inputFormatters: [
@@ -471,7 +454,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
             SizedBox(height: context.h(16)),
             RdxTextField(
               controller: descriptionController,
-              label: 'Description',
+              label: 'Description *',
               maxLines: 3,
               hint: 'Enter coupon description',
             ),
@@ -481,7 +464,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
               final typeField = _discountTypeDropdown(context, colors);
               final valueField = RdxTextField(
                 controller: discountValueController,
-                label: 'Discount Value',
+                label: 'Discount Value *',
                 hint: discountType == DiscountType.percentage
                     ? 'Enter Discount Percentage'
                     : 'Enter Discount Amount',
@@ -520,7 +503,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
               final stack = c.maxWidth < 420;
               final minField = RdxTextField(
                 controller: minOrderController,
-                label: 'Minimum Order Value (₹)',
+                label: 'Minimum Order Value (₹) *',
                 hint: 'Enter Amount',
                 keyboardType: TextInputType.number,
                 inputFormatters: [
@@ -560,7 +543,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Start Date',
+                    'Start Date *',
                     style: AppTextStyles.bodySecondary(context)
                         .copyWith(color: colors.textSecondary),
                   ),
@@ -580,7 +563,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Expiry Date',
+                    'Expiry Date *',
                     style: AppTextStyles.bodySecondary(context)
                         .copyWith(color: colors.textSecondary),
                   ),
@@ -619,7 +602,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
         children: [
           Expanded(
             child: RdxActionButton.save(
-              label: isEdit ? 'Update' : 'Save',
+              label: isEdit ? 'Update' : 'Done',
               isLoading: isLoading,
               onPressed: _save,
             ),
@@ -670,7 +653,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
 
   Widget _discountTypeDropdown(BuildContext context, AppColorScheme colors) {
     return RdxDropdown<DiscountType>(
-      label: 'Discount Type',
+      label: 'Discount Type *',
       value: discountType,
       items: const [DiscountType.percentage, DiscountType.flat],
       labelBuilder: (v) =>

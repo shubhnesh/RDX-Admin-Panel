@@ -288,7 +288,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
                     children: [
                       Expanded(
                         child: RdxActionButton.save(
-                          label: widget.saveButtonLabel ?? 'Save',
+                          label: widget.saveButtonLabel ?? 'Done',
                           isLoading: _saving,
                           onPressed: _save,
                         ),

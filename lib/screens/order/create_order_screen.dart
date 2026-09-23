@@ -51,6 +51,71 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     super.dispose();
   }
 
+  /// Handles system back and header back.
+  ///
+  /// If the cart has items, shows a discard confirmation dialog.
+  /// On confirm: clears the cart, then pops. On cancel: stays on screen.
+  Future<void> _handleBack() async {
+    final cart = ref.read(cartProvider);
+
+    if (cart.isEmpty) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+
+    final discard = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final colors = AppColors.of(ctx);
+        return AlertDialog(
+          backgroundColor: colors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: Text(
+            'Discard cart?',
+            style: AppTextStyles.section(ctx).copyWith(
+              color: colors.textPrimary,
+            ),
+          ),
+          content: Text(
+            'You have items in your cart. Do you want to discard them ?',
+            style: AppTextStyles.bodySecondary(ctx).copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                'No',
+                style: AppTextStyles.label(ctx).copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(
+                'Yes',
+                style: AppTextStyles.label(ctx).copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (discard == true && mounted) {
+      ref.read(cartProvider.notifier).clear();
+      Navigator.of(context).pop();
+    }
+  }
+
   /// Moves from the active order/cart screen to checkout.
   ///
   /// IMPORTANT:
@@ -222,37 +287,45 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     // Keep the two-column POS layout on desktop/tablet.
     final isCompact = width < 900;
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      body: Column(
-        children: [
-          const RdxHeader(
-            title: 'Create New Order',
-            showBackButton: true,
-          ),
-          Expanded(
-            child: menuState.isLoading
-                ? const LoadingIndicator()
-                : Padding(
-                    padding: Responsive.pagePadding(
-                      context,
-                      top: context.h(10),
-                      bottom: context.h(10),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: colors.background,
+        body: Column(
+          children: [
+            RdxHeader(
+              title: 'Create New Order',
+              showBackButton: true,
+              onBack: _handleBack,
+            ),
+            Expanded(
+              child: menuState.isLoading
+                  ? const LoadingIndicator()
+                  : Padding(
+                      padding: Responsive.pagePadding(
+                        context,
+                        top: context.h(10),
+                        bottom: context.h(10),
+                      ),
+                      child: isCompact
+                          ? _buildCompactLayout(
+                              context,
+                              menuState,
+                              colors,
+                            )
+                          : _buildDesktopLayout(
+                              context,
+                              menuState,
+                              colors,
+                            ),
                     ),
-                    child: isCompact
-                        ? _buildCompactLayout(
-                            context,
-                            menuState,
-                            colors,
-                          )
-                        : _buildDesktopLayout(
-                            context,
-                            menuState,
-                            colors,
-                          ),
-                  ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:rdx_admin/core/theme/text_styles.dart';
@@ -13,6 +14,50 @@ import '../../widgets/resuable_options/rdx_text_field.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/buttons/rdx_toggle_button.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
+
+/// Auto-inserts ":" after two digits are typed, and blocks anything
+/// that isn't a digit or that colon. Produces "HH:mm" as the user types.
+class _HHMMInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Strip everything except digits.
+    var digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // Max 4 digits: HH + mm.
+    if (digits.length > 4) {
+      digits = digits.substring(0, 4);
+    }
+
+    // Clamp hour part as soon as we have 2 digits for it.
+    if (digits.length >= 2) {
+      var hour = int.parse(digits.substring(0, 2));
+      if (hour > 23) hour = 23;
+      digits = hour.toString().padLeft(2, '0') + digits.substring(2);
+    }
+
+    // Clamp minute part once fully typed.
+    if (digits.length >= 4) {
+      var minute = int.parse(digits.substring(2, 4));
+      if (minute > 59) minute = 59;
+      digits = digits.substring(0, 2) + minute.toString().padLeft(2, '0');
+    }
+
+    String formatted;
+    if (digits.length <= 2) {
+      formatted = digits;
+    } else {
+      formatted = '${digits.substring(0, 2)}:${digits.substring(2)}';
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
 
 class RestaurantProfileScreen extends ConsumerStatefulWidget {
   const RestaurantProfileScreen({super.key});
@@ -33,9 +78,14 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
   String? _logoName;
   bool _isUploadingLogo = false;
 
-  // Local state for operating hours toggles (can later be moved to provider)
-  bool _weekdaysOpen = true;
-  bool _weekendsOpen = true;
+  // ── Operating hours state (24h "HH:mm") ─────────────────────────────
+  bool _weekdaysOpenFlag = true;
+  bool _weekendsOpenFlag = true;
+
+  late String _weekdaysOpenTime;
+  late String _weekdaysCloseTime;
+  late String _weekendsOpenTime;
+  late String _weekendsCloseTime;
 
   @override
   void initState() {
@@ -48,6 +98,13 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
     addressController = TextEditingController(text: settings.address);
     phoneController = TextEditingController(text: settings.phone);
     emailController = TextEditingController(text: settings.email);
+
+    _weekdaysOpenFlag = settings.weekdays.isOpen;
+    _weekendsOpenFlag = settings.weekends.isOpen;
+    _weekdaysOpenTime = _to24h(settings.weekdays.open);
+    _weekdaysCloseTime = _to24h(settings.weekdays.close);
+    _weekendsOpenTime = _to24h(settings.weekends.open);
+    _weekendsCloseTime = _to24h(settings.weekends.close);
   }
 
   @override
@@ -59,6 +116,21 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
     emailController.dispose();
 
     super.dispose();
+  }
+
+  /// Converts a stored value ("08:00 AM" or "20:00") into 24h "HH:mm".
+  String _to24h(String value) {
+    final cleaned = value.trim().toUpperCase();
+    final isPm = cleaned.endsWith('PM');
+    final isAm = cleaned.endsWith('AM');
+    if (!isPm && !isAm) return cleaned; // already 24h-ish
+    final numeric = cleaned.substring(0, cleaned.length - 2).trim();
+    final parts = numeric.split(':');
+    var hour = int.tryParse(parts[0]) ?? 0;
+    final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+    if (isPm && hour != 12) hour += 12;
+    if (isAm && hour == 12) hour = 0;
+    return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
   }
 
   Future<void> _pickLogo() async {
@@ -76,7 +148,6 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
 
       if (!mounted) return;
 
-      // User cancelled the picker.
       if (result == null || result.files.isEmpty) {
         setState(() {
           _isUploadingLogo = false;
@@ -85,26 +156,12 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
       }
 
       final file = result.files.single;
-
-      // Maximum allowed size: 2 MB.
       const maxSizeInBytes = 2 * 1024 * 1024;
 
       if (file.size > maxSizeInBytes) {
         setState(() {
           _isUploadingLogo = false;
         });
-
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   SnackBar(
-        //     content: Text(
-        //       'Logo must be smaller than 2 MB.',
-        //       style: AppTextStyles.bodySecondary(context).copyWith(
-        //         color: Colors.white,
-        //       ),
-        //     ),
-        //   ),
-        // );
-
         return;
       }
 
@@ -161,20 +218,30 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
           addr: addressController.text,
           ph: phoneController.text,
           em: emailController.text,
+          weekdaysHours: OperatingHours(
+            open: _weekdaysOpenTime,
+            close: _weekdaysCloseTime,
+            isOpen: _weekdaysOpenFlag,
+          ),
+          weekendsHours: OperatingHours(
+            open: _weekendsOpenTime,
+            close: _weekendsCloseTime,
+            isOpen: _weekendsOpenFlag,
+          ),
         );
 
     if (!mounted) return;
 
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   SnackBar(
-    //     content: Text(
-    //       ok ? 'Settings saved' : 'Failed to save settings',
-    //       style: AppTextStyles.bodySecondary(context).copyWith(
-    //         color: Colors.white,
-    //       ),
-    //     ),
-    //   ),
-    // );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok ? 'Settings saved' : 'Failed to save settings',
+          style: AppTextStyles.bodySecondary(context).copyWith(
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -186,7 +253,6 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
       backgroundColor: colors.background,
       body: Column(
         children: [
-          // ── Shared header ───────────────────────────────────────
           RdxHeader(
             title: 'Restaurant Profile',
             showBackButton: true,
@@ -217,9 +283,6 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
                         colors: colors,
                         child: Row(
                           children: [
-                            // -------------------------------------------------------
-                            // RESTAURANT LOGO
-                            // -------------------------------------------------------
                             Container(
                               width: 64,
                               height: 64,
@@ -243,9 +306,7 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
                                       color: AppColors.primary,
                                     ),
                             ),
-
                             const SizedBox(width: 14),
-
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,33 +423,41 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
                           ],
                         ),
                       ),
-                      // _ProfileSection(
-                      //   title: 'Operating Hours',
-                      //   icon: Icons.access_time_outlined,
-                      //   colors: colors,
-                      //   child: Column(
-                      //     children: [
-                      //       _HoursRow(
-                      //         label: 'Weekdays',
-                      //         openText: '08:00 AM',
-                      //         closeText: '11:00 PM',
-                      //         isOpen: _weekdaysOpen,
-                      //         onChanged: (value) =>
-                      //             setState(() => _weekdaysOpen = value),
-                      //         colors: colors,
-                      //       ),
-                      //       _HoursRow(
-                      //         label: 'Weekends',
-                      //         openText: '10:00 AM',
-                      //         closeText: '02:00 AM',
-                      //         isOpen: _weekendsOpen,
-                      //         onChanged: (value) =>
-                      //             setState(() => _weekendsOpen = value),
-                      //         colors: colors,
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
+                      _ProfileSection(
+                        title: 'Operating Hours',
+                        icon: Icons.access_time_outlined,
+                        colors: colors,
+                        child: Column(
+                          children: [
+                            _HoursRow(
+                              label: 'Weekdays',
+                              openText: _weekdaysOpenTime,
+                              closeText: _weekdaysCloseTime,
+                              isOpen: _weekdaysOpenFlag,
+                              onChanged: (value) =>
+                                  setState(() => _weekdaysOpenFlag = value),
+                              onOpenChanged: (v) =>
+                                  setState(() => _weekdaysOpenTime = v),
+                              onCloseChanged: (v) =>
+                                  setState(() => _weekdaysCloseTime = v),
+                              colors: colors,
+                            ),
+                            _HoursRow(
+                              label: 'Weekends',
+                              openText: _weekendsOpenTime,
+                              closeText: _weekendsCloseTime,
+                              isOpen: _weekendsOpenFlag,
+                              onChanged: (value) =>
+                                  setState(() => _weekendsOpenFlag = value),
+                              onOpenChanged: (v) =>
+                                  setState(() => _weekendsOpenTime = v),
+                              onCloseChanged: (v) =>
+                                  setState(() => _weekendsCloseTime = v),
+                              colors: colors,
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -446,40 +515,155 @@ class _ProfileSection extends ConsumerWidget {
       );
 }
 
-class _ProfileTime extends ConsumerWidget {
+/// Tap to edit inline: shows plain text until tapped, then becomes
+/// a masked "HH:mm" text field. Commits on submit or on losing focus.
+class _ProfileTime extends StatefulWidget {
   final String text;
   final AppColorScheme colors;
+  final ValueChanged<String>? onChanged;
 
   const _ProfileTime({
     required this.text,
     required this.colors,
+    this.onChanged,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Container(
+  State<_ProfileTime> createState() => _ProfileTimeState();
+}
+
+class _ProfileTimeState extends State<_ProfileTime> {
+  bool _editing = false;
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.text);
+    _focusNode = FocusNode();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProfileTime oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_editing && widget.text != oldWidget.text) {
+      _controller.text = widget.text;
+    }
+  }
+
+  void _handleFocusChange() {
+    if (!_focusNode.hasFocus && _editing) {
+      _commit();
+    }
+  }
+
+  void _commit() {
+    var value = _controller.text;
+    final digits = value.replaceAll(':', '');
+    if (digits.isEmpty) {
+      value = widget.text;
+    } else {
+      final padded = digits.padRight(4, '0');
+      value = '${padded.substring(0, 2)}:${padded.substring(2, 4)}';
+    }
+    _controller.text = value;
+    setState(() => _editing = false);
+    if (widget.onChanged != null) widget.onChanged!(value);
+  }
+
+  void _startEditing() {
+    if (widget.onChanged == null) return;
+    setState(() => _editing = true);
+    _controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _controller.text.length,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors;
+
+    // Single shared box decoration so editing vs. non-editing look identical,
+    // with exactly one border drawn — never the TextField's own.
+    final box = BoxDecoration(
+      color: colors.background,
+      borderRadius: BorderRadius.circular(5),
+      border: Border.all(
+        color: _editing ? colors.primary : colors.border,
+      ),
+    );
+
+    if (_editing) {
+      return Container(
+        height: 38,
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: BoxDecoration(
-          color: colors.background,
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: colors.border),
+        decoration: box,
+        child: TextField(
+          controller: _controller,
+          focusNode: _focusNode,
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.number,
+          inputFormatters: [_HHMMInputFormatter()],
+          style: AppTextStyles.section(context).copyWith(
+            color: colors.textPrimary,
+          ),
+          cursorColor: colors.primary,
+          decoration: const InputDecoration(
+            isCollapsed: true,
+            filled: false,
+            contentPadding: EdgeInsets.zero,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            focusedErrorBorder: InputBorder.none,
+          ),
+          onSubmitted: (_) => _commit(),
         ),
+      );
+    }
+
+    return InkWell(
+      onTap: _startEditing,
+      borderRadius: BorderRadius.circular(5),
+      child: Container(
+        height: 38,
+        alignment: Alignment.center,
+        decoration: box,
         child: Text(
-          text,
+          widget.text,
           style: AppTextStyles.section(context).copyWith(
             color: colors.textSecondary,
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
-
-class _HoursRow extends ConsumerWidget {
+class _HoursRow extends StatelessWidget {
   final String label;
   final String openText;
   final String closeText;
   final bool isOpen;
   final ValueChanged<bool> onChanged;
+  final ValueChanged<String> onOpenChanged;
+  final ValueChanged<String> onCloseChanged;
   final AppColorScheme colors;
 
   const _HoursRow({
@@ -488,17 +672,31 @@ class _HoursRow extends ConsumerWidget {
     required this.closeText,
     required this.isOpen,
     required this.onChanged,
+    required this.onOpenChanged,
+    required this.onCloseChanged,
     required this.colors,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 520;
     final times = Row(
       children: [
-        Expanded(child: _ProfileTime(text: openText, colors: colors)),
+        Expanded(
+          child: _ProfileTime(
+            text: openText,
+            colors: colors,
+            onChanged: onOpenChanged,
+          ),
+        ),
         SizedBox(width: context.w(12)),
-        Expanded(child: _ProfileTime(text: closeText, colors: colors)),
+        Expanded(
+          child: _ProfileTime(
+            text: closeText,
+            colors: colors,
+            onChanged: onCloseChanged,
+          ),
+        ),
       ],
     );
     final toggle = RdxToggleButton(value: isOpen, onChanged: onChanged);
@@ -540,9 +738,21 @@ class _HoursRow extends ConsumerWidget {
                   .copyWith(color: colors.textSecondary),
             ),
           ),
-          Expanded(child: _ProfileTime(text: openText, colors: colors)),
+          Expanded(
+            child: _ProfileTime(
+              text: openText,
+              colors: colors,
+              onChanged: onOpenChanged,
+            ),
+          ),
           SizedBox(width: context.w(12)),
-          Expanded(child: _ProfileTime(text: closeText, colors: colors)),
+          Expanded(
+            child: _ProfileTime(
+              text: closeText,
+              colors: colors,
+              onChanged: onCloseChanged,
+            ),
+          ),
           Expanded(
             flex: 1,
             child: Align(alignment: Alignment.centerRight, child: toggle),

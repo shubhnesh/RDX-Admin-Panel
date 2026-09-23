@@ -1,30 +1,32 @@
-//dashboard_screen
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/utils/responsive_size.dart';
-import '../../core/utils/formatters.dart';
-import '../../models/dashboard_stats_model.dart';
-import '../../models/activity_log_model.dart';
-import '../../providers/dashboard_provider.dart';
-import '../../widgets/reusable_widgets/loading_indicator.dart';
-import '../../widgets/resuable_options/rdx_search_bar.dart';
-import '../../widgets/reusable_widgets/stat_card.dart';
+import 'package:rdx_admin/core/utils/responsive_size.dart';
+import 'package:rdx_admin/providers/coupon_provider.dart';
+import 'package:rdx_admin/providers/dashboard_provider.dart';
+import 'package:rdx_admin/providers/inventory_provider.dart';
+import 'package:rdx_admin/providers/live_orders_provider.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_attention_panel.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_hourly_chart.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_order_mix.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_pulse_cards.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_revenue_chart.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_top_selling.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/loading_indicator.dart';
+import 'package:rdx_admin/widgets/resuable_options/rdx_search_bar.dart';
 
+/// Real-data dashboard: revenue/charts from orders, pulse from live modules.
 class DashboardScreen extends ConsumerStatefulWidget {
-  final ValueChanged<String> onNavigate;
+  final ValueChanged<String>? onNavigate;
 
-  const DashboardScreen({super.key, required this.onNavigate});
+  const DashboardScreen({super.key, this.onNavigate});
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  String _chartPeriod = 'Weekly'; // Daily | Weekly | Monthly
-
   @override
   void initState() {
     super.initState();
@@ -36,12 +38,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final provider = ref.watch(dashboardProvider);
     final colors = AppColors.of(context);
 
+    // Instant reflection when operational modules change.
+    ref.listen(liveOrdersProvider, (_, __) {
+      ref.read(dashboardProvider).refreshOperational();
+    });
+    ref.listen(inventoryProvider, (_, __) {
+      ref.read(dashboardProvider).refreshOperational();
+    });
+    ref.listen(couponProvider, (_, __) {
+      ref.read(dashboardProvider).refreshOperational();
+    });
+
     return Scaffold(
       backgroundColor: colors.background,
-      body: provider.isLoading
+      body: provider.isLoading && provider.stats == null
           ? const LoadingIndicator()
           : provider.stats == null
-              ? const SizedBox()
+              ? _errorBody(provider)
               : RefreshIndicator(
                   color: AppColors.primary,
                   onRefresh: provider.load,
@@ -49,40 +62,64 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     padding: Responsive.pagePadding(
                       context,
                       top: context.h(14),
-                      bottom: context.h(0),
+                      bottom: context.h(24),
                     ),
                     children: [
                       _buildTopBar(colors),
                       SizedBox(height: context.h(20)),
-                      _buildStatCards(provider.stats!, colors),
+                      DashboardPulseCards(
+                        stats: provider.stats!,
+                        onNavigate: widget.onNavigate,
+                      ),
                       SizedBox(height: context.h(20)),
-                      _buildAnalyticsCard(provider.stats!, colors),
+                      DashboardRevenueChart(
+                        stats: provider.stats!,
+                        period: provider.chartPeriod,
+                        onPeriodChanged: provider.setChartPeriod,
+                      ),
                       SizedBox(height: context.h(20)),
-                      _buildMiddleRow(provider.stats!, colors),
+                      _buildAttentionAndVolumeRow(provider),
                       SizedBox(height: context.h(20)),
-                      // _buildRecentActivity(provider.recentActivity, colors),
+                      _buildMiddleRow(provider),
                     ],
                   ),
                 ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // TOP BAR — search + notifications + settings
-  // ═══════════════════════════════════════════════════════════════════
+  Widget _errorBody(DashboardProvider provider) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            provider.errorMessage ?? 'Nothing to show',
+            style: AppTextStyles.body(context),
+          ),
+          SizedBox(height: context.h(12)),
+          TextButton(
+            onPressed: provider.load,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildTopBar(AppColorScheme colors) {
     return RdxSearchToolbar(
       hintText: 'Search orders, items..',
       actions: [
-        _plainIconBtn(colors,
-            icon: Icons.notifications_outlined,
-            badge: true,
-            onTap: () => widget.onNavigate('/notifications')),
+        _plainIconBtn(
+          colors,
+          icon: Icons.notifications_outlined,
+          badge: true,
+          onTap: () => widget.onNavigate?.call('/notifications'),
+        ),
         _plainIconBtn(
           colors,
           icon: Icons.settings_outlined,
-          onTap: () => widget.onNavigate('/settings'),
+          onTap: () => widget.onNavigate?.call('/settings'),
         ),
       ],
     );
@@ -126,541 +163,68 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildStatCards(DashboardStatsModel s, AppColorScheme colors) {
-    final isNarrow = Responsive.isMobile(context);
-    final cards = [
-      StatCard(
-        label: 'TOTAL REVENUE',
-        value: Formatters.currency(s.totalRevenue, symbol: '\$'),
-        subtitle: '+${s.revenueChangePercent}% today',
-        subtitleColor: AppColors.success,
-        icon: Icons.attach_money_rounded,
-        // iconBg: AppColors.primary.withValues(alpha: 0.15),
-        // iconColor: AppColors.primary,
-      ),
-      StatCard(
-        label: 'ACTIVE ORDERS',
-        value: '${s.activeOrders}',
-        subtitle: '${s.preparingCount} preparing, ${s.enRouteCount} en route',
-        subtitleColor: colors.textSecondary,
-        icon: Icons.receipt_long_outlined,
-        // iconBg: AppColors.info.withValues(alpha: 0.15),
-        // iconColor: AppColors.info,
-      ),
-      StatCard(
-        label: 'TABLES OCCUPIED',
-        value: '${s.tablesOccupiedPercent.toStringAsFixed(0)}%',
-        subtitle: null,
-        progress: s.tablesOccupiedPercent / 100,
-        icon: Icons.table_restaurant_outlined,
-        // iconBg: AppColors.warning.withValues(alpha: 0.15),
-        // iconColor: AppColors.warning,
-      ),
-      StatCard(
-        label: 'AVAILABLE RIDERS',
-        value: '${s.availableRiders}/${s.totalRiders}',
-        subtitle: s.highDemand ? 'High demand' : 'Normal',
-        subtitleColor: s.highDemand ? AppColors.warning : AppColors.success,
-        subtitleIcon: s.highDemand
-            ? Icons.warning_amber_rounded
-            : Icons.check_circle_outline,
-        icon: Icons.delivery_dining_outlined,
-        // iconBg: AppColors.success.withValues(alpha: 0.15),
-        // iconColor: AppColors.success,
-      ),
-    ];
-
-    if (isNarrow) {
-      return Column(
-        children: [
-          for (var i = 0; i < cards.length; i++) ...[
-            if (i > 0) SizedBox(height: context.h(12)),
-            cards[i],
-          ],
-        ],
-      );
-    }
-
-    return Row(
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) SizedBox(width: context.w(14)),
-          Expanded(child: (cards[i])),
-        ],
-      ],
-    );
-  }
-
-  // Widget _statCard(StatCard d) {
-  //   return StatCard(
-  //     label: d.label,
-  //     value: d.value,
-  //     icon: d.icon,
-  //     // accentColor: d.iconColor,
-  //     subtitle: d.subtitle,
-  //     subtitleColor: d.subtitleColor,
-  //     subtitleIcon: d.subtitleIcon,
-  //     progress: d.progress,
-  //   );
-  // }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // ANALYTICS PERFORMANCE (line chart)
-  // ═══════════════════════════════════════════════════════════════════
-
-  Widget _buildAnalyticsCard(DashboardStatsModel s, AppColorScheme colors) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final spots = s.weeklyRevenue
-        .asMap()
-        .entries
-        .map((e) => FlSpot(e.key.toDouble(), e.value))
-        .toList();
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        context.w(20),
-        context.h(18),
-        context.w(20),
-        context.h(16),
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Builder(builder: (context) {
-            final narrow = MediaQuery.sizeOf(context).width < 700;
-            final titleCol = Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Analytics Performance',
-                  style: AppTextStyles.heading(context),
-                ),
-                Text(
-                  "This will be operated by the total orders on each day of the weeks. Real-time insight into your restaurant's ecosystem.",
-                  style: AppTextStyles.bodySecondary(context),
-                ),
-              ],
-            );
-            if (narrow) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  titleCol,
-                  SizedBox(height: context.h(12)),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: _periodTabs(colors),
-                  ),
-                ],
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: titleCol),
-                _periodTabs(colors),
-              ],
-            );
-          }),
-          SizedBox(height: context.h(20)),
-          SizedBox(
-            height: context.h(200),
-            child: LineChart(
-              LineChartData(
-                minY: 0,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 15,
-                  getDrawingHorizontalLine: (v) => FlLine(
-                    color: colors.border.withOpacity(0.6),
-                    strokeWidth: context.w(1),
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: context.h(28),
-                      interval: 1,
-                      getTitlesWidget: (value, meta) {
-                        final i = value.toInt();
-                        if (i < 0 || i >= days.length) return const SizedBox();
-                        return Padding(
-                          padding: EdgeInsets.only(top: context.h(8)),
-                          child: Text(
-                            days[i],
-                            style: AppTextStyles.bodySecondary(context)
-                                .copyWith(color: colors.textMuted),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => colors.surfaceVariant,
-                    getTooltipItems: (touched) => touched
-                        .map(
-                          (t) => LineTooltipItem(
-                            t.y.toStringAsFixed(0),
-                            TextStyle(
-                              color: colors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    curveSmoothness: 0.35,
-                    color: AppColors.primary,
-                    barWidth: context.w(3),
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, bar, index) {
-                        if (index == spots.length - 1) {
-                          return FlDotCirclePainter(
-                            radius: context.w(5),
-                            color: AppColors.primary,
-                            strokeWidth: context.w(3),
-                            strokeColor: colors.surface,
-                          );
-                        }
-                        return FlDotCirclePainter(
-                          radius: 0,
-                          color: Colors.transparent,
-                        );
-                      },
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColors.primary.withOpacity(0.35),
-                          AppColors.primary.withOpacity(0.02),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _periodTabs(AppColorScheme colors) {
-    const periods = ['Daily', 'Weekly', 'Monthly'];
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surfaceVariant,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: periods.map((p) {
-          final selected = _chartPeriod == p;
-          return InkWell(
-            onTap: () => setState(() => _chartPeriod = p),
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: context.w(12),
-                vertical: context.h(6),
-              ),
-              decoration: BoxDecoration(
-                color: selected ? AppColors.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                p,
-                style: AppTextStyles.label(context).copyWith(
-                  color: selected ? Colors.white : colors.textSecondary,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // MIDDLE ROW — Volume Trend + Top Selling
-  // ═══════════════════════════════════════════════════════════════════
-
-  Widget _buildMiddleRow(DashboardStatsModel s, AppColorScheme colors) {
+  Widget _buildAttentionAndVolumeRow(DashboardProvider provider) {
+    final stats = provider.stats!;
     final isNarrow = !Responsive.isDesktop(context);
 
+    final attention = DashboardAttentionPanel(
+      items: stats.attentionItems,
+      onItemTap: (item) {
+        if (item.route != null) {
+          widget.onNavigate?.call(item.route!);
+        }
+      },
+    );
+    final volume = DashboardHourlyChart(stats: stats);
+
     if (isNarrow) {
       return Column(
         children: [
-          _buildVolumeTrend(s, colors),
+          attention,
           SizedBox(height: context.h(16)),
-          _buildTopSelling(s, colors),
+          volume,
         ],
       );
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(flex: 3, child: _buildVolumeTrend(s, colors)),
-        SizedBox(width: context.w(16)),
-        Expanded(flex: 2, child: _buildTopSelling(s, colors)),
-      ],
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: attention),
+          SizedBox(width: context.w(16)),
+          Expanded(child: volume),
+        ],
+      ),
     );
   }
 
-  Widget _buildVolumeTrend(DashboardStatsModel s, AppColorScheme colors) {
-    const labels = ['10AM', '12PM', '2PM', '4PM', '6PM', '8PM', '10PM', '12AM'];
-    final peakValue = s.hourlyVolume.reduce((a, b) => a > b ? a : b);
-    final maxY = peakValue > 0 ? peakValue * 1.15 : 1.0;
-    final peakIndex = s.hourlyVolume.indexOf(peakValue);
+  Widget _buildMiddleRow(DashboardProvider provider) {
+    final stats = provider.stats!;
+    final isNarrow = !Responsive.isDesktop(context);
 
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        context.w(20),
-        context.h(18),
-        context.w(20),
-        context.h(16),
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final topSelling = DashboardTopSelling(items: stats.topSellingItems);
+    final orderMix = DashboardOrderMix(stats: stats);
+
+    if (isNarrow) {
+      return Column(
         children: [
-          Builder(builder: (context) {
-            final narrow = MediaQuery.sizeOf(context).width < 500;
-            final title = Text(
-              'Volume Trend',
-              style: AppTextStyles.heading(context),
-            );
-            final chip = Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: context.w(10),
-                vertical: context.h(5),
-              ),
-              decoration: BoxDecoration(
-                color: colors.surfaceVariant,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: colors.border),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Today',
-                    style: AppTextStyles.bodySecondary(context),
-                  ),
-                  SizedBox(width: context.w(4)),
-                  Icon(Icons.keyboard_arrow_down,
-                      size: 16, color: colors.textMuted),
-                ],
-              ),
-            );
-            if (narrow) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  title,
-                  SizedBox(height: context.h(8)),
-                  chip,
-                ],
-              );
-            }
-            return Row(
-              children: [
-                title,
-                const Spacer(),
-                chip,
-              ],
-            );
-          }),
+          topSelling,
           SizedBox(height: context.h(16)),
-          SizedBox(
-            height: context.h(160),
-            child: BarChart(
-              BarChartData(
-                maxY: maxY,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: maxY / 3,
-                  getDrawingHorizontalLine: (_) => FlLine(
-                    color: colors.border.withOpacity(0.55),
-                    strokeWidth: context.w(1),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: context.h(24),
-                      getTitlesWidget: (value, meta) {
-                        final i = value.toInt();
-                        if (i < 0 || i >= labels.length) {
-                          return const SizedBox();
-                        }
-                        return Padding(
-                          padding: EdgeInsets.only(top: context.h(6)),
-                          child: Text(
-                            labels[i],
-                            style: TextStyle(color: colors.textMuted),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => colors.surfaceVariant,
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      return BarTooltipItem(
-                        rod.toY.toStringAsFixed(0),
-                        AppTextStyles.label(context)
-                            .copyWith(color: colors.textPrimary),
-                      );
-                    },
-                  ),
-                ),
-                barGroups: s.hourlyVolume.asMap().entries.map((e) {
-                  final isPeak = e.key == peakIndex;
-                  return BarChartGroupData(
-                    x: e.key,
-                    barRods: [
-                      BarChartRodData(
-                        toY: e.value,
-                        width: context.w(30),
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(context.w(3)),
-                        ),
-                        color: isPeak
-                            ? AppColors.primary
-                            : AppColors.primary.withOpacity(0.45),
-                      ),
-                    ],
-                    showingTooltipIndicators: isPeak ? [0] : [],
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
+          orderMix,
         ],
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildTopSelling(DashboardStatsModel s, AppColorScheme colors) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        context.w(20),
-        context.h(18),
-        context.w(20),
-        context.h(12),
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Top Selling Items',
-            style: AppTextStyles.heading(context),
-          ),
-          SizedBox(height: context.h(14)),
-          for (final item in s.topSellingItems) ...[
-            _topItemRow(item, colors),
-            if (item != s.topSellingItems.last)
-              Divider(height: context.h(20), color: colors.divider),
-          ],
+          Expanded(child: topSelling),
+          SizedBox(width: context.w(16)),
+          Expanded(child: orderMix),
         ],
       ),
-    );
-  }
-
-  Widget _topItemRow(TopSellingItem item, AppColorScheme colors) {
-    return Row(
-      children: [
-        Container(
-          width: context.w(28),
-          height: context.h(28),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: item.rank == 1
-                ? AppColors.primary.withOpacity(0.15)
-                : colors.surfaceVariant,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '${item.rank}',
-            style: AppTextStyles.label(context).copyWith(
-              color: item.rank == 1 ? AppColors.primary : colors.textSecondary,
-            ),
-          ),
-        ),
-        SizedBox(width: context.w(12)),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.name,
-                style: AppTextStyles.label(context)
-                    .copyWith(color: colors.textPrimary),
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                '${item.orders} Orders',
-                style: AppTextStyles.caption(context),
-              ),
-            ],
-          ),
-        ),
-        Text(
-          '\$${item.revenue.toStringAsFixed(0)}',
-          style:
-              AppTextStyles.label(context).copyWith(color: colors.textPrimary),
-        ),
-      ],
     );
   }
 }

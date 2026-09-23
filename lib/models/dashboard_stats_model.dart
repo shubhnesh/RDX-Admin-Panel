@@ -1,75 +1,114 @@
+/// Dashboard aggregates and chart series built from real module data.
 class DashboardStatsModel {
-  final double totalRevenue;
-  final double revenueChangePercent;
-  final int activeOrders;
-  final int preparingCount;
-  final int enRouteCount;
-  final double tablesOccupiedPercent;
-  final int availableRiders;
-  final int totalRiders;
-  final bool highDemand;
-  final List<double> weeklyRevenue;
-  final List<double> hourlyVolume;
-  final List<TopSellingItem> topSellingItems;
+  final double todayRevenue;
+  final double yesterdayRevenue;
+  final int todayOrderCount;
+  final int dineInCount;
+  final int takeawayCount;
+  final int deliveryCount;
+  final int staffOrderCount;
+  final int appOrderCount;
 
-  DashboardStatsModel({
-    required this.totalRevenue,
-    this.revenueChangePercent = 0,
-    required this.activeOrders,
-    this.preparingCount = 0,
-    this.enRouteCount = 0,
-    this.tablesOccupiedPercent = 0,
-    this.availableRiders = 0,
-    this.totalRiders = 50,
-    this.highDemand = false,
-    this.weeklyRevenue = const [0, 0, 0, 0, 0, 0, 0],
-    this.hourlyVolume = const [0, 0, 0, 0, 0, 0, 0, 0],
+  final List<double> hourlyVolume;
+  final List<String> hourlyLabels;
+  final List<String> hourlyRangeLabels;
+
+  final List<DailyPoint> revenueTrend;
+  final List<DailyPoint> orderCountTrend;
+
+  final List<TopSellingItem> topSellingItems;
+  final List<AttentionItem> attentionItems;
+
+  final int activeCouponCount;
+  final int couponUsagesToday;
+  final int lowStockCount;
+  final int criticalStockCount;
+  final int pendingPaymentCount;
+  final int activeOrdersCount;
+
+  const DashboardStatsModel({
+    required this.todayRevenue,
+    this.yesterdayRevenue = 0,
+    this.todayOrderCount = 0,
+    this.dineInCount = 0,
+    this.takeawayCount = 0,
+    this.deliveryCount = 0,
+    this.staffOrderCount = 0,
+    this.appOrderCount = 0,
+    this.hourlyVolume = const [],
+    this.hourlyLabels = const [],
+    this.hourlyRangeLabels = const [],
+    this.revenueTrend = const [],
+    this.orderCountTrend = const [],
     this.topSellingItems = const [],
+    this.attentionItems = const [],
+    this.activeCouponCount = 0,
+    this.couponUsagesToday = 0,
+    this.lowStockCount = 0,
+    this.criticalStockCount = 0,
+    this.pendingPaymentCount = 0,
+    this.activeOrdersCount = 0,
   });
 
-  factory DashboardStatsModel.fromJson(Map<String, dynamic> json) {
-    return DashboardStatsModel(
-      totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0,
-      revenueChangePercent:
-          (json['revenue_change_percent'] as num?)?.toDouble() ?? 0,
-      activeOrders: json['active_orders'] as int? ?? 0,
-      preparingCount: json['preparing_count'] as int? ?? 0,
-      enRouteCount: json['en_route_count'] as int? ?? 0,
-      tablesOccupiedPercent:
-          (json['tables_occupied_percent'] as num?)?.toDouble() ?? 0,
-      availableRiders: json['available_riders'] as int? ?? 0,
-      totalRiders: json['total_riders'] as int? ?? 50,
-      highDemand: json['high_demand'] as bool? ?? false,
-      weeklyRevenue: (json['weekly_revenue'] as List?)
-              ?.map((e) => (e as num).toDouble())
-              .toList() ??
-          List.filled(7, 0.0),
-      hourlyVolume: (json['hourly_volume'] as List?)
-              ?.map((e) => (e as num).toDouble())
-              .toList() ??
-          List.filled(12, 0.0),
-      topSellingItems: (json['top_selling_items'] as List?)
-              ?.map(
-                  (e) => TopSellingItem.fromJson(Map<String, dynamic>.from(e)))
-              .toList() ??
-          [],
-    );
+  double get revenueChangePercent {
+    if (yesterdayRevenue <= 0) return todayRevenue > 0 ? 100.0 : 0.0;
+    return ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100;
   }
 
-  Map<String, dynamic> toJson() => {
-        'total_revenue': totalRevenue,
-        'revenue_change_percent': revenueChangePercent,
-        'active_orders': activeOrders,
-        'preparing_count': preparingCount,
-        'en_route_count': enRouteCount,
-        'tables_occupied_percent': tablesOccupiedPercent,
-        'available_riders': availableRiders,
-        'total_riders': totalRiders,
-        'high_demand': highDemand,
-        'weekly_revenue': weeklyRevenue,
-        'hourly_volume': hourlyVolume,
-        'top_selling_items': topSellingItems.map((e) => e.toJson()).toList(),
-      };
+  DashboardStatsModel copyWith({
+    double? todayRevenue,
+    double? yesterdayRevenue,
+    int? todayOrderCount,
+    int? dineInCount,
+    int? takeawayCount,
+    int? deliveryCount,
+    int? staffOrderCount,
+    int? appOrderCount,
+    List<double>? hourlyVolume,
+    List<String>? hourlyLabels,
+    List<String>? hourlyRangeLabels,
+    List<DailyPoint>? revenueTrend,
+    List<DailyPoint>? orderCountTrend,
+    List<TopSellingItem>? topSellingItems,
+    List<AttentionItem>? attentionItems,
+    int? activeCouponCount,
+    int? couponUsagesToday,
+    int? lowStockCount,
+    int? criticalStockCount,
+    int? pendingPaymentCount,
+    int? activeOrdersCount,
+  }) {
+    return DashboardStatsModel(
+      todayRevenue: todayRevenue ?? this.todayRevenue,
+      yesterdayRevenue: yesterdayRevenue ?? this.yesterdayRevenue,
+      todayOrderCount: todayOrderCount ?? this.todayOrderCount,
+      dineInCount: dineInCount ?? this.dineInCount,
+      takeawayCount: takeawayCount ?? this.takeawayCount,
+      deliveryCount: deliveryCount ?? this.deliveryCount,
+      staffOrderCount: staffOrderCount ?? this.staffOrderCount,
+      appOrderCount: appOrderCount ?? this.appOrderCount,
+      hourlyVolume: hourlyVolume ?? this.hourlyVolume,
+      hourlyLabels: hourlyLabels ?? this.hourlyLabels,
+      hourlyRangeLabels: hourlyRangeLabels ?? this.hourlyRangeLabels,
+      revenueTrend: revenueTrend ?? this.revenueTrend,
+      orderCountTrend: orderCountTrend ?? this.orderCountTrend,
+      topSellingItems: topSellingItems ?? this.topSellingItems,
+      attentionItems: attentionItems ?? this.attentionItems,
+      activeCouponCount: activeCouponCount ?? this.activeCouponCount,
+      couponUsagesToday: couponUsagesToday ?? this.couponUsagesToday,
+      lowStockCount: lowStockCount ?? this.lowStockCount,
+      criticalStockCount: criticalStockCount ?? this.criticalStockCount,
+      pendingPaymentCount: pendingPaymentCount ?? this.pendingPaymentCount,
+      activeOrdersCount: activeOrdersCount ?? this.activeOrdersCount,
+    );
+  }
+}
+
+class DailyPoint {
+  final DateTime date;
+  final double value;
+
+  const DailyPoint({required this.date, required this.value});
 }
 
 class TopSellingItem {
@@ -78,24 +117,38 @@ class TopSellingItem {
   final int orders;
   final double revenue;
 
-  TopSellingItem({
+  const TopSellingItem({
     required this.rank,
     required this.name,
     required this.orders,
     required this.revenue,
   });
+}
 
-  factory TopSellingItem.fromJson(Map<String, dynamic> json) => TopSellingItem(
-        rank: json['rank'] as int? ?? 0,
-        name: json['name'] as String? ?? '',
-        orders: json['orders'] as int? ?? 0,
-        revenue: (json['revenue'] as num?)?.toDouble() ?? 0,
-      );
+enum AttentionSeverity { critical, warning, info }
 
-  Map<String, dynamic> toJson() => {
-        'rank': rank,
-        'name': name,
-        'orders': orders,
-        'revenue': revenue,
-      };
+enum AttentionKind {
+  criticalStock,
+  lowStock,
+  pendingPayment,
+  expiringCoupon,
+  unavailableMenu,
+}
+
+class AttentionItem {
+  final AttentionKind kind;
+  final AttentionSeverity severity;
+  final String title;
+  final String subtitle;
+  final String? route;
+  final String? filterHint;
+
+  const AttentionItem({
+    required this.kind,
+    required this.severity,
+    required this.title,
+    required this.subtitle,
+    this.route,
+    this.filterHint,
+  });
 }

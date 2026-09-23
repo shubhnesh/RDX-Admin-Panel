@@ -1,180 +1,341 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/dashboard_stats_model.dart';
-import '../models/activity_log_model.dart';
-import '../models/order_model.dart';
 
+/// Pure aggregations over real order / inventory / coupon data.
+/// No dummy numbers — pass live lists from providers/services.
 class DashboardService {
-  // Lazy getter (not a field initializer) so constructing DashboardService
-  // never touches Firestore/Firebase — important while useMockData is true
-  // and Firebase may not be configured at all yet.
-  FirebaseFirestore get _db => FirebaseFirestore.instance;
+  DashboardStatsModel buildStats({
+    required List<DashboardOrderInput> todayOrders,
+    required List<DashboardOrderInput> trendOrders,
+    required int lowStockCount,
+    required int criticalStockCount,
+    required int activeCouponCount,
+    required int couponUsagesToday,
+    required int activeOrdersCount,
+    required int pendingPaymentCount,
+    List<String> criticalItemNames = const [],
+    List<String> lowStockItemNames = const [],
+    List<String> expiringCouponCodes = const [],
+    // Restaurant's operating hours (24h), taken from Settings.
+    // Volume trend is bucketed into 2-hour slots across this window.
+    int openHour = 10,
+    int closeHour = 22,
+  }) {
+    final paidToday = todayOrders.where((o) => o.isPaid).toList();
+    final todayRevenue = paidToday.fold<double>(0, (s, o) => s + o.total);
 
-  /// While the app isn't wired up to real Firestore data yet, the dashboard
-  /// renders from [_mockStats]/[_mockActivity] below instead of hitting
-  /// Firestore. Flip this to `false` once real `orders` / `activity_logs`
-  /// collections exist — fetchStats/fetchRecentActivity will then read
-  /// live data exactly as before.
-  static const bool useMockData = true;
-
-  Future<DashboardStatsModel> fetchStats() async {
-    if (useMockData) {
-      // Simulate a small network delay so loading states still feel real.
-      await Future.delayed(const Duration(milliseconds: 300));
-      return _mockStats;
-    }
-
-    final statsDoc = await _db.collection('dashboard').doc('stats').get();
-    if (statsDoc.exists) {
-      return DashboardStatsModel.fromJson(statsDoc.data()!);
-    }
-
-    final ordersSnap = await _db
-        .collection('orders')
-        .orderBy('created_at', descending: true)
-        .limit(200)
-        .get();
-
-    final orders =
-        ordersSnap.docs.map((d) => OrderModel.fromFirestore(d)).toList();
-
-    final active = orders
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final yesterdayStart = todayStart.subtract(const Duration(days: 1));
+    final yesterdayRevenue = trendOrders
         .where((o) =>
-            o.status == OrderStatus.pending ||
-            o.status == OrderStatus.preparing ||
-            o.status == OrderStatus.ready)
-        .length;
-    final preparing =
-        orders.where((o) => o.status == OrderStatus.preparing).length;
-    final ready = orders.where((o) => o.status == OrderStatus.ready).length;
+            o.isPaid &&
+            !o.createdAt.isBefore(yesterdayStart) &&
+            o.createdAt.isBefore(todayStart))
+        .fold<double>(0, (s, o) => s + o.total);
 
-    final totalRevenue = orders.fold<double>(0, (sum, o) => sum + o.total);
+    final dineIn = todayOrders.where((o) => o.orderType == 'dineIn').length;
+    final takeaway =
+        todayOrders.where((o) => o.orderType == 'takeaway').length;
+    final delivery =
+        todayOrders.where((o) => o.orderType == 'delivery').length;
+    final staff = todayOrders.where((o) => o.orderSource == 'staff').length;
+    final app = todayOrders.where((o) => o.orderSource == 'app').length;
 
-    final Map<String, TopSellingItem> topMap = {};
-    for (final o in orders) {
-      for (final item in o.items) {
-        final existing = topMap[item.name];
-        if (existing == null) {
-          topMap[item.name] = TopSellingItem(
-            rank: 0,
-            name: item.name,
-            orders: item.quantity,
-            revenue: item.price * item.quantity,
-          );
-        } else {
-          topMap[item.name] = TopSellingItem(
-            rank: 0,
-            name: item.name,
-            orders: existing.orders + item.quantity,
-            revenue: existing.revenue + (item.price * item.quantity),
-          );
-        }
-      }
-    }
-    final topList = topMap.values.toList()
-      ..sort((a, b) => b.orders.compareTo(a.orders));
-    final topSelling = topList.take(5).toList().asMap().entries.map((e) {
-      return TopSellingItem(
-        rank: e.key + 1,
-        name: e.value.name,
-        orders: e.value.orders,
-        revenue: e.value.revenue,
-      );
-    }).toList();
+    final hourly = _hourlyVolume(
+      todayOrders,
+      openHour: openHour,
+      closeHour: closeHour,
+    );
+    final revenueTrend = _dailyRevenueSeries(trendOrders, days: _inferDays(trendOrders));
+    final orderTrend = _dailyOrderCountSeries(trendOrders, days: _inferDays(trendOrders));
+    final topSelling = _topSelling(todayOrders, limit: 4);
+
+    final attention = _buildAttention(
+      criticalStockCount: criticalStockCount,
+      lowStockCount: lowStockCount,
+      pendingPaymentCount: pendingPaymentCount,
+      criticalItemNames: criticalItemNames,
+      lowStockItemNames: lowStockItemNames,
+      expiringCouponCodes: expiringCouponCodes,
+    );
 
     return DashboardStatsModel(
-      totalRevenue: totalRevenue,
-      revenueChangePercent: 0,
-      activeOrders: active,
-      preparingCount: preparing,
-      enRouteCount: ready,
-      tablesOccupiedPercent: 0,
-      availableRiders: 0,
-      totalRiders: 50,
-      highDemand: active > 15,
-      weeklyRevenue: List.filled(7, totalRevenue / 7),
-      hourlyVolume: List.filled(12, 0),
+      todayRevenue: todayRevenue,
+      yesterdayRevenue: yesterdayRevenue,
+      todayOrderCount: todayOrders.length,
+      dineInCount: dineIn,
+      takeawayCount: takeaway,
+      deliveryCount: delivery,
+      staffOrderCount: staff,
+      appOrderCount: app,
+      hourlyVolume: hourly.values,
+      hourlyLabels: hourly.labels,
+      hourlyRangeLabels: hourly.rangeLabels,
+      revenueTrend: revenueTrend,
+      orderCountTrend: orderTrend,
       topSellingItems: topSelling,
+      attentionItems: attention,
+      activeCouponCount: activeCouponCount,
+      couponUsagesToday: couponUsagesToday,
+      lowStockCount: lowStockCount,
+      criticalStockCount: criticalStockCount,
+      pendingPaymentCount: pendingPaymentCount,
+      activeOrdersCount: activeOrdersCount,
     );
   }
 
-  Future<List<ActivityLogModel>> fetchRecentActivity({int limit = 20}) async {
-    if (useMockData) {
-      await Future.delayed(const Duration(milliseconds: 200));
-      return _mockActivity;
+  static int daysForPeriod(String period) {
+    switch (period) {
+      case 'Daily':
+        return 7;
+      case 'Weekly':
+        return 14;
+      case 'Monthly':
+        return 30;
+      default:
+        return 7;
+    }
+  }
+
+  int _inferDays(List<DashboardOrderInput> orders) {
+    if (orders.isEmpty) return 7;
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    var minDay = start;
+    for (final o in orders) {
+      final d = DateTime(o.createdAt.year, o.createdAt.month, o.createdAt.day);
+      if (d.isBefore(minDay)) minDay = d;
+    }
+    return start.difference(minDay).inDays + 1;
+  }
+
+  ({List<double> values, List<String> labels, List<String> rangeLabels})
+      _hourlyVolume(
+    List<DashboardOrderInput> orders, {
+    required int openHour,
+    required int closeHour,
+  }) {
+    final slots = _twoHourSlots(openHour: openHour, closeHour: closeHour);
+    final buckets = List<double>.filled(slots.length, 0);
+
+    for (final o in orders) {
+      final idx = _slotIndexForHour(o.createdAt.hour, slots);
+      if (idx != -1) buckets[idx] += 1;
     }
 
-    final snap = await _db
-        .collection('activity_logs')
-        .orderBy('timestamp', descending: true)
-        .limit(limit)
-        .get();
-    return snap.docs.map((d) => ActivityLogModel.fromFirestore(d)).toList();
+    return (
+      values: buckets,
+      labels: slots.map(_formatHourLabel).toList(),
+      rangeLabels: slots.map(_formatRangeLabel).toList(),
+    );
   }
 
-  Future<void> logActivity({
-    required String actor,
-    required String action,
-    required String details,
-  }) async {
-    if (useMockData) return;
-    await _db.collection('activity_logs').add({
-      'actor': actor,
-      'action': action,
-      'details': details,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+  /// Builds hour-of-day slot starts, 2 hours apart, from [openHour] up to
+  /// (but not reaching) [closeHour]. Wraps past midnight when the
+  /// restaurant closes after 12 AM (e.g. open 10AM, close 2AM).
+  List<int> _twoHourSlots({required int openHour, required int closeHour}) {
+    final open = openHour % 24;
+    final close = closeHour % 24;
+    final span = close > open ? close - open : (24 - open) + close;
+    final slotCount = (span / 2).ceil().clamp(1, 12);
+    return [for (var i = 0; i < slotCount; i++) (open + i * 2) % 24];
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // MOCK DATA — mirrors the reference dashboard design so the Analytics
-  // Performance line chart, Volume Trend bar chart, Top Selling list and
-  // Recent Activity table all render with realistic values.
-  // ═══════════════════════════════════════════════════════════════════
+  /// Finds which 2-hour slot [hour] falls into, wrapping past midnight.
+  int _slotIndexForHour(int hour, List<int> slots) {
+    for (var i = 0; i < slots.length; i++) {
+      final start = slots[i];
+      final end = (start + 2) % 24;
+      final inRange =
+          end > start ? (hour >= start && hour < end) : (hour >= start || hour < end);
+      if (inRange) return i;
+    }
+    return -1;
+  }
 
-  static final DashboardStatsModel _mockStats = DashboardStatsModel(
-    totalRevenue: 142504,
-    revenueChangePercent: 12.3,
-    activeOrders: 24,
-    preparingCount: 12,
-    enRouteCount: 12,
-    tablesOccupiedPercent: 85,
-    availableRiders: 12,
-    totalRiders: 30,
-    highDemand: true,
-    // Mon..Sun weekly revenue — dips midweek, peaks Friday, tapers Sunday.
-    weeklyRevenue: const [58, 42, 38, 64, 92, 70, 76],
-    // 10AM..12AM in 2-hour steps — peaks at 8PM like the design.
-    hourlyVolume: const [120, 180, 100, 240, 320, 450, 300, 150],
-    topSellingItems: [
-      TopSellingItem(
-          rank: 1, name: 'RDX Signature Burger', orders: 142, revenue: 1846),
-      TopSellingItem(rank: 2, name: 'Truffle Fries', orders: 98, revenue: 882),
-      TopSellingItem(rank: 3, name: 'Neon Cola', orders: 85, revenue: 340),
-      TopSellingItem(rank: 4, name: 'Spicy Wings', orders: 64, revenue: 608),
-    ],
-  );
+  /// Single point label for the chart axis, e.g. "10AM", "12PM".
+  String _formatHourLabel(int hour24) {
+    final period = hour24 >= 12 ? 'PM' : 'AM';
+    var h = hour24 % 12;
+    if (h == 0) h = 12;
+    return '$h$period';
+  }
 
-  static final List<ActivityLogModel> _mockActivity = [
-    ActivityLogModel(
-      id: 'ORD-8924',
-      actor: 'Customer',
-      action: 'New order received',
-      details: 'LIVE',
-      timestamp: DateTime.now().subtract(const Duration(seconds: 30)),
-    ),
-    ActivityLogModel(
-      id: 'SYS-ALRT',
-      actor: 'System',
-      action: 'Rider shortage in Zone B',
-      details: 'SYSTEM',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-    ),
-    ActivityLogModel(
-      id: 'ORD-8919',
-      actor: 'System',
-      action: 'Order delivered',
-      details: 'COMPLETED',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 12)),
-    ),
-  ];
+  /// Full 2-hour range for the hover tooltip, e.g. "10AM-12PM", "12PM-2PM".
+  String _formatRangeLabel(int startHour24) {
+    final endHour24 = (startHour24 + 2) % 24;
+    return '${_formatHourLabel(startHour24)}-${_formatHourLabel(endHour24)}';
+  }
+
+  List<DailyPoint> _dailyRevenueSeries(
+    List<DashboardOrderInput> orders, {
+    required int days,
+  }) {
+    final n = days.clamp(1, 90);
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day)
+        .subtract(Duration(days: n - 1));
+
+    final map = <DateTime, double>{};
+    for (var i = 0; i < n; i++) {
+      map[start.add(Duration(days: i))] = 0;
+    }
+    for (final o in orders) {
+      if (!o.isPaid) continue;
+      final day =
+          DateTime(o.createdAt.year, o.createdAt.month, o.createdAt.day);
+      if (map.containsKey(day)) {
+        map[day] = map[day]! + o.total;
+      }
+    }
+    final keys = map.keys.toList()..sort();
+    return [for (final d in keys) DailyPoint(date: d, value: map[d]!)];
+  }
+
+  List<DailyPoint> _dailyOrderCountSeries(
+    List<DashboardOrderInput> orders, {
+    required int days,
+  }) {
+    final n = days.clamp(1, 90);
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day)
+        .subtract(Duration(days: n - 1));
+
+    final map = <DateTime, double>{};
+    for (var i = 0; i < n; i++) {
+      map[start.add(Duration(days: i))] = 0;
+    }
+    for (final o in orders) {
+      final day =
+          DateTime(o.createdAt.year, o.createdAt.month, o.createdAt.day);
+      if (map.containsKey(day)) {
+        map[day] = map[day]! + 1;
+      }
+    }
+    final keys = map.keys.toList()..sort();
+    return [for (final d in keys) DailyPoint(date: d, value: map[d]!)];
+  }
+
+  List<TopSellingItem> _topSelling(
+    List<DashboardOrderInput> orders, {
+    int limit = 5,
+  }) {
+    final byName = <String, ({int qty, double revenue})>{};
+    for (final o in orders) {
+      for (final line in o.items) {
+        final prev = byName[line.name];
+        byName[line.name] = (
+          qty: (prev?.qty ?? 0) + line.quantity,
+          revenue: (prev?.revenue ?? 0) + line.price * line.quantity,
+        );
+      }
+    }
+    final sorted = byName.entries.toList()
+      ..sort((a, b) => b.value.qty.compareTo(a.value.qty));
+    return [
+      for (var i = 0; i < sorted.length && i < limit; i++)
+        TopSellingItem(
+          rank: i + 1,
+          name: sorted[i].key,
+          orders: sorted[i].value.qty,
+          revenue: sorted[i].value.revenue,
+        ),
+    ];
+  }
+
+  List<AttentionItem> _buildAttention({
+    required int criticalStockCount,
+    required int lowStockCount,
+    required int pendingPaymentCount,
+    required List<String> criticalItemNames,
+    required List<String> lowStockItemNames,
+    required List<String> expiringCouponCodes,
+  }) {
+    final items = <AttentionItem>[];
+
+    if (criticalStockCount > 0) {
+      final names = criticalItemNames.take(3).join(', ');
+      items.add(AttentionItem(
+        kind: AttentionKind.criticalStock,
+        severity: AttentionSeverity.critical,
+        title:
+            '$criticalStockCount item${criticalStockCount == 1 ? '' : 's'} critical',
+        subtitle: names.isEmpty ? 'Below safe stock level' : names,
+        route: '/inventory',
+        filterHint: 'Critical',
+      ));
+    }
+
+    if (lowStockCount > 0) {
+      final names = lowStockItemNames.take(3).join(', ');
+      items.add(AttentionItem(
+        kind: AttentionKind.lowStock,
+        severity: AttentionSeverity.warning,
+        title:
+            '$lowStockCount item${lowStockCount == 1 ? '' : 's'} low stock',
+        subtitle: names.isEmpty ? 'Below minimum threshold' : names,
+        route: '/inventory',
+        filterHint: 'Low Stock',
+      ));
+    }
+
+    if (pendingPaymentCount > 0) {
+      items.add(AttentionItem(
+        kind: AttentionKind.pendingPayment,
+        severity: AttentionSeverity.warning,
+        title:
+            '$pendingPaymentCount order${pendingPaymentCount == 1 ? '' : 's'} pending payment',
+        subtitle: 'Unpaid after kitchen flow',
+        route: '/live-orders',
+        filterHint: 'Unpaid',
+      ));
+    }
+
+    if (expiringCouponCodes.isNotEmpty) {
+      items.add(AttentionItem(
+        kind: AttentionKind.expiringCoupon,
+        severity: AttentionSeverity.info,
+        title:
+            '${expiringCouponCodes.length} coupon${expiringCouponCodes.length == 1 ? '' : 's'} expiring soon',
+        subtitle: expiringCouponCodes.take(3).join(', '),
+        route: '/coupons',
+        filterHint: 'Active',
+      ));
+    }
+
+    return items;
+  }
+}
+
+/// Lightweight order shape for dashboard aggregations (mapped from OrderModel).
+class DashboardOrderInput {
+  final String id;
+  final double total;
+  final DateTime createdAt;
+  final bool isPaid;
+  final String orderType;
+  final String orderSource;
+  final List<DashboardLineItem> items;
+
+  const DashboardOrderInput({
+    required this.id,
+    required this.total,
+    required this.createdAt,
+    required this.isPaid,
+    required this.orderType,
+    required this.orderSource,
+    this.items = const [],
+  });
+}
+
+class DashboardLineItem {
+  final String name;
+  final int quantity;
+  final double price;
+
+  const DashboardLineItem({
+    required this.name,
+    required this.quantity,
+    required this.price,
+  });
 }

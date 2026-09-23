@@ -88,6 +88,35 @@ class OrderService {
   }
 
   // ---------------------------------------------------------------------------
+  // RANGE QUERY (dashboard revenue / trends)
+  // ---------------------------------------------------------------------------
+
+  /// Orders with [created_at] in `[from, to)`.
+  ///
+  /// Used by the dashboard for today's revenue, hourly volume, and multi-day
+  /// trend charts. Single-field range on `created_at` — no composite index
+  /// required unless you add extra `where` clauses later.
+  Future<List<OrderModel>> fetchOrdersInRange({
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final snapshot = await _col
+        .where(
+          'created_at',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(from),
+        )
+        .where(
+          'created_at',
+          isLessThan: Timestamp.fromDate(to),
+        )
+        .get();
+
+    final orders = snapshot.docs.map(OrderModel.fromFirestore).toList();
+    _sortNewestFirst(orders);
+    return orders;
+  }
+
+  // ---------------------------------------------------------------------------
   // CREATE ORDER
   // ---------------------------------------------------------------------------
 
@@ -107,11 +136,6 @@ class OrderService {
     );
 
     // Payment method should remain null until payment is actually made.
-    //
-    // Do not do:
-    // data['payment_method'] = PaymentMethod.cash.name;
-    //
-    // because that would make an unpaid order appear paid.
 
     await doc.set(data);
 
@@ -161,53 +185,9 @@ class OrderService {
   }
 
   // ---------------------------------------------------------------------------
-  // SETTLE / MAKE PAYMENT
-  // ---------------------------------------------------------------------------
-  //
-  // IMPORTANT:
-  // Payment lifecycle is independent from order lifecycle.
-  //
-  // Example:
-  //
-  // Order:
-  //   pending + unpaid
-  //
-  // After payment:
-  //   pending + paid
-  //
-  // The order does NOT automatically become delivered.
-  //
-  // The admin can separately move the order through:
-  //
-  // pending -> preparing -> ready -> delivered
-  //
-  // ---------------------------------------------------------------------------
-
-  // Future<void> settleOrder({
-  //   required String orderId,
-  //   required PaymentMethod paymentMethod,
-  // }) async {
-  //   final id = orderId.trim();
-
-  //   if (id.isEmpty) {
-  //     throw ArgumentError(
-  //       'Cannot settle an order without an order ID.',
-  //     );
-  //   }
-
-  //   await _col.doc(id).update({
-  //     'payment_method': paymentMethod.name,
-  //     'payment_status': PaymentStatus.paid.name,
-  //     'updated_at': FieldValue.serverTimestamp(),
-  //   });
-  // }
-
-  // ---------------------------------------------------------------------------
   // MARK PAYMENT AS UNPAID
   // ---------------------------------------------------------------------------
-  //
-  // Useful if you ever need to reverse a payment state from admin.
-  //
+
   Future<void> markPaymentUnpaid(String orderId) async {
     final id = orderId.trim();
 
@@ -227,38 +207,6 @@ class OrderService {
   // ---------------------------------------------------------------------------
   // MARK PAYMENT PAID
   // ---------------------------------------------------------------------------
-  //
-  // This is an explicit alternative to settleOrder if you already
-  // have the payment method selected elsewhere.
-  //
-  // Future<void> updatePaymentStatus({
-  //   required String orderId,
-  //   required PaymentStatus status,
-  //   PaymentMethod? paymentMethod,
-  // }) async {
-  //   final id = orderId.trim();
-
-  //   if (id.isEmpty) {
-  //     throw ArgumentError(
-  //       'Cannot update payment without an order ID.',
-  //     );
-  //   }
-
-  //   final data = <String, dynamic>{
-  //     'payment_status': status.name,
-  //     'updated_at': FieldValue.serverTimestamp(),
-  //   };
-
-  //   if (status == PaymentStatus.paid && paymentMethod != null) {
-  //     data['payment_method'] = paymentMethod.name;
-  //   }
-
-  //   if (status == PaymentStatus.unpaid) {
-  //     data['payment_method'] = FieldValue.delete();
-  //   }
-
-  //   await _col.doc(id).update(data);
-  // }
 
   Future<void> updatePaymentStatus({
     required String orderId,

@@ -1,43 +1,124 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rdx_admin/services/settings_service.dart';
+
+
+/// Domain model for operating hours of one period (e.g. weekdays / weekends).
+class OperatingHours {
+  const OperatingHours({
+    required this.open,
+    required this.close,
+    this.isOpen = true,
+  });
+
+  final String open; // e.g. "08:00 AM"
+  final String close; // e.g. "11:00 PM"
+  final bool isOpen;
+
+  OperatingHours copyWith({
+    String? open,
+    String? close,
+    bool? isOpen,
+  }) {
+    return OperatingHours(
+      open: open ?? this.open,
+      close: close ?? this.close,
+      isOpen: isOpen ?? this.isOpen,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'open': open,
+        'close': close,
+        'is_open': isOpen,
+      };
+
+  factory OperatingHours.fromMap(Map<String, dynamic>? map, {
+    required String defaultOpen,
+    required String defaultClose,
+    bool defaultIsOpen = true,
+  }) {
+    if (map == null) {
+      return OperatingHours(
+        open: defaultOpen,
+        close: defaultClose,
+        isOpen: defaultIsOpen,
+      );
+    }
+    return OperatingHours(
+      open: map['open'] as String? ?? defaultOpen,
+      close: map['close'] as String? ?? defaultClose,
+      isOpen: map['is_open'] as bool? ?? defaultIsOpen,
+    );
+  }
+}
 
 class SettingsProvider extends ChangeNotifier {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  SettingsProvider({SettingsService? service})
+      : _service = service ?? SettingsService();
+
+  final SettingsService _service;
 
   bool isLoading = false;
   String? errorMessage;
 
+  // ── Identity ────────────────────────────────────────────────────────────
   String restaurantName = 'RDX Fast Foods';
   String description = 'Best in city, freshly made every morning.';
   String address = 'Chandigarh';
   String phone = '+91 98765 43210';
   String email = 'contact@rdxrestaurant.com';
 
+  // ── Operational rules ───────────────────────────────────────────────────
   bool autoAcceptOrders = true;
   bool requireManagerApprovalForRefunds = true;
   bool keepPricingConsistent = false;
 
+  // ── Operating hours ─────────────────────────────────────────────────────
+  OperatingHours weekdays = const OperatingHours(
+    open: '08:00 AM',
+    close: '11:00 PM',
+    isOpen: true,
+  );
+  OperatingHours weekends = const OperatingHours(
+    open: '10:00 AM',
+    close: '02:00 AM',
+    isOpen: true,
+  );
+
+  // ── Load ────────────────────────────────────────────────────────────────
   Future<void> load() async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      final doc = await _db.collection('settings').doc('restaurant').get();
-      if (doc.exists) {
-        final d = doc.data()!;
-        restaurantName = d['restaurant_name'] ?? restaurantName;
-        description = d['description'] ?? description;
-        address = d['address'] ?? address;
-        phone = d['phone'] ?? phone;
-        email = d['email'] ?? email;
-        autoAcceptOrders = d['auto_accept_orders'] ?? true;
+      final d = await _service.load();
+      if (d != null) {
+        restaurantName = d['restaurant_name'] as String? ?? restaurantName;
+        description = d['description'] as String? ?? description;
+        address = d['address'] as String? ?? address;
+        phone = d['phone'] as String? ?? phone;
+        email = d['email'] as String? ?? email;
+
+        autoAcceptOrders = d['auto_accept_orders'] as bool? ?? true;
         requireManagerApprovalForRefunds =
-            d['require_manager_approval_for_refunds'] ?? true;
-        keepPricingConsistent = d['keep_pricing_consistent'] ?? false;
+            d['require_manager_approval_for_refunds'] as bool? ?? true;
+        keepPricingConsistent =
+            d['keep_pricing_consistent'] as bool? ?? false;
+
+        weekdays = OperatingHours.fromMap(
+          d['weekdays'] as Map<String, dynamic>?,
+          defaultOpen: '08:00 AM',
+          defaultClose: '11:00 PM',
+        );
+        weekends = OperatingHours.fromMap(
+          d['weekends'] as Map<String, dynamic>?,
+          defaultOpen: '10:00 AM',
+          defaultClose: '02:00 AM',
+        );
       }
-    } catch (e) {
+    } catch (_) {
       errorMessage = 'Failed to load settings';
     }
 
@@ -45,6 +126,7 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Toggles ─────────────────────────────────────────────────────────────
   Future<void> toggleAutoAccept(bool value) async {
     final previous = autoAcceptOrders;
     autoAcceptOrders = value;
@@ -84,10 +166,7 @@ class SettingsProvider extends ChangeNotifier {
     required void Function() rollback,
   }) async {
     try {
-      await _db.collection('settings').doc('restaurant').set({
-        field: value,
-        'updated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await _service.updateToggle(field, value);
     } catch (_) {
       rollback();
       errorMessage = 'Failed to save setting.';
@@ -95,19 +174,25 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 
+  // ── Full save (identity + hours) ────────────────────────────────────────
   Future<bool> save({
     required String name,
     required String desc,
     required String addr,
     required String ph,
     required String em,
+    OperatingHours? weekdaysHours,
+    OperatingHours? weekendsHours,
   }) async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
+    final newWeekdays = weekdaysHours ?? weekdays;
+    final newWeekends = weekendsHours ?? weekends;
+
     try {
-      await _db.collection('settings').doc('restaurant').set({
+      await _service.save({
         'restaurant_name': name,
         'description': desc,
         'address': addr,
@@ -117,19 +202,22 @@ class SettingsProvider extends ChangeNotifier {
         'require_manager_approval_for_refunds':
             requireManagerApprovalForRefunds,
         'keep_pricing_consistent': keepPricingConsistent,
-        'updated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+        'weekdays': newWeekdays.toMap(),
+        'weekends': newWeekends.toMap(),
+      });
 
       restaurantName = name;
       description = desc;
       address = addr;
       phone = ph;
       email = em;
+      weekdays = newWeekdays;
+      weekends = newWeekends;
 
       isLoading = false;
       notifyListeners();
       return true;
-    } catch (e) {
+    } catch (_) {
       errorMessage = 'Failed to save settings.';
       isLoading = false;
       notifyListeners();

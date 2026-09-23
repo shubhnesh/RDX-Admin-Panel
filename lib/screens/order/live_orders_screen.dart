@@ -87,7 +87,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         'App Orders',
         'Preparing',
         'Ready',
-        'Pending Payment',
+        'Unpaid',
         'Delivered',
       ];
 

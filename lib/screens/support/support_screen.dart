@@ -37,9 +37,9 @@ class _SupportScreenState extends State<SupportScreen> {
   Future<void> _submit() async {
     if (_subjectController.text.trim().isEmpty ||
         _messageController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill subject and message')),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(content: Text('Please fill subject and message')),
+      // );
       return;
     }
     setState(() => _sending = true);
@@ -48,9 +48,9 @@ class _SupportScreenState extends State<SupportScreen> {
     setState(() => _sending = false);
     _subjectController.clear();
     _messageController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ticket submitted successfully')),
-    );
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   const SnackBar(content: Text('Ticket submitted successfully')),
+    // );
   }
 
   @override

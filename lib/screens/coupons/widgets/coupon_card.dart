@@ -120,11 +120,7 @@ class CouponCard extends StatelessWidget {
               SizedBox(width: context.w(4)),
               IconButton(
                 tooltip: 'Copy coupon code',
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Coupon code copied')),
-                  );
-                },
+                onPressed: () {},
                 icon: Icon(
                   Icons.copy_outlined,
                   size: context.h(15),

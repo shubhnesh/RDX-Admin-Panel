@@ -72,11 +72,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     ref.read(liveOrdersProvider).load();
 
     if (placed == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('New order added to the queue.'),
-        ),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(
+      //     content: Text('New order added to the queue.'),
+      //   ),
+      // );
     }
   }
 

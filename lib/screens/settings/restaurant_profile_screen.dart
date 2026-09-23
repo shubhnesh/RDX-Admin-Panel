@@ -94,16 +94,16 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
           _isUploadingLogo = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Logo must be smaller than 2 MB.',
-              style: AppTextStyles.bodySecondary(context).copyWith(
-                color: Colors.white,
-              ),
-            ),
-          ),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text(
+        //       'Logo must be smaller than 2 MB.',
+        //       style: AppTextStyles.bodySecondary(context).copyWith(
+        //         color: Colors.white,
+        //       ),
+        //     ),
+        //   ),
+        // );
 
         return;
       }
@@ -165,16 +165,16 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          ok ? 'Settings saved' : 'Failed to save settings',
-          style: AppTextStyles.bodySecondary(context).copyWith(
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(
+    //     content: Text(
+    //       ok ? 'Settings saved' : 'Failed to save settings',
+    //       style: AppTextStyles.bodySecondary(context).copyWith(
+    //         color: Colors.white,
+    //       ),
+    //     ),
+    //   ),
+    // );
   }
 
   @override

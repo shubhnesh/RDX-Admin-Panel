@@ -507,11 +507,11 @@ class _RightOrderSummary extends ConsumerWidget {
                     leadingIcon: Icons.print_outlined,
                     isPrimary: true,
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Sending bill to printer…'),
-                        ),
-                      );
+                      // ScaffoldMessenger.of(context).showSnackBar(
+                      //   const SnackBar(
+                      //     content: Text('Sending bill to printer…'),
+                      //   ),
+                      // );
                     },
                   ),
                 ),
@@ -966,11 +966,11 @@ class _WorkflowAction extends ConsumerWidget {
             ref.invalidate(orderDetailProvider(order.id));
             await ref.read(liveOrdersProvider).load();
             if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Order moved to ${nextStatus.label}.'),
-              ),
-            );
+            // ScaffoldMessenger.of(context).showSnackBar(
+            //   SnackBar(
+            //     content: Text('Order moved to ${nextStatus.label}.'),
+            //   ),
+            // );
           } catch (e) {
             if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(

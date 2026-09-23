@@ -379,11 +379,11 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
       await ref.read(inventoryProvider).saveItem(item, timestamp: now);
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isEdit ? 'Material updated' : 'Material added'),
-          ),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text(isEdit ? 'Material updated' : 'Material added'),
+        //   ),
+        // );
       }
     } catch (e) {
       if (mounted) {

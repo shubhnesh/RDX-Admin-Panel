@@ -102,14 +102,14 @@ class _MainScreenState extends State<MainScreen> {
       expanded: isMobile ? true : _sidebarExpanded,
       onToggleExpand: _toggleSidebar,
       onLogout: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Logged out')),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(content: Text('Logged out')),
+        // );
       },
       onAddOrder: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Add Order coming soon')),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(content: Text('Add Order coming soon')),
+        // );
       },
     );
 

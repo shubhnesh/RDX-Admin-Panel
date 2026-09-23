@@ -349,13 +349,13 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
 
   Future<void> _createTag() async {
     if (_tags.length >= TagService.maxCustomTags) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'You can only create up to ${TagService.maxCustomTags} custom tags.',
-          ),
-        ),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text(
+      //       'You can only create up to ${TagService.maxCustomTags} custom tags.',
+      //     ),
+      //   ),
+      // );
       return;
     }
     final created = await CategoryEntryDialog.show<TagModel>(

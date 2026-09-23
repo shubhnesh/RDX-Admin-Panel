@@ -122,9 +122,9 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
   }
 
   void _printBill() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sending bill to printer…')),
-    );
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   const SnackBar(content: Text('Sending bill to printer…')),
+    // );
   }
 
   Future<void> _markPaidAndComplete() async {
@@ -146,9 +146,9 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment recorded and order completed.')),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(content: Text('Payment recorded and order completed.')),
+      // );
       _close();
     } catch (_) {
       if (!mounted) return;

@@ -264,13 +264,13 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success ? 'Menu item deleted.' : 'Failed to delete menu item.',
-          ),
-        ),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text(
+      //       success ? 'Menu item deleted.' : 'Failed to delete menu item.',
+      //     ),
+      //   ),
+      // );
     }
   }
 

@@ -73,8 +73,11 @@ class _InventoryManageCategoryScreenState
       ]);
       if (!mounted) return;
       setState(() {
-        _categories = results[0] as List<InventoryCategoryModel>;
-        _units = results[1] as List<UnitModel>;
+        _categories = _sortedByName(
+          results[0] as List<InventoryCategoryModel>,
+          (c) => c.name,
+        );
+        _units = _sortedByName(results[1] as List<UnitModel>, (u) => u.name);
         _loading = false;
       });
     } catch (_) {
@@ -98,7 +101,10 @@ class _InventoryManageCategoryScreenState
       onSave: (name, _) => _categoryService.createCategory(name: name),
     );
     if (created == null || !mounted) return;
-    setState(() => _categories = [..._categories, created]);
+    setState(
+      () => _categories =
+          _sortedByName([..._categories, created], (c) => c.name),
+    );
   }
 
   Future<void> _editCategory(InventoryCategoryModel category) async {
@@ -117,10 +123,13 @@ class _InventoryManageCategoryScreenState
     );
     if (updated == null || !mounted) return;
     setState(() {
-      _categories = [
-        for (final c in _categories)
-          if (c.id == updated.id) updated else c,
-      ];
+      _categories = _sortedByName(
+        [
+          for (final c in _categories)
+            if (c.id == updated.id) updated else c,
+        ],
+        (c) => c.name,
+      );
     });
   }
 
@@ -162,7 +171,7 @@ class _InventoryManageCategoryScreenState
       onSave: (name, _) => _unitService.createUnit(name: name),
     );
     if (created == null || !mounted) return;
-    setState(() => _units = [..._units, created]);
+    setState(() => _units = _sortedByName([..._units, created], (u) => u.name));
   }
 
   Future<void> _editUnit(UnitModel unit) async {
@@ -181,10 +190,13 @@ class _InventoryManageCategoryScreenState
     );
     if (updated == null || !mounted) return;
     setState(() {
-      _units = [
-        for (final u in _units)
-          if (u.id == updated.id) updated else u,
-      ];
+      _units = _sortedByName(
+        [
+          for (final u in _units)
+            if (u.id == updated.id) updated else u,
+        ],
+        (u) => u.name,
+      );
     });
   }
 
@@ -231,16 +243,36 @@ class _InventoryManageCategoryScreenState
     return all.where((t) => t.$2.toLowerCase().contains(q)).toList();
   }
 
+  /// Case-insensitive alphabetical sort for named entities.
+  List<T> _sortedByName<T>(
+    Iterable<T> items,
+    String Function(T) nameOf,
+  ) {
+    final list = List<T>.from(items);
+    list.sort(
+      (a, b) => nameOf(a).toLowerCase().compareTo(nameOf(b).toLowerCase()),
+    );
+    return list;
+  }
+
   List<InventoryCategoryModel> get _filteredCategories {
-    if (_itemQuery.trim().isEmpty) return _categories;
-    final q = _itemQuery.trim().toLowerCase();
-    return _categories.where((c) => c.name.toLowerCase().contains(q)).toList();
+    final source = _itemQuery.trim().isEmpty
+        ? _categories
+        : _categories
+            .where((c) =>
+                c.name.toLowerCase().contains(_itemQuery.trim().toLowerCase()))
+            .toList();
+    return _sortedByName(source, (c) => c.name);
   }
 
   List<UnitModel> get _filteredUnits {
-    if (_itemQuery.trim().isEmpty) return _units;
-    final q = _itemQuery.trim().toLowerCase();
-    return _units.where((u) => u.name.toLowerCase().contains(q)).toList();
+    final source = _itemQuery.trim().isEmpty
+        ? _units
+        : _units
+            .where((u) =>
+                u.name.toLowerCase().contains(_itemQuery.trim().toLowerCase()))
+            .toList();
+    return _sortedByName(source, (u) => u.name);
   }
 
   @override

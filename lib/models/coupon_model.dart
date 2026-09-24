@@ -19,6 +19,11 @@ class CouponModel {
   final List<String> applicableCategories;
   final List<String> applicableSubCategories;
 
+  /// Optional image URL for the coupon, entered as a plain link the same
+  /// way menu item images are — no upload, just pasted in. Null/empty
+  /// means no image was set and the card falls back to a placeholder.
+  final String? imageUrl;
+
   /// Optional single subcategory this coupon is restricted to (id from
   /// `menu_categories.subcategories`). Null means the coupon applies
   /// regardless of subcategory.
@@ -44,6 +49,7 @@ class CouponModel {
     required this.status,
     this.applicableCategories = const [],
     this.applicableSubCategories = const [],
+    this.imageUrl,
     this.applicableSubCategoryId,
     this.applicableItemId,
   });
@@ -74,6 +80,9 @@ class CouponModel {
       ),
       applicableCategories: _strings(json['applicable_categories']),
       applicableSubCategories: _strings(json['applicable_sub_categories']),
+      imageUrl: (json['image_url'] as String?)?.isEmpty ?? true
+          ? null
+          : json['image_url'] as String?,
       applicableSubCategoryId:
           (json['applicable_sub_category_id'] as String?)?.isEmpty ?? true
               ? null
@@ -98,6 +107,7 @@ class CouponModel {
         'status': status.name,
         'applicable_categories': applicableCategories,
         'applicable_sub_categories': applicableSubCategories,
+        'image_url': imageUrl,
         'applicable_sub_category_id': applicableSubCategoryId,
         'applicable_item_id': applicableItemId,
         'updated_at': FieldValue.serverTimestamp(),

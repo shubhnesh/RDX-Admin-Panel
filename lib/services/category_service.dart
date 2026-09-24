@@ -8,7 +8,11 @@ class CategoryService {
   CategoryService({FirebaseFirestore? firestore})
       : _db = firestore ?? FirebaseFirestore.instance;
 
-  static const maxSubcategories = 5;
+  /// Kept for backward compatibility with any callers that still
+  /// reference it. Subcategories are no longer hard-capped — users
+  /// may add as many as they need via the one-at-a-time dialog UX.
+  @Deprecated('Subcategories are unlimited; do not enforce a max.')
+  static const maxSubcategories = 9999;
 
   final FirebaseFirestore _db;
 
@@ -40,7 +44,7 @@ class CategoryService {
     return CategoryModel.fromFirestore(doc);
   }
 
-  /// Creates a category with up to [maxSubcategories] subcategories.
+  /// Creates a category with any number of subcategories.
   ///
   /// Document IDs are readable slugs derived from the name (e.g.
   /// "Chineses" -> "chineses") to match the existing `menu_categories`
@@ -62,12 +66,6 @@ class CategoryService {
 
     final cleanedSubcategoryNames =
         subcategoryNames.map((n) => n.trim()).where((n) => n.isNotEmpty).toList();
-
-    if (cleanedSubcategoryNames.length > maxSubcategories) {
-      throw ArgumentError(
-        'A category can have at most $maxSubcategories subcategories.',
-      );
-    }
 
     final categorySlug = await _uniqueSlug(_slugify(trimmedName));
 
@@ -91,12 +89,6 @@ class CategoryService {
   Future<void> updateCategory(CategoryModel category) async {
     if (category.id.trim().isEmpty) {
       throw ArgumentError('Cannot update a category without an ID.');
-    }
-
-    if (category.subcategories.length > maxSubcategories) {
-      throw ArgumentError(
-        'A category can have at most $maxSubcategories subcategories.',
-      );
     }
 
     await _col.doc(category.id).update({

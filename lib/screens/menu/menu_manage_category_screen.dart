@@ -74,10 +74,19 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
       ]);
       if (!mounted) return;
       setState(() {
-        _categories = results[0] as List<CategoryModel>;
-        _preparations = results[1] as List<PreparationModel>;
-        _regionalities = results[2] as List<RegionalityModel>;
-        _tags = results[3] as List<TagModel>;
+        _categories = _sortedByName(
+          results[0] as List<CategoryModel>,
+          (c) => c.name,
+        );
+        _preparations = _sortedByName(
+          results[1] as List<PreparationModel>,
+          (p) => p.name,
+        );
+        _regionalities = _sortedByName(
+          results[2] as List<RegionalityModel>,
+          (r) => r.name,
+        );
+        _tags = _sortedByName(results[3] as List<TagModel>, (t) => t.name);
         _loading = false;
       });
     } catch (_) {
@@ -101,10 +110,9 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
       nameLabel: 'Category Name *',
       nameHint: 'e.g. Beverages',
       initialSubItems: const [],
-      maxSubItems: CategoryService.maxSubcategories,
-      subItemsLabel:
-          'Subcategories (optional, up to ${CategoryService.maxSubcategories})',
-      subItemHintBuilder: (i) => 'Subcategory ${i + 1}',
+      // One text field at a time — user can add as many subcategories as needed.
+      subItemsLabel: 'Subcategories (optional)',
+      subItemHintBuilder: (_) => 'Add a subcategory and press Add',
       onSave: (name, subNames) async {
         final id = await _categoryService.createCategory(
           name: name,
@@ -121,7 +129,9 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
       },
     );
     if (created == null || !mounted) return;
-    setState(() => _categories = [..._categories, created]);
+    setState(
+      () => _categories = _sortedByName([..._categories, created], (c) => c.name),
+    );
   }
 
   Future<void> _editCategory(CategoryModel category) async {
@@ -133,10 +143,9 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
       nameHint: 'e.g. Beverages',
       initialName: category.name,
       initialSubItems: category.subcategories.map((s) => s.name).toList(),
-      maxSubItems: CategoryService.maxSubcategories,
-      subItemsLabel:
-          'Subcategories (optional, up to ${CategoryService.maxSubcategories})',
-      subItemHintBuilder: (i) => 'Subcategory ${i + 1}',
+      // One text field at a time — user can add as many subcategories as needed.
+      subItemsLabel: 'Subcategories (optional)',
+      subItemHintBuilder: (_) => 'Add a subcategory and press Add',
       onSave: (name, subNames) async {
         final updated = CategoryModel(
           id: category.id,
@@ -155,10 +164,13 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
     );
     if (updated == null || !mounted) return;
     setState(() {
-      _categories = [
-        for (final item in _categories)
-          if (item.id == updated.id) updated else item,
-      ];
+      _categories = _sortedByName(
+        [
+          for (final item in _categories)
+            if (item.id == updated.id) updated else item,
+        ],
+        (c) => c.name,
+      );
     });
   }
 
@@ -215,7 +227,10 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
       onSave: (name, _) => _preparationService.createPreparation(name: name),
     );
     if (created == null || !mounted) return;
-    setState(() => _preparations = [..._preparations, created]);
+    setState(
+      () => _preparations =
+          _sortedByName([..._preparations, created], (p) => p.name),
+    );
   }
 
   Future<void> _editPreparation(PreparationModel preparation) async {
@@ -234,10 +249,13 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
     );
     if (updated == null || !mounted) return;
     setState(() {
-      _preparations = [
-        for (final item in _preparations)
-          if (item.id == updated.id) updated else item,
-      ];
+      _preparations = _sortedByName(
+        [
+          for (final item in _preparations)
+            if (item.id == updated.id) updated else item,
+        ],
+        (p) => p.name,
+      );
     });
   }
 
@@ -289,7 +307,10 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
       onSave: (name, _) => _regionalityService.createRegionality(name: name),
     );
     if (created == null || !mounted) return;
-    setState(() => _regionalities = [..._regionalities, created]);
+    setState(
+      () => _regionalities =
+          _sortedByName([..._regionalities, created], (r) => r.name),
+    );
   }
 
   Future<void> _editRegionality(RegionalityModel regionality) async {
@@ -308,10 +329,13 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
     );
     if (updated == null || !mounted) return;
     setState(() {
-      _regionalities = [
-        for (final item in _regionalities)
-          if (item.id == updated.id) updated else item,
-      ];
+      _regionalities = _sortedByName(
+        [
+          for (final item in _regionalities)
+            if (item.id == updated.id) updated else item,
+        ],
+        (r) => r.name,
+      );
     });
   }
 
@@ -368,7 +392,7 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
       onSave: (name, _) => _tagService.createTag(name: name),
     );
     if (created == null || !mounted) return;
-    setState(() => _tags = [..._tags, created]);
+    setState(() => _tags = _sortedByName([..._tags, created], (t) => t.name));
   }
 
   Future<void> _editTag(TagModel tag) async {
@@ -387,10 +411,13 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
     );
     if (updated == null || !mounted) return;
     setState(() {
-      _tags = [
-        for (final item in _tags)
-          if (item.id == updated.id) updated else item,
-      ];
+      _tags = _sortedByName(
+        [
+          for (final item in _tags)
+            if (item.id == updated.id) updated else item,
+        ],
+        (t) => t.name,
+      );
     });
   }
 
@@ -582,6 +609,31 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
             : _categoryTable(context, colors);
   }
 
+  /// Case-insensitive alphabetical sort for named entities.
+  List<T> _sortedByName<T>(
+    Iterable<T> items,
+    String Function(T) nameOf,
+  ) {
+    final list = List<T>.from(items);
+    list.sort(
+      (a, b) => nameOf(a).toLowerCase().compareTo(nameOf(b).toLowerCase()),
+    );
+    return list;
+  }
+
+  /// Formats subcategory names for the table/card: alphabetically sorted,
+  /// up to 8 per line, then continues on the next line.
+  String _formatSubcategories(List<SubcategoryModel> subs) {
+    if (subs.isEmpty) return '—';
+    final names = _sortedByName(subs, (s) => s.name).map((s) => s.name).toList();
+    final lines = <String>[];
+    for (var i = 0; i < names.length; i += 8) {
+      final end = i + 8 > names.length ? names.length : i + 8;
+      lines.add(names.sublist(i, end).join(', '));
+    }
+    return lines.join('\n');
+  }
+
   Widget _categoryTable(BuildContext context, AppColorScheme colors) {
     final isMobile = Responsive.isMobile(context);
     final isNarrow = Responsive.isNarrow(context);
@@ -623,7 +675,7 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
             Text(
               category.subcategories.isEmpty
                   ? '—'
-                  : category.subcategories.map((sub) => sub.name).join(', '),
+                  : _formatSubcategories(category.subcategories),
               style: AppTextStyles.bodySecondary(context)
                   .copyWith(color: colors.textSecondary),
             ),
@@ -644,7 +696,7 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
         final category = _categories[index];
         final subs = category.subcategories.isEmpty
             ? 'No subcategories'
-            : category.subcategories.map((s) => s.name).join(', ');
+            : _formatSubcategories(category.subcategories);
 
         return _categoryCard(
           context: context,

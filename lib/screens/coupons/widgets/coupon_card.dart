@@ -48,9 +48,11 @@ class CouponCard extends StatelessWidget {
         ? '${coupon.usageCount} used · No limit'
         : '${coupon.usageCount} of ${coupon.usageLimit} used';
 
+    final hasImage =
+        coupon.imageUrl != null && coupon.imageUrl!.trim().isNotEmpty;
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(context.h(14)),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(10)),
@@ -63,49 +65,116 @@ class CouponCard extends StatelessWidget {
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Status + menu ────────────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.w(5),
-                    vertical: context.h(2),
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(context.h(5)),
-                  ),
-                  child: Text(
-                    coupon.status.name.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption(context)
-                        .copyWith(color: statusColor),
-                  ),
+          // ── Image ─────────────────────────────────────────────
+          AspectRatio(
+            aspectRatio: 2.2,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                context.w(8),
+                context.w(8),
+                context.w(8),
+                context.w(4),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(context.h(8)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    hasImage
+                        ? Image.network(
+                            coupon.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: colors.surfaceVariant,
+                              child: Icon(
+                                Icons.local_offer_outlined,
+                                color: colors.textMuted,
+                                size: context.h(28),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            color: colors.surfaceVariant,
+                            child: Icon(
+                              Icons.local_offer_outlined,
+                              color: colors.textMuted,
+                              size: context.h(28),
+                            ),
+                          ),
+                    // Subtle bottom gradient so overlaid badges stay
+                    // readable over bright photos.
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.0),
+                              Colors.black.withValues(alpha: 0.18),
+                            ],
+                            stops: const [0.6, 1.0],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Status pill, top-left over the image.
+                    Positioned(
+                      left: context.w(6),
+                      top: context.h(6),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: context.w(5),
+                          vertical: context.h(2),
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          borderRadius: BorderRadius.circular(context.h(5)),
+                        ),
+                        child: Text(
+                          coupon.status.name.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption(context)
+                              .copyWith(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(),
-              Builder(
-                builder: (buttonContext) {
-                  return RdxTableMoreButton(
-                    tooltip: 'More actions',
-                    onPressed: () {
-                      onActions!(buttonContext);
-                    },
-                  );
-                },
-              ),
-            ],
+            ),
           ),
 
-          SizedBox(height: context.h(8)),
-
+          // ── Content ──────────────────────────────────────────────
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              context.w(14),
+              0,
+              context.w(14),
+              context.h(14),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+          SizedBox(height: context.h(2)),
+          // ── Discount ──────────────────────────────────────────────
+          Text(
+            discount,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.body(context).copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          SizedBox(height: context.h(2)),
           // ── Coupon code + copy ──────────────────────────────────
           Row(
             children: [
@@ -146,51 +215,16 @@ class CouponCard extends StatelessWidget {
             style: AppTextStyles.bodySecondary(context),
           ),
 
-          SizedBox(height: context.h(10)),
-
-          // ── Discount ────────────────────────────────────────────
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(
-              horizontal: context.w(10),
-              vertical: context.h(9),
+          if (coupon.minOrderValue != null) ...[
+            SizedBox(height: context.h(8)),
+            Text(
+              'On orders above ${Formatters.currency(coupon.minOrderValue!)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.label(context)
+                  .copyWith(color: colors.textMuted),
             ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF3EC),
-              borderRadius: BorderRadius.circular(context.h(7)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.local_offer_outlined,
-                  size: context.h(17),
-                  color: AppColors.primary,
-                ),
-                SizedBox(width: context.w(8)),
-                Flexible(
-                  child: Text(
-                    discount,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.section(context)
-                        .copyWith(color: AppColors.primary),
-                  ),
-                ),
-                if (coupon.minOrderValue != null) ...[
-                  SizedBox(width: context.w(8)),
-                  Flexible(
-                    child: Text(
-                      'Min. ${Formatters.currency(coupon.minOrderValue!)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                      style: AppTextStyles.label(context),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          ],
 
           SizedBox(height: context.h(11)),
 
@@ -211,32 +245,32 @@ class CouponCard extends StatelessWidget {
           SizedBox(height: context.h(5)),
 
           // ── Usage information ──────────────────────────────────
-          Row(
-            children: [
-              Icon(
-                Icons.bar_chart_outlined,
-                size: context.h(14),
-                color: colors.textMuted,
-              ),
-              SizedBox(width: context.w(5)),
-              Expanded(
-                child: Text(
-                  usageLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.label(context),
-                ),
-              ),
-            ],
-          ),
+          // Row(
+          //   children: [
+          //     Icon(
+          //       Icons.bar_chart_outlined,
+          //       size: context.h(14),
+          //       color: colors.textMuted,
+          //     ),
+          //     SizedBox(width: context.w(5)),
+          //     Expanded(
+          //       child: Text(
+          //         usageLabel,
+          //         maxLines: 1,
+          //         overflow: TextOverflow.ellipsis,
+          //         style: AppTextStyles.label(context),
+          //       ),
+          //     ),
+          //   ],
+          // ),
+
+          // SizedBox(height: context.h(8)),
+
+          // Divider(color: colors.divider, height: context.h(1)),
 
           SizedBox(height: context.h(8)),
 
-          Divider(color: colors.divider, height: context.h(1)),
-
-          SizedBox(height: context.h(8)),
-
-          // ── Date + current status ───────────────────────────────
+          // ── Date + more actions ──────────────────────────────────
           Row(
             children: [
               Icon(
@@ -254,7 +288,20 @@ class CouponCard extends StatelessWidget {
                       .copyWith(color: colors.textMuted),
                 ),
               ),
+              Builder(
+                builder: (buttonContext) {
+                  return RdxTableMoreButton(
+                    tooltip: 'More actions',
+                    onPressed: () {
+                      onActions!(buttonContext);
+                    },
+                  );
+                },
+              ),
             ],
+          ),
+              ],
+            ),
           ),
         ],
       ),

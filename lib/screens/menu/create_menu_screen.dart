@@ -27,6 +27,11 @@ import '../../widgets/buttons/rdx_toggle_button.dart';
 /// Selecting it opens [CreateCategoryDialog] instead of setting a category.
 const String _kCreateCategoryValue = '__create_category__';
 
+/// Sentinel value placed as the first entry in the subcategory dropdown.
+/// Only shown once a primary category is selected. Selecting it opens a
+/// dialog to add one subcategory onto that category (persisted immediately).
+const String _kCreateSubcategoryValue = '__create_subcategory__';
+
 /// Sentinel value placed as the first entry in the regionality dropdown.
 /// Selecting it opens [CreateRegionalityDialog].
 const String _kCreateRegionalityValue = '__create_regionality__';
@@ -112,7 +117,20 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     if (_primaryCategory == null) return [];
     final category =
         _categories.where((item) => item.id == _primaryCategory).toList();
-    return category.isEmpty ? [] : category.first.subcategories;
+    if (category.isEmpty) return [];
+    return _sortedByName(category.first.subcategories, (s) => s.name);
+  }
+
+  /// Case-insensitive alphabetical sort for named entities.
+  List<T> _sortedByName<T>(
+    Iterable<T> items,
+    String Function(T) nameOf,
+  ) {
+    final list = List<T>.from(items);
+    list.sort(
+      (a, b) => nameOf(a).toLowerCase().compareTo(nameOf(b).toLowerCase()),
+    );
+    return list;
   }
 
   Future<void> _loadCategories() async {
@@ -121,7 +139,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       final categories = await _categoryService.fetchCategories();
       if (!mounted) return;
       setState(() {
-        _categories = categories;
+        _categories = _sortedByName(categories, (c) => c.name);
         _categoriesLoading = false;
       });
     } catch (_) {
@@ -136,7 +154,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       final regionalities = await _regionalityService.fetchRegionalities();
       if (!mounted) return;
       setState(() {
-        _regionalities = regionalities;
+        _regionalities = _sortedByName(regionalities, (r) => r.name);
         _regionalitiesLoading = false;
       });
     } catch (_) {
@@ -153,10 +171,9 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       nameLabel: 'Category Name *',
       nameHint: 'e.g. Beverages',
       initialSubItems: const [],
-      maxSubItems: CategoryService.maxSubcategories,
-      subItemsLabel:
-          'Subcategories (optional, up to ${CategoryService.maxSubcategories})',
-      subItemHintBuilder: (i) => 'Subcategory ${i + 1}',
+      // One text field at a time — user can add as many subcategories as needed.
+      subItemsLabel: 'Subcategories (optional)',
+      subItemHintBuilder: (_) => 'Add a subcategory and press Add',
       onSave: (name, subNames) async {
         final id = await _categoryService.createCategory(
           name: name,
@@ -174,9 +191,75 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     );
     if (created == null || !mounted) return;
     setState(() {
-      _categories = [..._categories, created];
+      _categories = _sortedByName([..._categories, created], (c) => c.name);
       _primaryCategory = created.id;
       _subcategory = null;
+    });
+  }
+
+  /// Adds a single subcategory to the currently selected primary category.
+  /// Only available once [_primaryCategory] is set (the dropdown option is
+  /// gated the same way). Persists immediately via [CategoryService.updateCategory].
+  Future<void> _openCreateSubcategoryDialog() async {
+    if (_primaryCategory == null) return;
+
+    final categoryMatch =
+        _categories.where((c) => c.id == _primaryCategory).toList();
+    if (categoryMatch.isEmpty) return;
+    final category = categoryMatch.first;
+
+    final created = await CategoryEntryDialog.show<SubcategoryModel>(
+      context,
+      title: 'Add Subcategory',
+      nameLabel: 'Subcategory Name *',
+      nameHint: 'e.g. Noodles',
+      description:
+          'Added to "${category.name}" and saved right away so it can be '
+          'reused on other items.',
+      onSave: (name, _) async {
+        final trimmed = name.trim();
+        if (trimmed.isEmpty) {
+          throw ArgumentError('Subcategory name cannot be empty.');
+        }
+        final alreadyExists = category.subcategories.any(
+          (s) => s.name.toLowerCase() == trimmed.toLowerCase(),
+        );
+        if (alreadyExists) {
+          throw ArgumentError(
+            'A subcategory named "$trimmed" already exists in this category.',
+          );
+        }
+
+        final subId =
+            '${category.id}-${trimmed.toLowerCase().replaceAll(RegExp(r'\s+'), '-')}';
+        final newSub = SubcategoryModel(id: subId, name: trimmed);
+        final updated = CategoryModel(
+          id: category.id,
+          name: category.name,
+          subcategories: [...category.subcategories, newSub],
+        );
+        await _categoryService.updateCategory(updated);
+        return newSub;
+      },
+    );
+    if (created == null || !mounted) return;
+
+    setState(() {
+      _categories = [
+        for (final item in _categories)
+          if (item.id == category.id)
+            CategoryModel(
+              id: item.id,
+              name: item.name,
+              subcategories: _sortedByName(
+                [...item.subcategories, created],
+                (s) => s.name,
+              ),
+            )
+          else
+            item,
+      ];
+      _subcategory = created.id;
     });
   }
 
@@ -246,7 +329,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     if (created == null || !mounted) return;
 
     setState(() {
-      _customTags = [..._customTags, created];
+      _customTags = _sortedByName([..._customTags, created], (t) => t.name);
       _tags.add(created.name);
     });
   }
@@ -259,7 +342,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       final preparations = await _preparationService.fetchPreparations();
       if (!mounted) return;
       setState(() {
-        _preparations = preparations;
+        _preparations = _sortedByName(preparations, (p) => p.name);
         _preparationsLoading = false;
       });
     } catch (_) {
@@ -274,7 +357,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       final tags = await _tagService.fetchTags();
       if (!mounted) return;
       setState(() {
-        _customTags = tags;
+        _customTags = _sortedByName(tags, (t) => t.name);
         _customTagsLoading = false;
       });
     } catch (_) {
@@ -416,7 +499,8 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
         regionalityName = created.name;
         if (mounted) {
           setState(() {
-            _regionalities = [..._regionalities, created];
+            _regionalities =
+                _sortedByName([..._regionalities, created], (r) => r.name);
             _regionality = created.id;
             _pendingRegionalityName = null;
           });
@@ -444,7 +528,8 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
         preparationName = created.name;
         if (mounted) {
           setState(() {
-            _preparations = [..._preparations, created];
+            _preparations =
+                _sortedByName([..._preparations, created], (p) => p.name);
             _preparation = created.id;
             _pendingPreparationName = null;
           });
@@ -797,11 +882,23 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 final sub = _dropdown(
                   'Subcategory',
                   _subcategory,
-                  _subcategories.map((item) => item.id).toList(),
-                  (value) => setState(() => _subcategory = value),
+                  [
+                    // "+ Create subcategory" only appears once a category is chosen.
+                    if (_primaryCategory != null) _kCreateSubcategoryValue,
+                    ..._subcategories.map((item) => item.id),
+                  ],
+                  (value) {
+                    if (value == _kCreateSubcategoryValue) {
+                      _openCreateSubcategoryDialog();
+                      return;
+                    }
+                    setState(() => _subcategory = value);
+                  },
                   _categoryLabel,
                   searchable: true,
-                  hint: 'Select subcategory',
+                  hint: _primaryCategory == null
+                      ? 'Select a category first'
+                      : 'Select subcategory',
                 );
                 if (stack) {
                   return Column(children: [
@@ -852,7 +949,10 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 final diet = _dropdown(
                   'Dietary Type',
                   _dietaryType,
-                  DietaryType.values,
+                  _sortedByName(
+                    DietaryType.values,
+                    (v) => _titleCase(v.name),
+                  ),
                   (value) => setState(() => _dietaryType = value),
                   (value) => _titleCase(value.name),
                   required: true,
@@ -1129,6 +1229,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
 
   String _categoryLabel(String id) {
     if (id == _kCreateCategoryValue) return '+ Create your category';
+    if (id == _kCreateSubcategoryValue) return '+ Create subcategory';
 
     final match = _categories.where((item) => item.id == id).toList();
     if (match.isNotEmpty) return match.first.name;

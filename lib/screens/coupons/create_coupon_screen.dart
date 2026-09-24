@@ -47,6 +47,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   final discountValueController = TextEditingController();
   final minOrderController = TextEditingController();
   final usageLimitController = TextEditingController();
+  final imageController = TextEditingController();
 
   bool get isEdit => widget.existing != null && widget.existing!.id.isNotEmpty;
 
@@ -71,6 +72,18 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   String _selectedSubCategoryId = _kNoneSubCategoryValue;
   String _selectedItemId = _kNoneItemValue;
 
+  /// Case-insensitive alphabetical sort for named entities.
+  List<T> _sortedByName<T>(
+    Iterable<T> items,
+    String Function(T) nameOf,
+  ) {
+    final list = List<T>.from(items);
+    list.sort(
+      (a, b) => nameOf(a).toLowerCase().compareTo(nameOf(b).toLowerCase()),
+    );
+    return list;
+  }
+
   /// The currently selected category, or null if none is selected.
   CategoryModel? get _selectedCategory {
     if (_selectedCategoryId == _kNoneCategoryValue) return null;
@@ -79,11 +92,12 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
     return match.isEmpty ? null : match.first;
   }
 
-  /// Subcategories belonging to the currently selected category only.
-  /// Empty until a category is chosen — this is what makes the
-  /// subcategory dropdown "not fill" until a category is picked first.
-  List<SubcategoryModel> get _subcategoriesForSelectedCategory =>
-      _selectedCategory?.subcategories ?? [];
+  /// Subcategories belonging to the currently selected category only,
+  /// sorted alphabetically by name.
+  List<SubcategoryModel> get _subcategoriesForSelectedCategory {
+    final subs = _selectedCategory?.subcategories ?? [];
+    return _sortedByName(subs, (s) => s.name);
+  }
 
   /// Finds which category owns a given subcategory id. Used to restore
   /// the category selection when editing an existing coupon.
@@ -96,13 +110,14 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
     return null;
   }
 
-  /// Menu items belonging to the currently selected subcategory. Empty
-  /// (aside from the "None" sentinel) until a subcategory is chosen.
+  /// Menu items belonging to the currently selected subcategory, sorted
+  /// alphabetically by name. Empty until a subcategory is chosen.
   List<MenuItemModel> get _itemsForSelectedSubCategory {
     if (_selectedSubCategoryId == _kNoneSubCategoryValue) return [];
-    return _menuItems
-        .where((item) => item.subCategoryId == _selectedSubCategoryId)
-        .toList();
+    return _sortedByName(
+      _menuItems.where((item) => item.subCategoryId == _selectedSubCategoryId),
+      (item) => item.name,
+    );
   }
 
   String _categoryLabel(String id) {
@@ -117,7 +132,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       final categories = await _categoryService.fetchCategories();
       if (!mounted) return;
       setState(() {
-        _categories = categories;
+        _categories = _sortedByName(categories, (c) => c.name);
         _categoriesLoading = false;
         // Editing an existing coupon only stores the subcategory id, so
         // once categories arrive, back-fill which category owns it.
@@ -138,7 +153,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       final items = await _menuService.fetchMenuItems();
       if (!mounted) return;
       setState(() {
-        _menuItems = items;
+        _menuItems = _sortedByName(items, (i) => i.name);
         _itemsLoading = false;
       });
     } catch (_) {
@@ -174,6 +189,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       discountValueController.text = existing.discountValue.toString();
       minOrderController.text = existing.minOrderValue?.toString() ?? '';
       usageLimitController.text = existing.usageLimit?.toString() ?? '';
+      imageController.text = existing.imageUrl ?? '';
 
       discountType = existing.discountType;
       startDate = existing.startDate;
@@ -193,6 +209,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       discountValueController,
       minOrderController,
       usageLimitController,
+      imageController,
     ]) {
       c.addListener(() => setState(() {}));
     }
@@ -213,94 +230,6 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       );
     }
   }
-
-  // Future<void> _save() async {
-  //   final code = codeController.text.trim();
-  //   final description = descriptionController.text.trim();
-  //   final discountText = discountValueController.text.trim();
-  //   final minOrderText = minOrderController.text.trim();
-  //   final usageLimitText = usageLimitController.text.trim();
-
-  //   final discountValue = double.tryParse(discountText);
-  //   final minOrderValue = double.tryParse(minOrderText);
-  //   final usageLimit = int.tryParse(usageLimitText);
-
-  //   // Every field is mandatory
-  //   if (code.isEmpty ||
-  //       description.isEmpty ||
-  //       discountValue == null ||
-  //       minOrderValue == null ||
-  //       usageLimit == null ||
-  //       startDate == null ||
-  //       endDate == null) {
-  //     setState(() => errorMessage =
-  //         'All fields are mandatory. Please fill coupon code, description, discount value, minimum order value, usage limit, start date and expiry date.');
-  //     return;
-  //   }
-
-  //   // Coupon code length restriction
-  //   if (code.length > 15) {
-  //     setState(() =>
-  //         errorMessage = 'Coupon code cannot be longer than 15 characters.');
-  //     return;
-  //   }
-
-  //   // Percentage max value = 100
-  //   if (discountType == DiscountType.percentage && discountValue > 100) {
-  //     setState(
-  //         () => errorMessage = 'Discount percentage cannot be more than 100.');
-  //     return;
-  //   }
-
-  //   if (discountValue <= 0) {
-  //     setState(() => errorMessage = 'Discount value must be greater than 0.');
-  //     return;
-  //   }
-
-  //   if (minOrderValue < 0) {
-  //     setState(() => errorMessage = 'Minimum order value cannot be negative.');
-  //     return;
-  //   }
-
-  //   if (usageLimit <= 0) {
-  //     setState(() => errorMessage = 'Usage limit must be greater than 0.');
-  //     return;
-  //   }
-
-  //   if (endDate!.isBefore(startDate!)) {
-  //     setState(
-  //         () => errorMessage = 'Expiry date cannot be before the start date.');
-  //     return;
-  //   }
-
-  //   final coupon = CouponModel(
-  //     id: 'c${DateTime.now().millisecondsSinceEpoch}',
-  //     code: code.toUpperCase(),
-  //     description: description,
-  //     discountType: discountType,
-  //     discountValue: discountValue,
-  //     minOrderValue: minOrderValue,
-  //     usageLimit: usageLimit,
-  //     startDate: startDate!,
-  //     endDate: endDate!,
-  //     status: startDate!.isAfter(DateTime.now())
-  //         ? CouponStatus.scheduled
-  //         : CouponStatus.active,
-  //   );
-
-  //   setState(() {
-  //     isLoading = true;
-  //     errorMessage = null;
-  //   });
-  //   final success = await ref.read(couponProvider).createCoupon(coupon);
-  //   if (!mounted) return;
-  //   setState(() => isLoading = false);
-  //   if (success) {
-  //     Navigator.of(context).pop();
-  //   } else {
-  //     setState(() => errorMessage = 'Failed to create coupon.');
-  //   }
-  // }
 
   Future<void> _showNotice(String message) async {
     if (!mounted) return;
@@ -397,6 +326,8 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       usageLimit: usageLimit,
       startDate: startDate!,
       endDate: endDate!,
+      imageUrl:
+          imageController.text.trim().isEmpty ? null : imageController.text.trim(),
 
       status: startDate!.isAfter(DateTime.now())
           ? CouponStatus.scheduled
@@ -449,6 +380,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
     discountValueController.dispose();
     minOrderController.dispose();
     usageLimitController.dispose();
+    imageController.dispose();
     super.dispose();
   }
 
@@ -483,6 +415,9 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
                   usageLimit: int.tryParse(usageLimitController.text.trim()),
                   startDate: startDate ?? DateTime.now(),
                   endDate: endDate ?? DateTime.now(),
+                  imageUrl: imageController.text.trim().isEmpty
+                      ? null
+                      : imageController.text.trim(),
                   status:
                       startDate != null && !startDate!.isAfter(DateTime.now())
                           ? CouponStatus.active
@@ -599,6 +534,12 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
               label: 'Description *',
               maxLines: 3,
               hint: 'Enter coupon description',
+            ),
+            SizedBox(height: context.h(16)),
+            RdxTextField(
+              controller: imageController,
+              label: 'Coupon Image',
+              hint: 'Enter image URL',
             ),
             SizedBox(height: context.h(16)),
             LayoutBuilder(builder: (context, c) {

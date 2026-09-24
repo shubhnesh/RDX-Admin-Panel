@@ -32,10 +32,10 @@ class SubcategoryModel {
 
 /// A menu category stored in the `menu_categories` collection.
 ///
-/// Subcategories are embedded directly on the category document since a
-/// category can have at most 5 of them — this avoids an extra
-/// collection/query round-trip and keeps them naturally scoped to
-/// their parent category.
+/// Subcategories are embedded directly on the category document — this
+/// avoids an extra collection/query round-trip and keeps them naturally
+/// scoped to their parent category. There is no hard upper limit; users
+/// add them one at a time via the category dialog.
 class CategoryModel {
   final String id;
   final String name;

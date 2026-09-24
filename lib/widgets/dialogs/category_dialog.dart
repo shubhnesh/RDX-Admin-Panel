@@ -1,4 +1,3 @@
-// lib/widgets/dialogs/category_entry_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
@@ -6,93 +5,62 @@ import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/resuable_options/rdx_text_field.dart';
 
-/// One dialog mechanism for every "create/edit a category value" case in
-/// the app: categories, subcategories, preparation styles, regionalities,
-/// tags, inventory categories, units — anything that boils down to
-/// "type a name (optionally with a list of sub-names), then either hand
-/// it back locally or persist it".
+/// Shared entry dialog for Category / Preparation / Regionality / Tag.
 ///
-/// Two usage shapes, both handled by the same class:
+/// When [enableSubItems] is true (or when any of the subcategory-related
+/// params are provided), the dialog shows a single subcategory text field
+/// plus an Add button. Subcategories are collected one-by-one into a chip
+/// list with no hard upper limit — the user can add as many as they need.
 ///
-/// 1. **Local-only** (e.g. preparation/regionality typed inside the menu
-///    item form): pass an [onSave] that does NOT call a service — just
-///    returns the trimmed name(s) — and the caller decides when to
-///    actually persist it.
-///
-/// 2. **Save-now** (e.g. category, tag, inventory category, unit): pass
-///    an [onSave] that calls the relevant `*Service` and returns the
-///    created/updated model. The dialog shows its own loading state and
-///    surfaces a generic error if [onSave] throws.
-///
-/// [T] is whatever [onSave] returns — `String`, `CategoryModel`,
-/// `UnitModel`, etc. It's popped via `Navigator.pop` as-is.
+/// When subcategory params are omitted the dialog is a simple name form
+/// (used for preparation, regionality, and tags).
 class CategoryEntryDialog<T> extends StatefulWidget {
+  final String title;
+  final String? editTitle;
+  final String nameLabel;
+  final String nameHint;
+  final String? description;
+  final String? initialName;
+  final List<String> initialSubItems;
+  final int? maxSubItems;
+  final String? subItemsLabel;
+  final String Function(int index)? subItemHintBuilder;
+  /// Optional label for the primary action button (defaults to "Save").
+  final String? saveButtonLabel;
+  final Future<T> Function(String name, List<String> subNames) onSave;
+
   const CategoryEntryDialog({
     super.key,
     required this.title,
-    required this.onSave,
     this.editTitle,
-    this.nameLabel = 'Name',
-    this.nameHint,
+    required this.nameLabel,
+    required this.nameHint,
     this.description,
     this.initialName,
+    this.initialSubItems = const [],
+    this.maxSubItems,
     this.subItemsLabel,
     this.subItemHintBuilder,
-    this.initialSubItems,
-    this.maxSubItems = 0,
-    this.dialogWidth = 380,
     this.saveButtonLabel,
+    required this.onSave,
   });
 
-  /// Heading shown when creating.
-  final String title;
-
-  /// Heading shown when editing (i.e. [initialName] was non-null).
-  /// Defaults to [title] if omitted.
-  final String? editTitle;
-
-  final String nameLabel;
-  final String? nameHint;
-
-  /// Optional helper copy shown under the title (create mode only).
-  final String? description;
-
-  /// Pre-filled name — presence of this flips the dialog into "edit" mode.
-  final String? initialName;
-
-  /// If non-null, a repeatable "sub item" section is shown (used for
-  /// category → subcategories). Leave null to get a plain name dialog.
-  final List<String>? initialSubItems;
-  final int maxSubItems;
-  final String? subItemsLabel;
-  final String Function(int index)? subItemHintBuilder;
-
-  /// Does the actual work (Firestore call or none) and returns the value
-  /// to pop with. Receives the trimmed name and trimmed/non-empty sub
-  /// item names (empty list if sub items aren't enabled).
-  final Future<T> Function(String name, List<String> subItems) onSave;
-
-  final String? saveButtonLabel;
-
-  final double dialogWidth;
-
-  bool get _hasSubItems => initialSubItems != null;
-
+  /// Convenience launcher. Returns the value produced by [onSave], or
+  /// `null` if the user cancelled.
   static Future<T?> show<T>(
     BuildContext context, {
     required String title,
-    required Future<T> Function(String name, List<String> subItems) onSave,
     String? editTitle,
-    String nameLabel = 'Name',
-    String? nameHint,
+    required String nameLabel,
+    required String nameHint,
     String? description,
     String? initialName,
-    List<String>? initialSubItems,
-    int maxSubItems = 0,
+    List<String> initialSubItems = const [],
+    int? maxSubItems,
     String? subItemsLabel,
     String Function(int index)? subItemHintBuilder,
     String? saveButtonLabel,
-    double dialogWidth = 380,
+    required Future<T> Function(String name, List<String> subNames) onSave,
   }) {
     return showDialog<T>(
       context: context,
@@ -108,9 +76,8 @@ class CategoryEntryDialog<T> extends StatefulWidget {
         maxSubItems: maxSubItems,
         subItemsLabel: subItemsLabel,
         subItemHintBuilder: subItemHintBuilder,
-        onSave: onSave,
         saveButtonLabel: saveButtonLabel,
-        dialogWidth: dialogWidth,
+        onSave: onSave,
       ),
     );
   }
@@ -120,193 +87,299 @@ class CategoryEntryDialog<T> extends StatefulWidget {
 }
 
 class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
-  final _formKey = GlobalKey<FormState>();
-  late final _name = TextEditingController(text: widget.initialName ?? '');
-  late final List<TextEditingController> _subControllers = widget._hasSubItems
-      ? (widget.initialSubItems!.isNotEmpty
-          ? widget.initialSubItems!
-              .map((s) => TextEditingController(text: s))
-              .toList()
-          : [TextEditingController()])
-      : const [];
-
-  bool get _editing => widget.initialName != null;
-
+  late final TextEditingController _nameController;
+  final TextEditingController _subItemController = TextEditingController();
+  late final List<String> _subItems;
   bool _saving = false;
   String? _error;
 
-  void _addSubField() {
-    if (_subControllers.length >= widget.maxSubItems) return;
-    setState(() => _subControllers.add(TextEditingController()));
+  /// True when this dialog is being used for categories (sub-items UI).
+  /// Driven by whether any subcategory-related param was passed so callers
+  /// that only need a name field stay unaffected.
+  bool get _showSubItems =>
+      widget.subItemsLabel != null ||
+      widget.subItemHintBuilder != null ||
+      widget.initialSubItems.isNotEmpty ||
+      widget.maxSubItems != null;
+
+  bool get _isEditing =>
+      widget.initialName != null && widget.initialName!.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _subItems = List<String>.from(
+      widget.initialSubItems
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty),
+    );
   }
 
-  void _removeSubField(int index) {
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _subItemController.dispose();
+    super.dispose();
+  }
+
+  void _addSubItem() {
+    final value = _subItemController.text.trim();
+    if (value.isEmpty) return;
+
+    // Soft optional cap only if a caller still passes maxSubItems.
+    if (widget.maxSubItems != null && _subItems.length >= widget.maxSubItems!) {
+      setState(() {
+        _error =
+            'You can add at most ${widget.maxSubItems} subcategories.';
+      });
+      return;
+    }
+
+    if (_subItems.any((s) => s.toLowerCase() == value.toLowerCase())) {
+      _subItemController.clear();
+      return;
+    }
+
     setState(() {
-      _subControllers.removeAt(index).dispose();
-      if (_subControllers.isEmpty) _subControllers.add(TextEditingController());
+      _subItems.add(value);
+      _subItemController.clear();
+      _error = null;
     });
   }
 
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+  void _removeSubItem(String name) {
+    setState(() {
+      _subItems.remove(name);
+      _error = null;
+    });
+  }
+
+  Future<void> _submit() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Please enter a name.');
+      return;
+    }
 
     setState(() {
       _saving = true;
       _error = null;
     });
 
-    final subItems = _subControllers
-        .map((c) => c.text.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-
     try {
-      final result = await widget.onSave(_name.text.trim(), subItems);
+      final result = await widget.onSave(name, List<String>.from(_subItems));
       if (!mounted) return;
-      Navigator.pop(context, result);
-    } catch (_) {
+      Navigator.of(context).pop(result);
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = 'Failed to save. Please try again.';
+        _error = e is StateError || e is ArgumentError
+            ? e.toString().replaceFirst(RegExp(r'^(StateError|ArgumentError): '), '')
+            : 'Something went wrong. Please try again.';
       });
     }
   }
 
   @override
-  void dispose() {
-    _name.dispose();
-    for (final c in _subControllers) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final dialogTitle =
+        _isEditing ? (widget.editTitle ?? widget.title) : widget.title;
 
     return Dialog(
       backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(context.h(12)),
       ),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: context.w(24),
+        vertical: context.h(24),
+      ),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: context.w(widget.dialogWidth)),
+        constraints: BoxConstraints(maxWidth: context.w(420)),
         child: Padding(
-          padding: EdgeInsets.all(context.h(20)),
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _editing
-                        ? (widget.editTitle ?? widget.title)
-                        : widget.title,
-                    style: AppTextStyles.section(context)
-                        .copyWith(color: colors.textPrimary),
-                  ),
-                  if (!_editing && widget.description != null) ...[
-                    SizedBox(height: context.h(6)),
-                    Text(
-                      widget.description!,
-                      style: AppTextStyles.bodyTertiary(context)
-                          .copyWith(color: colors.textMuted),
+          padding: EdgeInsets.fromLTRB(
+            context.w(20),
+            context.h(18),
+            context.w(20),
+            context.h(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                dialogTitle,
+                style: AppTextStyles.section(context)
+                    .copyWith(color: colors.textPrimary),
+              ),
+              if (widget.description != null &&
+                  widget.description!.trim().isNotEmpty) ...[
+                SizedBox(height: context.h(6)),
+                Text(
+                  widget.description!,
+                  style: AppTextStyles.bodyTertiary(context)
+                      .copyWith(color: colors.textSecondary),
+                ),
+              ],
+              SizedBox(height: context.h(16)),
+              RdxTextField(
+                controller: _nameController,
+                label: widget.nameLabel,
+                hint: widget.nameHint,
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
+              ),
+              if (_showSubItems) ...[
+                SizedBox(height: context.h(16)),
+                Text(
+                  widget.subItemsLabel ?? 'Subcategories (optional)',
+                  style: AppTextStyles.bodySecondary(context)
+                      .copyWith(color: colors.textMuted),
+                ),
+                SizedBox(height: context.h(4)),
+                Text(
+                  _subItems.isEmpty
+                      ? 'Add one at a time — no limit.'
+                      : '${_subItems.length} subcategor'
+                          '${_subItems.length == 1 ? 'y' : 'ies'} added',
+                  style: AppTextStyles.bodyTertiary(context)
+                      .copyWith(color: colors.textMuted),
+                ),
+                SizedBox(height: context.h(8)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: RdxTextField(
+                        controller: _subItemController,
+                        hint: widget.subItemHintBuilder != null
+                            ? widget.subItemHintBuilder!(_subItems.length)
+                            : 'Add a subcategory and press Add',
+                        onSubmitted: (_) => _addSubItem(),
+                      ),
+                    ),
+                    SizedBox(width: context.w(8)),
+                    Padding(
+                      padding: EdgeInsets.only(top: context.h(0)),
+                      child: RdxActionButton(
+                        label: 'Add',
+                        onPressed: _addSubItem,
+                        isPrimary: true,
+                        height: context.h(35),
+                        minWidth: context.w(60),
+                      ),
                     ),
                   ],
-                  SizedBox(height: context.h(16)),
-                  RdxTextField(
-                    controller: _name,
-                    label: widget.nameLabel,
-                    hint: widget.nameHint ?? 'e.g. ${widget.nameLabel}',
-                    onSubmitted: widget._hasSubItems ? null : (_) => _save(),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Required'
-                        : null,
-                  ),
-                  if (widget._hasSubItems) ...[
-                    SizedBox(height: context.h(16)),
-                    Text(
-                      widget.subItemsLabel ??
-                          'Sub items (optional, up to ${widget.maxSubItems})',
-                      style: AppTextStyles.bodySecondary(context)
-                          .copyWith(color: colors.textMuted),
-                    ),
-                    SizedBox(height: context.h(8)),
-                    for (int i = 0; i < _subControllers.length; i++)
-                      Padding(
-                        padding: EdgeInsets.only(bottom: context.h(10)),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: RdxTextField(
-                                controller: _subControllers[i],
-                                hint: widget.subItemHintBuilder?.call(i) ??
-                                    'Item ${i + 1}',
-                              ),
-                            ),
-                            SizedBox(width: context.w(8)),
-                            InkWell(
-                              onTap: () => _removeSubField(i),
-                              borderRadius: BorderRadius.circular(context.h(6)),
-                              child: Padding(
-                                padding: EdgeInsets.all(context.w(4)),
-                                child: Icon(
-                                  Icons.close_rounded,
-                                  size: context.h(18),
-                                  color: colors.textMuted,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (_subControllers.length < widget.maxSubItems)
-                      TextButton.icon(
-                        onPressed: _addSubField,
-                        icon: Icon(
-                          Icons.add_rounded,
-                          size: context.h(18),
-                          color: AppColors.primary,
-                        ),
-                        label: Text(
-                          'Add item',
-                          style: AppTextStyles.label(context)
-                              .copyWith(color: AppColors.primary),
-                        ),
-                      ),
-                  ],
-                  if (_error != null) ...[
-                    SizedBox(height: context.h(8)),
-                    Text(_error!, style: TextStyle(color: AppColors.danger)),
-                  ],
-                  SizedBox(height: context.h(18)),
-                  Row(
+                ),
+                if (_subItems.isNotEmpty) ...[
+                  SizedBox(height: context.h(10)),
+                  Wrap(
+                    spacing: context.w(8),
+                    runSpacing: context.h(8),
                     children: [
-                      Expanded(
-                        child: RdxActionButton.save(
-                          label: widget.saveButtonLabel ?? 'Done',
-                          isLoading: _saving,
-                          onPressed: _save,
+                      for (final name in _subItems)
+                        _SubItemChip(
+                          label: name,
+                          colors: colors,
+                          onDeleted: () => _removeSubItem(name),
                         ),
-                      ),
-                      SizedBox(width: context.w(10)),
-                      Expanded(
-                        child: RdxActionButton.discard(
-                          onPressed:
-                              _saving ? null : () => Navigator.pop(context),
-                        ),
-                      ),
                     ],
                   ),
                 ],
+              ],
+              if (_error != null) ...[
+                SizedBox(height: context.h(10)),
+                Text(
+                  _error!,
+                  style: AppTextStyles.bodyTertiary(context)
+                      .copyWith(color: AppColors.danger),
+                ),
+              ],
+              SizedBox(height: context.h(18)),
+              Row(
+                children: [
+                  Expanded(
+                    child: RdxActionButton(
+                      label: 'Cancel',
+                      isPrimary: false,
+                      onPressed:
+                          _saving ? null : () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  SizedBox(width: context.w(10)),
+                  Expanded(
+                    child: widget.saveButtonLabel != null
+                        ? RdxActionButton(
+                            label: widget.saveButtonLabel!,
+                            isPrimary: true,
+                            isLoading: _saving,
+                            onPressed: _saving ? null : _submit,
+                          )
+                        : RdxActionButton.save(
+                            isLoading: _saving,
+                            onPressed: _submit,
+                          ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SubItemChip extends StatelessWidget {
+  final String label;
+  final AppColorScheme colors;
+  final VoidCallback onDeleted;
+
+  const _SubItemChip({
+    required this.label,
+    required this.colors,
+    required this.onDeleted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: context.w(9),
+        right: context.w(4),
+        top: context.h(5),
+        bottom: context.h(5),
+      ),
+      decoration: BoxDecoration(
+        color: colors.surfaceVariant,
+        borderRadius: BorderRadius.circular(context.h(8)),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.bodyTertiary(context),
+          ),
+          SizedBox(width: context.w(4)),
+          InkWell(
+            onTap: onDeleted,
+            borderRadius: BorderRadius.circular(context.h(10)),
+            child: Padding(
+              padding: EdgeInsets.all(context.h(2)),
+              child: Icon(
+                Icons.close_rounded,
+                size: context.h(14),
+                color: colors.textMuted,
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

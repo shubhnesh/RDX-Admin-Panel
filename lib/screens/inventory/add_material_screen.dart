@@ -92,6 +92,18 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
 
   bool get isEdit => widget.existing != null && widget.existing!.id.isNotEmpty;
 
+  /// Case-insensitive alphabetical sort for named entities.
+  List<T> _sortedByName<T>(
+    Iterable<T> items,
+    String Function(T) nameOf,
+  ) {
+    final list = List<T>.from(items);
+    list.sort(
+      (a, b) => nameOf(a).toLowerCase().compareTo(nameOf(b).toLowerCase()),
+    );
+    return list;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -123,7 +135,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
       final list = await _categoryService.fetchCategories();
       if (!mounted) return;
       setState(() {
-        _categories = list;
+        _categories = _sortedByName(list, (c) => c.name);
         _categoriesLoading = false;
         // If existing value is a name (not an id), resolve to id.
         if (_category != null && !_categories.any((c) => c.id == _category)) {
@@ -147,7 +159,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
       final list = await _unitService.fetchUnits();
       if (!mounted) return;
       setState(() {
-        _units = list;
+        _units = _sortedByName(list, (u) => u.name);
         _unitsLoading = false;
         if (_unit != null && !_units.any((u) => u.id == _unit)) {
           final byName = _units.where(
@@ -175,7 +187,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     );
     if (created == null || !mounted) return;
     setState(() {
-      _categories = [..._categories, created];
+      _categories = _sortedByName([..._categories, created], (c) => c.name);
       _category = created.id;
     });
   }
@@ -191,7 +203,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     );
     if (created == null || !mounted) return;
     setState(() {
-      _units = [..._units, created];
+      _units = _sortedByName([..._units, created], (u) => u.name);
       _unit = created.id;
     });
   }

@@ -253,10 +253,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       await _showNotice('Please enter a coupon code.');
       return;
     }
-    if (description.isEmpty) {
-      await _showNotice('Please enter a description.');
-      return;
-    }
+    // Description is optional — no validation required.
     if (discountValue == null) {
       await _showNotice('Please enter a discount value.');
       return;
@@ -319,15 +316,16 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
           : 'c${DateTime.now().millisecondsSinceEpoch}',
 
       code: code.toUpperCase(),
-      description: description,
+      description: description, // may be empty — allowed
       discountType: discountType,
       discountValue: discountValue,
       minOrderValue: minOrderValue,
       usageLimit: usageLimit,
       startDate: startDate!,
       endDate: endDate!,
-      imageUrl:
-          imageController.text.trim().isEmpty ? null : imageController.text.trim(),
+      imageUrl: imageController.text.trim().isEmpty
+          ? null
+          : imageController.text.trim(),
 
       status: startDate!.isAfter(DateTime.now())
           ? CouponStatus.scheduled
@@ -426,6 +424,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
                 final preview = CouponCard(
                   coupon: previewCoupon,
                   onActions: (_) {},
+                  isPreview: true,
                 );
 
                 // ── Narrow (mobile / tablet) ───────────────────────────────
@@ -531,7 +530,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
             SizedBox(height: context.h(16)),
             RdxTextField(
               controller: descriptionController,
-              label: 'Description *',
+              label: 'Description',
               maxLines: 3,
               hint: 'Enter coupon description',
             ),

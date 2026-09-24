@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/formatters.dart';
@@ -8,13 +9,18 @@ import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
 
 class CouponCard extends StatelessWidget {
   final CouponModel coupon;
-  // final VoidCallback onDelete;
   final ValueChanged<BuildContext>? onActions;
 
-  const CouponCard({super.key, 
+  /// When true (create/edit preview only), an empty description shows the
+  /// placeholder "Description will be shown here." Real list cards never
+  /// show that dummy text.
+  final bool isPreview;
+
+  const CouponCard({
+    super.key,
     required this.coupon,
-    // required this.onDelete,
     this.onActions,
+    this.isPreview = false,
   });
 
   Color _statusColor(BuildContext context) {
@@ -33,7 +39,6 @@ class CouponCard extends StatelessWidget {
     return (coupon.usageCount / coupon.usageLimit!).clamp(0, 1).toDouble();
   }
 
-
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -44,12 +49,16 @@ class CouponCard extends StatelessWidget {
         ? '${coupon.discountValue.toStringAsFixed(0)}% OFF'
         : '${Formatters.currency(coupon.discountValue)} OFF';
 
-    final usageLabel = coupon.usageLimit == null
-        ? '${coupon.usageCount} used · No limit'
-        : '${coupon.usageCount} of ${coupon.usageLimit} used';
-
     final hasImage =
         coupon.imageUrl != null && coupon.imageUrl!.trim().isNotEmpty;
+
+    // Description text:
+    // - Preview + empty → show placeholder
+    // - Real card + empty → hide the line entirely
+    // - Has text → show it
+    final descriptionText = coupon.description.trim().isEmpty
+        ? (isPreview ? 'Description will be shown here.' : null)
+        : coupon.description;
 
     return Container(
       width: double.infinity,
@@ -163,143 +172,126 @@ class CouponCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-          SizedBox(height: context.h(2)),
-          // ── Discount ──────────────────────────────────────────────
-          Text(
-            discount,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.body(context).copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          SizedBox(height: context.h(2)),
-          // ── Coupon code + copy ──────────────────────────────────
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  coupon.code,
+                SizedBox(height: context.h(2)),
+                // ── Discount ──────────────────────────────────────────────
+                Text(
+                  discount,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.heading(context),
+                  style: AppTextStyles.body(context).copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              SizedBox(width: context.w(4)),
-              IconButton(
-                tooltip: 'Copy coupon code',
-                onPressed: () {},
-                icon: Icon(
-                  Icons.copy_outlined,
-                  size: context.h(15),
-                  color: colors.textMuted,
+                SizedBox(height: context.h(2)),
+                // ── Coupon code + copy ──────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        coupon.code,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.heading(context),
+                      ),
+                    ),
+                    SizedBox(width: context.w(4)),
+                    IconButton(
+                      tooltip: 'Copy coupon code',
+                      onPressed: () async {
+                        await Clipboard.setData(
+                          ClipboardData(text: coupon.code),
+                        );
+                      },
+                      icon: Icon(
+                        Icons.copy_outlined,
+                        size: context.h(15),
+                        color: colors.textMuted,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(
+                        minWidth: context.w(32),
+                        minHeight: context.h(32),
+                      ),
+                    ),
+                  ],
                 ),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: BoxConstraints(
-                  minWidth: context.w(32),
-                  minHeight: context.h(32),
+
+                // ── Description (only when there is text, or preview placeholder)
+                if (descriptionText != null) ...[
+                  Text(
+                    descriptionText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySecondary(context),
+                  ),
+                ],
+
+                if (coupon.minOrderValue != null) ...[
+                  SizedBox(height: context.h(8)),
+                  Text(
+                    'On orders above ${Formatters.currency(coupon.minOrderValue!)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.label(context)
+                        .copyWith(color: colors.textMuted),
+                  ),
+                ],
+
+                SizedBox(height: context.h(11)),
+
+                // ── Usage progress ──────────────────────────────────────
+                if (coupon.usageLimit != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(context.h(4)),
+                    child: LinearProgressIndicator(
+                      value: _usageProgress,
+                      minHeight: context.h(6),
+                      backgroundColor: colors.surfaceVariant,
+                      valueColor: AlwaysStoppedAnimation(
+                        isExpired ? colors.textMuted : AppColors.primary,
+                      ),
+                    ),
+                  ),
+
+                SizedBox(height: context.h(5)),
+
+                Divider(color: colors.divider, height: context.h(1)),
+
+                SizedBox(height: context.h(8)),
+
+                // ── Date + more actions ──────────────────────────────────
+                Row(
+                  children: [
+                    Icon(
+                      Icons.event_outlined,
+                      size: context.h(14),
+                      color: colors.textMuted,
+                    ),
+                    SizedBox(width: context.w(5)),
+                    Expanded(
+                      child: Text(
+                        '${Formatters.date(coupon.startDate)} - ${Formatters.date(coupon.endDate)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.label(context)
+                            .copyWith(color: colors.textMuted),
+                      ),
+                    ),
+                    if (onActions != null)
+                      Builder(
+                        builder: (buttonContext) {
+                          return RdxTableMoreButton(
+                            tooltip: 'More actions',
+                            onPressed: () {
+                              onActions!(buttonContext);
+                            },
+                          );
+                        },
+                      ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-
-          // ── Description ─────────────────────────────────────────
-          Text(
-            coupon.description.isEmpty
-                ? 'Description will be shown here.'
-                : coupon.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.bodySecondary(context),
-          ),
-
-          if (coupon.minOrderValue != null) ...[
-            SizedBox(height: context.h(8)),
-            Text(
-              'On orders above ${Formatters.currency(coupon.minOrderValue!)}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.label(context)
-                  .copyWith(color: colors.textMuted),
-            ),
-          ],
-
-          SizedBox(height: context.h(11)),
-
-          // ── Usage progress ──────────────────────────────────────
-          if (coupon.usageLimit != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(context.h(4)),
-              child: LinearProgressIndicator(
-                value: _usageProgress,
-                minHeight: context.h(6),
-                backgroundColor: colors.surfaceVariant,
-                valueColor: AlwaysStoppedAnimation(
-                  isExpired ? colors.textMuted : AppColors.primary,
-                ),
-              ),
-            ),
-
-          SizedBox(height: context.h(5)),
-
-          // ── Usage information ──────────────────────────────────
-          // Row(
-          //   children: [
-          //     Icon(
-          //       Icons.bar_chart_outlined,
-          //       size: context.h(14),
-          //       color: colors.textMuted,
-          //     ),
-          //     SizedBox(width: context.w(5)),
-          //     Expanded(
-          //       child: Text(
-          //         usageLabel,
-          //         maxLines: 1,
-          //         overflow: TextOverflow.ellipsis,
-          //         style: AppTextStyles.label(context),
-          //       ),
-          //     ),
-          //   ],
-          // ),
-
-          // SizedBox(height: context.h(8)),
-
-          // Divider(color: colors.divider, height: context.h(1)),
-
-          SizedBox(height: context.h(8)),
-
-          // ── Date + more actions ──────────────────────────────────
-          Row(
-            children: [
-              Icon(
-                Icons.event_outlined,
-                size: context.h(14),
-                color: colors.textMuted,
-              ),
-              SizedBox(width: context.w(5)),
-              Expanded(
-                child: Text(
-                  '${Formatters.date(coupon.startDate)} - ${Formatters.date(coupon.endDate)}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.label(context)
-                      .copyWith(color: colors.textMuted),
-                ),
-              ),
-              Builder(
-                builder: (buttonContext) {
-                  return RdxTableMoreButton(
-                    tooltip: 'More actions',
-                    onPressed: () {
-                      onActions!(buttonContext);
-                    },
-                  );
-                },
-              ),
-            ],
-          ),
               ],
             ),
           ),

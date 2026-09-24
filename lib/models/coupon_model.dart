@@ -19,6 +19,17 @@ class CouponModel {
   final List<String> applicableCategories;
   final List<String> applicableSubCategories;
 
+  /// Optional single subcategory this coupon is restricted to (id from
+  /// `menu_categories.subcategories`). Null means the coupon applies
+  /// regardless of subcategory.
+  final String? applicableSubCategoryId;
+
+  /// Optional single menu item this coupon is restricted to (id from
+  /// `menu_items`). Only meaningful when [applicableSubCategoryId] is
+  /// also set, since items are chosen from within that subcategory.
+  /// Null means the coupon isn't restricted to one specific item.
+  final String? applicableItemId;
+
   CouponModel({
     required this.id,
     required this.code,
@@ -33,6 +44,8 @@ class CouponModel {
     required this.status,
     this.applicableCategories = const [],
     this.applicableSubCategories = const [],
+    this.applicableSubCategoryId,
+    this.applicableItemId,
   });
 
   factory CouponModel.fromFirestore(DocumentSnapshot doc) {
@@ -61,6 +74,14 @@ class CouponModel {
       ),
       applicableCategories: _strings(json['applicable_categories']),
       applicableSubCategories: _strings(json['applicable_sub_categories']),
+      applicableSubCategoryId:
+          (json['applicable_sub_category_id'] as String?)?.isEmpty ?? true
+              ? null
+              : json['applicable_sub_category_id'] as String?,
+      applicableItemId: (json['applicable_item_id'] as String?)?.isEmpty ??
+              true
+          ? null
+          : json['applicable_item_id'] as String?,
     );
   }
 
@@ -77,6 +98,8 @@ class CouponModel {
         'status': status.name,
         'applicable_categories': applicableCategories,
         'applicable_sub_categories': applicableSubCategories,
+        'applicable_sub_category_id': applicableSubCategoryId,
+        'applicable_item_id': applicableItemId,
         'updated_at': FieldValue.serverTimestamp(),
       };
 

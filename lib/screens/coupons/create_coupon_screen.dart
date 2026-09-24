@@ -7,12 +7,28 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive_size.dart';
+import '../../models/category_model.dart';
 import '../../models/coupon_model.dart';
+import '../../models/menu_item_model.dart';
 import '../../providers/coupon_provider.dart';
+import '../../services/category_service.dart';
+import '../../services/menu_service.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/resuable_options/rdx_dropdown.dart';
 import '../../widgets/resuable_options/rdx_text_field.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
+
+/// Sentinel placed as the first entry in the category dropdown so the
+/// user can leave the coupon unrestricted (or clear a mistaken pick).
+const String _kNoneCategoryValue = '__none_category__';
+
+/// Sentinel placed as the first entry in the subcategory dropdown so the
+/// user can leave the coupon unrestricted (or clear a mistaken pick).
+const String _kNoneSubCategoryValue = '__none_subcategory__';
+
+/// Sentinel placed as the first entry in the item dropdown, same
+/// contract as [_kNoneSubCategoryValue].
+const String _kNoneItemValue = '__none_item__';
 
 class CreateCouponScreen extends ConsumerStatefulWidget {
   final CouponModel? existing;
@@ -41,6 +57,111 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   bool isLoading = false;
   String? errorMessage;
 
+  // ── Applicability (subcategory / item) ──────────────────────────────
+  final _categoryService = CategoryService();
+  final _menuService = MenuService();
+
+  List<CategoryModel> _categories = [];
+  bool _categoriesLoading = true;
+
+  List<MenuItemModel> _menuItems = [];
+  bool _itemsLoading = true;
+
+  String _selectedCategoryId = _kNoneCategoryValue;
+  String _selectedSubCategoryId = _kNoneSubCategoryValue;
+  String _selectedItemId = _kNoneItemValue;
+
+  /// The currently selected category, or null if none is selected.
+  CategoryModel? get _selectedCategory {
+    if (_selectedCategoryId == _kNoneCategoryValue) return null;
+    final match =
+        _categories.where((c) => c.id == _selectedCategoryId).toList();
+    return match.isEmpty ? null : match.first;
+  }
+
+  /// Subcategories belonging to the currently selected category only.
+  /// Empty until a category is chosen — this is what makes the
+  /// subcategory dropdown "not fill" until a category is picked first.
+  List<SubcategoryModel> get _subcategoriesForSelectedCategory =>
+      _selectedCategory?.subcategories ?? [];
+
+  /// Finds which category owns a given subcategory id. Used to restore
+  /// the category selection when editing an existing coupon.
+  CategoryModel? _categoryForSubcategoryId(String subCategoryId) {
+    for (final category in _categories) {
+      if (category.subcategories.any((s) => s.id == subCategoryId)) {
+        return category;
+      }
+    }
+    return null;
+  }
+
+  /// Menu items belonging to the currently selected subcategory. Empty
+  /// (aside from the "None" sentinel) until a subcategory is chosen.
+  List<MenuItemModel> get _itemsForSelectedSubCategory {
+    if (_selectedSubCategoryId == _kNoneSubCategoryValue) return [];
+    return _menuItems
+        .where((item) => item.subCategoryId == _selectedSubCategoryId)
+        .toList();
+  }
+
+  String _categoryLabel(String id) {
+    if (id == _kNoneCategoryValue) return 'None';
+    final match = _categories.where((c) => c.id == id).toList();
+    return match.isEmpty ? id : match.first.name;
+  }
+
+  Future<void> _loadCategories() async {
+    setState(() => _categoriesLoading = true);
+    try {
+      final categories = await _categoryService.fetchCategories();
+      if (!mounted) return;
+      setState(() {
+        _categories = categories;
+        _categoriesLoading = false;
+        // Editing an existing coupon only stores the subcategory id, so
+        // once categories arrive, back-fill which category owns it.
+        if (_selectedSubCategoryId != _kNoneSubCategoryValue) {
+          final owner = _categoryForSubcategoryId(_selectedSubCategoryId);
+          _selectedCategoryId = owner?.id ?? _kNoneCategoryValue;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _categoriesLoading = false);
+    }
+  }
+
+  Future<void> _loadMenuItems() async {
+    setState(() => _itemsLoading = true);
+    try {
+      final items = await _menuService.fetchMenuItems();
+      if (!mounted) return;
+      setState(() {
+        _menuItems = items;
+        _itemsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _itemsLoading = false);
+    }
+  }
+
+  String _subCategoryLabel(String id) {
+    if (id == _kNoneSubCategoryValue) return 'None';
+    final match = _categories
+        .expand((c) => c.subcategories)
+        .where((s) => s.id == id)
+        .toList();
+    return match.isEmpty ? id : match.first.name;
+  }
+
+  String _itemLabel(String id) {
+    if (id == _kNoneItemValue) return 'None';
+    final match = _menuItems.where((i) => i.id == id).toList();
+    return match.isEmpty ? id : match.first.name;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -57,7 +178,14 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       discountType = existing.discountType;
       startDate = existing.startDate;
       endDate = existing.endDate;
+
+      _selectedSubCategoryId =
+          existing.applicableSubCategoryId ?? _kNoneSubCategoryValue;
+      _selectedItemId = existing.applicableItemId ?? _kNoneItemValue;
     }
+
+    _loadCategories();
+    _loadMenuItems();
 
     for (final c in [
       codeController,
@@ -247,6 +375,14 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       return;
     }
 
+    if (_selectedCategoryId != _kNoneCategoryValue &&
+        _selectedSubCategoryId == _kNoneSubCategoryValue) {
+      await _showNotice(
+        'Please select a subcategory, or set the category back to None.',
+      );
+      return;
+    }
+
     final coupon = CouponModel(
       // Keep existing ID while editing.
       id: isEdit
@@ -265,6 +401,12 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       status: startDate!.isAfter(DateTime.now())
           ? CouponStatus.scheduled
           : CouponStatus.active,
+
+      applicableSubCategoryId: _selectedSubCategoryId == _kNoneSubCategoryValue
+          ? null
+          : _selectedSubCategoryId,
+      applicableItemId:
+          _selectedItemId == _kNoneItemValue ? null : _selectedItemId,
     );
 
     setState(() {
@@ -496,6 +638,115 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
         SizedBox(height: context.h(20)),
         _sectionCard(
           context,
+          icon: Icons.category_outlined,
+          title: 'Applicability (Optional)',
+          children: [
+            Text(
+              'Restrict this coupon to a specific subcategory or item. '
+              'Select Category first',
+              style: AppTextStyles.bodySecondary(context)
+                  .copyWith(color: colors.textSecondary),
+            ),
+            SizedBox(height: context.h(16)),
+            RdxDropdown<String>(
+              label: 'Category',
+              value: _selectedCategoryId,
+              items: [
+                _kNoneCategoryValue,
+                ..._categories.map((c) => c.id),
+              ],
+              labelBuilder: _categoryLabel,
+              hint: _categoriesLoading ? 'Loading...' : 'Select category',
+              onChanged: _categoriesLoading
+                  ? null
+                  : (v) {
+                      if (v == null) return;
+                      setState(() {
+                        _selectedCategoryId = v;
+                        // A new (or cleared) category invalidates any
+                        // previously selected subcategory and item, since
+                        // both are scoped to a single category.
+                        _selectedSubCategoryId = _kNoneSubCategoryValue;
+                        _selectedItemId = _kNoneItemValue;
+                      });
+                    },
+            ),
+            SizedBox(height: context.h(16)),
+            LayoutBuilder(builder: (context, c) {
+              final stack = c.maxWidth < 420;
+              final subCategoryField = RdxDropdown<String>(
+                label: _selectedCategoryId == _kNoneCategoryValue
+                    ? 'Subcategory'
+                    : 'Subcategory *',
+                value: _selectedSubCategoryId,
+                items: [
+                  _kNoneSubCategoryValue,
+                  ..._subcategoriesForSelectedCategory.map((s) => s.id),
+                ],
+                labelBuilder: _subCategoryLabel,
+                hint: _selectedCategoryId == _kNoneCategoryValue
+                    ? 'Select a category first'
+                    : _categoriesLoading
+                        ? 'Loading...'
+                        : 'Select subcategory',
+                onChanged: (_categoriesLoading ||
+                        _selectedCategoryId == _kNoneCategoryValue)
+                    ? null
+                    : (v) {
+                        if (v == null) return;
+                        setState(() {
+                          _selectedSubCategoryId = v;
+                          // A new subcategory invalidates any previously
+                          // selected item, since items are scoped to a
+                          // single subcategory.
+                          _selectedItemId = _kNoneItemValue;
+                        });
+                      },
+              );
+              final itemField = RdxDropdown<String>(
+                label: 'Item',
+                value: _selectedItemId,
+                items: [
+                  _kNoneItemValue,
+                  ..._itemsForSelectedSubCategory.map((i) => i.id),
+                ],
+                labelBuilder: _itemLabel,
+                hint: _selectedSubCategoryId == _kNoneSubCategoryValue
+                    ? 'Select a subcategory first'
+                    : _itemsLoading
+                        ? 'Loading...'
+                        : 'Select item',
+                onChanged: (_itemsLoading ||
+                        _selectedSubCategoryId == _kNoneSubCategoryValue)
+                    ? null
+                    : (v) {
+                        if (v == null) return;
+                        setState(() => _selectedItemId = v);
+                      },
+              );
+              if (stack) {
+                return Column(
+                  children: [
+                    subCategoryField,
+                    SizedBox(height: context.h(16)),
+                    itemField,
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: subCategoryField),
+                  SizedBox(width: context.w(16)),
+                  Expanded(child: itemField),
+                ],
+              );
+            }),
+          ],
+        ),
+        SizedBox(height: context.h(20)),
+        _sectionCard(
+          context,
           icon: Icons.rule_folder_outlined,
           title: 'Usage Rules',
           children: [
@@ -545,7 +796,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
                   Text(
                     'Start Date *',
                     style: AppTextStyles.bodySecondary(context)
-                        .copyWith(color: colors.textSecondary),
+                        .copyWith(color: colors.textMuted),
                   ),
                   SizedBox(height: context.h(6)),
                   _datePickerField(
@@ -565,7 +816,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
                   Text(
                     'Expiry Date *',
                     style: AppTextStyles.bodySecondary(context)
-                        .copyWith(color: colors.textSecondary),
+                        .copyWith(color: colors.textMuted),
                   ),
                   SizedBox(height: context.h(6)),
                   _datePickerField(

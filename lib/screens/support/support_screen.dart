@@ -183,7 +183,6 @@ class _SupportScreenState extends State<SupportScreen> {
                       SizedBox(width: context.w(8)),
                       Text(
                         c.$1,
-
                         style: selected
                             ? AppTextStyles.label(context)
                                 .copyWith(color: colors.primary)
@@ -229,12 +228,14 @@ class _SupportScreenState extends State<SupportScreen> {
           SizedBox(height: context.h(16)),
           RdxTextField(
             controller: _subjectController,
+            maxLength: 40,
             label: 'Subject',
             hint: 'Brief summary of the issue',
           ),
           SizedBox(height: context.h(16)),
           RdxTextField(
             controller: _messageController,
+            maxLength: 50,
             label: 'Describe the issue',
             hint: 'Provide as much detail as possible…',
             maxLines: 6,

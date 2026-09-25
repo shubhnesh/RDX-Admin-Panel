@@ -408,6 +408,8 @@ class StatCard extends StatelessWidget {
               SizedBox(height: context.h(4)), // was 6
               Text(
                 value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.heading(context),
               ),
               if (subtitle != null) ...[
@@ -470,6 +472,8 @@ class StatCard extends StatelessWidget {
         SizedBox(height: context.h(6)), // was 10
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: AppTextStyles.heading(context).copyWith(
             color: colors.textPrimary,
           ),

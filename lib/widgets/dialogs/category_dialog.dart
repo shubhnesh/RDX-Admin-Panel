@@ -25,6 +25,7 @@ class CategoryEntryDialog<T> extends StatefulWidget {
   final int? maxSubItems;
   final String? subItemsLabel;
   final String Function(int index)? subItemHintBuilder;
+
   /// Optional label for the primary action button (defaults to "Save").
   final String? saveButtonLabel;
   final Future<T> Function(String name, List<String> subNames) onSave;
@@ -110,9 +111,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName ?? '');
     _subItems = List<String>.from(
-      widget.initialSubItems
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty),
+      widget.initialSubItems.map((s) => s.trim()).where((s) => s.isNotEmpty),
     );
   }
 
@@ -130,8 +129,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
     // Soft optional cap only if a caller still passes maxSubItems.
     if (widget.maxSubItems != null && _subItems.length >= widget.maxSubItems!) {
       setState(() {
-        _error =
-            'You can add at most ${widget.maxSubItems} subcategories.';
+        _error = 'You can add at most ${widget.maxSubItems} subcategories.';
       });
       return;
     }
@@ -176,7 +174,9 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
       setState(() {
         _saving = false;
         _error = e is StateError || e is ArgumentError
-            ? e.toString().replaceFirst(RegExp(r'^(StateError|ArgumentError): '), '')
+            ? e
+                .toString()
+                .replaceFirst(RegExp(r'^(StateError|ArgumentError): '), '')
             : 'Something went wrong. Please try again.';
       });
     }
@@ -227,6 +227,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
               SizedBox(height: context.h(16)),
               RdxTextField(
                 controller: _nameController,
+                maxLength: 20,
                 label: widget.nameLabel,
                 hint: widget.nameHint,
                 onChanged: (_) {
@@ -256,6 +257,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
                     Expanded(
                       child: RdxTextField(
                         controller: _subItemController,
+                        maxLength: 20,
                         hint: widget.subItemHintBuilder != null
                             ? widget.subItemHintBuilder!(_subItems.length)
                             : 'Add a subcategory and press Add',

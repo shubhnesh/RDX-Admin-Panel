@@ -494,6 +494,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
         children: [
           RdxTextField(
             controller: _nameCtrl,
+            maxLength: 10,
             label: 'Material Name *',
             hint: 'Enter material name',
             enabled: !isEdit,
@@ -582,6 +583,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           SizedBox(height: context.h(16)),
           RdxTextField(
             controller: _costCtrl,
+            maxLength: 4,
             label: 'Unit Cost (₹) *',
             hint: 'Enter cost per unit',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -618,6 +620,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           // 1. Max Capacity first — always editable.
           RdxTextField(
             controller: _maxCtrl,
+            maxLength: 5,
             label: 'Maximum Storage Capacity *',
             hint: 'Enter maximum storage capacity',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -642,6 +645,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           //    exceed max rejected.
           RdxTextField(
             controller: _qtyCtrl,
+            maxLength: 5,
             label:
                 isEdit ? 'Current Stock Quantity' : 'Initial Stock Quantity *',
             hint: 'Enter current stock quantity',
@@ -679,6 +683,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           //    keystrokes that would exceed current stock are rejected.
           RdxTextField(
             controller: _minCtrl,
+            maxLength: 3,
             label: 'Minimum Stock Alert Value *',
             hint: 'Enter minimum stock value',
             enabled: maxHasValue,

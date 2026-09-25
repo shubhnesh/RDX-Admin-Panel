@@ -426,12 +426,14 @@ class _MultiDropdownMenuPanelState<T>
               child: TextField(
                 controller: widget.searchController,
                 focusNode: widget.searchFocus,
+                maxLength: 20,
                 style: AppTextStyles.body(context),
                 decoration: InputDecoration(
                   isDense: true,
                   hintText: widget.searchHint,
                   hintStyle: AppTextStyles.body(context)
                       .copyWith(color: widget.colors.textMuted),
+                  counterText: '',
                   prefixIcon: Icon(
                     Icons.search_rounded,
                     size: context.h(18),

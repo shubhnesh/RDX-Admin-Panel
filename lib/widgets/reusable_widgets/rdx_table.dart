@@ -172,8 +172,7 @@ class RdxTable extends StatelessWidget {
 
     final availableWidth = tableWidth - horizontalPadding;
 
-    final scaledMins =
-        columns.map((c) => _scaledMinWidth(context, c)).toList();
+    final scaledMins = columns.map((c) => _scaledMinWidth(context, c)).toList();
     final minimumTotal = scaledMins.fold<double>(0, (sum, w) => sum + w);
 
     if (availableWidth <= minimumTotal) {
@@ -216,13 +215,16 @@ class RdxTable extends StatelessWidget {
               width: widths[i],
               child: Align(
                 alignment: columns[i].alignment,
-                child: Text(
-                  columns[i].title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textMuted,
-                    fontSize: Responsive.isMobile(context) ? 12 : null,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: widths[i]),
+                  child: Text(
+                    columns[i].title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.section(context).copyWith(
+                      color: colors.textMuted,
+                      fontSize: Responsive.isMobile(context) ? 12 : null,
+                    ),
                   ),
                 ),
               ),
@@ -278,7 +280,10 @@ class RdxTable extends StatelessWidget {
                   width: widths[i],
                   child: Align(
                     alignment: columns[i].alignment,
-                    child: cells[i],
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: widths[i]),
+                      child: cells[i],
+                    ),
                   ),
                 ),
             ],

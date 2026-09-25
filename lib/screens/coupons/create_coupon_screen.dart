@@ -521,7 +521,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
               controller: codeController,
               label: 'Coupon Code *',
               hint: 'Create coupon code',
-              maxLength: 15,
+              maxLength: 10,
               inputFormatters: [
                 LengthLimitingTextInputFormatter(15),
                 FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
@@ -530,6 +530,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
             SizedBox(height: context.h(16)),
             RdxTextField(
               controller: descriptionController,
+              maxLength: 30,
               label: 'Description',
               maxLines: 3,
               hint: 'Enter coupon description',
@@ -537,6 +538,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
             SizedBox(height: context.h(16)),
             RdxTextField(
               controller: imageController,
+              maxLength: 120,
               label: 'Coupon Image',
               hint: 'Enter image URL',
             ),
@@ -546,6 +548,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
               final typeField = _discountTypeDropdown(context, colors);
               final valueField = RdxTextField(
                 controller: discountValueController,
+                maxLength: 4,
                 label: 'Discount Value *',
                 hint: discountType == DiscountType.percentage
                     ? 'Enter Discount Percentage'
@@ -694,6 +697,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
               final stack = c.maxWidth < 420;
               final minField = RdxTextField(
                 controller: minOrderController,
+                maxLength: 5,
                 label: 'Minimum Order Value (₹) *',
                 hint: 'Enter Amount',
                 keyboardType: TextInputType.number,
@@ -703,6 +707,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
               );
               final limitField = RdxTextField(
                 controller: usageLimitController,
+                maxLength: 5,
                 label: 'Usage Limit',
                 hint: 'Enter usage limit of coupon',
                 keyboardType: TextInputType.number,

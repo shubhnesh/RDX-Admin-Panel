@@ -682,7 +682,8 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                                                     _primaryCategory != null,
                                                 dietarySelected:
                                                     _dietaryType != null,
-                                                hasTags: _tags.any((t) => t != 'Featured') ||
+                                                hasTags: _tags.any((t) =>
+                                                        t != 'Featured') ||
                                                     _preparation != null,
                                                 onToggleAvailability: () {
                                                   setState(() =>
@@ -750,12 +751,14 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
               final stack = c.maxWidth < 400;
               final nameField = RdxTextField(
                 controller: _name,
+                maxLength: 25,
                 label: 'Item Name *',
                 hint: 'Enter item name',
                 onChanged: (_) => setState(() {}),
               );
               final priceField = RdxTextField(
                 controller: _price,
+                maxLength: 4,
                 label: 'Price *',
                 hint: 'Enter price',
                 keyboardType:
@@ -799,6 +802,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 Expanded(
                   child: RdxTextField(
                     controller: _ingredientInput,
+                    maxLength: 25,
                     hint: 'Add an ingredient and press add',
                     onSubmitted: (_) => _addIngredient(),
                   ),
@@ -832,15 +836,17 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
             SizedBox(height: context.h(15)),
             RdxTextField(
               controller: _description,
+              maxLength: 50,
               label: 'Description',
               maxLines: 5,
               hint: 'Add item description',
-              counterText: '${_description.text.length}/250',
+              counterText: '${_description.text.length}/50',
               onChanged: (_) => setState(() {}),
             ),
             SizedBox(height: context.h(15)),
             RdxTextField(
               controller: _image,
+              maxLength: 120,
               label: 'Item Image',
               hint: 'Enter image URL',
               onChanged: (_) => setState(() {}),

@@ -67,7 +67,8 @@ class RestaurantProfileScreen extends ConsumerStatefulWidget {
       _RestaurantProfileScreenState();
 }
 
-class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScreen> {
+class _RestaurantProfileScreenState
+    extends ConsumerState<RestaurantProfileScreen> {
   late final TextEditingController nameController;
   late final TextEditingController descriptionController;
   late final TextEditingController addressController;
@@ -267,7 +268,6 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
               ),
             ],
           ),
-
           Expanded(
             child: SingleChildScrollView(
               padding: Responsive.pagePadding(context, top: 8, bottom: 32),
@@ -367,11 +367,13 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
                           children: [
                             RdxTextField(
                               controller: nameController,
+                              maxLength: 25,
                               label: 'Restaurant Name',
                             ),
                             const SizedBox(height: 12),
                             RdxTextField(
                               controller: descriptionController,
+                              maxLength: 50,
                               label: 'Brief Description',
                               maxLines: 3,
                             ),
@@ -386,6 +388,7 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
                           children: [
                             RdxTextField(
                               controller: addressController,
+                              maxLength: 80,
                               label: 'Primary Address',
                             ),
                             const SizedBox(height: 12),
@@ -395,11 +398,13 @@ class _RestaurantProfileScreenState extends ConsumerState<RestaurantProfileScree
 
                                 final phone = RdxTextField(
                                   controller: phoneController,
+                                  maxLength: 15,
                                   label: 'Support Phone',
                                 );
 
                                 final email = RdxTextField(
                                   controller: emailController,
+                                  maxLength: 80,
                                   label: 'Support Email',
                                 );
 
@@ -617,6 +622,7 @@ class _ProfileTimeState extends State<_ProfileTime> {
           focusNode: _focusNode,
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
+          maxLength: 5,
           inputFormatters: [_HHMMInputFormatter()],
           style: AppTextStyles.section(context).copyWith(
             color: colors.textPrimary,
@@ -624,6 +630,7 @@ class _ProfileTimeState extends State<_ProfileTime> {
           cursorColor: colors.primary,
           decoration: const InputDecoration(
             isCollapsed: true,
+            counterText: '',
             filled: false,
             contentPadding: EdgeInsets.zero,
             border: InputBorder.none,

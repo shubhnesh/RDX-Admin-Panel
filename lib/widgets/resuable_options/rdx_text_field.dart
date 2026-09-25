@@ -11,7 +11,7 @@ class RdxTextField extends StatefulWidget {
   final String? initialValue;
   final int maxLines;
   final int? minLines;
-  final int? maxLength;
+  final int maxLength;
   final TextInputType? keyboardType;
   final bool obscureText;
   final bool enabled;
@@ -36,7 +36,7 @@ class RdxTextField extends StatefulWidget {
     this.initialValue,
     this.maxLines = 1,
     this.minLines,
-    this.maxLength,
+    required this.maxLength,
     this.keyboardType,
     this.obscureText = false,
     this.enabled = true,
@@ -121,7 +121,6 @@ class _RdxTextFieldState extends State<RdxTextField> {
     final fieldHeight = isMultiline
         ? (fs * lineHeightFactor * widget.maxLines) + (vPad * 2) + 2
         : RdxTextField.singleLineHeight(context);
-
     final field = SizedBox(
       height: fieldHeight,
       child: TextFormField(
@@ -150,8 +149,8 @@ class _RdxTextFieldState extends State<RdxTextField> {
         cursorColor: AppColors.primary,
         decoration: InputDecoration(
           hintText: widget.hint,
-          hintStyle:
-              AppTextStyles.bodySecondary(context).copyWith(color: colors.textMuted),
+          hintStyle: AppTextStyles.bodySecondary(context)
+              .copyWith(color: colors.textMuted),
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
           prefixText: widget.prefixText,

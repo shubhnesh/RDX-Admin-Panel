@@ -360,11 +360,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             final stack = c.maxWidth < 400;
                             final nameField = RdxTextField(
                               controller: _customerName,
+                              maxLength: 20,
                               label: 'Customer Name',
                               hint: 'Enter customer name',
                             );
                             final phoneField = RdxTextField(
                               controller: _customerPhone,
+                              maxLength: 15,
                               label: 'Phone Number',
                               hint: 'Enter phone number',
                               keyboardType: TextInputType.phone,
@@ -458,6 +460,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           SizedBox(height: context.h(14)),
                           RdxTextField(
                             controller: _deliveryAddress,
+                            maxLength: 50,
                             label: 'Delivery Address *',
                             hint: 'Enter delivery address',
                             maxLines: 3,
@@ -477,6 +480,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       children: [
                         RdxTextField(
                           controller: _orderNotes,
+                          maxLength: 40,
                           label: 'Kitchen Notes',
                           hint: 'Write any special instructions for your order',
                           maxLines: 3,

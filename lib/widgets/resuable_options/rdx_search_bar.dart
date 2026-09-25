@@ -247,6 +247,7 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
               autofocus: widget.autofocus,
               textInputAction: widget.textInputAction,
               keyboardType: widget.keyboardType,
+              maxLength: 20,
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
               style: widget.textStyle ??
@@ -259,6 +260,7 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
                     AppTextStyles.label(context).copyWith(
                       color: widget.hintColor ?? colors.textMuted,
                     ),
+                counterText: '',
 
                 // No background inside the TextField.
                 filled: false,

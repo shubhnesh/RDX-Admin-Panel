@@ -81,6 +81,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   // ),
                   RdxTextField(
                     controller: _emailCtrl,
+                    maxLength: 25,
                     keyboardType: TextInputType.emailAddress,
                     hint: 'Email',
                     prefixIcon: const Icon(Icons.email_outlined),
@@ -102,6 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   // ),
                   RdxTextField(
                     controller: _passCtrl,
+                    maxLength: 8,
                     obscureText: _obscure,
                     hint: 'Password',
                     prefixIcon: const Icon(Icons.lock_outline),

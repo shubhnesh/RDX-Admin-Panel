@@ -34,7 +34,8 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
       ];
 
   double get _unitPrice =>
-      widget.item.price + _allSelectedAddOns.fold(0.0, (sum, a) => sum + a.price);
+      widget.item.price +
+      _allSelectedAddOns.fold(0.0, (sum, a) => sum + a.price);
 
   @override
   void dispose() {
@@ -62,7 +63,9 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
           quantity: _quantity,
           spiceLevel: _spiceLevel,
           addOns: _allSelectedAddOns,
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
         );
     Navigator.of(context).pop();
   }
@@ -80,7 +83,8 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
         return Container(
           decoration: BoxDecoration(
             color: colors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(context.h(18))),
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(context.h(18))),
           ),
           child: Column(
             children: [
@@ -140,7 +144,9 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                         _stepperButton(
                           colors,
                           icon: Icons.remove,
-                          onTap: _quantity > 1 ? () => setState(() => _quantity--) : null,
+                          onTap: _quantity > 1
+                              ? () => setState(() => _quantity--)
+                              : null,
                         ),
                         SizedBox(width: context.w(16)),
                         Text('$_quantity',
@@ -150,7 +156,9 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                         _stepperButton(
                           colors,
                           icon: Icons.add,
-                          onTap: _quantity < 20 ? () => setState(() => _quantity++) : null,
+                          onTap: _quantity < 20
+                              ? () => setState(() => _quantity++)
+                              : null,
                         ),
                       ],
                     ),
@@ -167,16 +175,19 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                           ChoiceChip(
                             label: Text(level),
                             selected: _spiceLevel == level,
-                            onSelected: (selected) =>
-                                setState(() => _spiceLevel = selected ? level : null),
-                            selectedColor: AppColors.primary.withValues(alpha: 0.15),
+                            onSelected: (selected) => setState(
+                                () => _spiceLevel = selected ? level : null),
+                            selectedColor:
+                                AppColors.primary.withValues(alpha: 0.15),
                             labelStyle: AppTextStyles.label(context).copyWith(
                               color: _spiceLevel == level
                                   ? AppColors.primary
                                   : colors.textPrimary,
                             ),
                             side: BorderSide(
-                              color: _spiceLevel == level ? AppColors.primary : colors.border,
+                              color: _spiceLevel == level
+                                  ? AppColors.primary
+                                  : colors.border,
                             ),
                             backgroundColor: colors.surfaceVariant,
                           ),
@@ -191,7 +202,8 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                                   .copyWith(color: colors.textMuted)),
                         ),
                         InkWell(
-                          onTap: () => setState(() => _addingCustom = !_addingCustom),
+                          onTap: () =>
+                              setState(() => _addingCustom = !_addingCustom),
                           child: Text(
                             _addingCustom ? 'Cancel' : '+ Custom add-on',
                             style: AppTextStyles.label(context)
@@ -219,7 +231,8 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                         colors,
                         label: custom.displayLabel,
                         selected: true,
-                        onChanged: (_) => setState(() => _customAddOns.remove(custom)),
+                        onChanged: (_) =>
+                            setState(() => _customAddOns.remove(custom)),
                       ),
                     if (_addingCustom) ...[
                       SizedBox(height: context.h(6)),
@@ -229,6 +242,7 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                             flex: 3,
                             child: RdxTextField(
                               controller: _customNameController,
+                              maxLength: 25,
                               hint: 'Add-on name',
                             ),
                           ),
@@ -237,9 +251,11 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                             flex: 2,
                             child: RdxTextField(
                               controller: _customPriceController,
+                              maxLength: 4,
                               hint: '₹0',
                               keyboardType:
-                                  const TextInputType.numberWithOptions(decimal: true),
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                             ),
                           ),
                           SizedBox(width: context.w(8)),
@@ -260,6 +276,7 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                     SizedBox(height: context.h(8)),
                     RdxTextField(
                       controller: _notesController,
+                      maxLength: 50,
                       hint: 'e.g. no onions, extra crispy',
                       maxLines: 3,
                     ),
@@ -312,9 +329,13 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
         padding: EdgeInsets.all(context.h(8)),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: onTap == null ? colors.surfaceVariant : AppColors.primary.withValues(alpha: 0.1),
+          color: onTap == null
+              ? colors.surfaceVariant
+              : AppColors.primary.withValues(alpha: 0.1),
         ),
-        child: Icon(icon, size: context.h(18), color: onTap == null ? colors.textMuted : AppColors.primary),
+        child: Icon(icon,
+            size: context.h(18),
+            color: onTap == null ? colors.textMuted : AppColors.primary),
       ),
     );
   }
@@ -339,7 +360,8 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
             ),
             Expanded(
               child: Text(label,
-                  style: AppTextStyles.body(context).copyWith(color: colors.textPrimary)),
+                  style: AppTextStyles.body(context)
+                      .copyWith(color: colors.textPrimary)),
             ),
           ],
         ),

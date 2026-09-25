@@ -5,7 +5,7 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/order_model.dart';
 import 'package:rdx_admin/providers/order_providers.dart';
-import 'package:rdx_admin/screens/widgets/dialogs/rdx_notice_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/rdx_notice_dialog.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 

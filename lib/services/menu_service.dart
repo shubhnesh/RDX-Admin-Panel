@@ -39,18 +39,18 @@ class MenuService {
 
   /// Creates a new menu item.
   ///
-  /// Firestore generates the document ID.
+  /// Uses the item name as the document ID so the collection shows
+  /// readable names instead of random auto-generated IDs.
   Future<String> createItem(MenuItemModel item) async {
-    final doc = _col.doc();
-
+    final docId = item.name.trim();
     final data = item.toFirestore();
 
     data['created_at'] = FieldValue.serverTimestamp();
     data['updated_at'] = FieldValue.serverTimestamp();
 
-    await doc.set(data);
+    await _col.doc(docId).set(data);
 
-    return doc.id;
+    return docId;
   }
 
   /// Updates an existing menu item.

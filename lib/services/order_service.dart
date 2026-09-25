@@ -121,7 +121,11 @@ class OrderService {
   // ---------------------------------------------------------------------------
 
   Future<String> createOrder(OrderModel order) async {
-    final doc = _col.doc();
+    // Prefer an ID already set on the model; otherwise build a readable
+    // order ID (e.g. ORD1727…) instead of a random Firestore auto-ID.
+    final docId = order.id.trim().isNotEmpty
+        ? order.id.trim()
+        : 'ORD${DateTime.now().millisecondsSinceEpoch}';
 
     final data = order.toJson();
 
@@ -137,9 +141,9 @@ class OrderService {
 
     // Payment method should remain null until payment is actually made.
 
-    await doc.set(data);
+    await _col.doc(docId).set(data);
 
-    return doc.id;
+    return docId;
   }
 
   // ---------------------------------------------------------------------------

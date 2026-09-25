@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
-import 'package:rdx_admin/screens/widgets/dialogs/rdx_notice_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/rdx_notice_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';

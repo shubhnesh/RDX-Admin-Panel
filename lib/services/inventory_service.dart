@@ -150,8 +150,11 @@ class InventoryService {
         : item.copyWith(updatedAt: ts);
     final data = itemToSave.toJson();
     if (isNew) {
-      final ref = await _col.add(data);
-      return ref.id;
+      // Use the material name as the document ID so the collection
+      // shows readable names instead of random auto-generated IDs.
+      final docId = item.name.trim();
+      await _col.doc(docId).set(data);
+      return docId;
     } else {
       await _col.doc(item.id).set(data, SetOptions(merge: true));
       return item.id;

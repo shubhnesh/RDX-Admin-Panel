@@ -28,6 +28,11 @@ class RdxTextField extends StatefulWidget {
   final TextInputAction? textInputAction;
   final FocusNode? focusNode;
 
+  /// Controls keyboard auto-capitalization.
+  /// Defaults to [TextCapitalization.sentences] so the first letter starts
+  /// capital; the user can still type lowercase if they want.
+  final TextCapitalization textCapitalization;
+
   const RdxTextField({
     super.key,
     this.controller,
@@ -52,6 +57,7 @@ class RdxTextField extends StatefulWidget {
     this.inputFormatters,
     this.textInputAction,
     this.focusNode,
+    this.textCapitalization = TextCapitalization.sentences,
   })  : assert(maxLines > 0),
         assert(minLines == null || minLines > 0),
         assert(minLines == null || minLines <= maxLines);
@@ -142,6 +148,7 @@ class _RdxTextFieldState extends State<RdxTextField> {
         inputFormatters: widget.inputFormatters,
         textInputAction: widget.textInputAction ??
             (isMultiline ? TextInputAction.newline : TextInputAction.done),
+        textCapitalization: widget.textCapitalization,
         focusNode: _focusNode,
         textAlignVertical:
             isMultiline ? TextAlignVertical.top : TextAlignVertical.center,

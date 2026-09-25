@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/screens/coupons/widgets/coupon_card.dart';
-import 'package:rdx_admin/screens/widgets/dialogs/rdx_notice_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/rdx_notice_dialog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/formatters.dart';
@@ -310,10 +310,10 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
     }
 
     final coupon = CouponModel(
-      // Keep existing ID while editing.
-      id: isEdit
-          ? widget.existing!.id
-          : 'c${DateTime.now().millisecondsSinceEpoch}',
+      // Keep existing ID while editing; for new coupons use the
+      // uppercase code as the Firestore document ID so the console
+      // shows readable names instead of random strings.
+      id: isEdit ? widget.existing!.id : code.toUpperCase(),
 
       code: code.toUpperCase(),
       description: description, // may be empty — allowed
@@ -522,9 +522,19 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
               label: 'Coupon Code *',
               hint: 'Create coupon code',
               maxLength: 10,
+              // All-caps for coupon codes (formatter also forces uppercase).
+              textCapitalization: TextCapitalization.characters,
               inputFormatters: [
                 LengthLimitingTextInputFormatter(15),
                 FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                // Force every keystroke to uppercase so the field
+                // always shows the coupon code in capital letters.
+                TextInputFormatter.withFunction((oldValue, newValue) {
+                  return TextEditingValue(
+                    text: newValue.text.toUpperCase(),
+                    selection: newValue.selection,
+                  );
+                }),
               ],
             ),
             SizedBox(height: context.h(16)),

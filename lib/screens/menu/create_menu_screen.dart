@@ -4,7 +4,7 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/screens/menu/menu_manage_category_screen.dart';
 import 'package:rdx_admin/screens/menu/widgets/menu_item_card.dart';
 import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
-import 'package:rdx_admin/screens/widgets/dialogs/rdx_notice_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/rdx_notice_dialog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/category_model.dart';
@@ -754,6 +754,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 maxLength: 25,
                 label: 'Item Name *',
                 hint: 'Enter item name',
+                textCapitalization: TextCapitalization.sentences,
                 onChanged: (_) => setState(() {}),
               );
               final priceField = RdxTextField(
@@ -763,6 +764,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 hint: 'Enter price',
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
+                textCapitalization: TextCapitalization.none,
                 prefixText: '₹',
                 onChanged: (_) => setState(() {}),
               );
@@ -804,6 +806,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                     controller: _ingredientInput,
                     maxLength: 25,
                     hint: 'Add an ingredient and press add',
+                    textCapitalization: TextCapitalization.sentences,
                     onSubmitted: (_) => _addIngredient(),
                   ),
                 ),
@@ -841,6 +844,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
               maxLines: 5,
               hint: 'Add item description',
               counterText: '${_description.text.length}/50',
+              textCapitalization: TextCapitalization.sentences,
               onChanged: (_) => setState(() {}),
             ),
             SizedBox(height: context.h(15)),
@@ -849,6 +853,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
               maxLength: 120,
               label: 'Item Image',
               hint: 'Enter image URL',
+              textCapitalization: TextCapitalization.none,
               onChanged: (_) => setState(() {}),
             ),
           ]),

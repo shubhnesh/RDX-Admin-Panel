@@ -11,7 +11,9 @@ class CouponService {
   }
 
   Future<void> createCoupon(CouponModel coupon) async {
-    await _col.add(coupon.toJson());
+    // Use the coupon code as the document ID so the collection
+    // shows readable names (e.g. SUMMER60) instead of random IDs.
+    await _col.doc(coupon.id).set(coupon.toJson());
   }
 
   Future<void> updateCoupon(CouponModel coupon) async {

@@ -398,7 +398,7 @@ class _RestaurantProfileScreenState
 
                                 final phone = RdxTextField(
                                   controller: phoneController,
-                                  maxLength: 15,
+                                  maxLength: 10,
                                   label: 'Support Phone',
                                 );
 

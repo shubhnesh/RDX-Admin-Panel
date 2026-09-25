@@ -366,7 +366,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             );
                             final phoneField = RdxTextField(
                               controller: _customerPhone,
-                              maxLength: 15,
+                              maxLength: 10,
                               label: 'Phone Number',
                               hint: 'Enter phone number',
                               keyboardType: TextInputType.phone,

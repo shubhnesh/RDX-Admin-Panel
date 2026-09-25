@@ -235,7 +235,7 @@ class _SupportScreenState extends State<SupportScreen> {
           SizedBox(height: context.h(16)),
           RdxTextField(
             controller: _messageController,
-            maxLength: 50,
+            maxLength: 300,
             label: 'Describe the issue',
             hint: 'Provide as much detail as possible…',
             maxLines: 6,

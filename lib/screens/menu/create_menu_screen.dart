@@ -66,6 +66,15 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
   final _sortOrder = TextEditingController(text: '0');
   final _ingredientInput = TextEditingController();
 
+  /// When true, item uses size-based pricing instead of a single price.
+  bool _hasSizes = false;
+
+  /// Controllers for each size row (max 5). Paired with [_sizePriceControllers].
+  final List<TextEditingController> _sizeNameControllers = [];
+  final List<TextEditingController> _sizePriceControllers = [];
+
+  static const int _maxSizes = 5;
+
   String? _primaryCategory;
   String? _subcategory;
   DietaryType? _dietaryType;
@@ -366,8 +375,55 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     }
   }
 
+  List<MenuItemSize> get _currentSizes {
+    final result = <MenuItemSize>[];
+    for (var i = 0; i < _sizeNameControllers.length; i++) {
+      final name = _sizeNameControllers[i].text.trim();
+      final price = double.tryParse(_sizePriceControllers[i].text.trim());
+      if (name.isEmpty || price == null || price < 0) continue;
+      result.add(MenuItemSize(name: name, price: price));
+    }
+    return result;
+  }
+
+  double get _resolvedPrice {
+    if (_hasSizes) {
+      final sizes = _currentSizes;
+      if (sizes.isEmpty) return 0.0;
+      return sizes.map((s) => s.price).reduce((a, b) => a < b ? a : b);
+    }
+    return double.tryParse(_price.text.trim()) ?? 0.0;
+  }
+
+  void _addSizeRow({String name = '', String price = ''}) {
+    if (_sizeNameControllers.length >= _maxSizes) return;
+    setState(() {
+      _sizeNameControllers.add(TextEditingController(text: name));
+      _sizePriceControllers.add(TextEditingController(text: price));
+    });
+  }
+
+  void _removeSizeRow() {
+    if (_sizeNameControllers.length <= 1) return;
+    setState(() {
+      _sizeNameControllers.removeLast().dispose();
+      _sizePriceControllers.removeLast().dispose();
+    });
+  }
+
+  void _setHasSizes(bool value) {
+    setState(() {
+      _hasSizes = value;
+      if (value && _sizeNameControllers.isEmpty) {
+        _sizeNameControllers.add(TextEditingController());
+        _sizePriceControllers.add(TextEditingController());
+      }
+    });
+  }
+
   MenuItemModel get _previewItem {
-    final price = double.tryParse(_price.text.trim()) ?? 0.0;
+    final sizes = _hasSizes ? _currentSizes : const <MenuItemSize>[];
+    final price = _resolvedPrice;
 
     return MenuItemModel(
       id: widget.itemId ?? 'preview',
@@ -381,6 +437,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       preparationId: _preparation ?? '',
       preparation: _preparationLabel(_preparation),
       price: price,
+      sizes: sizes,
       category: _primaryCategory == null
           ? 'Category'
           : _categoryLabel(_primaryCategory!),
@@ -431,6 +488,31 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
         ..clear()
         ..addAll(item.ingredients);
       _available = item.available;
+
+      // Size-based pricing
+      for (final c in _sizeNameControllers) {
+        c.dispose();
+      }
+      for (final c in _sizePriceControllers) {
+        c.dispose();
+      }
+      _sizeNameControllers.clear();
+      _sizePriceControllers.clear();
+      if (item.sizes.isNotEmpty) {
+        _hasSizes = true;
+        for (final s in item.sizes.take(_maxSizes)) {
+          _sizeNameControllers.add(TextEditingController(text: s.name));
+          _sizePriceControllers.add(
+            TextEditingController(
+              text: s.price == s.price.roundToDouble()
+                  ? s.price.toInt().toString()
+                  : s.price.toString(),
+            ),
+          );
+        }
+      } else {
+        _hasSizes = false;
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _loading = false);
@@ -461,10 +543,35 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       return;
     }
 
-    final price = double.tryParse(_price.text.trim());
-    if (price == null || price < 0) {
-      await _showErrorDialog('Please enter a valid price.');
-      return;
+    double price;
+    List<MenuItemSize> sizes = const [];
+
+    if (_hasSizes) {
+      sizes = _currentSizes;
+      if (sizes.isEmpty) {
+        await _showErrorDialog(
+          'Please add at least one size with a valid name and price.',
+        );
+        return;
+      }
+      if (_sizeNameControllers.any((c) => c.text.trim().isEmpty) ||
+          _sizePriceControllers.any((c) {
+            final p = double.tryParse(c.text.trim());
+            return p == null || p < 0;
+          })) {
+        await _showErrorDialog(
+          'Each size needs a name and a valid price.',
+        );
+        return;
+      }
+      price = sizes.map((s) => s.price).reduce((a, b) => a < b ? a : b);
+    } else {
+      final parsed = double.tryParse(_price.text.trim());
+      if (parsed == null || parsed < 0) {
+        await _showErrorDialog('Please enter a valid price.');
+        return;
+      }
+      price = parsed;
     }
 
     if (_primaryCategory == null) {
@@ -555,6 +662,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       preparationId: preparationId,
       preparation: preparationName,
       price: price,
+      sizes: sizes,
       primaryCategoryId: _primaryCategory!,
       category: _categoryLabel(_primaryCategory!),
       subCategoryId: _subcategory ?? '',
@@ -589,6 +697,12 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     _price.dispose();
     _sortOrder.dispose();
     _ingredientInput.dispose();
+    for (final c in _sizeNameControllers) {
+      c.dispose();
+    }
+    for (final c in _sizePriceControllers) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -757,6 +871,9 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 textCapitalization: TextCapitalization.sentences,
                 onChanged: (_) => setState(() {}),
               );
+              if (_hasSizes) {
+                return nameField;
+              }
               final priceField = RdxTextField(
                 controller: _price,
                 maxLength: 4,
@@ -783,6 +900,91 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 SizedBox(width: context.w(130), child: priceField),
               ]);
             }),
+            SizedBox(height: context.h(15)),
+
+            // ── Size-based pricing toggle ─────────────────────────
+            _switch(
+              context,
+              colors,
+              'Define sizes & prices',
+              'Optional. Turn on to set different sizes (e.g. Small, Large) '
+                  'with their own prices instead of a single price.',
+              _hasSizes,
+              _setHasSizes,
+            ),
+            if (_hasSizes) ...[
+              SizedBox(height: context.h(12)),
+              Text(
+                '${_sizeNameControllers.length}/$_maxSizes sizes',
+                style: AppTextStyles.bodyTertiary(context)
+                    .copyWith(color: colors.textMuted),
+              ),
+              SizedBox(height: context.h(6)),
+              // Size rows are packed tightly (small gap only) so adding
+              // more sizes doesn't visually "spread out" the form.
+              for (var i = 0; i < _sizeNameControllers.length; i++)
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: context.h(6),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: RdxTextField(
+                          controller: _sizeNameControllers[i],
+                          maxLength: 20,
+                          label: i == 0 ? 'Size *' : '',
+                          hint: 'e.g. Small',
+                          textCapitalization: TextCapitalization.sentences,
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                      SizedBox(width: context.w(10)),
+                      Expanded(
+                        flex: 2,
+                        child: RdxTextField(
+                          controller: _sizePriceControllers[i],
+                          maxLength: 4,
+                          label: i == 0 ? 'Price *' : '',
+                          hint: 'Price',
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          textCapitalization: TextCapitalization.none,
+                          prefixText: '₹',
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              SizedBox(height: context.h(4)),
+              Row(
+                children: [
+                  RdxActionButton(
+                    label: '+',
+                    onPressed: _sizeNameControllers.length >= _maxSizes
+                        ? null
+                        : () => _addSizeRow(),
+                    isPrimary: true,
+                    height: context.h(35),
+                    minWidth: context.w(48),
+                  ),
+                  SizedBox(width: context.w(8)),
+                  RdxActionButton(
+                    label: '−',
+                    onPressed: _sizeNameControllers.length <= 1
+                        ? null
+                        : _removeSizeRow,
+                    isPrimary: false,
+                    height: context.h(35),
+                    minWidth: context.w(48),
+                  ),
+                ],
+              ),
+            ],
             SizedBox(height: context.h(15)),
 
             // ── Ingredients ────────────────────────────────────────
@@ -839,11 +1041,11 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
             SizedBox(height: context.h(15)),
             RdxTextField(
               controller: _description,
-              maxLength: 50,
+              maxLength: 300,
               label: 'Description',
               maxLines: 5,
               hint: 'Add item description',
-              counterText: '${_description.text.length}/50',
+              counterText: '${_description.text.length}/300',
               textCapitalization: TextCapitalization.sentences,
               onChanged: (_) => setState(() {}),
             ),
@@ -1168,6 +1370,9 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
         searchable: searchable,
       );
 
+  /// Title + toggle sit on the same row, hugging each other with only a
+  /// small fixed gap (not spread across the row), then the subtitle
+  /// wraps below at full width.
   Widget _switch(
     BuildContext context,
     AppColorScheme colors,
@@ -1176,29 +1381,29 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     bool value,
     ValueChanged<bool> onChanged,
   ) =>
-      Row(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.bodySecondary(context)
-                      .copyWith(color: colors.textPrimary),
-                ),
-                SizedBox(height: context.h(3)),
-                Text(
-                  subtitle,
-                  style: AppTextStyles.bodySecondary(context)
-                      .copyWith(color: colors.textSecondary),
-                ),
-              ],
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.bodySecondary(context)
+                    .copyWith(color: colors.textMuted),
+              ),
+              SizedBox(width: context.w(8)),
+              RdxToggleButton(
+                value: value,
+                onChanged: onChanged,
+              ),
+            ],
           ),
-          RdxToggleButton(
-            value: value,
-            onChanged: onChanged,
+          SizedBox(height: context.h(3)),
+          Text(
+            subtitle,
+            style: AppTextStyles.bodyTertiary(context)
+                .copyWith(color: colors.textSecondary),
           ),
         ],
       );

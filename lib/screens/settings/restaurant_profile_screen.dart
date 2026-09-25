@@ -373,7 +373,7 @@ class _RestaurantProfileScreenState
                             const SizedBox(height: 12),
                             RdxTextField(
                               controller: descriptionController,
-                              maxLength: 50,
+                              maxLength: 300,
                               label: 'Brief Description',
                               maxLines: 3,
                             ),

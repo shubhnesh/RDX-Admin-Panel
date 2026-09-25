@@ -2,11 +2,35 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum DietaryType { veg, nonVeg, egg }
 
+/// A single size option with its own price (e.g. Small / ₹120).
+class MenuItemSize {
+  final String name;
+  final double price;
+
+  const MenuItemSize({
+    required this.name,
+    required this.price,
+  });
+
+  factory MenuItemSize.fromJson(Map<String, dynamic> json) => MenuItemSize(
+        name: json['name']?.toString() ?? '',
+        price: (json['price'] as num?)?.toDouble() ?? 0,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'price': price,
+      };
+}
+
 /// A menu item. Category/subcategory/preparation/regionality are all
 /// resolved from Firestore-backed collections rather than hardcoded lists
 /// — each `*Id` field links to a document, and the plain-name field
 /// (`category`, `preparation`, etc.) is denormalized at save time so
 /// cards can render without an extra lookup.
+///
+/// When [sizes] is non-empty the item uses size-based pricing; [price]
+/// is then the lowest size price (for list/card display).
 class MenuItemModel {
   final String id;
   final String name;
@@ -25,6 +49,7 @@ class MenuItemModel {
   final String regionalityId;
   final String regionality;
   final double price;
+  final List<MenuItemSize> sizes;
   final List<String> tags;
   final List<String> ingredients;
   final DateTime? createdAt;
@@ -48,6 +73,7 @@ class MenuItemModel {
     this.regionalityId = '',
     String? regionality,
     this.price = 0,
+    this.sizes = const [],
     this.tags = const [],
     this.ingredients = const [],
     this.createdAt,
@@ -72,6 +98,7 @@ class MenuItemModel {
   bool get showOnMobileApp => true;
   bool get featuredItem => isFeatured;
   bool get isVeg => dietaryType == DietaryType.veg;
+  bool get hasSizes => sizes.isNotEmpty;
 
   MenuItemModel copyWith({
     bool? available,
@@ -80,6 +107,8 @@ class MenuItemModel {
     bool? isAvailable,
     bool? isFeatured,
     List<String>? ingredients,
+    List<MenuItemSize>? sizes,
+    double? price,
   }) =>
       MenuItemModel(
         id: id,
@@ -98,7 +127,8 @@ class MenuItemModel {
         subCategory: subCategory,
         regionalityId: regionalityId,
         regionality: regionality,
-        price: price,
+        price: price ?? this.price,
+        sizes: sizes ?? this.sizes,
         tags: tags,
         ingredients: ingredients ?? this.ingredients,
         createdAt: createdAt,
@@ -133,6 +163,7 @@ class MenuItemModel {
       regionalityId: json['regionality_id']?.toString() ?? '',
       regionality: json['regionality']?.toString() ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0,
+      sizes: _sizes(json['sizes']),
       tags: _strings(json['tags']),
       ingredients: _strings(json['ingredients']),
       createdAt: _timestamp(json['created_at']),
@@ -157,6 +188,7 @@ class MenuItemModel {
         'regionality_id': regionalityId,
         'regionality': regionality,
         'price': price,
+        'sizes': sizes.map((s) => s.toJson()).toList(),
         'tags': tags,
         'ingredients': ingredients,
       };
@@ -176,6 +208,15 @@ class MenuItemModel {
           .where((item) => item.isNotEmpty)
           .toList()
       : const [];
+
+  static List<MenuItemSize> _sizes(dynamic value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<Map>()
+        .map((e) => MenuItemSize.fromJson(Map<String, dynamic>.from(e)))
+        .where((s) => s.name.trim().isNotEmpty)
+        .toList();
+  }
 
   static DateTime? _timestamp(dynamic value) => value is Timestamp
       ? value.toDate()

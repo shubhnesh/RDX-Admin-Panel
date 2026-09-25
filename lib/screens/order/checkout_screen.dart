@@ -460,7 +460,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           SizedBox(height: context.h(14)),
                           RdxTextField(
                             controller: _deliveryAddress,
-                            maxLength: 50,
+                            maxLength: 200,
                             label: 'Delivery Address *',
                             hint: 'Enter delivery address',
                             maxLines: 3,

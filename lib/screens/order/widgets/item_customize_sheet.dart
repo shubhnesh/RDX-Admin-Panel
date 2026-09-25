@@ -276,7 +276,7 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                     SizedBox(height: context.h(8)),
                     RdxTextField(
                       controller: _notesController,
-                      maxLength: 50,
+                      maxLength: 200,
                       hint: 'e.g. no onions, extra crispy',
                       maxLines: 3,
                     ),

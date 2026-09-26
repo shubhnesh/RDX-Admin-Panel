@@ -8,6 +8,8 @@ class LiveOrderCard extends StatefulWidget {
   final OrderModel order;
   final String? actionText;
   final ValueChanged<OrderModel>? onAdvance;
+  final String? secondaryActionText;
+  final ValueChanged<OrderModel>? onSecondaryAction;
   final VoidCallback? onTap;
 
   const LiveOrderCard({
@@ -15,6 +17,8 @@ class LiveOrderCard extends StatefulWidget {
     required this.order,
     this.actionText,
     this.onAdvance,
+    this.secondaryActionText,
+    this.onSecondaryAction,
     this.onTap,
   });
 
@@ -29,6 +33,8 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
   OrderModel get order => widget.order;
   String? get actionText => widget.actionText;
   ValueChanged<OrderModel>? get onAdvance => widget.onAdvance;
+  String? get secondaryActionText => widget.secondaryActionText;
+  ValueChanged<OrderModel>? get onSecondaryAction => widget.onSecondaryAction;
   VoidCallback? get onTap => widget.onTap;
 
   @override
@@ -341,38 +347,62 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                       ),
                     ),
                     const Spacer(),
+                    if (secondaryActionText != null &&
+                        onSecondaryAction != null) ...[
+                      _actionChip(
+                        context,
+                        label: secondaryActionText!,
+                        primary: false,
+                        onTap: () => onSecondaryAction!(order),
+                      ),
+                      SizedBox(width: context.w(6)),
+                    ],
                     if (actionText != null && onAdvance != null)
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(
-                            context.h(5),
-                          ),
-                          onTap: () => onAdvance!(order),
-                          child: Container(
-                            height: context.h(28),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.w(11),
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(
-                                context.h(5),
-                              ),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              actionText!,
-                              style: AppTextStyles.caption(context).copyWith(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
+                      _actionChip(
+                        context,
+                        label: actionText!,
+                        primary: true,
+                        onTap: () => onAdvance!(order),
                       ),
                   ],
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  Widget _actionChip(
+    BuildContext context, {
+    required String label,
+    required bool primary,
+    required VoidCallback onTap,
+  }) {
+    final colors = AppColors.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(context.h(5)),
+        onTap: onTap,
+        child: Container(
+          height: context.h(28),
+          padding: EdgeInsets.symmetric(horizontal: context.w(11)),
+          decoration: BoxDecoration(
+            color: primary ? AppColors.primary : colors.surface,
+            borderRadius: BorderRadius.circular(context.h(5)),
+            border: primary
+                ? null
+                : Border.all(color: AppColors.primary.withValues(alpha: 0.45)),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppTextStyles.caption(context).copyWith(
+              color: primary ? Colors.white : AppColors.primary,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),

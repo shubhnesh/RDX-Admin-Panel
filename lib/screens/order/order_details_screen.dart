@@ -926,7 +926,7 @@ class _StatusRow extends StatelessWidget {
       case OrderStatus.preparing:
         return 'Preparing';
       case OrderStatus.ready:
-        return 'Ready';
+        return 'Out for delivery';
       case OrderStatus.delivered:
         return 'Delivered';
       case OrderStatus.cancelled:
@@ -948,7 +948,8 @@ class _WorkflowAction extends ConsumerWidget {
     final buttonLabel = switch (order.status) {
       OrderStatus.pending => 'Move to preparing',
       OrderStatus.preparing => 'Mark ready',
-      OrderStatus.ready => 'Mark delivered',
+      OrderStatus.ready =>
+        order.needsDelivery ? 'Mark delivered' : 'Mark served',
       OrderStatus.delivered => 'Delivered',
       OrderStatus.cancelled => 'Cancelled',
     };

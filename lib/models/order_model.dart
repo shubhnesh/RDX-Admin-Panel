@@ -22,7 +22,7 @@ extension OrderStatusX on OrderStatus {
         return 'Preparing';
 
       case OrderStatus.ready:
-        return 'Ready';
+        return 'Out for delivery';
 
       case OrderStatus.cancelled:
         return 'Cancelled';
@@ -43,7 +43,7 @@ extension OrderStatusX on OrderStatus {
         return 'Mark Ready';
 
       case OrderStatus.ready:
-        return 'Mark Completed';
+        return 'Delivered';
 
       case OrderStatus.cancelled:
       case OrderStatus.delivered:
@@ -506,10 +506,9 @@ class OrderModel {
 
   /// Primary board button label based on status, order type, and payment.
   ///
-  /// Ready stage branches:
-  /// - **Delivery** → "Out for delivery" (app or staff delivery orders)
-  /// - **Walk-in + prepaid** → "Mark Completed" (already paid; just finish)
-  /// - **Walk-in + unpaid** → "Serve Order" (then collect payment)
+  /// Ready stage is the "out for delivery / ready to serve" column:
+  /// - **Delivery** → "Delivered"
+  /// - **Walk-in** → "Served"
   String? get boardAdvanceLabel {
     switch (status) {
       case OrderStatus.pending:
@@ -518,16 +517,18 @@ class OrderModel {
         return 'Mark Ready';
       case OrderStatus.ready:
         if (needsDelivery) {
-          return 'Out for delivery';
+          return 'Delivered';
         }
-        if (isPaid) {
-          return 'Mark Completed';
-        }
-        return 'Serve Order';
+        return 'Served';
       case OrderStatus.cancelled:
       case OrderStatus.delivered:
         return null;
     }
+  }
+
+  /// Secondary "Pay Now" on the live board (ready + unpaid).
+  bool get showBoardPayNow {
+    return status == OrderStatus.ready && isUnpaid;
   }
 
   // ===========================================================================

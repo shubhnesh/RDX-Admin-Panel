@@ -136,9 +136,11 @@ extension OrderSourceX on OrderSource {
   String get label {
     switch (this) {
       case OrderSource.staff:
-        return 'Restaurant';
+        // POS / Create Order screen → walk-in (restaurant staff).
+        return 'Walk-in';
 
       case OrderSource.app:
+        // Customer mobile/web app → always tagged App (not Delivery).
         return 'App';
     }
   }

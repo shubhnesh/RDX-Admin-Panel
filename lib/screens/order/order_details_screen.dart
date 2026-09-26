@@ -303,7 +303,7 @@ class _LeftFormColumn extends ConsumerWidget {
 
         SizedBox(height: context.h(16)),
 
-        // ── Workflow — step line only; no extra bottom chip when terminal
+        // ── Workflow — step line; advance + terminate when active
         _FormPanel(
           title: 'Workflow',
           icon: Icons.sync_alt_outlined,
@@ -313,6 +313,17 @@ class _LeftFormColumn extends ConsumerWidget {
             if (order.status.nextStatus != null) ...[
               SizedBox(height: context.h(14)),
               _WorkflowAction(order: order),
+            ],
+            // Terminate (cancel) — available for active orders (not already
+            // cancelled or delivered). Order is kept and listed under Cancelled.
+            if (order.status != OrderStatus.cancelled &&
+                order.status != OrderStatus.delivered) ...[
+              SizedBox(height: context.h(10)),
+              _TerminateAction(order: order),
+            ],
+            if (order.status == OrderStatus.cancelled) ...[
+              SizedBox(height: context.h(14)),
+              _CancelledBanner(),
             ],
           ],
         ),
@@ -979,6 +990,130 @@ class _WorkflowAction extends ConsumerWidget {
             );
           }
         },
+      ),
+    );
+  }
+}
+
+
+class _TerminateAction extends ConsumerWidget {
+  final OrderModel order;
+
+  const _TerminateAction({required this.order});
+
+  Future<void> _confirmAndCancel(BuildContext context, WidgetRef ref) async {
+    final colors = AppColors.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: colors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: Text(
+            'Terminate order?',
+            style: AppTextStyles.section(ctx).copyWith(
+              color: colors.textPrimary,
+            ),
+          ),
+          content: Text(
+            'This will cancel the order. It will be kept in history and '
+            'shown under the Cancelled tab. This cannot be undone.',
+            style: AppTextStyles.bodySecondary(ctx).copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                'Keep order',
+                style: AppTextStyles.label(ctx).copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(
+                'Terminate',
+                style: AppTextStyles.label(ctx).copyWith(
+                  color: const Color(0xFFE05151),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await OrderService().updateOrderStatus(
+        order.id,
+        OrderStatus.cancelled,
+      );
+      if (!context.mounted) return;
+      ref.invalidate(orderDetailProvider(order.id));
+      await ref.read(liveOrdersProvider).load();
+      if (!context.mounted) return;
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to terminate order. $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      width: double.infinity,
+      child: RdxActionButton(
+        label: 'Terminate',
+        leadingIcon: Icons.cancel_outlined,
+        isPrimary: false,
+        onPressed: () => _confirmAndCancel(context, ref),
+      ),
+    );
+  }
+}
+
+class _CancelledBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(context.h(12)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE05151).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(context.h(8)),
+        border: Border.all(
+          color: const Color(0xFFE05151).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.cancel_outlined,
+            size: context.h(18),
+            color: const Color(0xFFE05151),
+          ),
+          SizedBox(width: context.w(10)),
+          Expanded(
+            child: Text(
+              'This order was terminated and is kept in history.',
+              style: AppTextStyles.bodySecondary(context).copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

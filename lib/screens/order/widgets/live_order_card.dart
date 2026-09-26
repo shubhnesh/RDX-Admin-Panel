@@ -423,25 +423,34 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
   // ORDER TYPE BADGE
   // -------------------------------------------------------------------------
 
+  /// Badge priority:
+  /// - App-sourced orders → always "App" (never show Delivery/Dine-in as source).
+  /// - Walk-in (staff POS) → order type label (Dine In / Takeaway / Delivery).
   Widget _orderTypeBadge(BuildContext context, AppColorScheme colors) {
+    final isApp = order.orderSource == OrderSource.app;
+    final label = isApp ? 'App' : _formatEnumLabel(order.orderType.name);
+    final accent = isApp
+        ? const Color(0xFF7C5CFC)
+        : AppColors.primary;
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: context.w(7),
         vertical: context.h(4),
       ),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
+        color: accent.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(context.h(20)),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.35),
+          color: accent.withValues(alpha: 0.35),
         ),
       ),
       child: Text(
-        _formatEnumLabel(order.orderType.name),
+        label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: AppTextStyles.caption(context).copyWith(
-          color: AppColors.primary,
+          color: accent,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -503,7 +512,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
       return order.customerName!.trim();
     }
 
-    return '#RDX-${order.id}';
+    return order.id;
   }
 
   IconData _getPrimaryIcon() {

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/order_model.dart';
@@ -13,6 +15,41 @@ class OrderService {
     return _db.collection('orders');
   }
 
+  /// Safe alphabet — skips 0/O and 1/I to avoid support-call confusion.
+  static const _orderIdAlphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+  static final _random = Random.secure();
+
+  /// Walk-in / admin order ID: `POS-YYMMDD-XXXXXXXX` (e.g. POS-250926-A7K2M9XP).
+  ///
+  /// Distinct from customer-app IDs (`ORD-…`) so both can share the same
+  /// `orders` collection without colliding.
+  String _generatePosOrderId({DateTime? at}) {
+    final now = at ?? DateTime.now();
+    final yy = (now.year % 100).toString().padLeft(2, '0');
+    final mm = now.month.toString().padLeft(2, '0');
+    final dd = now.day.toString().padLeft(2, '0');
+    final suffix = List.generate(
+      8,
+      (_) => _orderIdAlphabet[_random.nextInt(_orderIdAlphabet.length)],
+    ).join();
+    return 'POS-$yy$mm$dd-$suffix';
+  }
+
+  /// Picks an unused document ID. Retries on the rare collision.
+  Future<String> _allocatePosOrderId() async {
+    const maxAttempts = 8;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      final id = _generatePosOrderId();
+      final existing = await _col.doc(id).get();
+      if (!existing.exists) return id;
+    }
+    // Extremely unlikely fallback: timestamp + longer random suffix.
+    final fallback =
+        'POS-${DateTime.now().millisecondsSinceEpoch}-${List.generate(8, (_) => _orderIdAlphabet[_random.nextInt(_orderIdAlphabet.length)]).join()}';
+    return fallback;
+  }
+
   // ---------------------------------------------------------------------------
   // STATUS GROUPS
   // ---------------------------------------------------------------------------
@@ -22,6 +59,7 @@ class OrderService {
     OrderStatus.preparing,
     OrderStatus.ready,
     OrderStatus.delivered,
+    OrderStatus.cancelled,
   ];
 
   static const _historyStatuses = [
@@ -121,16 +159,18 @@ class OrderService {
   // ---------------------------------------------------------------------------
 
   Future<String> createOrder(OrderModel order) async {
-    // Prefer an ID already set on the model; otherwise build a readable
-    // order ID (e.g. ORD1727…) instead of a random Firestore auto-ID.
+    // Prefer an ID already set on the model (e.g. caller pre-assigned).
+    // Otherwise allocate a POS-prefixed readable ID so admin/walk-in
+    // orders never collide with customer-app ORD-… IDs.
     final docId = order.id.trim().isNotEmpty
         ? order.id.trim()
-        : 'ORD${DateTime.now().millisecondsSinceEpoch}';
+        : await _allocatePosOrderId();
 
     final data = order.toJson();
 
     // The server must be the source of truth for creation time.
     data['created_at'] = FieldValue.serverTimestamp();
+    data['updated_at'] = FieldValue.serverTimestamp();
 
     // New orders are unpaid unless the caller explicitly supplied
     // another payment status.
@@ -138,6 +178,15 @@ class OrderService {
       'payment_status',
       () => PaymentStatus.unpaid.name,
     );
+
+    // Default walk-in source when caller did not set one.
+    data.putIfAbsent(
+      'order_source',
+      () => OrderSource.staff.name,
+    );
+
+    // Mirror public ID for admin queries / receipts.
+    data['order_number'] = docId;
 
     // Payment method should remain null until payment is actually made.
 

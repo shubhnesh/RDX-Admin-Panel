@@ -336,7 +336,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        '#RDX-${order.id}',
+                        order.id,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.caption(context)

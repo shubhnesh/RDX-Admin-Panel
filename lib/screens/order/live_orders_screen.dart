@@ -5,6 +5,8 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/screens/order/bill_settlement_screen.dart';
 import 'package:rdx_admin/screens/order/widgets/live_order_card.dart';
 import 'package:rdx_admin/widgets/buttons/stats_collapse_button.dart';
+import 'package:rdx_admin/widgets/resuable_options/rdx_category_tabs.dart';
+import 'package:rdx_admin/widgets/resuable_options/rdx_dropdown.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
@@ -13,8 +15,10 @@ import '../../providers/live_orders_provider.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/reusable_widgets/stat_card.dart';
-import '../../widgets/resuable_options/rdx_category_tabs.dart';
 import 'create_order_screen.dart';
+
+/// Board source selected via the Live / App dropdown.
+enum _BoardSource { live, app }
 
 class LiveOrdersScreen extends ConsumerStatefulWidget {
   const LiveOrdersScreen({super.key});
@@ -24,11 +28,11 @@ class LiveOrdersScreen extends ConsumerStatefulWidget {
 }
 
 class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
-  String _selectedStatus = 'All';
+  /// Live (walk-in / staff POS) or App (customer app). Default: Live.
+  _BoardSource _boardSource = _BoardSource.live;
 
-  /// Whether the stat card row is hidden, giving the order board below more
-  /// vertical room. Toggled by [StatsCollapseButton].
-  bool _statsCollapsed = false;
+  /// Status filter within the selected source. 'All' shows the full board.
+  String _selectedStatus = 'All';
 
   /// Horizontal scroll for the kanban board (All view).
   final ScrollController _boardScrollController = ScrollController();
@@ -41,6 +45,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
   /// True while the pointer is over the horizontal kanban board area.
   bool _boardHovered = false;
+
+  /// Whether the overview stat card row is hidden.
+  bool _statsCollapsed = false;
 
   @override
   void initState() {
@@ -80,26 +87,43 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     }
   }
 
-  // STATUS FILTER
+  // ---------------------------------------------------------------------------
+  // SOURCE + STATUS FILTERS
+  // ---------------------------------------------------------------------------
 
-  List<String> get _statusLabels => const [
-        'Live',
-        'App Orders',
+  bool get _isLive => _boardSource == _BoardSource.live;
+
+  /// Final-stage label for the selected source.
+  String get _finalStageLabel => _isLive ? 'Served' : 'Delivered';
+
+  /// Status chips shown beside the source dropdown (no Live/App chips).
+  List<String> get _statusLabels => [
         'Preparing',
         'Out for Delivery',
         'Pending Payment',
-        'Delivered',
+        _finalStageLabel,
+        'Cancelled',
       ];
 
-  void _onStatusSelected(String label) {
-    if (_selectedStatus == label) return;
-
+  void _onSourceChanged(_BoardSource? source) {
+    if (source == null || source == _boardSource) return;
     setState(() {
-      _selectedStatus = label;
+      _boardSource = source;
+      // Reset filter when switching source so board shows full columns.
+      _selectedStatus = 'All';
     });
   }
 
-  /// Unpaid orders for the Pending Payment filter + stat (not an All-board column).
+  void _onStatusSelected(String label) {
+    if (_selectedStatus == label) {
+      // Tapping the active chip again returns to the full board.
+      setState(() => _selectedStatus = 'All');
+      return;
+    }
+    setState(() => _selectedStatus = label);
+  }
+
+  /// Unpaid orders for the Pending Payment filter + stat, scoped to source.
   List<OrderModel> _getPendingPaymentOrders(
     LiveOrdersProvider provider,
   ) {
@@ -114,8 +138,13 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       }
     }
 
-    addAll(provider.ready);
-    addAll(provider.delivered);
+    if (_isLive) {
+      addAll(provider.readyWalkIn);
+      addAll(provider.deliveredWalkIn);
+    } else {
+      addAll(provider.readyApp);
+      addAll(provider.deliveredApp);
+    }
     return result;
   }
 
@@ -159,8 +188,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               (sum, item) => sum + (item.price * item.quantity),
             ),
             taxPercentage: 0,
-            guestName: order.customerName?.trim().isNotEmpty == true
-                ? order.customerName!
+            guestName: order.customerName.trim().isNotEmpty
+                ? order.customerName
                 : 'Walk-in Customer',
             phoneNumber: order.customerPhone,
             sendDigitalReceipt: false,
@@ -179,13 +208,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     final colors = AppColors.of(context);
     final provider = ref.watch(liveOrdersProvider);
 
-    final totalOrders = provider.live.length +
-        provider.preparing.length +
-        provider.ready.length +
-        provider.delivered.length;
-
-    final pendingPaymentOrders = _getPendingPaymentOrders(provider);
-
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
@@ -197,8 +219,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               // ── Header row: title/subtitle + New Order ─────────────────
               Builder(
                 builder: (context) {
-                  final narrow = MediaQuery.sizeOf(context).width < 900;
-
                   final titleBlock = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -215,22 +235,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                       ),
                     ],
                   );
-
-                  if (narrow) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: titleBlock),
-                        SizedBox(width: context.w(12)),
-                        RdxActionButton(
-                          label: 'New Order',
-                          leadingIcon: Icons.add,
-                          isPrimary: true,
-                          onPressed: _openPlaceOrder,
-                        ),
-                      ],
-                    );
-                  }
 
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,9 +254,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
               SizedBox(height: context.h(20)),
 
-              // ── Stats collapse toggle ──────────────────────────────────
-              // Sits above the stat row's left edge; collapsing hides the
-              // row entirely so the order board below gets more vertical space.
+              // ── Overview stats (4 cards only) ──────────────────────────
               Align(
                 alignment: Alignment.centerLeft,
                 child: StatsCollapseButton(
@@ -263,34 +265,41 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 ),
               ),
               SizedBox(height: context.h(8)),
-
-              // ── Stats ──────────────────────────────────────────────────
               AnimatedSize(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOut,
                 alignment: Alignment.topCenter,
                 child: _statsCollapsed
                     ? const SizedBox(width: double.infinity)
-                    : _buildSummaryStats(
-                        provider: provider,
-                        totalOrders: totalOrders,
-                        pendingPaymentCount: pendingPaymentOrders.length,
-                        appOrdersCount: provider.appOrders.length,
-                      ),
+                    : _buildOverviewStats(provider),
               ),
 
               SizedBox(height: context.h(20)),
 
-              // ── Status tabs ────────────────────────────────────────────
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: RdxCategoryTabs(
-                  expand: false,
-                  labels: _statusLabels,
-                  allLabel: 'All',
-                  selectedLabel: _selectedStatus,
-                  onSelected: _onStatusSelected,
-                ),
+              // ── Source dropdown + status tabs ──────────────────────────
+              // Dropdown replaces Live / App Orders tabs.
+              // Status tabs adapt to source (Served vs Delivered).
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: context.w(120),
+                    child: RdxDropdown<_BoardSource>(
+                      value: _boardSource,
+                      items: _BoardSource.values,
+                      labelBuilder: (s) =>
+                          s == _BoardSource.live ? 'Live' : 'App',
+                      onChanged: _onSourceChanged,
+                      isDense: true,
+                    ),
+                  ),
+                  SizedBox(width: context.w(10)),
+                  RdxCategoryTabs(
+                    labels: _statusLabels,
+                    selectedLabel: _selectedStatus,
+                    onSelected: _onStatusSelected,
+                  ),
+                ],
               ),
 
               SizedBox(height: context.h(16)),
@@ -308,83 +317,75 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  Widget _buildSummaryStats({
-    required LiveOrdersProvider provider,
-    required int totalOrders,
-    required int pendingPaymentCount,
-    required int appOrdersCount,
-  }) {
-    final deliveredPaidCount = provider.delivered
-        .where(
-          (order) => order.paymentStatus == PaymentStatus.paid,
-        )
-        .length;
+  /// Four overview cards only — Total / Live / App / Pending Payment.
+  /// Per-column counts live on the board headings, not here.
+  Widget _buildOverviewStats(LiveOrdersProvider provider) {
+    final totalOrders = provider.liveWalkIn.length +
+        provider.preparingWalkIn.length +
+        provider.readyWalkIn.length +
+        provider.appOrdersActive.length +
+        provider.delivered
+            .where((o) => o.paymentStatus == PaymentStatus.paid)
+            .length;
+
+    final liveCount = provider.liveWalkIn.length;
+    final appCount = provider.appOrdersActive.length;
+
+    // Pending payment across both sources (ready + delivered unpaid).
+    final seenIds = <String>{};
+    var pendingPaymentCount = 0;
+    for (final order in [
+      ...provider.ready,
+      ...provider.delivered,
+    ]) {
+      if (order.paymentStatus == PaymentStatus.paid) continue;
+      if (!seenIds.add(order.id)) continue;
+      pendingPaymentCount++;
+    }
+
     return SizedBox(
       width: double.infinity,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isNarrow = constraints.maxWidth < 600;
-
           final spacing = isNarrow ? context.w(6) : context.w(16);
+          final minH = isNarrow ? context.h(62) : context.h(72);
 
           final cards = <Widget>[
             StatCard(
               label: 'Total Orders',
               value: '$totalOrders',
               icon: Icons.receipt_long_outlined,
-              minHeight: isNarrow ? context.h(62) : context.h(72),
+              minHeight: minH,
             ),
             StatCard(
               label: 'Live Orders',
-              value: '${provider.live.length}',
+              value: '$liveCount',
               icon: Icons.star_outline_rounded,
-              accentColor: const Color(0xFF5AC8FA), // light blue
-              minHeight: isNarrow ? context.h(62) : context.h(72),
+              accentColor: const Color(0xFF5AC8FA),
+              minHeight: minH,
             ),
             StatCard(
               label: 'App Orders',
-              value: '$appOrdersCount',
+              value: '$appCount',
               icon: Icons.phone_android_outlined,
               accentColor: const Color(0xFF7C5CFC),
-              minHeight: isNarrow ? context.h(62) : context.h(72),
-            ),
-            StatCard(
-              label: 'Preparing',
-              value: '${provider.preparing.length}',
-              icon: Icons.access_time_rounded, // or Icons.schedule_outlined
-              accentColor: const Color(0xFFE9A719),
-              minHeight: isNarrow ? context.h(62) : context.h(72),
-            ),
-            StatCard(
-              label: 'Out for Delivery',
-              value: '${provider.ready.length}',
-              icon: Icons.delivery_dining_outlined,
-              accentColor: const Color(0xFF20B47A),
-              minHeight: isNarrow ? context.h(62) : context.h(72),
+              minHeight: minH,
             ),
             StatCard(
               label: 'Pending Payment',
               value: '$pendingPaymentCount',
               icon: Icons.payments_outlined,
               accentColor: const Color(0xFFE9A719),
-              minHeight: isNarrow ? context.h(62) : context.h(72),
-            ),
-            StatCard(
-              label: 'Delivered',
-              value: '$deliveredPaidCount',
-              icon: Icons.check_circle_outline,
-              accentColor: const Color(0xFF20B47A),
-              minHeight: isNarrow ? context.h(62) : context.h(72),
+              minHeight: minH,
             ),
           ];
 
           return Row(
             children: [
-              for (int index = 0; index < cards.length; index++) ...[
-                Expanded(
-                  child: cards[index],
-                ),
-                if (index != cards.length - 1) SizedBox(width: spacing),
+              for (int i = 0; i < cards.length; i++) ...[
+                Expanded(child: cards[i]),
+                if (i != cards.length - 1) SizedBox(width: spacing),
               ],
             ],
           );
@@ -396,33 +397,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   // ---------------------------------------------------------------------------
   // ORDERS CONTENT
   // ---------------------------------------------------------------------------
-  //
-  // RESPONSIVE BOARD
-  //
-  // Wide screens (>= _kColumnsBreakpoint):
-  //   Each state is a COLUMN, laid out side by side in a Row.
-  //   Cards inside a column are stacked VERTICALLY and scroll independently.
-  //
-  // As the screen shrinks below the breakpoint:
-  //   Each state becomes a ROW, stacked vertically one under another.
-  //   Cards inside a row are laid out HORIZONTALLY and scroll sideways.
-  // ---------------------------------------------------------------------------
 
   static const double _kColumnsBreakpoint = 900;
   static const double _kRowCardWidth = 280;
 
-  // ---------------------------------------------------------------------------
-  // WIDE LAYOUT — states as columns, cards stacked vertically
-  // ---------------------------------------------------------------------------
-  //
-  // Column width is always computed as if all board states were visible, so a single filtered-in section keeps
-  // the same "normal" card width as the All view instead of stretching to
-  // fill the row when fewer sections are shown.
-  // ---------------------------------------------------------------------------
-
-  // All-board columns: Live / App / Preparing / Out for Delivery.
-  // Pending Payment = filter + stat only. Delivered filter has Served + Delivered.
-  static const int _kTotalColumns = 4;
+  // All-board columns per source: primary | Preparing | Out for Delivery | Final.
   static const int _kVisibleColumns = 4;
 
   Widget _buildColumnsBoard(
@@ -431,17 +410,14 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     required double maxHeight,
   }) {
     final gap = context.w(16);
-    // Always use All-board column width so filtered views (e.g. Delivered
-    // with SERVED + DELIVERED) stay the same size as the other columns
-    // instead of stretching to fill the row.
     final columnWidth =
         (maxWidth - gap * (_kVisibleColumns - 1)) / _kVisibleColumns;
 
-    // Bounded height is required so each column's Expanded + ListView works
-    // inside a horizontal scroll view.
-    final compactEmptyDeliveredBoard = _selectedStatus == 'Delivered' &&
-        sections.every((section) => section.orders.isEmpty);
-    final boardHeight = compactEmptyDeliveredBoard
+    final isFinalFilter =
+        _selectedStatus == 'Served' || _selectedStatus == 'Delivered';
+    final compactEmptyFinalBoard =
+        isFinalFilter && sections.every((section) => section.orders.isEmpty);
+    final boardHeight = compactEmptyFinalBoard
         ? context.h(220)
         : maxHeight.isFinite && maxHeight > 0
             ? maxHeight
@@ -449,8 +425,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
     final colors = AppColors.of(context);
 
-    // Board horizontal scrollbar only while the pointer is over the board
-    // and not inside a specific column list.
     final showBoardScrollbar = _boardHovered && _hoveredListColumnIndex == null;
 
     final boardTheme = Theme.of(context).copyWith(
@@ -482,8 +456,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         },
         child: Listener(
           onPointerSignal: (signal) {
-            // Convert vertical mouse-wheel / trackpad to horizontal board scroll
-            // when the cursor is NOT over a column's order list.
             if (signal is! PointerScrollEvent) return;
             if (_hoveredListColumnIndex != null) return;
             if (!_boardScrollController.hasClients) return;
@@ -539,9 +511,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   ) {
     final sections = _buildVisibleSectionsData(provider);
 
-    // Specific status filters:
-    // - Single section → card grid
-    // - Multiple (e.g. Delivered → Served + Delivered) → stacked sections
     if (_selectedStatus != 'All') {
       if (sections.isEmpty) {
         return const SizedBox.shrink();
@@ -549,7 +518,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       if (sections.length == 1) {
         return _buildSingleSectionGrid(sections.first);
       }
-      // Delivered filter uses the same single-section layout as other filters.
       return LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= _kColumnsBreakpoint;
@@ -582,21 +550,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // SINGLE-SECTION GRID — used when a specific status filter is selected
-  // ---------------------------------------------------------------------------
-  //
-  // Card width matches the board's per-column width (maxWidth split across
-  // _kTotalColumns, same gap), so a row here naturally holds as many cards
-  // as the "All" board has columns — currently 4 — without hardcoding a
-  // card count.
-  // ---------------------------------------------------------------------------
-
   Widget _buildSingleSectionGrid(_SectionData data) {
     final isEmpty = data.orders.isEmpty;
-    // Same gap as _buildColumnsBoard (the "All" view) so the card width
-    // comes out pixel-identical between the two — otherwise switching
-    // tabs visibly resized the cards.
     final gap = context.w(16);
 
     return LayoutBuilder(
@@ -664,7 +619,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         _sectionHeader(data),
         SizedBox(height: context.h(12)),
         if (isEmpty)
-          // Empty columns do not capture wheel — board scrolls horizontally.
           _buildEmptySection(
             emptyIcon: data.emptyIcon,
             emptyText: data.emptyText,
@@ -685,7 +639,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               child: Theme(
                 data: Theme.of(context).copyWith(
                   scrollbarTheme: ScrollbarThemeData(
-                    // Fully hide when this column is not under the cursor.
                     thickness: WidgetStatePropertyAll(listHovered ? 6.0 : 0.0),
                     radius: const Radius.circular(8),
                     thumbVisibility: WidgetStatePropertyAll(listHovered),
@@ -763,10 +716,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             emptyText: data.emptyText,
           )
         else
-          // IntrinsicHeight sizes this row to whatever its tallest card
-          // actually needs, instead of forcing every card into a fixed
-          // 208px box regardless of how little content it has — that fixed
-          // height was leaving empty space at the bottom of shorter cards.
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: IntrinsicHeight(
@@ -813,6 +762,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   }
 
   Widget _sectionHeader(_SectionData data) {
+    final count = data.orders.length;
     return Padding(
       padding: EdgeInsets.only(
         left: context.w(3),
@@ -829,10 +779,14 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             ),
           ),
           SizedBox(width: context.w(9)),
-          Text(
-            data.title,
-            style: AppTextStyles.section(context).copyWith(
-              color: AppColors.primary,
+          Flexible(
+            child: Text(
+              '${data.title} ($count)',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.section(context).copyWith(
+                color: AppColors.primary,
+              ),
             ),
           ),
         ],
@@ -841,120 +795,219 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // VISIBLE SECTIONS (data only — layout decides how to render them)
+  // VISIBLE SECTIONS — scoped to Live or App via [_boardSource]
   // ---------------------------------------------------------------------------
   //
-  // Flow after Preparing:
-  //   Mark Ready → OUT FOR DELIVERY column (status ready)
-  //   Delivered/Served + optional Pay Now → status delivered
-  //   Delivered filter shows all completed orders as served.
+  // Live board (All):
+  //   LIVE ORDERS | PREPARING | OUT FOR DELIVERY | SERVED
+  //
+  // App board (All):
+  //   APP ORDERS | PREPARING | OUT FOR DELIVERY | DELIVERED
+  //
+  // Pending Payment is filter-only (not a board column).
   // ---------------------------------------------------------------------------
 
   List<_SectionData> _buildVisibleSectionsData(
     LiveOrdersProvider provider,
   ) {
     final sections = <_SectionData>[];
+    final isAll = _selectedStatus == 'All';
 
-    // App and walk-in orders share the same restaurant workflow columns.
-    List<OrderModel> staffOnly(List<OrderModel> list) => list;
+    if (_isLive) {
+      // ── LIVE (walk-in / staff POS) ────────────────────────────────────
+      if (isAll) {
+        sections.add(
+          _SectionData(
+            title: 'LIVE ORDERS',
+            color: const Color(0xFF5AC8FA),
+            orders: provider.liveWalkIn,
+            actionText: 'Start Preparing',
+            onAdvance: provider.advanceStatus,
+            showPayNow: true,
+            onPayNow: _openPayment,
+            emptyIcon: Icons.star_outline_rounded,
+            emptyText: 'No orders',
+          ),
+        );
+      }
 
-    if (_selectedStatus == 'All' || _selectedStatus == 'Live') {
-      sections.add(
-        _SectionData(
-          title: 'LIVE ORDERS',
-          color: const Color(0xFF5AC8FA),
-          orders: staffOnly(provider.live),
-          actionText: 'Start Preparing',
-          onAdvance: provider.advanceStatus,
-          showPayNow: true,
-          onPayNow: _openPayment,
-        ),
-      );
-    }
+      if (isAll || _selectedStatus == 'Preparing') {
+        sections.add(
+          _SectionData(
+            title: 'PREPARING',
+            color: const Color(0xFFE9A719),
+            orders: provider.preparingWalkIn,
+            actionText: 'Mark Ready',
+            onAdvance: provider.advanceStatus,
+            showPayNow: true,
+            onPayNow: _openPayment,
+            emptyIcon: Icons.access_time_rounded,
+            emptyText: 'No orders preparing',
+          ),
+        );
+      }
 
-    // App orders sit directly beside Live Orders on the board.
-    if (_selectedStatus == 'All' || _selectedStatus == 'App Orders') {
-      sections.add(
-        _SectionData(
-          title: 'APP ORDERS',
-          color: const Color(0xFF7C5CFC),
-          orders: provider.appOrders,
-          actionText: null,
-          onAdvance: provider.advanceStatus,
-          emptyIcon: Icons.phone_android_outlined,
-          emptyText: 'No app orders',
-          usePerOrderAction: true,
-          showPayNow: true,
-          onPayNow: _openPayment,
-        ),
-      );
-    }
+      if (isAll || _selectedStatus == 'Out for Delivery') {
+        sections.add(
+          _SectionData(
+            title: 'OUT FOR DELIVERY',
+            color: const Color(0xFF20B47A),
+            orders: provider.readyWalkIn,
+            actionText: null,
+            onAdvance: provider.advanceStatus,
+            usePerOrderAction: true,
+            showPayNow: true,
+            onPayNow: _openPayment,
+            hideAdvanceUntilPaid: true,
+            emptyIcon: Icons.delivery_dining_outlined,
+            emptyText: 'No orders out for delivery',
+          ),
+        );
+      }
 
-    if (_selectedStatus == 'All' || _selectedStatus == 'Preparing') {
-      sections.add(
-        _SectionData(
-          title: 'PREPARING',
-          color: const Color(0xFFE9A719),
-          orders: staffOnly(provider.preparing),
-          actionText: 'Mark Ready',
-          onAdvance: provider.advanceStatus,
-          showPayNow: true,
-          onPayNow: _openPayment,
-        ),
-      );
-    }
+      if (_selectedStatus == 'Pending Payment') {
+        sections.add(
+          _SectionData(
+            title: 'PENDING PAYMENT',
+            color: const Color(0xFFE9A719),
+            orders: _getPendingPaymentOrders(provider),
+            actionText: 'Pay Now',
+            onAdvance: _openPayment,
+            emptyIcon: Icons.payments_outlined,
+            emptyText: 'No pending payments',
+          ),
+        );
+      }
 
-    // Out for Delivery column on All board (status = ready).
-    if (_selectedStatus == 'All' || _selectedStatus == 'Out for Delivery') {
-      sections.add(
-        _SectionData(
-          title: 'OUT FOR DELIVERY',
-          color: const Color(0xFF20B47A),
-          orders: staffOnly(provider.ready),
-          actionText: null,
-          onAdvance: provider.advanceStatus,
-          usePerOrderAction: true,
-          showPayNow: true,
-          onPayNow: _openPayment,
-          hideAdvanceUntilPaid: true,
-          emptyIcon: Icons.delivery_dining_outlined,
-          emptyText: 'No orders out for delivery',
-        ),
-      );
-    }
+      // Final stage for Live = Served (paid delivered walk-in).
+      if (isAll || _selectedStatus == 'Served') {
+        final served = provider.deliveredWalkIn
+            .where((o) => o.paymentStatus == PaymentStatus.paid)
+            .toList();
+        sections.add(
+          _SectionData(
+            title: 'SERVED',
+            color: const Color(0xFF20B47A),
+            orders: served,
+            actionText: null,
+            onAdvance: null,
+            emptyIcon: Icons.room_service_outlined,
+            emptyText: 'No served orders',
+          ),
+        );
+      }
 
-    // Pending Payment = FILTER ONLY (not a column on All).
-    if (_selectedStatus == 'Pending Payment') {
-      sections.add(
-        _SectionData(
-          title: 'PENDING PAYMENT',
-          color: const Color(0xFFE9A719),
-          orders: _getPendingPaymentOrders(provider),
-          actionText: 'Pay Now',
-          onAdvance: _openPayment,
-          emptyIcon: Icons.payments_outlined,
-          emptyText: 'No pending payments',
-        ),
-      );
-    }
+      if (_selectedStatus == 'Cancelled') {
+        sections.add(
+          _SectionData(
+            title: 'CANCELLED',
+            color: const Color(0xFFE05151),
+            orders: provider.cancelledWalkIn,
+            actionText: null,
+            onAdvance: null,
+            emptyIcon: Icons.cancel_outlined,
+            emptyText: 'No cancelled orders',
+          ),
+        );
+      }
+    } else {
+      // ── APP (customer app) ────────────────────────────────────────────
+      if (isAll) {
+        // Primary column: active app orders still in pending (new).
+        sections.add(
+          _SectionData(
+            title: 'APP ORDERS',
+            color: const Color(0xFF7C5CFC),
+            orders: provider.liveApp,
+            actionText: 'Start Preparing',
+            onAdvance: provider.advanceStatus,
+            showPayNow: true,
+            onPayNow: _openPayment,
+            emptyIcon: Icons.phone_android_outlined,
+            emptyText: 'No orders',
+          ),
+        );
+      }
 
-    // Delivered filter: app and walk-in orders are both treated as served.
-    if (_selectedStatus == 'Delivered') {
-      final paidDelivered = provider.delivered
-          .where((order) => order.paymentStatus == PaymentStatus.paid)
-          .toList();
+      if (isAll || _selectedStatus == 'Preparing') {
+        sections.add(
+          _SectionData(
+            title: 'PREPARING',
+            color: const Color(0xFFE9A719),
+            orders: provider.preparingApp,
+            actionText: 'Mark Ready',
+            onAdvance: provider.advanceStatus,
+            showPayNow: true,
+            onPayNow: _openPayment,
+            emptyIcon: Icons.access_time_rounded,
+            emptyText: 'No orders preparing',
+          ),
+        );
+      }
 
-      sections.add(
-        _SectionData(
-          title: 'SERVED',
-          color: const Color(0xFF20B47A),
-          orders: paidDelivered,
-          actionText: null,
-          onAdvance: null,
-          emptyIcon: Icons.room_service_outlined,
-          emptyText: 'No served orders',
-        ),
-      );
+      if (isAll || _selectedStatus == 'Out for Delivery') {
+        sections.add(
+          _SectionData(
+            title: 'OUT FOR DELIVERY',
+            color: const Color(0xFF20B47A),
+            orders: provider.readyApp,
+            actionText: null,
+            onAdvance: provider.advanceStatus,
+            usePerOrderAction: true,
+            showPayNow: true,
+            onPayNow: _openPayment,
+            hideAdvanceUntilPaid: true,
+            emptyIcon: Icons.delivery_dining_outlined,
+            emptyText: 'No orders out for delivery',
+          ),
+        );
+      }
+
+      if (_selectedStatus == 'Pending Payment') {
+        sections.add(
+          _SectionData(
+            title: 'PENDING PAYMENT',
+            color: const Color(0xFFE9A719),
+            orders: _getPendingPaymentOrders(provider),
+            actionText: 'Pay Now',
+            onAdvance: _openPayment,
+            emptyIcon: Icons.payments_outlined,
+            emptyText: 'No pending payments',
+          ),
+        );
+      }
+
+      // Final stage for App = Delivered (paid delivered app orders).
+      if (isAll || _selectedStatus == 'Delivered') {
+        final delivered = provider.deliveredApp
+            .where((o) => o.paymentStatus == PaymentStatus.paid)
+            .toList();
+        sections.add(
+          _SectionData(
+            title: 'DELIVERED',
+            color: const Color(0xFF20B47A),
+            orders: delivered,
+            actionText: null,
+            onAdvance: null,
+            emptyIcon: Icons.check_circle_outline,
+            emptyText: 'No delivered orders',
+          ),
+        );
+      }
+
+      if (_selectedStatus == 'Cancelled') {
+        sections.add(
+          _SectionData(
+            title: 'CANCELLED',
+            color: const Color(0xFFE05151),
+            orders: provider.cancelledApp,
+            actionText: null,
+            onAdvance: null,
+            emptyIcon: Icons.cancel_outlined,
+            emptyText: 'No cancelled orders',
+          ),
+        );
+      }
     }
 
     return sections;
@@ -1023,10 +1076,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 // =============================================================================
 // SECTION DATA
 // =============================================================================
-//
-// Plain data for one order state (LIVE / PREPARING / READY / DELIVERING).
-// Kept separate from the widgets so the same data can be rendered either as
-// a column (wide screens) or a row (narrow screens) without duplication.
 
 class _SectionData {
   final String title;

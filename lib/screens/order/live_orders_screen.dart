@@ -549,7 +549,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       if (sections.length == 1) {
         return _buildSingleSectionGrid(sections.first);
       }
-      // Delivered filter: SERVED + DELIVERED side-by-side (wide) or stacked.
+      // Delivered filter uses the same single-section layout as other filters.
       return LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= _kColumnsBreakpoint;
@@ -847,7 +847,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   // Flow after Preparing:
   //   Mark Ready → OUT FOR DELIVERY column (status ready)
   //   Delivered/Served + optional Pay Now → status delivered
-  //   Delivered filter splits: SERVED (walk-in) | DELIVERED (app/delivery)
+  //   Delivered filter shows all completed orders as served.
   // ---------------------------------------------------------------------------
 
   List<_SectionData> _buildVisibleSectionsData(
@@ -855,10 +855,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   ) {
     final sections = <_SectionData>[];
 
-    // Restaurant (staff) workflow columns — exclude app-sourced orders so
-    // POS and customer-app queues stay separate.
-    List<OrderModel> staffOnly(List<OrderModel> list) =>
-        list.where((o) => o.orderSource == OrderSource.staff).toList();
+    // App and walk-in orders share the same restaurant workflow columns.
+    List<OrderModel> staffOnly(List<OrderModel> list) => list;
 
     if (_selectedStatus == 'All' || _selectedStatus == 'Live') {
       sections.add(
@@ -868,6 +866,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           orders: staffOnly(provider.live),
           actionText: 'Start Preparing',
           onAdvance: provider.advanceStatus,
+          showPayNow: true,
+          onPayNow: _openPayment,
         ),
       );
     }
@@ -898,6 +898,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           orders: staffOnly(provider.preparing),
           actionText: 'Mark Ready',
           onAdvance: provider.advanceStatus,
+          showPayNow: true,
+          onPayNow: _openPayment,
         ),
       );
     }
@@ -914,6 +916,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           usePerOrderAction: true,
           showPayNow: true,
           onPayNow: _openPayment,
+          hideAdvanceUntilPaid: true,
           emptyIcon: Icons.delivery_dining_outlined,
           emptyText: 'No orders out for delivery',
         ),
@@ -935,41 +938,21 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       );
     }
 
-    // Delivered filter: two sections — Served (walk-in) + Delivered (app/delivery).
+    // Delivered filter: app and walk-in orders are both treated as served.
     if (_selectedStatus == 'Delivered') {
       final paidDelivered = provider.delivered
           .where((order) => order.paymentStatus == PaymentStatus.paid)
           .toList();
 
-      // Walk-in (dine-in / takeaway) completed at the restaurant.
-      final servedOrders =
-          paidDelivered.where((order) => order.isWalkIn).toList();
-
-      // App or delivery orders completed to the customer.
-      final deliveredOrders =
-          paidDelivered.where((order) => !order.isWalkIn).toList();
-
       sections.add(
         _SectionData(
           title: 'SERVED',
           color: const Color(0xFF20B47A),
-          orders: servedOrders,
+          orders: paidDelivered,
           actionText: null,
           onAdvance: null,
           emptyIcon: Icons.room_service_outlined,
-          emptyText: 'No served walk-in orders',
-        ),
-      );
-
-      sections.add(
-        _SectionData(
-          title: 'DELIVERED',
-          color: const Color(0xFF20B47A),
-          orders: deliveredOrders,
-          actionText: null,
-          onAdvance: null,
-          emptyIcon: Icons.delivery_dining_outlined,
-          emptyText: 'No delivered app orders',
+          emptyText: 'No served orders',
         ),
       );
     }
@@ -1057,6 +1040,7 @@ class _SectionData {
   final bool usePerOrderAction;
   final bool showPayNow;
   final ValueChanged<OrderModel>? onPayNow;
+  final bool hideAdvanceUntilPaid;
 
   const _SectionData({
     required this.title,
@@ -1069,9 +1053,11 @@ class _SectionData {
     this.usePerOrderAction = false,
     this.showPayNow = false,
     this.onPayNow,
+    this.hideAdvanceUntilPaid = false,
   });
 
   String? actionTextFor(OrderModel order) {
+    if (hideAdvanceUntilPaid && order.isUnpaid) return null;
     if (usePerOrderAction) {
       return order.boardAdvanceLabel;
     }
@@ -1080,9 +1066,7 @@ class _SectionData {
 
   String? secondaryActionTextFor(OrderModel order) {
     if (!showPayNow) return null;
-    if (order.showBoardPayNow) return 'Pay Now';
-    if (order.status == OrderStatus.delivered &&
-        order.paymentStatus == PaymentStatus.unpaid) {
+    if (order.status != OrderStatus.delivered && order.isUnpaid) {
       return 'Pay Now';
     }
     return null;

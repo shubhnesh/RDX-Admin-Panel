@@ -90,6 +90,31 @@ class AuthProvider extends ChangeNotifier {
     await _safeService?.signOut();
     notifyListeners();
   }
+
+  Future<bool> sendPasswordReset(String email) async {
+    final service = _safeService;
+
+    if (service == null) {
+      errorMessage = 'Firebase is not configured yet — running with mock data.';
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      await service.sendPasswordReset(email);
+      errorMessage = null;
+      notifyListeners();
+      return true;
+    } on FirebaseAuthException catch (e) {
+      errorMessage = e.message ?? 'Unable to send reset link.';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
 }
 
 /// Riverpod provider wrapping [AuthProvider].

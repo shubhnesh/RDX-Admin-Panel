@@ -6,9 +6,11 @@ import 'package:rdx_admin/screens/order/bill_settlement_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
+import '../../core/utils/tax.dart';
 import '../../models/order_model.dart';
 import '../../services/order_service.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
+import '../../widgets/dialogs/rdx_notice_dialog.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
@@ -99,8 +101,8 @@ class _OrderDetailBody extends ConsumerWidget {
     for (final item in order.items) {
       subtotal += item.price * item.quantity;
     }
-    final tax = (order.total - subtotal).clamp(0.0, double.infinity);
-    final taxPercent = subtotal > 0 ? (tax / subtotal) * 100 : 0.0;
+    final tax = subtotal * (AppTax.gstPercentage / 100);
+    final taxPercent = AppTax.gstPercentage;
 
     if (narrow) {
       return SingleChildScrollView(
@@ -227,59 +229,46 @@ class _LeftFormColumn extends ConsumerWidget {
             LayoutBuilder(
               builder: (context, c) {
                 final stack = c.maxWidth < 400;
+                final isDineIn = order.orderType == OrderType.dineIn;
                 final table = _InfoField(
                   label: 'Table',
-                  value: order.orderType == OrderType.dineIn
-                      ? ((order.tableNumber?.trim().isNotEmpty ?? false)
-                          ? 'Table ${order.tableNumber}'
-                          : 'No table / counter')
-                      : '—',
+                  value: (order.tableNumber?.trim().isNotEmpty ?? false)
+                      ? 'Table ${order.tableNumber}'
+                      : 'No table / counter',
                 );
-                final customer = Column(
+                final customer = Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Customer',
-                      style: AppTextStyles.bodySecondary(context).copyWith(
-                        color: colors.textMuted,
+                    Expanded(
+                      child: _InfoField(
+                        label: 'Customer',
+                        value: customerName,
                       ),
                     ),
-                    SizedBox(height: context.h(4)),
-                    // Name + phone only (no icon) — values from checkout
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          customerName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.body(context).copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                    if (order.customerPhone.trim().isNotEmpty) ...[
+                      SizedBox(width: context.w(12)),
+                      Expanded(
+                        child: _InfoField(
+                          label: 'Mobile number',
+                          value: order.customerPhone.trim(),
                         ),
-                        if (order.customerPhone.trim().isNotEmpty)
-                          Text(
-                            order.customerPhone,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.caption(context)
-                                .copyWith(color: colors.textSecondary),
-                          ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ],
                 );
                 if (stack) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      table,
-                      SizedBox(height: context.h(14)),
+                      if (isDineIn) ...[
+                        table,
+                        SizedBox(height: context.h(14)),
+                      ],
                       customer,
                     ],
                   );
                 }
+                if (!isDineIn) return customer;
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -489,7 +478,7 @@ class _RightOrderSummary extends ConsumerWidget {
                 _amountRow(
                   context,
                   colors,
-                  'Tax (${taxPercent.toStringAsFixed(0)}%)',
+                  'GST (${taxPercent.toStringAsFixed(0)}%)',
                   tax,
                 ),
                 SizedBox(height: context.h(10)),
@@ -514,7 +503,7 @@ class _RightOrderSummary extends ConsumerWidget {
                 SizedBox(
                   width: double.infinity,
                   child: RdxActionButton(
-                    label: 'Print bill & receipt',
+                    label: 'Print bill',
                     leadingIcon: Icons.print_outlined,
                     isPrimary: true,
                     onPressed: () {
@@ -526,15 +515,14 @@ class _RightOrderSummary extends ConsumerWidget {
                     },
                   ),
                 ),
-                // If unpaid, still offer Mark as Paid below print
+                // If unpaid, still offer Bill Settlement below the primary action
                 if (!isPaid) ...[
                   SizedBox(height: context.h(10)),
                   SizedBox(
                     width: double.infinity,
                     child: RdxActionButton(
-                      label: 'Mark as paid',
-                      leadingIcon: Icons.payments_outlined,
-                      isPrimary: false,
+                      label: 'Bill Settlement',
+                      isPrimary: true,
                       onPressed: () => _openSettlement(context, ref),
                     ),
                   ),
@@ -625,7 +613,7 @@ class _RightOrderSummary extends ConsumerWidget {
             paymentMethod: order.paymentMethod?.label,
             cardLastFour: null,
             subtotal: subtotal,
-            taxPercentage: taxPercent,
+            taxPercentage: AppTax.gstPercentage,
             guestName: order.customerName.trim().isEmpty
                 ? 'Walk-in customer'
                 : order.customerName,
@@ -829,14 +817,14 @@ class _InfoField extends StatelessWidget {
             color: colors.textMuted,
           ),
         ),
-        SizedBox(height: context.h(4)),
+        SizedBox(height: context.h(6)),
         Text(
           value,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: AppTextStyles.body(context).copyWith(
             color: colors.textPrimary,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -995,59 +983,20 @@ class _WorkflowAction extends ConsumerWidget {
   }
 }
 
-
 class _TerminateAction extends ConsumerWidget {
   final OrderModel order;
 
   const _TerminateAction({required this.order});
 
   Future<void> _confirmAndCancel(BuildContext context, WidgetRef ref) async {
-    final colors = AppColors.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: colors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Text(
-            'Terminate order?',
-            style: AppTextStyles.section(ctx).copyWith(
-              color: colors.textPrimary,
-            ),
-          ),
-          content: Text(
-            'This will cancel the order. It will be kept in history and '
-            'shown under the Cancelled tab. This cannot be undone.',
-            style: AppTextStyles.bodySecondary(ctx).copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(
-                'Keep order',
-                style: AppTextStyles.label(ctx).copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(
-                'Terminate',
-                style: AppTextStyles.label(ctx).copyWith(
-                  color: const Color(0xFFE05151),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+    final confirmed = await RdxNoticeDialog.showConfirmation(
+      context,
+      title: 'Terminate order?',
+      message: 'This will cancel the order. It will be kept in history and '
+          'shown under the Cancelled tab. This cannot be undone.',
+      cancelButtonLabel: 'Keep order',
+      confirmButtonLabel: 'Terminate',
+      confirmButtonColor: const Color(0xFFE05151),
     );
 
     if (confirmed != true) return;
@@ -1075,7 +1024,6 @@ class _TerminateAction extends ConsumerWidget {
       width: double.infinity,
       child: RdxActionButton(
         label: 'Terminate',
-        leadingIcon: Icons.cancel_outlined,
         isPrimary: false,
         onPressed: () => _confirmAndCancel(context, ref),
       ),
@@ -1194,31 +1142,31 @@ class _PaymentStatusCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(context.h(12)),
       decoration: BoxDecoration(
-        color: colors.surfaceVariant,
+        color: const Color(0xFFFFF8E7),
         borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: const Color(0xFFF3D58A)),
       ),
       child: Row(
         children: [
           Icon(
             Icons.pending_outlined,
             size: context.h(18),
-            color: colors.textMuted,
+            color: const Color(0xFFD99A00),
           ),
           SizedBox(width: context.w(10)),
           Expanded(
             child: Text(
               'Payment is pending',
               style: AppTextStyles.bodySecondary(context).copyWith(
-                color: colors.textSecondary,
+                color: const Color(0xFF80651B),
               ),
             ),
           ),
           Text(
             '₹${order.total.toStringAsFixed(2)}',
             style: AppTextStyles.body(context).copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w700,
+              color: const Color(0xFF6B5313),
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

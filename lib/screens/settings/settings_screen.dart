@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
 import '../../widgets/buttons/rdx_toggle_button.dart'; // adjust path if needed
+import '../../widgets/settings/operating_hours_editor.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -45,32 +46,43 @@ class SettingsScreen extends ConsumerWidget {
               builder: (context, constraints) {
                 final compact = constraints.maxWidth < 760;
                 final identity = _IdentityCard(colors: colors);
-                //  final rules = _RulesCard(provider: provider, colors: colors);
+                final hours = _SettingsCard(
+                  title: 'Operating Hours',
+                  icon: Icons.access_time_outlined,
+                  colors: colors,
+                  child: const OperatingHoursEditor(),
+                );
+                final delivery = _DeliveryRulesCard(
+                  provider: provider,
+                  colors: colors,
+                );
 
                 if (compact) {
                   return Column(children: [
                     identity,
                     SizedBox(height: context.h(14)),
-                    // rules,
+                    hours,
+                    SizedBox(height: context.h(14)),
+                    delivery,
                   ]);
                 }
-                return Column(
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Column(children: [
-                            identity,
-                            SizedBox(height: context.h(14)),
-                            // rules,
-                          ]),
-                        ),
-                      ],
-                    ),
-                  ]
-                );
+                return Column(children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Column(children: [
+                          identity,
+                          SizedBox(height: context.h(14)),
+                          hours,
+                          SizedBox(height: context.h(14)),
+                          delivery,
+                        ]),
+                      ),
+                    ],
+                  ),
+                ]);
               },
             ),
           ],
@@ -167,13 +179,11 @@ class _SettingsCard extends StatelessWidget {
   final IconData icon;
   final AppColorScheme colors;
   final Widget child;
-  final Widget? trailing;
   const _SettingsCard(
       {required this.title,
       required this.icon,
       required this.colors,
-      required this.child,
-      this.trailing});
+      required this.child});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -195,8 +205,6 @@ class _SettingsCard extends StatelessWidget {
           Text(title,
               style: AppTextStyles.section(context)
                   .copyWith(color: colors.textPrimary)),
-          const Spacer(),
-          if (trailing != null) trailing!
         ]),
         SizedBox(height: context.h(10)),
         Divider(height: context.h(1), color: colors.divider),
@@ -293,25 +301,28 @@ class _SettingsInput extends StatelessWidget {
       );
 }
 
-class _TimeBox extends StatelessWidget {
-  final String text;
+class _DeliveryRulesCard extends StatelessWidget {
+  final SettingsProvider provider;
   final AppColorScheme colors;
-  const _TimeBox({required this.text, required this.colors});
+
+  const _DeliveryRulesCard({required this.provider, required this.colors});
+
   @override
-  Widget build(BuildContext context) => Container(
-        alignment: Alignment.center,
-        padding: EdgeInsets.symmetric(
-          vertical: context.h(6),
-          horizontal: context.w(3),
+  Widget build(BuildContext context) => _SettingsCard(
+        title: 'Delivery Rules',
+        icon: Icons.delivery_dining_outlined,
+        colors: colors,
+        child: Column(
+          children: [
+            _RuleTile(
+              title: 'Late Night Delivery (₹5)',
+              subtitle:
+                  'Automatically applies after the configured weekday or weekend closing time.',
+              value: provider.lateNightDelivery,
+              onChanged: provider.toggleLateNightDelivery,
+              colors: colors,
+            ),
+          ],
         ),
-        decoration: BoxDecoration(
-          color: colors.background,
-          borderRadius: BorderRadius.circular(context.h(4)),
-          border: Border.all(color: colors.border),
-        ),
-        child: Text(text,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.label(context)
-                .copyWith(color: colors.textSecondary)),
       );
 }

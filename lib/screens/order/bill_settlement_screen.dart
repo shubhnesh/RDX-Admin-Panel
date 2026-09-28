@@ -29,6 +29,8 @@ class BillSettlementData {
   final String? cardLastFour;
   final double subtotal;
   final double taxPercentage;
+  final double lateNightFee;
+  final double longDistanceFee;
   final String guestName;
   final String phoneNumber;
   final bool sendDigitalReceipt;
@@ -51,6 +53,8 @@ class BillSettlementData {
     this.cardLastFour,
     required this.subtotal,
     required this.taxPercentage,
+    this.lateNightFee = 0,
+    this.longDistanceFee = 0,
     required this.guestName,
     required this.phoneNumber,
     required this.sendDigitalReceipt,
@@ -60,7 +64,7 @@ class BillSettlementData {
 
   double get taxAmount => subtotal * taxPercentage / 100;
 
-  double get total => subtotal + taxAmount;
+  double get total => subtotal + taxAmount + lateNightFee + longDistanceFee;
 
   int get totalQuantity => items.fold(0, (sum, item) => sum + item.quantity);
 }
@@ -608,7 +612,9 @@ class _PaymentMethodPanel extends StatelessWidget {
             vertical: context.h(14),
           ),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary.withValues(alpha: 0.08) : Colors.white,
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.08)
+                : Colors.white,
             borderRadius: BorderRadius.circular(context.h(10)),
             border: Border.all(
               color: isSelected ? AppColors.primary : colors.border,
@@ -621,7 +627,9 @@ class _PaymentMethodPanel extends StatelessWidget {
               Icon(
                 m.icon,
                 size: context.h(22),
-                color: isSelected ? AppColors.primary : AppColors.textPrimary.withAlpha(90),
+                color: isSelected
+                    ? AppColors.primary
+                    : AppColors.textPrimary.withAlpha(90),
               ),
               SizedBox(height: context.h(8)),
               Text(
@@ -749,9 +757,19 @@ class _BillingPanel extends StatelessWidget {
           _amountRow(
             context,
             colors,
-            'Tax (${bill.taxPercentage.toStringAsFixed(0)}%)',
+            'GST (${bill.taxPercentage.toStringAsFixed(0)}%)',
             bill.taxAmount,
           ),
+          if (bill.lateNightFee > 0) ...[
+            SizedBox(height: context.h(6)),
+            _amountRow(
+                context, colors, 'Late Night Delivery', bill.lateNightFee),
+          ],
+          if (bill.longDistanceFee > 0) ...[
+            SizedBox(height: context.h(6)),
+            _amountRow(
+                context, colors, 'Long Distance Fee', bill.longDistanceFee),
+          ],
           SizedBox(height: context.h(12)),
           Container(
             width: double.infinity,
@@ -993,9 +1011,19 @@ class _ReceiptPanel extends StatelessWidget {
                   _receiptMoneyRow(
                     context,
                     colors,
-                    'Tax (${bill.taxPercentage.toStringAsFixed(0)}%)',
+                    'GST (${bill.taxPercentage.toStringAsFixed(0)}%)',
                     bill.taxAmount,
                   ),
+                  if (bill.lateNightFee > 0) ...[
+                    SizedBox(height: context.h(4)),
+                    _receiptMoneyRow(context, colors, 'Late Night Delivery',
+                        bill.lateNightFee),
+                  ],
+                  if (bill.longDistanceFee > 0) ...[
+                    SizedBox(height: context.h(4)),
+                    _receiptMoneyRow(context, colors, 'Long Distance Fee',
+                        bill.longDistanceFee),
+                  ],
                   SizedBox(height: context.h(10)),
                   Container(
                     width: double.infinity,

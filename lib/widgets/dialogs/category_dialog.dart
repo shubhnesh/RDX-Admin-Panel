@@ -19,6 +19,7 @@ class CategoryEntryDialog<T> extends StatefulWidget {
   final String? editTitle;
   final String nameLabel;
   final String nameHint;
+  final int nameMaxLength;
   final String? description;
   final String? initialName;
   final List<String> initialSubItems;
@@ -36,6 +37,7 @@ class CategoryEntryDialog<T> extends StatefulWidget {
     this.editTitle,
     required this.nameLabel,
     required this.nameHint,
+    this.nameMaxLength = 20,
     this.description,
     this.initialName,
     this.initialSubItems = const [],
@@ -54,6 +56,7 @@ class CategoryEntryDialog<T> extends StatefulWidget {
     String? editTitle,
     required String nameLabel,
     required String nameHint,
+    int nameMaxLength = 20,
     String? description,
     String? initialName,
     List<String> initialSubItems = const [],
@@ -71,6 +74,7 @@ class CategoryEntryDialog<T> extends StatefulWidget {
         editTitle: editTitle,
         nameLabel: nameLabel,
         nameHint: nameHint,
+        nameMaxLength: nameMaxLength,
         description: description,
         initialName: initialName,
         initialSubItems: initialSubItems,
@@ -227,7 +231,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
               SizedBox(height: context.h(16)),
               RdxTextField(
                 controller: _nameController,
-                maxLength: 20,
+                maxLength: widget.nameMaxLength,
                 label: widget.nameLabel,
                 hint: widget.nameHint,
                 onChanged: (_) {

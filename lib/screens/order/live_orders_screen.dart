@@ -10,6 +10,7 @@ import 'package:rdx_admin/widgets/resuable_options/rdx_dropdown.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
+import '../../core/utils/tax.dart';
 import '../../models/order_model.dart';
 import '../../providers/live_orders_provider.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
@@ -187,7 +188,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               0,
               (sum, item) => sum + (item.price * item.quantity),
             ),
-            taxPercentage: 0,
+            taxPercentage: AppTax.gstPercentage,
             guestName: order.customerName.trim().isNotEmpty
                 ? order.customerName
                 : 'Walk-in Customer',

@@ -6,7 +6,7 @@ import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/responsive_size.dart';
-import '../../../models/cart_item_model.dart';
+import '../../../core/utils/tax.dart';
 import '../../../providers/cart_provider.dart';
 
 class CartPanel extends ConsumerWidget {
@@ -25,7 +25,7 @@ class CartPanel extends ConsumerWidget {
     final cart = ref.watch(cartProvider);
     final subtotal = ref.watch(cartTotalProvider);
 
-    final tax = subtotal * 0.08;
+    final tax = subtotal * (AppTax.gstPercentage / 100);
     final total = subtotal + tax;
 
     return Container(
@@ -65,7 +65,7 @@ class CartPanel extends ConsumerWidget {
                       vertical: context.h(2),
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.12),
+                      color: AppColors.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(context.h(20)),
                     ),
                     child: Text(
@@ -150,12 +150,12 @@ class CartPanel extends ConsumerWidget {
 
                 SizedBox(height: context.h(6)),
 
-                // TAX
+                // GST
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Tax (8%)',
+                      'GST (${AppTax.gstPercentage.toStringAsFixed(0)}%)',
                       style: AppTextStyles.bodySecondary(context),
                     ),
                     Text(

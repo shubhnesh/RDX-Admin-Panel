@@ -7,10 +7,13 @@ import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
+import '../../core/utils/tax.dart';
 import '../../models/order_model.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/order_providers.dart';
+import '../../providers/settings_provider.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
+import '../../widgets/buttons/rdx_toggle_button.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 import '../../widgets/resuable_options/rdx_dropdown.dart';
 import '../../widgets/resuable_options/rdx_text_field.dart';
@@ -36,8 +39,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _orderNotes = TextEditingController();
 
   OrderType _orderType = OrderType.dineIn;
-
-  static const double _taxPercentage = 8.0;
+  bool _longDistanceFeeSelected = false;
 
   final _tableConfigService = TableConfigService();
 
@@ -147,8 +149,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
 
     final subtotal = ref.read(cartTotalProvider);
-    final tax = subtotal * (_taxPercentage / 100);
-    final total = subtotal + tax;
+    final tax = subtotal * (AppTax.gstPercentage / 100);
+    final settings = ref.read(settingsProvider);
+    final lateNightFee = _orderType == OrderType.delivery &&
+            settings.lateNightDelivery &&
+            settings.isLateNightDeliveryTime()
+        ? 5.0
+        : 0.0;
+    final longDistanceFee =
+        _orderType == OrderType.delivery && _longDistanceFeeSelected
+            ? 29.0
+            : 0.0;
+    final total = subtotal + tax + lateNightFee + longDistanceFee;
 
     final order = OrderModel(
       id: '',
@@ -236,7 +248,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               paymentMethod: null,
               cardLastFour: null,
               subtotal: subtotal,
-              taxPercentage: _taxPercentage,
+              taxPercentage: AppTax.gstPercentage,
+              lateNightFee: lateNightFee,
+              longDistanceFee: longDistanceFee,
               guestName: guestName,
               phoneNumber: phoneNumber,
               sendDigitalReceipt: false,
@@ -267,8 +281,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final colors = AppColors.of(context);
     final cart = ref.watch(cartProvider);
     final subtotal = ref.watch(cartTotalProvider);
-    final tax = subtotal * (_taxPercentage / 100);
-    final total = subtotal + tax;
+    final tax = subtotal * (AppTax.gstPercentage / 100);
+    final settings = ref.watch(settingsProvider);
+    final lateNightActive = _orderType == OrderType.delivery &&
+        settings.lateNightDelivery &&
+        settings.isLateNightDeliveryTime();
+    final lateNightFee = lateNightActive ? 5.0 : 0.0;
+    final longDistanceFee =
+        _orderType == OrderType.delivery && _longDistanceFeeSelected
+            ? 29.0
+            : 0.0;
+    final total = subtotal + tax + lateNightFee + longDistanceFee;
     final placing = ref.watch(placeOrderControllerProvider).isLoading;
 
     return Scaffold(
@@ -321,9 +344,27 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         _summaryAmountRow(
                           context,
                           colors,
-                          'Tax (${_taxPercentage.toStringAsFixed(0)}%)',
+                          'GST (${AppTax.gstPercentage.toStringAsFixed(0)}%)',
                           tax,
                         ),
+                        if (lateNightFee > 0) ...[
+                          SizedBox(height: context.h(6)),
+                          _summaryAmountRow(
+                            context,
+                            colors,
+                            'Late Night Delivery',
+                            lateNightFee,
+                          ),
+                        ],
+                        if (longDistanceFee > 0) ...[
+                          SizedBox(height: context.h(6)),
+                          _summaryAmountRow(
+                            context,
+                            colors,
+                            'Long Distance Fee',
+                            longDistanceFee,
+                          ),
+                        ],
                         SizedBox(height: context.h(10)),
                         Row(
                           children: [
@@ -416,6 +457,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               }
                               if (value != OrderType.delivery) {
                                 _deliveryAddress.clear();
+                                _longDistanceFeeSelected = false;
                               }
                             });
                           },
@@ -464,6 +506,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             label: 'Delivery Address *',
                             hint: 'Enter delivery address',
                             maxLines: 3,
+                          ),
+                          SizedBox(height: context.h(12)),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Long Distance Fee (₹29)',
+                                style: AppTextStyles.bodySecondary(context)
+                                    .copyWith(color: colors.textMuted),
+                              ),
+                              SizedBox(width: context.w(8)),
+                              RdxToggleButton(
+                                value: _longDistanceFeeSelected,
+                                onChanged: (value) => setState(
+                                  () => _longDistanceFeeSelected = value,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ],

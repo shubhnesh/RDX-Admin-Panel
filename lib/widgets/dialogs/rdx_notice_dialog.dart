@@ -9,12 +9,18 @@ class RdxNoticeDialog extends StatelessWidget {
   final String title;
   final String message;
   final String buttonLabel;
+  final String? cancelButtonLabel;
+  final String? confirmButtonLabel;
+  final Color? confirmButtonColor;
 
   const RdxNoticeDialog({
     super.key,
     this.title = 'Notice',
     required this.message,
     this.buttonLabel = 'OK',
+    this.cancelButtonLabel,
+    this.confirmButtonLabel,
+    this.confirmButtonColor,
   });
 
   /// Shows a notice dialog and completes when the user dismisses it.
@@ -30,6 +36,27 @@ class RdxNoticeDialog extends StatelessWidget {
         title: title,
         message: message,
         buttonLabel: buttonLabel,
+      ),
+    );
+  }
+
+  /// Shows a confirmation dialog and returns true only when confirmed.
+  static Future<bool?> showConfirmation(
+    BuildContext context, {
+    String title = 'Confirm',
+    required String message,
+    String cancelButtonLabel = 'Cancel',
+    String confirmButtonLabel = 'Confirm',
+    Color? confirmButtonColor,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (_) => RdxNoticeDialog(
+        title: title,
+        message: message,
+        cancelButtonLabel: cancelButtonLabel,
+        confirmButtonLabel: confirmButtonLabel,
+        confirmButtonColor: confirmButtonColor,
       ),
     );
   }
@@ -56,15 +83,36 @@ class RdxNoticeDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(
-            buttonLabel,
-            style: AppTextStyles.label(context).copyWith(
-              color: AppColors.primary,
+        if (confirmButtonLabel != null) ...[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              cancelButtonLabel ?? 'Cancel',
+              style: AppTextStyles.label(context).copyWith(
+                color: colors.textSecondary,
+              ),
             ),
           ),
-        ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(
+              confirmButtonLabel!,
+              style: AppTextStyles.label(context).copyWith(
+                color: confirmButtonColor ?? AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ] else
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              buttonLabel,
+              style: AppTextStyles.label(context).copyWith(
+                color: AppColors.primary,
+              ),
+            ),
+          ),
       ],
     );
   }

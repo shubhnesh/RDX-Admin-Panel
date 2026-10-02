@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/screens/coupons/create_coupon_screen.dart';
+import 'package:rdx_admin/screens/coupons/create_offer_screen.dart';
 import 'package:rdx_admin/screens/coupons/widgets/coupon_card.dart';
+import 'package:rdx_admin/screens/coupons/widgets/offer_card.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_action_menu_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_delete_dialog.dart';
 import 'package:rdx_admin/widgets/buttons/stats_collapse_button.dart';
@@ -10,13 +12,17 @@ import '../../core/theme/text_styles.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/coupon_model.dart';
+import '../../models/offer_model.dart';
 import '../../providers/coupon_provider.dart';
+import '../../providers/offer_provider.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/resuable_options/rdx_search_bar.dart';
 import '../../widgets/resuable_options/rdx_category_tabs.dart';
 import '../../widgets/reusable_widgets/stat_card.dart';
+
+enum PromotionTypeFilter { all, coupons, offers }
 
 class CouponsScreen extends ConsumerStatefulWidget {
   const CouponsScreen({super.key});
@@ -28,10 +34,8 @@ class CouponsScreen extends ConsumerStatefulWidget {
 class _CouponsScreenState extends ConsumerState<CouponsScreen> {
   final _searchController = TextEditingController();
   String _query = '';
-
-  /// Whether the summary stat card row is hidden, giving the coupon grid
-  /// below more vertical room. Toggled by [StatsCollapseButton].
   bool _statsCollapsed = false;
+  PromotionTypeFilter _typeFilter = PromotionTypeFilter.all;
 
   @override
   void initState() {
@@ -39,6 +43,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(couponProvider).load();
+      ref.read(offerProvider).load();
     });
   }
 
@@ -48,8 +53,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     super.dispose();
   }
 
-  String _selectedStatusLabel(CouponProvider provider) =>
-      switch (provider.statusFilter) {
+  String _selectedStatusLabel(CouponStatus? status) => switch (status) {
         CouponStatus.active => 'Active',
         CouponStatus.scheduled => 'Scheduled',
         CouponStatus.expired => 'Expired',
@@ -63,14 +67,21 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
         _ => null,
       };
 
-  void _showCouponActions(
-    BuildContext buttonContext,
-    CouponModel coupon,
-  ) {
+  String _selectedTypeLabel() => switch (_typeFilter) {
+        PromotionTypeFilter.all => 'All',
+        PromotionTypeFilter.coupons => 'Coupons',
+        PromotionTypeFilter.offers => 'Offers',
+      };
+
+  PromotionTypeFilter _typeForLabel(String label) => switch (label) {
+        'Coupons' => PromotionTypeFilter.coupons,
+        'Offers' => PromotionTypeFilter.offers,
+        _ => PromotionTypeFilter.all,
+      };
+
+  void _showCouponActions(BuildContext buttonContext, CouponModel coupon) {
     final renderObject = buttonContext.findRenderObject();
-
     if (renderObject is! RenderBox) return;
-
     final buttonPosition = renderObject.localToGlobal(Offset.zero);
 
     showGeneralDialog<void>(
@@ -78,37 +89,20 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
       barrierDismissible: true,
       barrierLabel: 'Coupon actions',
       barrierColor: Colors.transparent,
-      transitionDuration: const Duration(
-        milliseconds: 120,
-      ),
-      pageBuilder: (
-        dialogContext,
-        animation,
-        secondaryAnimation,
-      ) {
+      transitionDuration: const Duration(milliseconds: 120),
+      pageBuilder: (_, __, ___) {
         return RdxActionMenuDialog(
           position: buttonPosition,
           gap: 6,
           items: [
             RdxActionMenuItem(
               title: 'Edit',
-              onTap: () {
-                _openCreateCoupon(
-                  context,
-                  coupon: coupon,
-                );
-              },
+              onTap: () => _openCreateCoupon(context, coupon: coupon),
             ),
             RdxActionMenuItem(
               title: 'Delete',
               textColor: AppColors.danger,
-              onTap: () {
-                // ref.read(couponProvider).deleteCoupon(coupon.id);
-                _confirmDelete(
-                  context,
-                  coupon,
-                );
-              },
+              onTap: () => _confirmDeleteCoupon(context, coupon),
             ),
           ],
         );
@@ -116,17 +110,38 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     );
   }
 
-  // Future<void> _confirmDelete(BuildContext context, CouponModel coupon) async {
-  //   final confirmed = await showDialog<bool>(
-  //     context: context,
-  //     builder: (_) => DeleteMaterialDialog(item: coupon),
-  //   );
-  //   if (confirmed == true && context.mounted) {
-  //     await ref.read(couponProvider).deleteCoupon(coupon.id);
-  //   }
-  // }
+  void _showOfferActions(BuildContext buttonContext, OfferModel offer) {
+    final renderObject = buttonContext.findRenderObject();
+    if (renderObject is! RenderBox) return;
+    final buttonPosition = renderObject.localToGlobal(Offset.zero);
 
-  Future<void> _confirmDelete(
+    showGeneralDialog<void>(
+      context: buttonContext,
+      barrierDismissible: true,
+      barrierLabel: 'Offer actions',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 120),
+      pageBuilder: (_, __, ___) {
+        return RdxActionMenuDialog(
+          position: buttonPosition,
+          gap: 6,
+          items: [
+            RdxActionMenuItem(
+              title: 'Edit',
+              onTap: () => _openCreateOffer(context, offer: offer),
+            ),
+            RdxActionMenuItem(
+              title: 'Delete',
+              textColor: AppColors.danger,
+              onTap: () => _confirmDeleteOffer(context, offer),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDeleteCoupon(
     BuildContext context,
     CouponModel coupon,
   ) async {
@@ -184,38 +199,178 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     }
   }
 
+  Future<void> _confirmDeleteOffer(
+    BuildContext context,
+    OfferModel offer,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => RdxDeleteDialog(
+        title: 'Delete Offer',
+        itemName: offer.title,
+        itemDetails: [
+          if (offer.description.isNotEmpty)
+            Text(
+              offer.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body(context).copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
+            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: RdxDeleteMetric(
+                  label: 'Discount',
+                  value: offer.discountType == DiscountType.percentage
+                      ? '${offer.discountValue.toStringAsFixed(0)}% OFF'
+                      : '${Formatters.currency(offer.discountValue)} OFF',
+                ),
+              ),
+              SizedBox(width: context.w(16)),
+              Expanded(
+                child: RdxDeleteMetric(
+                  label: 'Usage',
+                  value: offer.usageLimit == null
+                      ? '${offer.usageCount} used'
+                      : '${offer.usageCount} / ${offer.usageLimit}',
+                ),
+              ),
+            ],
+          ),
+          RdxDeleteMetric(
+            label: 'Validity',
+            value: '${Formatters.date(offer.startDate)} - '
+                '${Formatters.date(offer.endDate)}',
+          ),
+        ],
+        deleteButtonLabel: 'Delete Offer',
+        warningMessage: 'Deleting this offer will permanently remove it from '
+            'your promotions. This action cannot be undone.',
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await ref.read(offerProvider).deleteOffer(offer.id);
+    }
+  }
+
   Future<void> _openCreateCoupon(
     BuildContext context, {
     CouponModel? coupon,
   }) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => CreateCouponScreen(
-          existing: coupon,
-        ),
+        builder: (_) => CreateCouponScreen(existing: coupon),
       ),
+    );
+  }
+
+  Future<void> _openCreateOffer(
+    BuildContext context, {
+    OfferModel? offer,
+  }) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CreateOfferScreen(existing: offer),
+      ),
+    );
+  }
+
+  void _showCreatePromotionMenu(BuildContext buttonContext) {
+    final renderObject = buttonContext.findRenderObject();
+    if (renderObject is! RenderBox) return;
+    final buttonPosition = renderObject.localToGlobal(Offset.zero);
+
+    showGeneralDialog<void>(
+      context: buttonContext,
+      barrierDismissible: true,
+      barrierLabel: 'Create promotion',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 120),
+      pageBuilder: (_, __, ___) {
+        return RdxActionMenuDialog(
+          position: buttonPosition,
+          gap: 6,
+          items: [
+            RdxActionMenuItem(
+              title: 'Create Coupon',
+              onTap: () async {
+                await _openCreateCoupon(context);
+                if (context.mounted) {
+                  ref.read(couponProvider).load();
+                }
+              },
+            ),
+            RdxActionMenuItem(
+              title: 'Create Offer',
+              onTap: () async {
+                await _openCreateOffer(context);
+                if (context.mounted) {
+                  ref.read(offerProvider).load();
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final provider = ref.watch(couponProvider);
+    final couponState = ref.watch(couponProvider);
+    final offerState = ref.watch(offerProvider);
 
     final visibleCoupons = _query.isEmpty
-        ? provider.filteredCoupons
-        : provider.filteredCoupons
+        ? couponState.filteredCoupons
+        : couponState.filteredCoupons
             .where(
-              (c) =>
-                  c.code.toLowerCase().contains(_query.toLowerCase()) ||
-                  c.description.toLowerCase().contains(_query.toLowerCase()),
+              (coupon) =>
+                  coupon.code.toLowerCase().contains(_query.toLowerCase()) ||
+                  coupon.description
+                      .toLowerCase()
+                      .contains(_query.toLowerCase()),
             )
             .toList();
 
-    final totalUsageToday = provider.filteredCoupons.fold<int>(
+    final visibleOffers = _query.isEmpty
+        ? offerState.filteredOffers
+        : offerState.filteredOffers
+            .where(
+              (offer) =>
+                  offer.title.toLowerCase().contains(_query.toLowerCase()) ||
+                  offer.description
+                      .toLowerCase()
+                      .contains(_query.toLowerCase()),
+            )
+            .toList();
+
+    final filteredCoupons = switch (_typeFilter) {
+      PromotionTypeFilter.all || PromotionTypeFilter.coupons => visibleCoupons,
+      PromotionTypeFilter.offers => const <CouponModel>[],
+    };
+
+    final filteredOffers = switch (_typeFilter) {
+      PromotionTypeFilter.all || PromotionTypeFilter.offers => visibleOffers,
+      PromotionTypeFilter.coupons => const <OfferModel>[],
+    };
+
+    final totalUsageToday = couponState.filteredCoupons.fold<int>(
       0,
-      (sum, c) => sum + c.usageCount,
+      (sum, coupon) => sum + coupon.usageCount,
     );
+
+    final hasVisibleResults =
+        filteredCoupons.isNotEmpty || filteredOffers.isNotEmpty;
+    final emptyMessage = switch (_typeFilter) {
+      PromotionTypeFilter.coupons => 'No coupons found',
+      PromotionTypeFilter.offers => 'No offers found',
+      PromotionTypeFilter.all => 'No coupons or offers found',
+    };
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -229,36 +384,21 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Search + Create button ──────────────────────────
               RdxSearchToolbar(
-                hintText: 'Search coupons',
+                hintText: 'Search coupons & offers',
                 controller: _searchController,
                 onChanged: (v) => setState(() => _query = v),
                 actions: [
-                  RdxActionButton(
-                    label: 'Create Coupon',
-                    leadingIcon: Icons.add,
-                    // onPressed: () async {
-                    //   await Navigator.of(context).pushNamed(
-                    //     AppRoutes.createCoupon,
-                    //   );
-                    //   if (context.mounted) {
-                    //     ref.read(couponProvider).load();
-                    //   }
-                    onPressed: () async {
-                      await _openCreateCoupon(context);
-
-                      if (context.mounted) {
-                        ref.read(couponProvider).load();
-                      }
-                    },
+                  Builder(
+                    builder: (buttonContext) => RdxActionButton(
+                      label: 'Create Coupon',
+                      leadingIcon: Icons.add,
+                      onPressed: () => _showCreatePromotionMenu(buttonContext),
+                    ),
                   ),
                 ],
               ),
-
               SizedBox(height: context.h(16)),
-
-              // ── Title + status filter (stack on narrow) ─────────
               Builder(builder: (context) {
                 final narrow = MediaQuery.sizeOf(context).width < 900;
                 final titleBlock = Column(
@@ -277,43 +417,59 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                     ),
                   ],
                 );
-                final tabs = RdxCategoryTabs(
+
+                final typeTabs = RdxCategoryTabs(
+                  expand: false,
+                  labels: const ['Coupons', 'Offers'],
+                  allLabel: 'All',
+                  selectedLabel: _selectedTypeLabel(),
+                  onSelected: (label) {
+                    setState(() => _typeFilter = _typeForLabel(label));
+                  },
+                );
+
+                final statusTabs = RdxCategoryTabs(
                   expand: false,
                   labels: const ['Active', 'Scheduled', 'Expired'],
                   allLabel: 'All',
-                  selectedLabel: _selectedStatusLabel(provider),
+                  selectedLabel: _selectedStatusLabel(
+                    couponState.statusFilter ?? offerState.statusFilter,
+                  ),
                   onSelected: (label) {
-                    provider.setStatusFilter(_statusForLabel(label));
+                    final status = _statusForLabel(label);
+                    ref.read(couponProvider).setStatusFilter(status);
+                    ref.read(offerProvider).setStatusFilter(status);
                   },
                 );
+
                 if (narrow) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       titleBlock,
                       SizedBox(height: context.h(12)),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: tabs,
-                      ),
+                      typeTabs,
+                      SizedBox(height: context.h(8)),
+                      statusTabs,
                     ],
                   );
                 }
+
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: titleBlock),
-                    tabs,
+                    Column(
+                      children: [
+                        typeTabs,
+                        SizedBox(height: context.h(8)),
+                        statusTabs,
+                      ],
+                    ),
                   ],
                 );
               }),
-
               SizedBox(height: context.h(20)),
-
-              // ── Stats collapse toggle ───────────────────────────
-              // Sits above the summary stat cards' left edge; collapsing
-              // hides the row entirely so the coupon grid below gets
-              // more vertical space.
               Align(
                 alignment: Alignment.centerLeft,
                 child: StatsCollapseButton(
@@ -324,8 +480,6 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                 ),
               ),
               SizedBox(height: context.h(8)),
-
-              // ── Summary stat cards ──────────────────────────────
               AnimatedSize(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOut,
@@ -339,7 +493,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                             Expanded(
                               child: StatCard(
                                 label: 'Total Active',
-                                value: '${provider.activeCount} coupons',
+                                value: '${couponState.activeCount} coupons',
                                 icon: Icons.local_offer_outlined,
                               ),
                             ),
@@ -356,45 +510,57 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                         ),
                       ),
               ),
-
               SizedBox(height: context.h(20)),
-
-              // ── Coupon grid ─────────────────────────────────────
               Expanded(
-                child: provider.isLoading
+                child: couponState.isLoading || offerState.isLoading
                     ? const LoadingIndicator()
-                    : visibleCoupons.isEmpty
-                        ? const EmptyState(
-                            message: 'No coupons found',
+                    : !hasVisibleResults
+                        ? EmptyState(
+                            message: emptyMessage,
                             icon: Icons.local_offer_outlined,
                           )
                         : LayoutBuilder(
                             builder: (context, constraints) {
                               final columns = Responsive.gridColumns(context);
                               final spacing = context.w(16);
-
                               final cardWidth = (constraints.maxWidth -
                                       ((columns - 1) * spacing)) /
                                   columns;
+
+                              final cards = <Widget>[];
+                              for (final coupon in filteredCoupons) {
+                                cards.add(
+                                  SizedBox(
+                                    width: cardWidth,
+                                    child: CouponCard(
+                                      coupon: coupon,
+                                      onActions: (buttonContext) {
+                                        _showCouponActions(
+                                            buttonContext, coupon);
+                                      },
+                                    ),
+                                  ),
+                                );
+                              }
+                              for (final offer in filteredOffers) {
+                                cards.add(
+                                  SizedBox(
+                                    width: cardWidth,
+                                    child: OfferCard(
+                                      offer: offer,
+                                      onActions: (buttonContext) {
+                                        _showOfferActions(buttonContext, offer);
+                                      },
+                                    ),
+                                  ),
+                                );
+                              }
 
                               return SingleChildScrollView(
                                 child: Wrap(
                                   spacing: spacing,
                                   runSpacing: spacing,
-                                  children: visibleCoupons.map((coupon) {
-                                    return SizedBox(
-                                      width: cardWidth,
-                                      child: CouponCard(
-                                        coupon: coupon,
-                                        onActions: (buttonContext) {
-                                          _showCouponActions(
-                                            buttonContext,
-                                            coupon,
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  }).toList(),
+                                  children: cards,
                                 ),
                               );
                             },

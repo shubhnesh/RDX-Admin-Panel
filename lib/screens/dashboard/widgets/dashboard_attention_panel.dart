@@ -3,6 +3,8 @@ import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/dashboard_stats_model.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_empty.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_card_style.dart';
 
 /// Aggregated "needs attention" list from stock, unpaid orders, coupons, etc.
 class DashboardAttentionPanel extends StatelessWidget {
@@ -27,36 +29,24 @@ class DashboardAttentionPanel extends StatelessWidget {
         context.w(18),
         context.h(12),
       ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(context.h(14)),
-        border: Border.all(color: colors.border),
-      ),
+      decoration: DashboardCardStyle.decoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.priority_high_rounded,
-                size: context.h(18),
-                color: AppColors.primary,
-              ),
-              SizedBox(width: context.w(8)),
-              Text(
-                'Needs attention',
-                style: AppTextStyles.heading(context),
-              ),
-              const Spacer(),
-              if (items.isNotEmpty)
-                Container(
+          // Title lives on the parent DashboardSection.
+          if (items.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(bottom: context.h(10)),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: context.w(8),
                     vertical: context.h(3),
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(context.h(20)),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     '${items.length}',
@@ -66,28 +56,14 @@ class DashboardAttentionPanel extends StatelessWidget {
                     ),
                   ),
                 ),
-            ],
-          ),
-          SizedBox(height: context.h(12)),
-          if (items.isEmpty)
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: context.h(8)),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    size: context.h(18),
-                    color: AppColors.success,
-                  ),
-                  SizedBox(width: context.w(8)),
-                  Text(
-                    'All clear — nothing urgent right now.',
-                    style: AppTextStyles.bodySecondary(context).copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
               ),
+            ),
+          if (items.isEmpty)
+            const DashboardEmpty(
+              icon: Icons.priority_high_rounded,
+              title: 'No issues need attention',
+              subtitle:
+                  'Stock, payment and coupon alerts will appear here when action is needed.',
             )
           else
             for (var i = 0; i < items.length; i++) ...[

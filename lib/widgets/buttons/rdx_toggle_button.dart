@@ -25,9 +25,10 @@ class RdxToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final toggleWidth = width ?? context.w(30);
-    final toggleHeight = height ?? context.h(20);
-    final thumbSize = toggleHeight - context.h(4);
+    final toggleWidth = width ?? context.w(30).clamp(28.0, 30.0);
+    final toggleHeight = height ?? context.h(16).clamp(12.0, 16.0);
+    final inset = context.h(1).clamp(0.75, 1.0);
+    final thumbSize = toggleHeight - inset * 2;
     final active = activeColor ?? AppColors.primary;
     final inactive = inactiveColor ?? colors.textMuted;
     final currentColor = enabled && value ? active : inactive;
@@ -38,7 +39,7 @@ class RdxToggleButton extends StatelessWidget {
       child: Container(
         width: toggleWidth,
         height: toggleHeight,
-        padding: EdgeInsets.all(context.h(2)),
+        padding: EdgeInsets.all(inset),
         decoration: BoxDecoration(
           color: currentColor.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(toggleHeight),

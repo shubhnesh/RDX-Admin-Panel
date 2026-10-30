@@ -7,6 +7,7 @@ import 'package:rdx_admin/screens/coupons/widgets/offer_card.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_action_menu_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_delete_dialog.dart';
 import 'package:rdx_admin/widgets/buttons/stats_collapse_button.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_header_action_button.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/formatters.dart';
@@ -18,8 +19,9 @@ import '../../providers/offer_provider.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
-import '../../widgets/resuable_options/rdx_search_bar.dart';
-import '../../widgets/resuable_options/rdx_category_tabs.dart';
+import '../../widgets/reusable_widgets/rdx_dropdown.dart';
+import '../../widgets/reusable_widgets/rdx_search_bar.dart';
+import '../../widgets/reusable_widgets/rdx_category_tabs.dart';
 import '../../widgets/reusable_widgets/stat_card.dart';
 
 enum PromotionTypeFilter { all, coupons, offers }
@@ -55,28 +57,15 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
 
   String _selectedStatusLabel(CouponStatus? status) => switch (status) {
         CouponStatus.active => 'Active',
-        CouponStatus.scheduled => 'Scheduled',
+        CouponStatus.scheduled => 'All',
         CouponStatus.expired => 'Expired',
         null => 'All',
       };
 
   CouponStatus? _statusForLabel(String label) => switch (label) {
         'Active' => CouponStatus.active,
-        'Scheduled' => CouponStatus.scheduled,
         'Expired' => CouponStatus.expired,
         _ => null,
-      };
-
-  String _selectedTypeLabel() => switch (_typeFilter) {
-        PromotionTypeFilter.all => 'All',
-        PromotionTypeFilter.coupons => 'Coupons',
-        PromotionTypeFilter.offers => 'Offers',
-      };
-
-  PromotionTypeFilter _typeForLabel(String label) => switch (label) {
-        'Coupons' => PromotionTypeFilter.coupons,
-        'Offers' => PromotionTypeFilter.offers,
-        _ => PromotionTypeFilter.all,
       };
 
   void _showCouponActions(BuildContext buttonContext, CouponModel coupon) {
@@ -279,46 +268,6 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     );
   }
 
-  void _showCreatePromotionMenu(BuildContext buttonContext) {
-    final renderObject = buttonContext.findRenderObject();
-    if (renderObject is! RenderBox) return;
-    final buttonPosition = renderObject.localToGlobal(Offset.zero);
-
-    showGeneralDialog<void>(
-      context: buttonContext,
-      barrierDismissible: true,
-      barrierLabel: 'Create promotion',
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 120),
-      pageBuilder: (_, __, ___) {
-        return RdxActionMenuDialog(
-          position: buttonPosition,
-          gap: 6,
-          items: [
-            RdxActionMenuItem(
-              title: 'Create Coupon',
-              onTap: () async {
-                await _openCreateCoupon(context);
-                if (context.mounted) {
-                  ref.read(couponProvider).load();
-                }
-              },
-            ),
-            RdxActionMenuItem(
-              title: 'Create Offer',
-              onTap: () async {
-                await _openCreateOffer(context);
-                if (context.mounted) {
-                  ref.read(offerProvider).load();
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -359,217 +308,370 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
       PromotionTypeFilter.coupons => const <OfferModel>[],
     };
 
-    final totalUsageToday = couponState.filteredCoupons.fold<int>(
+    final couponUsages = couponState.filteredCoupons.fold<int>(
       0,
       (sum, coupon) => sum + coupon.usageCount,
     );
 
     final hasVisibleResults =
         filteredCoupons.isNotEmpty || filteredOffers.isNotEmpty;
+    final loadErrors = [
+      if (_typeFilter != PromotionTypeFilter.offers &&
+          couponState.errorMessage != null)
+        couponState.errorMessage!,
+      if (_typeFilter != PromotionTypeFilter.coupons &&
+          offerState.errorMessage != null)
+        offerState.errorMessage!,
+    ].join('\n');
     final emptyMessage = switch (_typeFilter) {
       PromotionTypeFilter.coupons => 'No coupons found',
       PromotionTypeFilter.offers => 'No offers found',
       PromotionTypeFilter.all => 'No coupons or offers found',
     };
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      body: SafeArea(
+    final pagePad = context.defaultScreenPadding();
+
+    final Widget listBody;
+    if (couponState.isLoading || offerState.isLoading) {
+      listBody = const LoadingIndicator();
+    } else if (!hasVisibleResults && loadErrors.isNotEmpty) {
+      listBody = Center(
         child: Padding(
-          padding: Responsive.pagePadding(
-            context,
-            top: context.h(14),
-            bottom: context.h(0),
-          ),
+          padding: EdgeInsets.all(context.w(24)),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              RdxSearchToolbar(
-                hintText: 'Search coupons & offers',
-                controller: _searchController,
-                onChanged: (v) => setState(() => _query = v),
-                actions: [
-                  Builder(
-                    builder: (buttonContext) => RdxActionButton(
-                      label: 'Create Coupon',
-                      leadingIcon: Icons.add,
-                      onPressed: () => _showCreatePromotionMenu(buttonContext),
-                    ),
-                  ),
-                ],
+              Text(
+                loadErrors,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.body(context),
               ),
-              SizedBox(height: context.h(16)),
-              Builder(builder: (context) {
-                final narrow = MediaQuery.sizeOf(context).width < 900;
-                final titleBlock = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Coupons & Offers',
-                      style: AppTextStyles.heading(context),
-                    ),
-                    SizedBox(height: context.h(4)),
-                    Text(
-                      'Manage active promotions and discount codes.',
-                      style: AppTextStyles.bodySecondary(context).copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                );
-
-                final typeTabs = RdxCategoryTabs(
-                  expand: false,
-                  labels: const ['Coupons', 'Offers'],
-                  allLabel: 'All',
-                  selectedLabel: _selectedTypeLabel(),
-                  onSelected: (label) {
-                    setState(() => _typeFilter = _typeForLabel(label));
-                  },
-                );
-
-                final statusTabs = RdxCategoryTabs(
-                  expand: false,
-                  labels: const ['Active', 'Scheduled', 'Expired'],
-                  allLabel: 'All',
-                  selectedLabel: _selectedStatusLabel(
-                    couponState.statusFilter ?? offerState.statusFilter,
-                  ),
-                  onSelected: (label) {
-                    final status = _statusForLabel(label);
-                    ref.read(couponProvider).setStatusFilter(status);
-                    ref.read(offerProvider).setStatusFilter(status);
-                  },
-                );
-
-                if (narrow) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      titleBlock,
-                      SizedBox(height: context.h(12)),
-                      typeTabs,
-                      SizedBox(height: context.h(8)),
-                      statusTabs,
-                    ],
-                  );
-                }
-
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: titleBlock),
-                    Column(
-                      children: [
-                        typeTabs,
-                        SizedBox(height: context.h(8)),
-                        statusTabs,
-                      ],
-                    ),
-                  ],
-                );
-              }),
-              SizedBox(height: context.h(20)),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: StatsCollapseButton(
-                  collapsed: _statsCollapsed,
-                  onPressed: () => setState(
-                    () => _statsCollapsed = !_statsCollapsed,
-                  ),
-                ),
-              ),
-              SizedBox(height: context.h(8)),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                alignment: Alignment.topCenter,
-                child: _statsCollapsed
-                    ? const SizedBox(width: double.infinity)
-                    : IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: StatCard(
-                                label: 'Total Active',
-                                value: '${couponState.activeCount} coupons',
-                                icon: Icons.local_offer_outlined,
-                              ),
-                            ),
-                            SizedBox(width: context.w(16)),
-                            Expanded(
-                              child: StatCard(
-                                label: 'Total Usages Today',
-                                value: '$totalUsageToday',
-                                icon: Icons.trending_up_rounded,
-                                accentColor: AppColors.success,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-              ),
-              SizedBox(height: context.h(20)),
-              Expanded(
-                child: couponState.isLoading || offerState.isLoading
-                    ? const LoadingIndicator()
-                    : !hasVisibleResults
-                        ? EmptyState(
-                            message: emptyMessage,
-                            icon: Icons.local_offer_outlined,
-                          )
-                        : LayoutBuilder(
-                            builder: (context, constraints) {
-                              final columns = Responsive.gridColumns(context);
-                              final spacing = context.w(16);
-                              final cardWidth = (constraints.maxWidth -
-                                      ((columns - 1) * spacing)) /
-                                  columns;
-
-                              final cards = <Widget>[];
-                              for (final coupon in filteredCoupons) {
-                                cards.add(
-                                  SizedBox(
-                                    width: cardWidth,
-                                    child: CouponCard(
-                                      coupon: coupon,
-                                      onActions: (buttonContext) {
-                                        _showCouponActions(
-                                            buttonContext, coupon);
-                                      },
-                                    ),
-                                  ),
-                                );
-                              }
-                              for (final offer in filteredOffers) {
-                                cards.add(
-                                  SizedBox(
-                                    width: cardWidth,
-                                    child: OfferCard(
-                                      offer: offer,
-                                      onActions: (buttonContext) {
-                                        _showOfferActions(buttonContext, offer);
-                                      },
-                                    ),
-                                  ),
-                                );
-                              }
-
-                              return SingleChildScrollView(
-                                child: Wrap(
-                                  spacing: spacing,
-                                  runSpacing: spacing,
-                                  children: cards,
-                                ),
-                              );
-                            },
-                          ),
+              SizedBox(height: context.h(12)),
+              RdxActionButton(
+                label: 'Retry',
+                onPressed: () {
+                  ref.read(couponProvider).load();
+                  ref.read(offerProvider).load();
+                },
+                isPrimary: true,
               ),
             ],
           ),
         ),
+      );
+    } else if (!hasVisibleResults) {
+      listBody = EmptyState(
+        message: emptyMessage,
+        icon: Icons.local_offer_outlined,
+      );
+    } else {
+      listBody = LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = Responsive.gridColumns(context);
+          final spacing = context.w(16);
+          final cardWidth =
+              (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
+
+          final cards = <Widget>[];
+          for (final coupon in filteredCoupons) {
+            cards.add(
+              SizedBox(
+                width: cardWidth,
+                child: CouponCard(
+                  coupon: coupon,
+                  onActions: (buttonContext) {
+                    _showCouponActions(buttonContext, coupon);
+                  },
+                ),
+              ),
+            );
+          }
+          for (final offer in filteredOffers) {
+            cards.add(
+              SizedBox(
+                width: cardWidth,
+                child: OfferCard(
+                  offer: offer,
+                  onActions: (buttonContext) {
+                    _showOfferActions(buttonContext, offer);
+                  },
+                ),
+              ),
+            );
+          }
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: cards,
+          );
+        },
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: colors.background,
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            // ── Heading + Create button (same row) + stats ────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  pagePad.left,
+                  pagePad.top,
+                  pagePad.right,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Heading + Create button on the same row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Coupons & Offers',
+                                style: AppTextStyles.heading(context),
+                              ),
+                              SizedBox(height: context.h(4)),
+                              Text(
+                                'Manage active promotions and discount codes.',
+                                style: AppTextStyles.bodySecondary(context)
+                                    .copyWith(color: colors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: context.w(12)),
+                        RdxHeaderActionButton(
+                          label: 'Create',
+                          onPressed: () async {
+                            await _openCreateCoupon(context);
+                            if (context.mounted) {
+                              ref.read(couponProvider).load();
+                              ref.read(offerProvider).load();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: context.h(20)),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: StatsCollapseButton(
+                        collapsed: _statsCollapsed,
+                        onPressed: () => setState(
+                          () => _statsCollapsed = !_statsCollapsed,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: context.h(8)),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      alignment: Alignment.topCenter,
+                      child: _statsCollapsed
+                          ? const SizedBox(width: double.infinity)
+                          : LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isNarrow = constraints.maxWidth < 600;
+                                final spacing =
+                                    isNarrow ? context.w(6) : context.w(16);
+                                final minHeight =
+                                    isNarrow ? context.h(62) : context.h(72);
+                                final cards = [
+                                  StatCard(
+                                    label: 'Active Coupons',
+                                    value: '${couponState.activeCount}',
+                                    icon: Icons.local_offer_outlined,
+                                    minHeight: minHeight,
+                                  ),
+                                  StatCard(
+                                    label: 'Coupon Uses',
+                                    value: '$couponUsages',
+                                    icon: Icons.trending_up_rounded,
+                                    accentColor: AppColors.success,
+                                    minHeight: minHeight,
+                                  ),
+                                  StatCard(
+                                    label: 'Active Offers',
+                                    value: '${offerState.activeCount}',
+                                    icon: Icons.local_offer_outlined,
+                                    accentColor: const Color(0xFF7C5CFC),
+                                    minHeight: minHeight,
+                                  ),
+                                ];
+
+                                return Row(
+                                  children: [
+                                    for (var i = 0; i < cards.length; i++) ...[
+                                      Expanded(child: cards[i]),
+                                      if (i != cards.length - 1)
+                                        SizedBox(width: spacing),
+                                    ],
+                                  ],
+                                );
+                              },
+                            ),
+                    ),
+                    SizedBox(height: context.h(12)),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Pinned: Search + status tabs + type dropdown ──────────
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _CouponsFiltersHeader(
+                background: colors.background,
+                horizontalPad: pagePad.left,
+                child: Row(
+                  children: [
+                    // Status tabs (left)
+                    RdxCategoryTabs(
+                      expand: false,
+                      labels: const ['Active', 'Expired'],
+                      allLabel: 'All',
+                      selectedLabel: _selectedStatusLabel(
+                        couponState.statusFilter ?? offerState.statusFilter,
+                      ),
+                      onSelected: (label) {
+                        final status = _statusForLabel(label);
+                        ref.read(couponProvider).setStatusFilter(status);
+                        ref.read(offerProvider).setStatusFilter(status);
+                      },
+                    ),
+                    SizedBox(width: context.w(12)),
+
+                    // Search bar (middle – takes remaining space)
+                    Expanded(
+                      child: RdxSearchBar(
+                        height: RdxSearchBar.standardHeight(context),
+                        hintText: 'Search coupons & offers',
+                        controller: _searchController,
+                        onChanged: (v) => setState(() => _query = v),
+                      ),
+                    ),
+                    SizedBox(width: context.w(12)),
+
+                    // Type dropdown (right)
+                    SizedBox(
+                      width: context.w(140),
+                      child: RdxDropdown<PromotionTypeFilter>(
+                        items: PromotionTypeFilter.values,
+                        value: _typeFilter,
+                        labelBuilder: (type) => switch (type) {
+                          PromotionTypeFilter.all => 'All',
+                          PromotionTypeFilter.coupons => 'Coupons',
+                          PromotionTypeFilter.offers => 'Offers',
+                        },
+                        onChanged: (type) {
+                          if (type != null) {
+                            setState(() => _typeFilter = type);
+                          }
+                        },
+                        isDense: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            if (!couponState.isLoading &&
+                !offerState.isLoading &&
+                hasVisibleResults)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    pagePad.left,
+                    context.h(12),
+                    pagePad.right,
+                    pagePad.bottom,
+                  ),
+                  child: listBody,
+                ),
+              )
+            else
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    pagePad.left,
+                    context.h(12),
+                    pagePad.right,
+                    pagePad.bottom,
+                  ),
+                  child: listBody,
+                ),
+              ),
+          ],
+        ),
       ),
     );
+  }
+}
+
+/// Pinned search + status + type filter strip.
+class _CouponsFiltersHeader extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final Color background;
+  final double horizontalPad;
+
+  _CouponsFiltersHeader({
+    required this.child,
+    required this.background,
+    required this.horizontalPad,
+  });
+
+  static const double _height = 56;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Material(
+      color: background,
+      elevation: overlapsContent || shrinkOffset > 0 ? 1.5 : 0,
+      shadowColor: Colors.black26,
+      child: Container(
+        height: _height,
+        alignment: Alignment.centerLeft,
+        padding: EdgeInsets.symmetric(horizontal: horizontalPad),
+        decoration: BoxDecoration(
+          color: background,
+          border: Border(
+            bottom: BorderSide(
+              color: overlapsContent || shrinkOffset > 0
+                  ? AppColors.of(context).border
+                  : Colors.transparent,
+              width: 1,
+            ),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _CouponsFiltersHeader oldDelegate) {
+    return child != oldDelegate.child ||
+        background != oldDelegate.background ||
+        horizontalPad != oldDelegate.horizontalPad;
   }
 }

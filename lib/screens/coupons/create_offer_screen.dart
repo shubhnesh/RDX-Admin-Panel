@@ -16,8 +16,9 @@ import '../../providers/offer_provider.dart';
 import '../../services/category_service.dart';
 import '../../services/menu_service.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
-import '../../widgets/resuable_options/rdx_dropdown.dart';
-import '../../widgets/resuable_options/rdx_text_field.dart';
+import '../../widgets/buttons/rdx_toggle_button.dart';
+import '../../widgets/reusable_widgets/rdx_dropdown.dart';
+import '../../widgets/reusable_widgets/rdx_text_field.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 
 const String _kNoneCategoryValue = '__none_category__';
@@ -26,10 +27,18 @@ const String _kNoneItemValue = '__none_item__';
 
 class CreateOfferScreen extends ConsumerStatefulWidget {
   final OfferModel? existing;
+  final VoidCallback? onCreated;
+  final bool embedded;
+  final String promotionType;
+  final ValueChanged<String>? onPromotionTypeChanged;
 
   const CreateOfferScreen({
     super.key,
     this.existing,
+    this.onCreated,
+    this.embedded = false,
+    this.promotionType = 'Offers',
+    this.onPromotionTypeChanged,
   });
 
   @override
@@ -76,7 +85,8 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
 
   CategoryModel? get _selectedCategory {
     if (_selectedCategoryId == _kNoneCategoryValue) return null;
-    final matches = _categories.where((c) => c.id == _selectedCategoryId).toList();
+    final matches =
+        _categories.where((c) => c.id == _selectedCategoryId).toList();
     return matches.isEmpty ? null : matches.first;
   }
 
@@ -321,7 +331,11 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
       setState(() => isLoading = false);
 
       if (success) {
-        Navigator.of(context).pop();
+        if (widget.onCreated != null) {
+          widget.onCreated!.call();
+        } else {
+          Navigator.of(context).pop();
+        }
       } else {
         await _showNotice(
           isEdit ? 'Failed to update offer.' : 'Failed to create offer.',
@@ -362,7 +376,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
     final previewOffer = OfferModel(
       id: 'draft',
       title: titleController.text.trim().isEmpty
-          ? 'Flat ₹150 OFF'
+          ? 'Flat ₹ OFF'
           : titleController.text.trim(),
       description: descriptionController.text.trim(),
       discountType: discountType,
@@ -385,21 +399,28 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
     final preview = OfferCard(
       offer: previewOffer,
       onActions: (_) {},
-      isPreview: true,
     );
 
     return Scaffold(
       backgroundColor: colors.background,
       body: Column(
         children: [
-          RdxHeader(
-            title: isEdit ? 'Edit Offer' : 'Create New Offer',
-            showBackButton: true,
-          ),
+          if (!widget.embedded)
+            RdxHeader(
+              title: isEdit ? 'Edit Offer' : 'Create Promotion',
+              showBackButton: true,
+            ),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final form = _formContent(context, colors);
+                final pagePadding = Responsive.pagePadding(context);
+                final columns = Responsive.gridColumns(context);
+                final spacing = context.w(16);
+                final previewCardWidth = (constraints.maxWidth -
+                        pagePadding.horizontal -
+                        ((columns - 1) * spacing)) /
+                    columns;
                 if (narrow) {
                   return SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(
@@ -419,7 +440,13 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                               .copyWith(color: colors.textPrimary),
                         ),
                         SizedBox(height: context.h(10)),
-                        preview,
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: SizedBox(
+                            width: previewCardWidth,
+                            child: preview,
+                          ),
+                        ),
                         SizedBox(height: context.h(20)),
                         _actionButtons(context),
                       ],
@@ -449,7 +476,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                         color: colors.border,
                       ),
                       SizedBox(
-                        width: context.w(330),
+                        width: previewCardWidth + context.w(22),
                         child: Padding(
                           padding: EdgeInsets.only(left: context.w(22)),
                           child: Column(
@@ -461,7 +488,10 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                                     .copyWith(color: colors.textPrimary),
                               ),
                               SizedBox(height: context.h(10)),
-                              preview,
+                              SizedBox(
+                                width: previewCardWidth,
+                                child: preview,
+                              ),
                               const Spacer(),
                               _actionButtons(context),
                             ],
@@ -483,6 +513,27 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.embedded && !isEdit) ...[
+          _sectionCard(
+            context,
+            icon: Icons.tune,
+            title: 'Promotion Type',
+            children: [
+              RdxDropdown<String>(
+                label: 'What would you like to create?',
+                value: widget.promotionType,
+                items: const ['Coupons', 'Offers'],
+                labelBuilder: (value) => value,
+                onChanged: (value) {
+                  if (value != null) {
+                    widget.onPromotionTypeChanged?.call(value);
+                  }
+                },
+              ),
+            ],
+          ),
+          SizedBox(height: context.h(20)),
+        ],
         _sectionCard(
           context,
           icon: Icons.local_offer_outlined,
@@ -758,38 +809,38 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
             }),
           ],
         ),
-        SizedBox(height: context.h(20)),
-        _sectionCard(
-          context,
-          icon: Icons.visibility_outlined,
-          title: 'Display & Behavior',
-          children: [
-            _switchRow(
-              context,
-              label: 'Auto Apply',
-              value: autoApply,
-              onChanged: (value) => setState(() => autoApply = value),
-            ),
-            SizedBox(height: context.h(12)),
-            _switchRow(
-              context,
-              label: 'Show on Home',
-              value: showOnHome,
-              onChanged: (value) => setState(() => showOnHome = value),
-            ),
-            SizedBox(height: context.h(16)),
-            RdxTextField(
-              controller: homePriorityController,
-              label: 'Home Priority',
-              hint: '0 = default / lower priority',
-              maxLength: 3,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
-            ),
-          ],
-        ),
+        // SizedBox(height: context.h(20)),
+        // _sectionCard(
+        //   context,
+        //   icon: Icons.visibility_outlined,
+        //   title: 'Display & Behavior',
+        //   children: [
+        //     _switchRow(
+        //       context,
+        //       label: 'Auto Apply',
+        //       value: autoApply,
+        //       onChanged: (value) => setState(() => autoApply = value),
+        //     ),
+        //     SizedBox(height: context.h(12)),
+        //     _switchRow(
+        //       context,
+        //       label: 'Show on Home',
+        //       value: showOnHome,
+        //       onChanged: (value) => setState(() => showOnHome = value),
+        //     ),
+        //     SizedBox(height: context.h(16)),
+        //     RdxTextField(
+        //       controller: homePriorityController,
+        //       label: 'Home Priority',
+        //       hint: '0 = default / lower priority',
+        //       maxLength: 3,
+        //       keyboardType: TextInputType.number,
+        //       inputFormatters: [
+        //         FilteringTextInputFormatter.digitsOnly,
+        //       ],
+        //     ),
+        //   ],
+        // ),
       ],
     );
   }
@@ -819,10 +870,9 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                   .copyWith(color: colors.textPrimary),
             ),
           ),
-          Switch(
+          RdxToggleButton(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.primary,
           ),
         ],
       ),
@@ -832,16 +882,16 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
   Widget _actionButtons(BuildContext context) => Row(
         children: [
           Expanded(
-            child: RdxActionButton.save(
-              label: isEdit ? 'Update' : 'Done',
-              isLoading: isLoading,
-              onPressed: _save,
+            child: RdxActionButton.discard(
+              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
             ),
           ),
           SizedBox(width: context.w(10)),
           Expanded(
-            child: RdxActionButton.discard(
-              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+            child: RdxActionButton.save(
+              label: isEdit ? 'Update' : 'Done',
+              isLoading: isLoading,
+              onPressed: _save,
             ),
           ),
         ],
@@ -909,6 +959,8 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
   }) {
     return Builder(builder: (context) {
       final colors = AppColors.of(context);
+      final fieldHeight = RdxTextField.singleLineHeight(context);
+      final textFontSize = RdxTextField.textFontSize(context);
       final minimumDate = firstDate ?? DateTime(2024);
       final lastDate = DateTime(2030);
       final today = DateTime.now();
@@ -965,31 +1017,35 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
           );
           if (picked != null) onPick(picked);
         },
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: context.w(12),
-            vertical: context.h(14),
-          ),
-          decoration: BoxDecoration(
-            color: colors.surfaceVariant,
-            borderRadius: BorderRadius.circular(context.h(8)),
-            border: Border.all(color: colors.border),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.calendar_today_outlined,
-                size: context.h(14),
-                color: colors.textMuted,
-              ),
-              SizedBox(width: context.w(8)),
-              Text(
-                date == null ? 'Select date' : Formatters.date(date),
-                style: AppTextStyles.body(context).copyWith(
-                  color: date == null ? colors.textMuted : colors.textPrimary,
+        child: SizedBox(
+          height: fieldHeight,
+          child: Container(
+            alignment: Alignment.centerLeft,
+            padding: EdgeInsets.symmetric(
+              horizontal: RdxTextField.horizontalPad(context),
+            ),
+            decoration: BoxDecoration(
+              color: date != null ? Colors.white : colors.surfaceVariant,
+              borderRadius: BorderRadius.circular(context.h(8).clamp(6.0, 8.0)),
+              border: Border.all(color: colors.border),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: context.h(14),
+                  color: colors.textMuted,
                 ),
-              ),
-            ],
+                SizedBox(width: context.w(8)),
+                Text(
+                  date == null ? 'Select date' : Formatters.date(date),
+                  style: AppTextStyles.bodySecondary(context).copyWith(
+                    color: date == null ? colors.textMuted : colors.textPrimary,
+                    fontSize: textFontSize,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

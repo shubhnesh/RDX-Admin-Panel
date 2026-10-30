@@ -3,7 +3,7 @@ import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
-import 'package:rdx_admin/widgets/resuable_options/rdx_text_field.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/rdx_text_field.dart';
 
 /// Shared entry dialog for Category / Preparation / Regionality / Tag.
 ///

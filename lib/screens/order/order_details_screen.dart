@@ -77,7 +77,7 @@ class OrderDetailsScreen extends ConsumerWidget {
   String _headerTitle(OrderModel order) {
     final table = order.tableNumber?.trim();
     if (table != null && table.isNotEmpty) {
-      return 'Order • Table $table';
+      return 'Table $table';
     }
     return 'Order #${_shortId(order.id)}';
   }
@@ -96,6 +96,9 @@ class _OrderDetailBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     final narrow = MediaQuery.sizeOf(context).width < 900;
+    final narrowSummaryHeight = (MediaQuery.sizeOf(context).height * 0.8)
+        .clamp(context.h(480), 720.0)
+        .toDouble();
 
     double subtotal = 0;
     for (final item in order.items) {
@@ -117,7 +120,7 @@ class _OrderDetailBody extends ConsumerWidget {
             _LeftFormColumn(order: order),
             SizedBox(height: context.h(16)),
             SizedBox(
-              height: context.h(480),
+              height: narrowSummaryHeight,
               child: _RightOrderSummary(
                 order: order,
                 subtotal: subtotal,
@@ -300,15 +303,8 @@ class _LeftFormColumn extends ConsumerWidget {
             _StatusRow(order: order),
             // Only show advance button when there is a next status
             if (order.status.nextStatus != null) ...[
-              SizedBox(height: context.h(14)),
+              SizedBox(height: context.h(40)),
               _WorkflowAction(order: order),
-            ],
-            // Terminate (cancel) — available for active orders (not already
-            // cancelled or delivered). Order is kept and listed under Cancelled.
-            if (order.status != OrderStatus.cancelled &&
-                order.status != OrderStatus.delivered) ...[
-              SizedBox(height: context.h(10)),
-              _TerminateAction(order: order),
             ],
             if (order.status == OrderStatus.cancelled) ...[
               SizedBox(height: context.h(14)),
@@ -348,6 +344,36 @@ class _LeftFormColumn extends ConsumerWidget {
           title: 'Payment',
           icon: Icons.payments_outlined,
           children: [
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: context.w(12),
+                vertical: context.h(12),
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(context.h(8)),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    'Total due',
+                    style: AppTextStyles.section(context).copyWith(
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '₹${order.total.toStringAsFixed(2)}',
+                    style: AppTextStyles.section(context).copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: context.h(12)),
             _PaymentStatusCard(order: order),
           ],
         ),
@@ -444,6 +470,8 @@ class _RightOrderSummary extends ConsumerWidget {
             child: order.items.isEmpty
                 ? _emptyItems(context, colors)
                 : ListView.separated(
+                    primary: false,
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.symmetric(
                       horizontal: context.w(10),
                       vertical: context.h(10),
@@ -499,33 +527,19 @@ class _RightOrderSummary extends ConsumerWidget {
                   ],
                 ),
                 SizedBox(height: context.h(14)),
-                // Print — primary (orange)
-                SizedBox(
-                  width: double.infinity,
-                  child: RdxActionButton(
-                    label: 'Print bill',
-                    leadingIcon: Icons.print_outlined,
-                    isPrimary: true,
-                    onPressed: () {
-                      // ScaffoldMessenger.of(context).showSnackBar(
-                      //   const SnackBar(
-                      //     content: Text('Sending bill to printer…'),
-                      //   ),
-                      // );
-                    },
-                  ),
-                ),
-                // If unpaid, still offer Bill Settlement below the primary action
-                if (!isPaid) ...[
-                  SizedBox(height: context.h(10)),
+                if (!isPaid)
                   SizedBox(
                     width: double.infinity,
                     child: RdxActionButton(
-                      label: 'Bill Settlement',
+                      label: 'Pay Now',
                       isPrimary: true,
                       onPressed: () => _openSettlement(context, ref),
                     ),
                   ),
+                if (order.status != OrderStatus.cancelled &&
+                    order.status != OrderStatus.delivered) ...[
+                  SizedBox(height: context.h(10)),
+                  _TerminateAction(order: order),
                 ],
               ],
             ),
@@ -618,6 +632,7 @@ class _RightOrderSummary extends ConsumerWidget {
                 ? 'Walk-in customer'
                 : order.customerName,
             phoneNumber: order.customerPhone,
+            deliveryAddress: order.deliveryAddress,
             sendDigitalReceipt: false,
             invoiceReference: order.id,
             receiptDateTime: DateTime.now(),
@@ -953,11 +968,11 @@ class _WorkflowAction extends ConsumerWidget {
       OrderStatus.cancelled => 'Cancelled',
     };
 
-    return SizedBox(
-      width: double.infinity,
+    return Align(
+      alignment: Alignment.center,
       child: RdxActionButton(
         label: buttonLabel,
-        leadingIcon: Icons.arrow_forward_outlined,
+        trailingIcon: Icons.arrow_forward_outlined,
         isPrimary: true,
         onPressed: () async {
           try {
@@ -1138,39 +1153,6 @@ class _PaymentStatusCard extends StatelessWidget {
       );
     }
 
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(context.h(12)),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF8E7),
-        borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: const Color(0xFFF3D58A)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.pending_outlined,
-            size: context.h(18),
-            color: const Color(0xFFD99A00),
-          ),
-          SizedBox(width: context.w(10)),
-          Expanded(
-            child: Text(
-              'Payment is pending',
-              style: AppTextStyles.bodySecondary(context).copyWith(
-                color: const Color(0xFF80651B),
-              ),
-            ),
-          ),
-          Text(
-            '₹${order.total.toStringAsFixed(2)}',
-            style: AppTextStyles.body(context).copyWith(
-              color: const Color(0xFF6B5313),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }

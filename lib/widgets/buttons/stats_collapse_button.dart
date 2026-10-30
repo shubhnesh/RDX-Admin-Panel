@@ -54,7 +54,7 @@ class _StatsCollapseButtonState extends State<StatsCollapseButton> {
                 widget.collapsed
                     ? Icons.keyboard_arrow_down_rounded
                     : Icons.keyboard_arrow_up_rounded,
-                size: 22,
+                size: context.h(22).clamp(16.0, 26.0),
                 color:
                     _hovering ? AppColors.surface : AppColors.lightTextPrimary,
               ),

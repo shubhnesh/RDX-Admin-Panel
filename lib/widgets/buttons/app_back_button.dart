@@ -39,7 +39,7 @@ class _AppBackButtonState extends State<AppBackButton> {
           ),
           child: Icon(
             Icons.arrow_back_ios_new,
-            size: 18,
+            size: context.h(18).clamp(14.0, 22.0),
             color: _hovering ? AppColors.surface : AppColors.lightTextPrimary,
           ),
         ),

@@ -22,14 +22,18 @@ class TagService {
       _db.collection('menu_tags');
 
   Future<List<TagModel>> fetchTags() async {
-    final snapshot = await _col.orderBy('name').get();
-    return snapshot.docs.map(TagModel.fromFirestore).toList();
+    final snapshot = await _col.get();
+    final tags = snapshot.docs.map(TagModel.fromFirestore).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return tags;
   }
 
   Stream<List<TagModel>> streamTags() {
-    return _col.orderBy('name').snapshots().map(
-          (snapshot) => snapshot.docs.map(TagModel.fromFirestore).toList(),
-        );
+    return _col.snapshots().map((snapshot) {
+      final tags = snapshot.docs.map(TagModel.fromFirestore).toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return tags;
+    });
   }
 
   Future<TagModel> createTag({required String name}) async {

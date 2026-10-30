@@ -323,9 +323,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
-import 'package:rdx_admin/widgets/resuable_options/rdx_search_bar.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/rdx_search_bar.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
+import 'rdx_text_field.dart';
 
 class RdxDropdown<T> extends StatefulWidget {
   final T? value;
@@ -487,6 +488,9 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
     final colors = AppColors.of(context);
     final hasValue =
         widget.value != null && widget.items.any((e) => e == widget.value);
+    final valueTextStyle = AppTextStyles.bodySecondary(context).copyWith(
+      fontSize: RdxTextField.textFontSize(context),
+    );
 
     final display = hasValue
         ? widget.labelBuilder(widget.value as T)
@@ -527,9 +531,11 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: hasValue
-                        ? AppTextStyles.bodySecondary(context)
-                        : AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textMuted),
+                        ? valueTextStyle
+                        : AppTextStyles.bodySecondary(context).copyWith(
+                            color: colors.textMuted,
+                            fontSize: RdxTextField.textFontSize(context),
+                          ),
                   ),
                 ),
                 SizedBox(width: context.w(6)),
@@ -654,6 +660,10 @@ class _DropdownMenuPanelState<T> extends State<_DropdownMenuPanel<T>> {
 
   @override
   Widget build(BuildContext context) {
+    final optionTextStyle = AppTextStyles.bodySecondary(context).copyWith(
+      fontSize: RdxTextField.textFontSize(context),
+    );
+
     return Container(
       constraints: BoxConstraints(maxHeight: widget.maxHeight),
       decoration: BoxDecoration(
@@ -705,7 +715,7 @@ class _DropdownMenuPanelState<T> extends State<_DropdownMenuPanel<T>> {
                               widget.searchController.text.trim().isNotEmpty
                           ? 'No matches'
                           : 'No options',
-                      style: AppTextStyles.bodySecondary(context),
+                      style: optionTextStyle,
                     ),
                   )
                 : ListView.separated(
@@ -741,9 +751,10 @@ class _DropdownMenuPanelState<T> extends State<_DropdownMenuPanel<T>> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: selected
-                                        ? AppTextStyles.bodySecondary(context)
-                                            .copyWith(color: AppColors.primary)
-                                        : AppTextStyles.bodySecondary(context),
+                                        ? optionTextStyle.copyWith(
+                                            color: AppColors.primary,
+                                          )
+                                        : optionTextStyle,
                                   ),
                                 ),
                                 if (selected)

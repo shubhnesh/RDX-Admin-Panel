@@ -255,8 +255,8 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 160),
                             curve: Curves.easeOut,
-                            width: context.h(28),
-                            height: context.h(28),
+                            width: context.h(28).clamp(24.0, 28.0),
+                            height: context.h(28).clamp(24.0, 28.0),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: _itemsHovering
@@ -273,7 +273,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                                 _itemsExpanded
                                     ? Icons.keyboard_arrow_up_rounded
                                     : Icons.keyboard_arrow_down_rounded,
-                                size: context.h(18),
+                                size: context.h(18).clamp(14.0, 18.0),
                                 color: _itemsHovering
                                     ? AppColors.surface
                                     : AppColors.lightTextPrimary,
@@ -388,8 +388,10 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
         borderRadius: BorderRadius.circular(context.h(5)),
         onTap: onTap,
         child: Container(
-          height: context.h(28),
-          padding: EdgeInsets.symmetric(horizontal: context.w(11)),
+          height: context.h(28).clamp(24.0, 28.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: context.w(11).clamp(7.0, 11.0),
+          ),
           decoration: BoxDecoration(
             color: primary ? AppColors.primary : colors.surface,
             borderRadius: BorderRadius.circular(context.h(5)),

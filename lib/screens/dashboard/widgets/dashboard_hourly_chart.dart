@@ -4,8 +4,10 @@ import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/dashboard_stats_model.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_card_style.dart';
 
-/// Bar chart: today's order volume by hour.
+/// Volume by mealtime (replaces old hourly chart).
+/// Uses the same mealtime buckets as [DashboardMealtimeBreakdown].
 class DashboardHourlyChart extends StatelessWidget {
   final DashboardStatsModel stats;
 
@@ -14,15 +16,17 @@ class DashboardHourlyChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final values = stats.hourlyVolume;
-    final labels = stats.hourlyLabels;
-    final rangeLabels = stats.hourlyRangeLabels;
-
-    final peakValue = values.isEmpty
-        ? 1.0
-        : values.reduce((a, b) => a > b ? a : b);
+    final values = [
+      stats.breakfastCount.toDouble(),
+      stats.lunchCount.toDouble(),
+      stats.eveningCount.toDouble(),
+      stats.dinnerCount.toDouble(),
+      stats.lateNightCount.toDouble(),
+    ];
+    final labels = ['BF', 'Lunch', 'Eve', 'Dinner', 'Late'];
+    final peakValue =
+        values.isEmpty ? 1.0 : values.reduce((a, b) => a > b ? a : b);
     final maxY = peakValue > 0 ? peakValue * 1.15 : 1.0;
-    final peakIndex = values.isEmpty ? -1 : values.indexOf(peakValue);
     final hasData = values.any((v) => v > 0);
 
     return Container(
@@ -32,60 +36,33 @@ class DashboardHourlyChart extends StatelessWidget {
         context.w(20),
         context.h(16),
       ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
+      decoration: DashboardCardStyle.decoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Expanded(
-                child: Text(
-                  'Volume Trend',
-                  style: AppTextStyles.heading(context),
-                ),
+                child: Text('Volume by mealtime',
+                    style: DashboardCardStyle.title(context)),
               ),
               Text(
-                  'Today',
-                  style: AppTextStyles.label(context).copyWith(color: AppColors.primary),
-                ),
+                stats.periodLabel,
+                style: AppTextStyles.label(context)
+                    .copyWith(color: AppColors.primary),
+              ),
             ],
           ),
           SizedBox(height: context.h(6)),
-          Text(
-            'Orders by hour',
-            style: AppTextStyles.bodySecondary(context),
-          ),
+          Text('Orders by time of day',
+              style: AppTextStyles.bodySecondary(context)),
           SizedBox(height: context.h(16)),
           SizedBox(
             height: context.h(160),
             child: !hasData
                 ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.bar_chart_rounded,
-                          size: context.h(28),
-                          color: colors.textMuted,
-                        ),
-                        SizedBox(height: context.h(8)),
-                        Text(
-                          'Not enough data yet',
-                          style: AppTextStyles.bodySecondary(context)
-                              .copyWith(color: colors.textSecondary),
-                        ),
-                        SizedBox(height: context.h(4)),
-                        Text(
-                          'Volume will appear here once orders come in.',
-                          style: AppTextStyles.caption(context)
-                              .copyWith(color: colors.textMuted),
-                        ),
-                      ],
-                    ),
+                    child: Text('Not enough data yet',
+                        style: AppTextStyles.bodySecondary(context)),
                   )
                 : BarChart(
                     BarChartData(
@@ -94,95 +71,45 @@ class DashboardHourlyChart extends StatelessWidget {
                       borderData: FlBorderData(show: false),
                       titlesData: FlTitlesData(
                         topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
+                            sideTitles: SideTitles(showTitles: false)),
                         rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
+                            sideTitles: SideTitles(showTitles: false)),
                         leftTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
+                            sideTitles: SideTitles(showTitles: false)),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: context.h(24),
                             getTitlesWidget: (value, meta) {
                               final i = value.toInt();
                               if (i < 0 || i >= labels.length) {
-                                return const SizedBox();
+                                return const SizedBox.shrink();
                               }
                               return Padding(
-                                padding: EdgeInsets.only(top: context.h(6)),
+                                padding: const EdgeInsets.only(top: 4),
                                 child: Text(
                                   labels[i],
-                                  style: TextStyle(
-                                    color: colors.textMuted,
-                                    fontSize: 11,
-                                  ),
+                                  style: AppTextStyles.caption(context)
+                                      .copyWith(color: colors.textMuted),
                                 ),
                               );
                             },
                           ),
                         ),
                       ),
-                      barTouchData: BarTouchData(
-                        touchTooltipData: BarTouchTooltipData(
-                          getTooltipColor: (_) => colors.textPrimary,
-                          tooltipRoundedRadius: 8,
-                          tooltipPadding: EdgeInsets.symmetric(
-                            horizontal: context.w(10),
-                            vertical: context.h(6),
+                      barGroups: [
+                        for (var i = 0; i < values.length; i++)
+                          BarChartGroupData(
+                            x: i,
+                            barRods: [
+                              BarChartRodData(
+                                toY: values[i],
+                                color: AppColors.primary,
+                                width: context.w(16),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ],
                           ),
-                          tooltipMargin: context.h(8),
-                          fitInsideVertically: true,
-                          fitInsideHorizontally: true,
-                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                            final orders = rod.toY.round();
-                            final label = groupIndex >= 0 &&
-                                    groupIndex < rangeLabels.length
-                                ? rangeLabels[groupIndex]
-                                : '';
-                            return BarTooltipItem(
-                              '$orders order${orders == 1 ? '' : 's'}\n',
-                              TextStyle(
-                                color: colors.surface,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: label,
-                                  style: TextStyle(
-                                    color: colors.surface.withValues(alpha: 0.7),
-                                    fontWeight: FontWeight.w400,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                      barGroups: values.asMap().entries.map((e) {
-                        final isPeak = e.key == peakIndex;
-                        return BarChartGroupData(
-                          x: e.key,
-                          barRods: [
-                            BarChartRodData(
-                              toY: e.value,
-                              width: context.w(28),
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(context.w(3)),
-                              ),
-                              color: isPeak
-                                  ? AppColors.primary
-                                  : AppColors.primary.withValues(alpha: 0.45),
-                            ),
-                          ],
-                          // Tooltip only on hover / tap — never pinned.
-                          showingTooltipIndicators: const [],
-                        );
-                      }).toList(),
+                      ],
                     ),
                   ),
           ),

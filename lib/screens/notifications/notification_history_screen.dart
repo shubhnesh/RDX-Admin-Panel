@@ -9,7 +9,7 @@ import '../../core/utils/responsive_size.dart';
 import '../../models/notification_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
-import '../../widgets/resuable_options/rdx_dropdown.dart';
+import '../../widgets/reusable_widgets/rdx_dropdown.dart';
 
 class NotificationHistoryScreen extends ConsumerStatefulWidget {
   const NotificationHistoryScreen({

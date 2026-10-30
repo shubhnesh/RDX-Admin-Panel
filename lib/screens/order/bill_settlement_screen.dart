@@ -33,6 +33,7 @@ class BillSettlementData {
   final double longDistanceFee;
   final String guestName;
   final String phoneNumber;
+  final String deliveryAddress;
   final bool sendDigitalReceipt;
   final String invoiceReference;
   final DateTime receiptDateTime;
@@ -57,6 +58,7 @@ class BillSettlementData {
     this.longDistanceFee = 0,
     required this.guestName,
     required this.phoneNumber,
+    this.deliveryAddress = '',
     required this.sendDigitalReceipt,
     required this.invoiceReference,
     required this.receiptDateTime,
@@ -204,7 +206,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                     ),
                     child: Column(
                       children: [
-                        _OrderMetaBar(bill: bill),
+                        _ServiceCustomerPanel(bill: bill),
                         SizedBox(height: context.h(14)),
                         _PaymentMethodPanel(
                           selected: _selectedPayment,
@@ -242,7 +244,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                             padding: EdgeInsets.only(right: context.w(18)),
                             child: Column(
                               children: [
-                                _OrderMetaBar(bill: bill),
+                                _ServiceCustomerPanel(bill: bill),
                                 SizedBox(height: context.h(14)),
                                 _PaymentMethodPanel(
                                   selected: _selectedPayment,
@@ -303,121 +305,194 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
           leadingIcon: Icons.print_outlined,
           isPrimary: true,
           // Print only after a payment method is chosen
-          onPressed: (_isSettling || !hasPayment) ? null : _printBill,
+          enabled: !_isSettling && hasPayment,
+          onPressed: _printBill,
         ),
         SizedBox(height: context.h(10)),
         RdxActionButton(
           label: _isSettling ? 'Processing…' : 'Mark paid & complete',
           leadingIcon: Icons.check_circle_outline,
           isPrimary: true,
-          onPressed: (_isSettling || !hasPayment) ? null : _markPaidAndComplete,
+          enabled: !_isSettling && hasPayment,
+          onPressed: _markPaidAndComplete,
         ),
         SizedBox(height: context.h(10)),
         RdxActionButton(
           label: 'Close',
           isPrimary: false,
-          onPressed: _isSettling ? null : _close,
+          enabled: !_isSettling,
+          onPressed: _close,
         ),
       ],
     );
   }
 }
 
-// =============================================================================
-// ORDER META BAR
-// =============================================================================
-
-class _OrderMetaBar extends StatelessWidget {
+class _ServiceCustomerPanel extends StatelessWidget {
   final BillSettlementData bill;
 
-  const _OrderMetaBar({required this.bill});
+  const _ServiceCustomerPanel({required this.bill});
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final customerName = bill.guestName.trim().isEmpty
+        ? 'Walk-in customer'
+        : bill.guestName.trim();
+    final isDineIn = bill.orderType.toLowerCase().contains('dine') ||
+        bill.orderType.toLowerCase().contains('eat');
+    final hasTable = bill.tableNumber?.trim().isNotEmpty ?? false;
+    final hasPhone = bill.phoneNumber.trim().isNotEmpty;
+    final hasAddress = bill.deliveryAddress.trim().isNotEmpty;
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(context.h(14)),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(context.h(10)),
+        borderRadius: BorderRadius.circular(context.h(8)),
         border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Order id — same label/value style as order type below
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _metaItem(
-                  context,
-                  colors,
-                  'Order ID',
-                  bill.orderNumber,
-                ),
+              Icon(
+                Icons.receipt_long_outlined,
+                size: context.h(18),
+                color: AppColors.primary,
               ),
-              _pill(
-                context,
-                colors,
-                label: bill.paymentMethod != null ? 'Paid' : 'Unpaid',
-                color: bill.paymentMethod != null
-                    ? const Color(0xFF20B47A)
-                    : const Color(0xFFE9A719),
+              SizedBox(width: context.w(8)),
+              Text(
+                'Service & customer',
+                style: AppTextStyles.section(context).copyWith(
+                  color: colors.textPrimary,
+                ),
               ),
             ],
           ),
-          SizedBox(height: context.h(14)),
-          Divider(height: 1, color: colors.divider),
-          SizedBox(height: context.h(12)),
+          SizedBox(height: context.h(16)),
           LayoutBuilder(
-            builder: (context, c) {
-              final stack = c.maxWidth < 420;
-              final items = [
-                _metaItem(context, colors, 'Order type', bill.orderType),
-                _metaItem(
-                  context,
-                  colors,
-                  'Table',
-                  bill.tableNumber?.trim().isNotEmpty == true
-                      ? bill.tableNumber!
-                      : '—',
-                ),
-                _metaItem(
-                  context,
-                  colors,
-                  'Time',
-                  _formatTime(bill.receiptDateTime),
-                ),
-              ];
+            builder: (context, constraints) {
+              final stack = constraints.maxWidth < 400;
+              final orderIdField = _serviceInfoField(
+                context,
+                colors,
+                'Order ID',
+                bill.orderNumber,
+              );
+              final serviceField = _serviceInfoField(
+                context,
+                colors,
+                'Service option',
+                bill.orderType,
+              );
+              final orderTimeField = _serviceInfoField(
+                context,
+                colors,
+                'Order Time',
+                _formatOrderTime(bill.receiptDateTime),
+              );
               if (stack) {
                 return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (int i = 0; i < items.length; i++) ...[
-                      items[i],
-                      if (i < items.length - 1) SizedBox(height: context.h(10)),
-                    ],
+                    orderIdField,
+                    SizedBox(height: context.h(14)),
+                    serviceField,
+                    SizedBox(height: context.h(14)),
+                    orderTimeField,
                   ],
                 );
               }
               return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (int i = 0; i < items.length; i++) ...[
-                    Expanded(child: items[i]),
-                    if (i < items.length - 1) SizedBox(width: context.w(12)),
-                  ],
+                  Expanded(child: orderIdField),
+                  SizedBox(width: context.w(14)),
+                  Expanded(child: serviceField),
+                  SizedBox(width: context.w(14)),
+                  Expanded(child: orderTimeField),
                 ],
               );
             },
           ),
+          SizedBox(height: context.h(16)),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stack = constraints.maxWidth < 400;
+              final table = _serviceInfoField(
+                context,
+                colors,
+                'Table',
+                hasTable
+                    ? 'Table ${bill.tableNumber!.trim()}'
+                    : 'No table / counter',
+              );
+              final customer = Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _serviceInfoField(
+                      context,
+                      colors,
+                      'Customer',
+                      customerName,
+                    ),
+                  ),
+                  if (hasPhone) ...[
+                    SizedBox(width: context.w(12)),
+                    Expanded(
+                      child: _serviceInfoField(
+                        context,
+                        colors,
+                        'Mobile number',
+                        bill.phoneNumber.trim(),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+
+              if (stack) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isDineIn) ...[
+                      table,
+                      SizedBox(height: context.h(14)),
+                    ],
+                    customer,
+                  ],
+                );
+              }
+              if (!isDineIn) return customer;
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: table),
+                  SizedBox(width: context.w(14)),
+                  Expanded(child: customer),
+                ],
+              );
+            },
+          ),
+          if (hasAddress) ...[
+            SizedBox(height: context.h(14)),
+            _serviceInfoField(
+              context,
+              colors,
+              'Delivery address',
+              bill.deliveryAddress.trim(),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _metaItem(
+  Widget _serviceInfoField(
     BuildContext context,
     AppColorScheme colors,
     String label,
@@ -428,60 +503,33 @@ class _OrderMetaBar extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.label(context).copyWith(
+          style: AppTextStyles.bodySecondary(context).copyWith(
             color: colors.textMuted,
           ),
         ),
-        SizedBox(height: context.h(3)),
+        SizedBox(height: context.h(6)),
         Text(
           value,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.bodySecondary(context).copyWith(
+          style: AppTextStyles.body(context).copyWith(
             color: colors.textPrimary,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
     );
   }
 
-  Widget _pill(
-    BuildContext context,
-    AppColorScheme colors, {
-    required String label,
-    required Color color,
-  }) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: context.w(10),
-        vertical: context.h(5),
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(context.h(20)),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.caption(context).copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
+  String _formatOrderTime(DateTime dateTime) {
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final year = (dateTime.year % 100).toString().padLeft(2, '0');
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$day ${_monthName(dateTime.month)} $year · $hour:$minute';
   }
 
-  /// dd mmm yy · hh:mm
-  String _formatTime(DateTime dt) {
-    final d = dt.day.toString().padLeft(2, '0');
-    final yy = (dt.year % 100).toString().padLeft(2, '0');
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '$d ${_month(dt.month)} $yy · $h:$m';
-  }
-
-  String _month(int m) {
+  String _monthName(int month) {
     const months = [
       'Jan',
       'Feb',
@@ -496,7 +544,7 @@ class _OrderMetaBar extends StatelessWidget {
       'Nov',
       'Dec',
     ];
-    return months[m - 1];
+    return months[month - 1];
   }
 }
 
@@ -568,29 +616,13 @@ class _PaymentMethodPanel extends StatelessWidget {
             ],
           ),
           SizedBox(height: context.h(14)),
-          LayoutBuilder(
-            builder: (context, c) {
-              final stack = c.maxWidth < 420;
-              if (stack) {
-                return Column(
-                  children: [
-                    for (int i = 0; i < methods.length; i++) ...[
-                      _methodTile(context, colors, methods[i]),
-                      if (i < methods.length - 1)
-                        SizedBox(height: context.h(8)),
-                    ],
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  for (int i = 0; i < methods.length; i++) ...[
-                    Expanded(child: _methodTile(context, colors, methods[i])),
-                    if (i < methods.length - 1) SizedBox(width: context.w(8)),
-                  ],
-                ],
-              );
-            },
+          Wrap(
+            spacing: context.w(10),
+            runSpacing: context.h(10),
+            children: [
+              for (final method in methods)
+                _methodTile(context, colors, method),
+            ],
           ),
         ],
       ),
@@ -601,43 +633,36 @@ class _PaymentMethodPanel extends StatelessWidget {
     final isSelected = selected == m.id;
 
     return Material(
-      color: Colors.transparent,
+      color: isSelected
+          ? AppColors.primary.withValues(alpha: 0.15)
+          : colors.surface,
+      borderRadius: BorderRadius.circular(context.h(10)),
       child: InkWell(
         onTap: () => onSelected(m.id),
         borderRadius: BorderRadius.circular(context.h(10)),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+        child: Container(
           padding: EdgeInsets.symmetric(
-            horizontal: context.w(10),
-            vertical: context.h(14),
+            horizontal: context.w(14),
+            vertical: context.h(12),
           ),
           decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary.withValues(alpha: 0.08)
-                : Colors.white,
             borderRadius: BorderRadius.circular(context.h(10)),
             border: Border.all(
-              color: isSelected ? AppColors.primary : colors.border,
-              width: isSelected ? 1.5 : 1,
-            ),
+                color: isSelected ? AppColors.primary : colors.border),
           ),
-          child: Column(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 m.icon,
-                size: context.h(22),
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.textPrimary.withAlpha(90),
+                size: context.h(18),
+                color: isSelected ? AppColors.primary : colors.textSecondary,
               ),
-              SizedBox(height: context.h(8)),
+              SizedBox(width: context.w(8)),
               Text(
                 m.title,
-                textAlign: TextAlign.center,
                 style: AppTextStyles.label(context).copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w600,
+                  color: isSelected ? colors.primary : colors.textSecondary,
                 ),
               ),
             ],
@@ -714,9 +739,9 @@ class _BillingPanel extends StatelessWidget {
                     children: [
                       Text(
                         '${item.quantity}× ${item.name}',
-                        style: AppTextStyles.bodySecondary(context).copyWith(
+                        style: AppTextStyles.body(context).copyWith(
                           color: colors.textPrimary,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       if (item.modifiers.isNotEmpty)

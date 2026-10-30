@@ -20,14 +20,18 @@ class CategoryService {
       _db.collection('menu_categories');
 
   Future<List<CategoryModel>> fetchCategories() async {
-    final snapshot = await _col.orderBy('name').get();
-    return snapshot.docs.map(CategoryModel.fromFirestore).toList();
+    final snapshot = await _col.get();
+    final categories = snapshot.docs.map(CategoryModel.fromFirestore).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return categories;
   }
 
   Stream<List<CategoryModel>> streamCategories() {
-    return _col.orderBy('name').snapshots().map(
-          (snapshot) => snapshot.docs.map(CategoryModel.fromFirestore).toList(),
-        );
+    return _col.snapshots().map((snapshot) {
+      final categories = snapshot.docs.map(CategoryModel.fromFirestore).toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return categories;
+    });
   }
 
   Future<CategoryModel> fetchCategoryById(String id) async {
@@ -64,8 +68,10 @@ class CategoryService {
       throw ArgumentError('Category name cannot be empty.');
     }
 
-    final cleanedSubcategoryNames =
-        subcategoryNames.map((n) => n.trim()).where((n) => n.isNotEmpty).toList();
+    final cleanedSubcategoryNames = subcategoryNames
+        .map((n) => n.trim())
+        .where((n) => n.isNotEmpty)
+        .toList();
 
     final categorySlug = await _uniqueSlug(_slugify(trimmedName));
 

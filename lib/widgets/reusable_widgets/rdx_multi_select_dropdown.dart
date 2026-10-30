@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
+import 'rdx_text_field.dart';
 
 class RdxMultiDropdown<T> extends StatefulWidget {
   final List<T> value;
@@ -211,6 +212,9 @@ class _RdxMultiDropdownState<T> extends State<RdxMultiDropdown<T>> {
     final colors = AppColors.of(context);
     final hasValue = _selected.isNotEmpty;
     final display = _displayText(colors);
+    final valueTextStyle = AppTextStyles.body(context).copyWith(
+      fontSize: RdxTextField.textFontSize(context),
+    );
 
     final field = CompositedTransformTarget(
       link: _layerLink,
@@ -247,9 +251,8 @@ class _RdxMultiDropdownState<T> extends State<RdxMultiDropdown<T>> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: hasValue
-                        ? AppTextStyles.body(context)
-                        : AppTextStyles.body(context)
-                            .copyWith(color: colors.textMuted),
+                        ? valueTextStyle
+                        : valueTextStyle.copyWith(color: colors.textMuted),
                   ),
                 ),
                 if (hasValue) ...[
@@ -395,6 +398,9 @@ class _MultiDropdownMenuPanelState<T>
   Widget build(BuildContext context) {
     final allSelected = widget.items.isNotEmpty &&
         widget.selected.length == widget.items.length;
+    final optionTextStyle = AppTextStyles.body(context).copyWith(
+      fontSize: RdxTextField.textFontSize(context),
+    );
 
     return Container(
       constraints: BoxConstraints(maxHeight: widget.maxHeight),
@@ -427,12 +433,12 @@ class _MultiDropdownMenuPanelState<T>
                 controller: widget.searchController,
                 focusNode: widget.searchFocus,
                 maxLength: 20,
-                style: AppTextStyles.body(context),
+                style: optionTextStyle,
                 decoration: InputDecoration(
                   isDense: true,
                   hintText: widget.searchHint,
-                  hintStyle: AppTextStyles.body(context)
-                      .copyWith(color: widget.colors.textMuted),
+                  hintStyle:
+                      optionTextStyle.copyWith(color: widget.colors.textMuted),
                   counterText: '',
                   prefixIcon: Icon(
                     Icons.search_rounded,
@@ -610,9 +616,10 @@ class _MultiDropdownMenuPanelState<T>
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: selected
-                                        ? AppTextStyles.label(context)
-                                            .copyWith(color: AppColors.primary)
-                                        : AppTextStyles.body(context),
+                                        ? optionTextStyle.copyWith(
+                                            color: AppColors.primary,
+                                          )
+                                        : optionTextStyle,
                                   ),
                                 ),
                               ],

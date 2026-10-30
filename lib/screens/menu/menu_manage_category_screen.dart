@@ -14,6 +14,7 @@ import '../../services/regionality_service.dart';
 import '../../services/tag_service.dart';
 import '../../widgets/reusable_widgets/rdx_delete_dialog.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
+import '../../widgets/buttons/rdx_header_action_button.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 
@@ -130,7 +131,8 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
     );
     if (created == null || !mounted) return;
     setState(
-      () => _categories = _sortedByName([..._categories, created], (c) => c.name),
+      () =>
+          _categories = _sortedByName([..._categories, created], (c) => c.name),
     );
   }
 
@@ -564,17 +566,9 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
       _CategorySection.tag => ('Add tag', _createTag),
     };
 
-    return TextButton.icon(
+    return RdxHeaderActionButton(
+      label: label,
       onPressed: onTap,
-      icon: Icon(
-        Icons.add_rounded,
-        size: context.h(18),
-        color: AppColors.primary,
-      ),
-      label: Text(
-        label,
-        style: AppTextStyles.label(context).copyWith(color: AppColors.primary),
-      ),
     );
   }
 
@@ -625,7 +619,8 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   /// up to 8 per line, then continues on the next line.
   String _formatSubcategories(List<SubcategoryModel> subs) {
     if (subs.isEmpty) return '—';
-    final names = _sortedByName(subs, (s) => s.name).map((s) => s.name).toList();
+    final names =
+        _sortedByName(subs, (s) => s.name).map((s) => s.name).toList();
     final lines = <String>[];
     for (var i = 0; i < names.length; i += 8) {
       final end = i + 8 > names.length ? names.length : i + 8;

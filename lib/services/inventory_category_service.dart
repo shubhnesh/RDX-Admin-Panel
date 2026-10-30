@@ -12,15 +12,22 @@ class InventoryCategoryService {
       _db.collection('inventory_categories');
 
   Future<List<InventoryCategoryModel>> fetchCategories() async {
-    final snapshot = await _col.orderBy('name').get();
-    return snapshot.docs.map(InventoryCategoryModel.fromFirestore).toList();
+    final snapshot = await _col.get();
+    final categories = snapshot.docs
+        .map(InventoryCategoryModel.fromFirestore)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return categories;
   }
 
   Stream<List<InventoryCategoryModel>> streamCategories() {
-    return _col.orderBy('name').snapshots().map(
-          (snapshot) =>
-              snapshot.docs.map(InventoryCategoryModel.fromFirestore).toList(),
-        );
+    return _col.snapshots().map((snapshot) {
+      final categories = snapshot.docs
+          .map(InventoryCategoryModel.fromFirestore)
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return categories;
+    });
   }
 
   Future<InventoryCategoryModel> createCategory({required String name}) async {

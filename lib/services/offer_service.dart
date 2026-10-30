@@ -8,8 +8,10 @@ class OfferService {
       _db.collection('offers');
 
   Future<List<OfferModel>> fetchOffers() async {
-    final snap = await _col.orderBy('start_date', descending: true).get();
-    return snap.docs.map((d) => OfferModel.fromFirestore(d)).toList();
+    final snap = await _col.get();
+    final offers = snap.docs.map(OfferModel.fromFirestore).toList()
+      ..sort((a, b) => b.startDate.compareTo(a.startDate));
+    return offers;
   }
 
   Future<void> createOffer(OfferModel offer) async {

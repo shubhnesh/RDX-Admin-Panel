@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
+import 'package:rdx_admin/screens/settings/operating_hours_editor.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
-import '../../widgets/buttons/rdx_toggle_button.dart'; // adjust path if needed
-import '../../widgets/settings/operating_hours_editor.dart';
+import '../../widgets/buttons/rdx_toggle_button.dart';
 
 class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
+  final VoidCallback? onSupport;
+  final VoidCallback? onLogout;
+
+  const SettingsScreen({
+    super.key,
+    this.onSupport,
+    this.onLogout,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,6 +63,11 @@ class SettingsScreen extends ConsumerWidget {
                   provider: provider,
                   colors: colors,
                 );
+                final supportAccount = _SupportAccountCard(
+                  colors: colors,
+                  onSupport: onSupport,
+                  onLogout: onLogout,
+                );
 
                 if (compact) {
                   return Column(children: [
@@ -64,6 +76,8 @@ class SettingsScreen extends ConsumerWidget {
                     hours,
                     SizedBox(height: context.h(14)),
                     delivery,
+                    SizedBox(height: context.h(14)),
+                    supportAccount,
                   ]);
                 }
                 return Column(children: [
@@ -78,6 +92,8 @@ class SettingsScreen extends ConsumerWidget {
                           hours,
                           SizedBox(height: context.h(14)),
                           delivery,
+                          SizedBox(height: context.h(14)),
+                          supportAccount,
                         ]),
                       ),
                     ],
@@ -90,6 +106,72 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _SupportAccountCard extends StatelessWidget {
+  final AppColorScheme colors;
+  final VoidCallback? onSupport;
+  final VoidCallback? onLogout;
+
+  const _SupportAccountCard({
+    required this.colors,
+    required this.onSupport,
+    required this.onLogout,
+  });
+
+  @override
+  Widget build(BuildContext context) => _SettingsCard(
+        title: 'Support & Account',
+        icon: Icons.manage_accounts_outlined,
+        colors: colors,
+        child: Column(
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                Icons.support_agent_outlined,
+                size: 20,
+                color: colors.textSecondary,
+              ),
+              title: Text(
+                'Support',
+                style: AppTextStyles.section(context)
+                    .copyWith(color: colors.textPrimary),
+              ),
+              subtitle: Text(
+                'Get help with your account or restaurant setup.',
+                style: AppTextStyles.bodySecondary(context),
+              ),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: colors.textMuted,
+              ),
+              onTap: onSupport,
+            ),
+            Divider(height: context.h(1), color: colors.divider),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.exit_to_app_rounded,
+                size: 20,
+                color: Color(0xFFE05151),
+              ),
+              title: const Text(
+                'Log out',
+                style: TextStyle(
+                  color: Color(0xFFE05151),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Sign out of your admin account.',
+                style: AppTextStyles.bodySecondary(context),
+              ),
+              onTap: onLogout,
+            ),
+          ],
+        ),
+      );
 }
 
 class _IdentityCard extends ConsumerWidget {
@@ -132,7 +214,7 @@ class _IdentityCard extends ConsumerWidget {
                 onPressed: () => Navigator.of(context)
                     .pushNamed(AppRoutes.restaurantProfile),
                 icon: Icon(Icons.open_in_new, size: context.h(20)),
-                label: Text('Open Restaurant Profile',
+                label: Text('Edit Restaurant Profile',
                     style: AppTextStyles.section(context)
                         .copyWith(color: colors.primary)))),
       ]),

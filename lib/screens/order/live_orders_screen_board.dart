@@ -260,7 +260,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                         ),
                         child: Icon(
                           emptyIcon,
-                          size: 22,
+                          size: context.h(22).clamp(16.0, 26.0),
                           color: AppColors.primary,
                         ),
                       ),
@@ -343,9 +343,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                             .copyWith(color: const Color(0xFFE0DCDC)),
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.schedule_outlined,
-                      size: 12,
+                      size: context.h(12).clamp(10.0, 14.0),
                       color: Color(0xFF777070),
                     ),
                     const SizedBox(width: 5),

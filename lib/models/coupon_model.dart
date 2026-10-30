@@ -4,6 +4,18 @@ enum DiscountType { percentage, flat }
 
 enum CouponStatus { active, scheduled, expired }
 
+/// Shared status derivation used by both coupons and offers.
+CouponStatus deriveStatus(DateTime startDate, DateTime endDate) {
+  final now = DateTime.now();
+  if (endDate.isBefore(now) || endDate.isAtSameMomentAs(now)) {
+    return CouponStatus.expired;
+  }
+  if (startDate.isAfter(now)) {
+    return CouponStatus.scheduled;
+  }
+  return CouponStatus.active;
+}
+
 class CouponModel {
   final String id;
   final String code;
@@ -18,21 +30,8 @@ class CouponModel {
   final CouponStatus status;
   final List<String> applicableCategories;
   final List<String> applicableSubCategories;
-
-  /// Optional image URL for the coupon, entered as a plain link the same
-  /// way menu item images are — no upload, just pasted in. Null/empty
-  /// means no image was set and the card falls back to a placeholder.
   final String? imageUrl;
-
-  /// Optional single subcategory this coupon is restricted to (id from
-  /// `menu_categories.subcategories`). Null means the coupon applies
-  /// regardless of subcategory.
   final String? applicableSubCategoryId;
-
-  /// Optional single menu item this coupon is restricted to (id from
-  /// `menu_items`). Only meaningful when [applicableSubCategoryId] is
-  /// also set, since items are chosen from within that subcategory.
-  /// Null means the coupon isn't restricted to one specific item.
   final String? applicableItemId;
 
   CouponModel({
@@ -60,37 +59,31 @@ class CouponModel {
   }
 
   factory CouponModel.fromJson(Map<String, dynamic> json) {
+    final startDate = _parseTimestamp(json['start_date']) ?? DateTime.now();
+    final endDate = _parseTimestamp(json['end_date']) ??
+        DateTime.now().add(const Duration(days: 30));
+
     return CouponModel(
       id: json['id'] ?? '',
-      code: json['code'] ?? '',
+      code: (json['code'] as String?)?.toUpperCase() ?? '',
       description: json['description'] ?? '',
       discountType: json['discount_type'] == 'flat'
           ? DiscountType.flat
           : DiscountType.percentage,
       discountValue: (json['discount_value'] as num?)?.toDouble() ?? 0,
       minOrderValue: (json['min_order_value'] as num?)?.toDouble(),
-      usageLimit: json['usage_limit'] as int?,
+      usageLimit: _intOrNull(json['usage_limit']),
       usageCount: json['usage_count'] as int? ?? 0,
-      startDate: _parseTimestamp(json['start_date']) ?? DateTime.now(),
-      endDate: _parseTimestamp(json['end_date']) ??
-          DateTime.now().add(const Duration(days: 30)),
-      status: CouponStatus.values.firstWhere(
-        (e) => e.name == json['status'],
-        orElse: () => CouponStatus.active,
-      ),
+      startDate: startDate,
+      endDate: endDate,
+      status: _statusFromString(json['status']) ??
+          deriveStatus(startDate, endDate),
       applicableCategories: _strings(json['applicable_categories']),
       applicableSubCategories: _strings(json['applicable_sub_categories']),
-      imageUrl: (json['image_url'] as String?)?.isEmpty ?? true
-          ? null
-          : json['image_url'] as String?,
+      imageUrl: _nullableString(json['image_url']),
       applicableSubCategoryId:
-          (json['applicable_sub_category_id'] as String?)?.isEmpty ?? true
-              ? null
-              : json['applicable_sub_category_id'] as String?,
-      applicableItemId: (json['applicable_item_id'] as String?)?.isEmpty ??
-              true
-          ? null
-          : json['applicable_item_id'] as String?,
+          _nullableString(json['applicable_sub_category_id']),
+      applicableItemId: _nullableString(json['applicable_item_id']),
     );
   }
 
@@ -113,9 +106,49 @@ class CouponModel {
         'updated_at': FieldValue.serverTimestamp(),
       };
 
+  /// Days remaining (negative if already expired). Useful for urgency UI.
+  int get daysRemaining {
+    final now = DateTime.now();
+    return endDate.difference(now).inDays;
+  }
+
+  bool get isExpiringSoon =>
+      status == CouponStatus.active && daysRemaining >= 0 && daysRemaining <= 3;
+
+  bool get isLimited => usageLimit != null && usageLimit! > 0;
+
+  double get usageProgress {
+    if (usageLimit == null || usageLimit == 0) return 0;
+    return (usageCount / usageLimit!).clamp(0.0, 1.0);
+  }
+
+  static CouponStatus? _statusFromString(dynamic value) {
+    if (value is! String) return null;
+    final sanitized = value.trim();
+    if (sanitized.isEmpty) return null;
+    for (final status in CouponStatus.values) {
+      if (status.name == sanitized) return status;
+    }
+    return null;
+  }
+
   static List<String> _strings(dynamic value) {
     if (value is! List) return const [];
     return value.whereType<String>().toList();
+  }
+
+  static String? _nullableString(dynamic value) {
+    if (value is String) {
+      final cleaned = value.trim();
+      return cleaned.isEmpty ? null : cleaned;
+    }
+    return null;
+  }
+
+  static int? _intOrNull(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return null;
   }
 
   static DateTime? _parseTimestamp(dynamic value) {

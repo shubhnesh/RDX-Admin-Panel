@@ -5,6 +5,10 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import 'rdx_text_field.dart';
 
+/// Shared search field used across Inventory, Menu, Coupons, and elsewhere.
+///
+/// Default outer height matches Inventory (`context.h(40)`). Text and hint
+/// are vertically centered in every size (same technique as [RdxTextField]).
 class RdxSearchBar extends StatefulWidget {
   final String hintText;
   final TextEditingController? controller;
@@ -44,6 +48,10 @@ class RdxSearchBar extends StatefulWidget {
 
   final bool showClearButton;
 
+  /// Canonical height used by Inventory and every other screen.
+  static double standardHeight(BuildContext context) =>
+      context.h(40).clamp(32.0, 48.0);
+
   const RdxSearchBar({
     super.key,
     this.hintText = 'Search...',
@@ -78,7 +86,8 @@ class RdxSearchBar extends StatefulWidget {
   State<RdxSearchBar> createState() => _RdxSearchBarState();
 }
 
-/// Shared page toolbar that keeps search and page actions in a stable layout.
+/// Shared page toolbar: search + optional trailing actions.
+/// Always uses [RdxSearchBar.standardHeight] so Menu/Coupons match Inventory.
 class RdxSearchToolbar extends StatelessWidget implements PreferredSizeWidget {
   final String hintText;
   final TextEditingController? controller;
@@ -96,13 +105,14 @@ class RdxSearchToolbar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize => const Size.fromHeight(48);
 
   @override
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 480;
+    final searchHeight = RdxSearchBar.standardHeight(context);
     final search = RdxSearchBar(
-      height: RdxTextField.singleLineHeight(context),
+      height: searchHeight,
       hintText: hintText,
       controller: controller,
       onChanged: onChanged,
@@ -119,20 +129,24 @@ class RdxSearchToolbar extends StatelessWidget implements PreferredSizeWidget {
             spacing: context.w(10),
             runSpacing: context.h(8),
             alignment: WrapAlignment.end,
-            children: actions,
+            children: [
+              for (final action in actions)
+                SizedBox(height: searchHeight, child: action),
+            ],
           ),
         ],
       );
     }
 
     return SizedBox(
-      height: preferredSize.height,
+      height: searchHeight,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(child: search),
           for (final action in actions) ...[
             SizedBox(width: context.w(14)),
-            action,
+            SizedBox(height: searchHeight, child: action),
           ],
         ],
       ),
@@ -191,9 +205,7 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
   }
 
   void _controllerListener() {
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
   void _focusListener() {
@@ -211,90 +223,109 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
     final bool hasText = _controller.text.isNotEmpty;
     final colors = AppColors.of(context);
 
-    final double effectiveHeight = widget.height ?? context.h(42);
+    final double effectiveHeight =
+        (widget.height ?? RdxSearchBar.standardHeight(context))
+            .clamp(32.0, 56.0);
 
-    return Container(
+    // Same text style family as RdxTextField
+    // height: 1.0 prevents the previous 1.2 line-height from pushing text up
+    final textStyle = widget.textStyle ??
+        AppTextStyles.label(context).copyWith(
+          fontSize: RdxTextField.textFontSize(context),
+          color: widget.textColor ?? colors.textPrimary,
+          height: 1.0,
+        );
+    final hintStyle = widget.hintStyle ??
+        AppTextStyles.label(context).copyWith(
+          fontSize: RdxTextField.textFontSize(context),
+          color: widget.hintColor ?? colors.textMuted,
+          height: 1.0,
+        );
+
+    final double fontSize =
+        textStyle.fontSize ?? RdxTextField.fontSize(context);
+
+    return SizedBox(
       width: widget.width,
       height: effectiveHeight,
-      margin: widget.margin,
-      padding: widget.padding ??
-          EdgeInsets.symmetric(
-            horizontal: RdxTextField.horizontalPad(context),
+      child: Container(
+        margin: widget.margin,
+        padding: widget.padding ??
+            EdgeInsets.symmetric(
+              horizontal: RdxTextField.horizontalPad(context),
+            ),
+        decoration: BoxDecoration(
+          color: widget.backgroundColor ?? Colors.white,
+          borderRadius: BorderRadius.circular(
+            context.h(8).clamp(6.0, 8.0),
           ),
-      decoration: BoxDecoration(
-        color: widget.backgroundColor ?? Colors.white,
-        borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(
-          color: widget.borderColor ?? colors.border,
-          width: widget.borderWidth,
+          border: Border.all(
+            color: widget.borderColor ?? colors.border,
+            width: widget.borderWidth,
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          widget.leading ??
-              Icon(
-                Icons.search_rounded,
-                size: context.h(25),
-                color: widget.hintColor ?? colors.textMuted,
-              ),
-          SizedBox(width: context.w(9)),
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              enabled: widget.enabled,
-              readOnly: widget.readOnly,
-              autofocus: widget.autofocus,
-              textInputAction: widget.textInputAction,
-              keyboardType: widget.keyboardType,
-              maxLength: 20,
-              onChanged: widget.onChanged,
-              onSubmitted: widget.onSubmitted,
-              style: widget.textStyle ??
-                  AppTextStyles.label(context).copyWith(
-                    color: widget.textColor ?? colors.textPrimary,
-                  ),
-              decoration: InputDecoration(
-                hintText: widget.hintText,
-                hintStyle: widget.hintStyle ??
-                    AppTextStyles.label(context).copyWith(
-                      color: widget.hintColor ?? colors.textMuted,
-                    ),
-                counterText: '',
-
-                // No background inside the TextField.
-                filled: false,
-                fillColor: Colors.transparent,
-
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-          if (widget.showClearButton && hasText)
-            GestureDetector(
-              onTap: _clear,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: context.w(8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            widget.leading ??
+                Icon(
+                  Icons.search_rounded,
+                  size: context.h(20).clamp(14.0, 20.0),
+                  color: widget.hintColor ?? colors.textMuted,
                 ),
-                child: Icon(
-                  Icons.close_rounded,
-                  size: context.h(16),
-                  color: colors.textMuted,
-                ),
-              ),
-            ),
-          if (widget.trailing != null) ...[
             SizedBox(width: context.w(8)),
-            widget.trailing!,
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                enabled: widget.enabled,
+                readOnly: widget.readOnly,
+                autofocus: widget.autofocus,
+                textInputAction: widget.textInputAction,
+                keyboardType: widget.keyboardType,
+                maxLines: 1,
+                textAlignVertical: TextAlignVertical.center,
+                style: textStyle,
+                cursorColor: AppColors.primary,
+                cursorHeight: fontSize * 1.1,
+                onChanged: widget.onChanged,
+                onSubmitted: widget.onSubmitted,
+                decoration: InputDecoration(
+                  hintText: widget.hintText,
+                  hintStyle: hintStyle,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  isDense: true,
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ),
+            if (widget.showClearButton && hasText)
+              GestureDetector(
+                onTap: _clear,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: EdgeInsets.only(left: context.w(6)),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: context.h(18).clamp(14.0, 18.0),
+                    color: colors.textMuted,
+                  ),
+                ),
+              ),
+            if (widget.trailing != null) ...[
+              SizedBox(width: context.w(6)),
+              widget.trailing!,
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

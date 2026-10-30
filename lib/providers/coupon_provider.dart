@@ -27,7 +27,7 @@ class CouponProvider extends ChangeNotifier {
     try {
       _coupons = await _service.fetchCoupons();
     } catch (e) {
-      errorMessage = 'Failed to load coupons.';
+      errorMessage = 'Failed to load coupons: $e';
     }
     isLoading = false;
     notifyListeners();

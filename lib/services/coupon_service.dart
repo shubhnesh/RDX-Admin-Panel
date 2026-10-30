@@ -6,8 +6,10 @@ class CouponService {
   CollectionReference get _col => _db.collection('coupons');
 
   Future<List<CouponModel>> fetchCoupons() async {
-    final snap = await _col.orderBy('start_date', descending: true).get();
-    return snap.docs.map((d) => CouponModel.fromFirestore(d)).toList();
+    final snap = await _col.get();
+    final coupons = snap.docs.map(CouponModel.fromFirestore).toList()
+      ..sort((a, b) => b.startDate.compareTo(a.startDate));
+    return coupons;
   }
 
   Future<void> createCoupon(CouponModel coupon) async {

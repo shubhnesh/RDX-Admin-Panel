@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/screens/coupons/widgets/coupon_card.dart';
+import 'package:rdx_admin/screens/coupons/create_offer_screen.dart';
 import 'package:rdx_admin/widgets/dialogs/rdx_notice_dialog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -14,8 +15,8 @@ import '../../providers/coupon_provider.dart';
 import '../../services/category_service.dart';
 import '../../services/menu_service.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
-import '../../widgets/resuable_options/rdx_dropdown.dart';
-import '../../widgets/resuable_options/rdx_text_field.dart';
+import '../../widgets/reusable_widgets/rdx_dropdown.dart';
+import '../../widgets/reusable_widgets/rdx_text_field.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 
 /// Sentinel placed as the first entry in the category dropdown so the
@@ -57,6 +58,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   DateTime? endDate;
   bool isLoading = false;
   String? errorMessage;
+  String _promotionType = 'Coupons';
 
   // ── Applicability (subcategory / item) ──────────────────────────────
   final _categoryService = CategoryService();
@@ -310,10 +312,10 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
     }
 
     final coupon = CouponModel(
-      // Keep existing ID while editing; for new coupons use the
-      // uppercase code as the Firestore document ID so the console
-      // shows readable names instead of random strings.
-      id: isEdit ? widget.existing!.id : code.toUpperCase(),
+      // Keep existing ID while editing.
+      id: isEdit
+          ? widget.existing!.id
+          : 'c${DateTime.now().millisecondsSinceEpoch}',
 
       code: code.toUpperCase(),
       description: description, // may be empty — allowed
@@ -394,113 +396,146 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       body: Column(
         children: [
           RdxHeader(
-              title: isEdit ? 'Edit Coupon' : 'Create New Coupon',
-              showBackButton: true),
+            title: isEdit ? 'Edit Coupon' : 'Create Promotion',
+            showBackButton: true,
+          ),
           Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final form = _formContent(context, colors);
-                final previewCoupon = CouponModel(
-                  id: 'draft',
-                  code: codeController.text.trim().isEmpty
-                      ? 'ABCD123'
-                      : codeController.text.trim().toUpperCase(),
-                  description: descriptionController.text.trim(),
-                  discountType: discountType,
-                  discountValue: parsedDiscount ?? 0,
-                  minOrderValue:
-                      double.tryParse(minOrderController.text.trim()),
-                  usageLimit: int.tryParse(usageLimitController.text.trim()),
-                  startDate: startDate ?? DateTime.now(),
-                  endDate: endDate ?? DateTime.now(),
-                  imageUrl: imageController.text.trim().isEmpty
-                      ? null
-                      : imageController.text.trim(),
-                  status:
-                      startDate != null && !startDate!.isAfter(DateTime.now())
+            child: IndexedStack(
+              index: !isEdit && _promotionType == 'Offers' ? 1 : 0,
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final form = _formContent(context, colors);
+                    final pagePadding = Responsive.pagePadding(context);
+                    final columns = Responsive.gridColumns(context);
+                    final spacing = context.w(16);
+                    final previewCardWidth = (constraints.maxWidth -
+                            pagePadding.horizontal -
+                            ((columns - 1) * spacing)) /
+                        columns;
+                    final previewCoupon = CouponModel(
+                      id: 'draft',
+                      code: codeController.text.trim().isEmpty
+                          ? 'ABC123'
+                          : codeController.text.trim().toUpperCase(),
+                      description: descriptionController.text.trim(),
+                      discountType: discountType,
+                      discountValue: parsedDiscount ?? 0,
+                      minOrderValue:
+                          double.tryParse(minOrderController.text.trim()),
+                      usageLimit:
+                          int.tryParse(usageLimitController.text.trim()),
+                      startDate: startDate ?? DateTime.now(),
+                      endDate: endDate ?? DateTime.now(),
+                      imageUrl: imageController.text.trim().isEmpty
+                          ? null
+                          : imageController.text.trim(),
+                      status: startDate != null &&
+                              !startDate!.isAfter(DateTime.now())
                           ? CouponStatus.active
                           : CouponStatus.scheduled,
-                );
-                final preview = CouponCard(
-                  coupon: previewCoupon,
-                  onActions: (_) {},
-                  isPreview: true,
-                );
+                    );
+                    final preview = CouponCard(
+                      coupon: previewCoupon,
+                      onActions: (_) {},
+                    );
 
-                // ── Narrow (mobile / tablet) ───────────────────────────────
-                if (narrow) {
-                  return SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      Responsive.pageHorizontal(context),
-                      context.h(16),
-                      Responsive.pageHorizontal(context),
-                      context.h(28),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        form,
-                        SizedBox(height: context.h(20)),
-                        Text(
-                          'Preview',
-                          style: AppTextStyles.section(context)
-                              .copyWith(color: colors.textPrimary),
+                    // ── Narrow (mobile / tablet) ───────────────────────────────
+                    if (narrow) {
+                      return SingleChildScrollView(
+                        padding: EdgeInsets.fromLTRB(
+                          Responsive.pageHorizontal(context),
+                          context.h(16),
+                          Responsive.pageHorizontal(context),
+                          context.h(28),
                         ),
-                        SizedBox(height: context.h(10)),
-                        preview,
-                        SizedBox(height: context.h(20)),
-                        _actionButtons(context),
-                      ],
-                    ),
-                  );
-                }
-
-                // ── Wide (desktop) ─────────────────────────────────────────
-                return Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    Responsive.pageHorizontal(context),
-                    context.h(16),
-                    Responsive.pageHorizontal(context),
-                    context.h(24),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.only(right: context.w(22)),
-                          child: form,
-                        ),
-                      ),
-                      VerticalDivider(
-                        width: context.w(1),
-                        thickness: context.h(1),
-                        color: colors.border,
-                      ),
-                      SizedBox(
-                        width: context.w(330),
-                        child: Padding(
-                          padding: EdgeInsets.only(left: context.w(22)),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                'Preview',
-                                style: AppTextStyles.section(context)
-                                    .copyWith(color: colors.textPrimary),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            form,
+                            SizedBox(height: context.h(20)),
+                            Text(
+                              'Preview',
+                              style: AppTextStyles.section(context)
+                                  .copyWith(color: colors.textPrimary),
+                            ),
+                            SizedBox(height: context.h(10)),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: SizedBox(
+                                width: previewCardWidth,
+                                child: preview,
                               ),
-                              SizedBox(height: context.h(10)),
-                              preview,
-                              const Spacer(),
-                              _actionButtons(context),
-                            ],
-                          ),
+                            ),
+                            SizedBox(height: context.h(20)),
+                            _actionButtons(context),
+                          ],
                         ),
+                      );
+                    }
+
+                    // ── Wide (desktop) ─────────────────────────────────────────
+                    return Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        Responsive.pageHorizontal(context),
+                        context.h(16),
+                        Responsive.pageHorizontal(context),
+                        context.h(24),
                       ),
-                    ],
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.only(right: context.w(22)),
+                              child: form,
+                            ),
+                          ),
+                          VerticalDivider(
+                            width: context.w(1),
+                            thickness: context.h(1),
+                            color: colors.border,
+                          ),
+                          SizedBox(
+                            width: previewCardWidth + context.w(22),
+                            child: Padding(
+                              padding: EdgeInsets.only(left: context.w(22)),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    'Preview',
+                                    style: AppTextStyles.section(context)
+                                        .copyWith(color: colors.textPrimary),
+                                  ),
+                                  SizedBox(height: context.h(10)),
+                                  SizedBox(
+                                    width: previewCardWidth,
+                                    child: preview,
+                                  ),
+                                  const Spacer(),
+                                  _actionButtons(context),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                if (!isEdit)
+                  CreateOfferScreen(
+                    embedded: true,
+                    promotionType: _promotionType,
+                    onPromotionTypeChanged: (value) {
+                      setState(() => _promotionType = value);
+                    },
+                    onCreated: () {
+                      if (mounted) Navigator.of(context).pop();
+                    },
                   ),
-                );
-              },
+              ],
             ),
           ),
         ],
@@ -512,6 +547,10 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (!isEdit) ...[
+          _promotionTypeSection(context),
+          SizedBox(height: context.h(20)),
+        ],
         _sectionCard(
           context,
           icon: Icons.local_offer_outlined,
@@ -522,19 +561,9 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
               label: 'Coupon Code *',
               hint: 'Create coupon code',
               maxLength: 10,
-              // All-caps for coupon codes (formatter also forces uppercase).
-              textCapitalization: TextCapitalization.characters,
               inputFormatters: [
                 LengthLimitingTextInputFormatter(15),
                 FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
-                // Force every keystroke to uppercase so the field
-                // always shows the coupon code in capital letters.
-                TextInputFormatter.withFunction((oldValue, newValue) {
-                  return TextEditingValue(
-                    text: newValue.text.toUpperCase(),
-                    selection: newValue.selection,
-                  );
-                }),
               ],
             ),
             SizedBox(height: context.h(16)),
@@ -577,6 +606,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
                   ],
                 );
               }
+
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -804,19 +834,37 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
     );
   }
 
+  Widget _promotionTypeSection(BuildContext context) => _sectionCard(
+        context,
+        icon: Icons.tune,
+        title: 'Promotion Type',
+        children: [
+          RdxDropdown<String>(
+            label: 'What would you like to create?',
+            value: _promotionType,
+            items: const ['Coupons', 'Offers'],
+            labelBuilder: (value) => value,
+            onChanged: (value) {
+              if (value == null || value == _promotionType) return;
+              setState(() => _promotionType = value);
+            },
+          ),
+        ],
+      );
+
   Widget _actionButtons(BuildContext context) => Row(
         children: [
+          Expanded(
+            child: RdxActionButton.discard(
+              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+            ),
+          ),
+          SizedBox(width: context.w(10)),
           Expanded(
             child: RdxActionButton.save(
               label: isEdit ? 'Update' : 'Done',
               isLoading: isLoading,
               onPressed: _save,
-            ),
-          ),
-          SizedBox(width: context.w(10)),
-          Expanded(
-            child: RdxActionButton.discard(
-              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
             ),
           ),
         ],
@@ -885,6 +933,8 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   }) {
     return Builder(builder: (context) {
       final colors = AppColors.of(context);
+      final fieldHeight = RdxTextField.singleLineHeight(context);
+      final textFontSize = RdxTextField.textFontSize(context);
       final minimumDate = firstDate ?? DateTime(2024);
       final lastDate = DateTime(2030);
       final today = DateTime.now();
@@ -941,31 +991,35 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
           );
           if (picked != null) onPick(picked);
         },
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: context.w(12),
-            vertical: context.h(14),
-          ),
-          decoration: BoxDecoration(
-            color: colors.surfaceVariant,
-            borderRadius: BorderRadius.circular(context.h(8)),
-            border: Border.all(color: colors.border),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.calendar_today_outlined,
-                size: context.h(14),
-                color: colors.textMuted,
-              ),
-              SizedBox(width: context.w(8)),
-              Text(
-                date == null ? 'Select date' : Formatters.date(date),
-                style: AppTextStyles.body(context).copyWith(
-                  color: date == null ? colors.textMuted : colors.textPrimary,
+        child: SizedBox(
+          height: fieldHeight,
+          child: Container(
+            alignment: Alignment.centerLeft,
+            padding: EdgeInsets.symmetric(
+              horizontal: RdxTextField.horizontalPad(context),
+            ),
+            decoration: BoxDecoration(
+              color: date != null ? Colors.white : colors.surfaceVariant,
+              borderRadius: BorderRadius.circular(context.h(8).clamp(6.0, 8.0)),
+              border: Border.all(color: colors.border),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: context.h(14),
+                  color: colors.textMuted,
                 ),
-              ),
-            ],
+                SizedBox(width: context.w(8)),
+                Text(
+                  date == null ? 'Select date' : Formatters.date(date),
+                  style: AppTextStyles.bodySecondary(context).copyWith(
+                    color: date == null ? colors.textMuted : colors.textPrimary,
+                    fontSize: textFontSize,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );

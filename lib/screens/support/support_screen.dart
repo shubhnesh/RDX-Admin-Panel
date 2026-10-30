@@ -4,11 +4,16 @@ import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
-import '../../widgets/resuable_options/rdx_text_field.dart';
+import '../../widgets/reusable_widgets/rdx_text_field.dart';
 
 /// Contact Technical Support — matches the provided design.
 class SupportScreen extends StatefulWidget {
-  const SupportScreen({super.key});
+  final VoidCallback? onBack;
+
+  const SupportScreen({
+    super.key,
+    this.onBack,
+  });
 
   @override
   State<SupportScreen> createState() => _SupportScreenState();
@@ -62,7 +67,11 @@ class _SupportScreenState extends State<SupportScreen> {
       backgroundColor: colors.background,
       body: Column(
         children: [
-          const RdxHeader(title: 'Contact Technical Support'),
+          RdxHeader(
+            title: 'Contact Technical Support',
+            showBackButton: true,
+            onBack: widget.onBack,
+          ),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {

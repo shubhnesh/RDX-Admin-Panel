@@ -20,15 +20,22 @@ class PreparationService {
       _db.collection('menu_preparations');
 
   Future<List<PreparationModel>> fetchPreparations() async {
-    final snapshot = await _col.orderBy('name').get();
-    return snapshot.docs.map(PreparationModel.fromFirestore).toList();
+    final snapshot = await _col.get();
+    final preparations = snapshot.docs
+        .map(PreparationModel.fromFirestore)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return preparations;
   }
 
   Stream<List<PreparationModel>> streamPreparations() {
-    return _col.orderBy('name').snapshots().map(
-          (snapshot) =>
-              snapshot.docs.map(PreparationModel.fromFirestore).toList(),
-        );
+    return _col.snapshots().map((snapshot) {
+      final preparations = snapshot.docs
+          .map(PreparationModel.fromFirestore)
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return preparations;
+    });
   }
 
   Future<PreparationModel> createPreparation({required String name}) async {

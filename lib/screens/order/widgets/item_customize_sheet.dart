@@ -8,7 +8,7 @@ import '../../../models/cart_item_model.dart';
 import '../../../models/menu_item_model.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../widgets/buttons/rdx_action_button.dart';
-import '../../../widgets/resuable_options/rdx_text_field.dart';
+import '../../../widgets/reusable_widgets/rdx_text_field.dart';
 
 class ItemCustomizeSheet extends ConsumerStatefulWidget {
   final MenuItemModel item;

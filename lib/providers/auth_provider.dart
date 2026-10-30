@@ -12,13 +12,14 @@ class AuthProvider extends ChangeNotifier {
   static bool get _firebaseReady => Firebase.apps.isNotEmpty;
 
   AuthService? _service;
+  bool _previewSignedOut = false;
   AuthService? get _safeService {
     if (!_firebaseReady) return null;
     return _service ??= AuthService();
   }
 
   User? get user => _safeService?.currentUser;
-  bool get isLoggedIn => !_firebaseReady ? true : user != null;
+  bool get isLoggedIn => !_firebaseReady ? !_previewSignedOut : user != null;
 
   bool isLoading = false;
   String? errorMessage;
@@ -42,6 +43,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await service.signIn(email, password);
+      _previewSignedOut = false;
       isLoading = false;
       notifyListeners();
       return true;
@@ -70,6 +72,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await service.register(email, password);
+      _previewSignedOut = false;
       isLoading = false;
       notifyListeners();
       return true;
@@ -87,7 +90,12 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    await _safeService?.signOut();
+    final service = _safeService;
+    if (service == null) {
+      _previewSignedOut = true;
+    } else {
+      await service.signOut();
+    }
     notifyListeners();
   }
 

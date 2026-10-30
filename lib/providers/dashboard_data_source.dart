@@ -20,6 +20,7 @@ DashboardOrderInput mapOrderToDashboardInput(OrderModel o) {
     isPaid: o.paymentStatus == PaymentStatus.paid,
     orderType: o.orderType.name,
     orderSource: o.orderSource.name,
+    status: o.status.name,
     items: [
       for (final line in o.items)
         DashboardLineItem(
@@ -41,15 +42,14 @@ DashboardOperationalSnapshot readOperationalFromProviders(Ref ref) {
       .where((o) => o.paymentStatus == PaymentStatus.unpaid)
       .length;
 
-  // Active = still in kitchen flow (not delivered/cancelled), staff + app.
-  final activeOrders = live.live.length +
-      live.preparing.length +
-      live.ready.length +
-      live.appOrders
-          .where((o) =>
-              o.status == OrderStatus.pending ||
-              o.status == OrderStatus.preparing ||
-              o.status == OrderStatus.ready)
+  // Match Live Orders screen "Total Orders":
+  // walk-in (live + preparing + ready) + active app + paid delivered.
+  final activeOrders = live.liveWalkIn.length +
+      live.preparingWalkIn.length +
+      live.readyWalkIn.length +
+      live.appOrdersActive.length +
+      live.delivered
+          .where((o) => o.paymentStatus == PaymentStatus.paid)
           .length;
 
   final criticalItems = inventory.items

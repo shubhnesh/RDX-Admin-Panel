@@ -227,7 +227,7 @@ class InventoryProvider extends ChangeNotifier {
     try {
       items = await _service.fetchInventory();
     } catch (e) {
-      errorMessage = 'Failed to load inventory.';
+      errorMessage = 'Failed to load inventory: $e';
     }
     isLoading = false;
     notifyListeners();

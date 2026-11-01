@@ -1,11 +1,12 @@
 import '../models/dashboard_stats_model.dart';
 
 /// Pure aggregations over real order / inventory / coupon data.
-/// No dummy numbers — pass live lists from providers/services.
+/// Fresh implementation focused on Zomato-style Sales + Funnel + Mealtime.
 class DashboardService {
   DashboardStatsModel buildStats({
-    required List<DashboardOrderInput> todayOrders,
-    required List<DashboardOrderInput> trendOrders,
+    required List<DashboardOrderInput> periodOrders,
+    required List<DashboardOrderInput> previousOrders,
+    required List<DashboardOrderInput> trendOrders, // last 7–14 days for charts
     required int lowStockCount,
     required int criticalStockCount,
     required int activeCouponCount,
@@ -15,40 +16,74 @@ class DashboardService {
     List<String> criticalItemNames = const [],
     List<String> lowStockItemNames = const [],
     List<String> expiringCouponCodes = const [],
-    // Restaurant's operating hours (24h), taken from Settings.
-    // Volume trend is bucketed into 2-hour slots across this window.
-    int openHour = 10,
-    int closeHour = 22,
+    String periodLabel = 'Today',
   }) {
-    final paidToday = todayOrders.where((o) => o.isPaid).toList();
-    final todayRevenue = paidToday.fold<double>(0, (s, o) => s + o.total);
+    final paid = periodOrders.where((o) => o.isPaid).toList();
+    final netSales = paid.fold<double>(0, (s, o) => s + o.total);
+    final ordersDelivered = periodOrders.length;
+    final aov = paid.isEmpty ? 0.0 : netSales / paid.length;
 
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final yesterdayStart = todayStart.subtract(const Duration(days: 1));
-    final yesterdayRevenue = trendOrders
-        .where((o) =>
-            o.isPaid &&
-            !o.createdAt.isBefore(yesterdayStart) &&
-            o.createdAt.isBefore(todayStart))
-        .fold<double>(0, (s, o) => s + o.total);
+    final prevPaid = previousOrders.where((o) => o.isPaid).toList();
+    final prevSales = prevPaid.fold<double>(0, (s, o) => s + o.total);
+    final prevOrders = previousOrders.length;
+    final prevAov = prevPaid.isEmpty ? 0.0 : prevSales / prevPaid.length;
 
-    final dineIn = todayOrders.where((o) => o.orderType == 'dineIn').length;
-    final takeaway =
-        todayOrders.where((o) => o.orderType == 'takeaway').length;
-    final delivery =
-        todayOrders.where((o) => o.orderType == 'delivery').length;
-    final staff = todayOrders.where((o) => o.orderSource == 'staff').length;
-    final app = todayOrders.where((o) => o.orderSource == 'app').length;
+    // Sparklines from trend (last 7 days)
+    final spark = _buildSparklines(trendOrders, days: 7);
 
-    final hourly = _hourlyVolume(
-      todayOrders,
-      openHour: openHour,
-      closeHour: closeHour,
-    );
-    final revenueTrend = _dailyRevenueSeries(trendOrders, days: _inferDays(trendOrders));
-    final orderTrend = _dailyOrderCountSeries(trendOrders, days: _inferDays(trendOrders));
-    final topSelling = _topSelling(todayOrders, limit: 4);
+    // Full trend series
+    final salesTrend = _dailySeries(trendOrders, days: 7, valueFn: (o) => o.isPaid ? o.total : 0);
+    final ordersTrend = _dailySeries(trendOrders, days: 7, valueFn: (_) => 1);
+    final aovTrend = _dailyAovSeries(trendOrders, days: 7);
+
+    // Mealtime
+    int breakfast = 0, lunch = 0, evening = 0, dinner = 0, lateNight = 0;
+    for (final o in periodOrders) {
+      final h = o.createdAt.hour;
+      if (h >= 7 && h < 11) {
+        breakfast++;
+      } else if (h >= 11 && h < 16) {
+        lunch++;
+      } else if (h >= 16 && h < 19) {
+        evening++;
+      } else if (h >= 19 && h < 23) {
+        dinner++;
+      } else {
+        lateNight++;
+      }
+    }
+
+    // Funnel from order status
+    int pending = 0, preparing = 0, ready = 0, delivered = 0, cancelled = 0;
+    for (final o in periodOrders) {
+      switch (o.status) {
+        case 'pending':
+          pending++;
+          break;
+        case 'preparing':
+          preparing++;
+          break;
+        case 'ready':
+          ready++;
+          break;
+        case 'delivered':
+          delivered++;
+          break;
+        case 'cancelled':
+          cancelled++;
+          break;
+        default:
+          delivered++;
+      }
+    }
+
+    final dineIn = periodOrders.where((o) => o.orderType == 'dineIn').length;
+    final takeaway = periodOrders.where((o) => o.orderType == 'takeaway').length;
+    final delivery = periodOrders.where((o) => o.orderType == 'delivery').length;
+    final staff = periodOrders.where((o) => o.orderSource == 'staff').length;
+    final app = periodOrders.where((o) => o.orderSource == 'app').length;
+
+    final topSelling = _topSelling(periodOrders, limit: 5);
 
     final attention = _buildAttention(
       criticalStockCount: criticalStockCount,
@@ -60,160 +95,123 @@ class DashboardService {
     );
 
     return DashboardStatsModel(
-      todayRevenue: todayRevenue,
-      yesterdayRevenue: yesterdayRevenue,
-      todayOrderCount: todayOrders.length,
+      netSales: netSales,
+      previousNetSales: prevSales,
+      ordersDelivered: ordersDelivered,
+      previousOrdersDelivered: prevOrders,
+      averageOrderValue: aov,
+      previousAov: prevAov,
+      salesSparkline: spark.sales,
+      ordersSparkline: spark.orders,
+      aovSparkline: spark.aov,
+      salesTrend: salesTrend,
+      ordersTrend: ordersTrend,
+      aovTrend: aovTrend,
+      breakfastCount: breakfast,
+      lunchCount: lunch,
+      eveningCount: evening,
+      dinnerCount: dinner,
+      lateNightCount: lateNight,
+      funnelPending: pending,
+      funnelPreparing: preparing,
+      funnelReady: ready,
+      funnelDelivered: delivered,
+      funnelCancelled: cancelled,
       dineInCount: dineIn,
       takeawayCount: takeaway,
       deliveryCount: delivery,
       staffOrderCount: staff,
       appOrderCount: app,
-      hourlyVolume: hourly.values,
-      hourlyLabels: hourly.labels,
-      hourlyRangeLabels: hourly.rangeLabels,
-      revenueTrend: revenueTrend,
-      orderCountTrend: orderTrend,
       topSellingItems: topSelling,
-      attentionItems: attention,
-      activeCouponCount: activeCouponCount,
-      couponUsagesToday: couponUsagesToday,
+      activeOrdersCount: activeOrdersCount,
+      pendingPaymentCount: pendingPaymentCount,
       lowStockCount: lowStockCount,
       criticalStockCount: criticalStockCount,
-      pendingPaymentCount: pendingPaymentCount,
-      activeOrdersCount: activeOrdersCount,
+      activeCouponCount: activeCouponCount,
+      couponUsagesToday: couponUsagesToday,
+      attentionItems: attention,
+      periodLabel: periodLabel,
     );
   }
 
-  static int daysForPeriod(String period) {
-    switch (period) {
-      case 'Daily':
-        return 7;
-      case 'Weekly':
-        return 14;
-      case 'Monthly':
-        return 30;
-      default:
-        return 7;
-    }
-  }
-
-  int _inferDays(List<DashboardOrderInput> orders) {
-    if (orders.isEmpty) return 7;
+  ({List<double> sales, List<double> orders, List<double> aov})
+      _buildSparklines(List<DashboardOrderInput> orders, {required int days}) {
+    final sales = <double>[];
+    final orderCounts = <double>[];
+    final aovs = <double>[];
     final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day);
-    var minDay = start;
-    for (final o in orders) {
-      final d = DateTime(o.createdAt.year, o.createdAt.month, o.createdAt.day);
-      if (d.isBefore(minDay)) minDay = d;
+    final start = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: days - 1));
+
+    for (var i = 0; i < days; i++) {
+      final day = start.add(Duration(days: i));
+      final dayOrders = orders.where((o) {
+        final d = o.createdAt;
+        return d.year == day.year && d.month == day.month && d.day == day.day;
+      }).toList();
+      final paid = dayOrders.where((o) => o.isPaid).toList();
+      final rev = paid.fold<double>(0, (s, o) => s + o.total);
+      sales.add(rev);
+      orderCounts.add(dayOrders.length.toDouble());
+      aovs.add(paid.isEmpty ? 0 : rev / paid.length);
     }
-    return start.difference(minDay).inDays + 1;
+    return (sales: sales, orders: orderCounts, aov: aovs);
   }
 
-  ({List<double> values, List<String> labels, List<String> rangeLabels})
-      _hourlyVolume(
-    List<DashboardOrderInput> orders, {
-    required int openHour,
-    required int closeHour,
-  }) {
-    final slots = _twoHourSlots(openHour: openHour, closeHour: closeHour);
-    final buckets = List<double>.filled(slots.length, 0);
-
-    for (final o in orders) {
-      final idx = _slotIndexForHour(o.createdAt.hour, slots);
-      if (idx != -1) buckets[idx] += 1;
-    }
-
-    return (
-      values: buckets,
-      labels: slots.map(_formatHourLabel).toList(),
-      rangeLabels: slots.map(_formatRangeLabel).toList(),
-    );
-  }
-
-  /// Builds hour-of-day slot starts, 2 hours apart, from [openHour] up to
-  /// (but not reaching) [closeHour]. Wraps past midnight when the
-  /// restaurant closes after 12 AM (e.g. open 10AM, close 2AM).
-  List<int> _twoHourSlots({required int openHour, required int closeHour}) {
-    final open = openHour % 24;
-    final close = closeHour % 24;
-    final span = close > open ? close - open : (24 - open) + close;
-    final slotCount = (span / 2).ceil().clamp(1, 12);
-    return [for (var i = 0; i < slotCount; i++) (open + i * 2) % 24];
-  }
-
-  /// Finds which 2-hour slot [hour] falls into, wrapping past midnight.
-  int _slotIndexForHour(int hour, List<int> slots) {
-    for (var i = 0; i < slots.length; i++) {
-      final start = slots[i];
-      final end = (start + 2) % 24;
-      final inRange =
-          end > start ? (hour >= start && hour < end) : (hour >= start || hour < end);
-      if (inRange) return i;
-    }
-    return -1;
-  }
-
-  /// Single point label for the chart axis, e.g. "10AM", "12PM".
-  String _formatHourLabel(int hour24) {
-    final period = hour24 >= 12 ? 'PM' : 'AM';
-    var h = hour24 % 12;
-    if (h == 0) h = 12;
-    return '$h$period';
-  }
-
-  /// Full 2-hour range for the hover tooltip, e.g. "10AM-12PM", "12PM-2PM".
-  String _formatRangeLabel(int startHour24) {
-    final endHour24 = (startHour24 + 2) % 24;
-    return '${_formatHourLabel(startHour24)}-${_formatHourLabel(endHour24)}';
-  }
-
-  List<DailyPoint> _dailyRevenueSeries(
+  List<DailyPoint> _dailySeries(
     List<DashboardOrderInput> orders, {
     required int days,
+    required double Function(DashboardOrderInput) valueFn,
   }) {
-    final n = days.clamp(1, 90);
+    final n = days.clamp(1, 30);
     final today = DateTime.now();
     final start = DateTime(today.year, today.month, today.day)
         .subtract(Duration(days: n - 1));
-
     final map = <DateTime, double>{};
     for (var i = 0; i < n; i++) {
       map[start.add(Duration(days: i))] = 0;
+    }
+    for (final o in orders) {
+      final day = DateTime(o.createdAt.year, o.createdAt.month, o.createdAt.day);
+      if (map.containsKey(day)) {
+        map[day] = map[day]! + valueFn(o);
+      }
+    }
+    final keys = map.keys.toList()..sort();
+    return [for (final d in keys) DailyPoint(date: d, value: map[d]!)];
+  }
+
+  List<DailyPoint> _dailyAovSeries(
+    List<DashboardOrderInput> orders, {
+    required int days,
+  }) {
+    final n = days.clamp(1, 30);
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day)
+        .subtract(Duration(days: n - 1));
+    final revMap = <DateTime, double>{};
+    final cntMap = <DateTime, int>{};
+    for (var i = 0; i < n; i++) {
+      final d = start.add(Duration(days: i));
+      revMap[d] = 0;
+      cntMap[d] = 0;
     }
     for (final o in orders) {
       if (!o.isPaid) continue;
-      final day =
-          DateTime(o.createdAt.year, o.createdAt.month, o.createdAt.day);
-      if (map.containsKey(day)) {
-        map[day] = map[day]! + o.total;
+      final day = DateTime(o.createdAt.year, o.createdAt.month, o.createdAt.day);
+      if (revMap.containsKey(day)) {
+        revMap[day] = revMap[day]! + o.total;
+        cntMap[day] = cntMap[day]! + 1;
       }
     }
-    final keys = map.keys.toList()..sort();
-    return [for (final d in keys) DailyPoint(date: d, value: map[d]!)];
-  }
-
-  List<DailyPoint> _dailyOrderCountSeries(
-    List<DashboardOrderInput> orders, {
-    required int days,
-  }) {
-    final n = days.clamp(1, 90);
-    final today = DateTime.now();
-    final start = DateTime(today.year, today.month, today.day)
-        .subtract(Duration(days: n - 1));
-
-    final map = <DateTime, double>{};
-    for (var i = 0; i < n; i++) {
-      map[start.add(Duration(days: i))] = 0;
-    }
-    for (final o in orders) {
-      final day =
-          DateTime(o.createdAt.year, o.createdAt.month, o.createdAt.day);
-      if (map.containsKey(day)) {
-        map[day] = map[day]! + 1;
-      }
-    }
-    final keys = map.keys.toList()..sort();
-    return [for (final d in keys) DailyPoint(date: d, value: map[d]!)];
+    final keys = revMap.keys.toList()..sort();
+    return [
+      for (final d in keys)
+        DailyPoint(
+          date: d,
+          value: cntMap[d]! == 0 ? 0 : revMap[d]! / cntMap[d]!,
+        ),
+    ];
   }
 
   List<TopSellingItem> _topSelling(
@@ -271,8 +269,7 @@ class DashboardService {
       items.add(AttentionItem(
         kind: AttentionKind.lowStock,
         severity: AttentionSeverity.warning,
-        title:
-            '$lowStockCount item${lowStockCount == 1 ? '' : 's'} low stock',
+        title: '$lowStockCount item${lowStockCount == 1 ? '' : 's'} low stock',
         subtitle: names.isEmpty ? 'Below minimum threshold' : names,
         route: '/inventory',
         filterHint: 'Low Stock',
@@ -315,6 +312,7 @@ class DashboardOrderInput {
   final bool isPaid;
   final String orderType;
   final String orderSource;
+  final String status; // pending | preparing | ready | delivered | cancelled
   final List<DashboardLineItem> items;
 
   const DashboardOrderInput({
@@ -324,6 +322,7 @@ class DashboardOrderInput {
     required this.isPaid,
     required this.orderType,
     required this.orderSource,
+    this.status = 'delivered',
     this.items = const [],
   });
 }

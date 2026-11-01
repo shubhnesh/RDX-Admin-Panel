@@ -142,22 +142,9 @@ class MainSideNav extends StatelessWidget {
                         icon: Icons.settings_outlined,
                         label: 'Settings',
                         expanded: expanded,
-                        selected: currentRoute == '/settings',
+                        selected: currentRoute == '/settings' ||
+                            currentRoute == '/support',
                         onTap: () => onNavigate('/settings'),
-                      ),
-                      _FooterTile(
-                        icon: Icons.support_agent_outlined,
-                        label: 'Support',
-                        expanded: expanded,
-                        selected: currentRoute == '/support',
-                        onTap: () => onNavigate('/support'),
-                      ),
-                      _FooterTile(
-                        icon: Icons.logout_rounded,
-                        label: 'Logout',
-                        expanded: expanded,
-                        onTap: onLogout ?? () {},
-                        danger: true,
                       ),
                     ],
                   ),
@@ -198,12 +185,9 @@ class MainSideNav extends StatelessWidget {
         mainAxisAlignment:
             expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
         children: [
-          SvgPicture.asset(
-            'assets/images/logo/rdx_logo_picture.svg',
-            colorFilter: const ColorFilter.mode(
-              Colors.black,
-              BlendMode.srcIn,
-            ),
+          // Safe logo: SVG decode can fail on web (CanvasKit not ready /
+          // hot-restart). Fallback icon avoids crashing the whole shell.
+          _NavLogo(
             width: context.w(50),
             height: context.h(35),
           ),
@@ -269,30 +253,25 @@ class _EdgeToggleButtonState extends State<_EdgeToggleButton> {
         waitDuration: const Duration(milliseconds: 400),
         child: GestureDetector(
           onTap: widget.onTap,
-          child: AnimatedScale(
-            duration: const Duration(milliseconds: 160),
-            scale: _hovering ? 1.1 : 1.0,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                color: _hovering ? AppColors.primary : AppColors.lightSurface,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: _hovering ? AppColors.primary : AppColors.lightBorder,
-                  width: 1.5,
-                ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: _hovering ? AppColors.primary : AppColors.lightSurface,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: _hovering ? AppColors.primary : AppColors.lightBorder,
+                width: 1.5,
               ),
-              child: AnimatedRotation(
-                duration: const Duration(milliseconds: 280),
-                turns: widget.expanded ? 0 : 0.5,
-                child: Icon(
-                  Icons.keyboard_double_arrow_left_rounded,
-                  size: size * (18 / 28),
-                  color:
-                      _hovering ? Colors.white : AppColors.lightTextSecondary,
-                ),
+            ),
+            child: AnimatedRotation(
+              duration: const Duration(milliseconds: 280),
+              turns: widget.expanded ? 0 : 0.5,
+              child: Icon(
+                Icons.keyboard_double_arrow_left_rounded,
+                size: size * (18 / 28),
+                color: _hovering ? Colors.white : AppColors.lightTextSecondary,
               ),
             ),
           ),
@@ -412,7 +391,6 @@ class _FooterTile extends StatelessWidget {
   final bool expanded;
   final VoidCallback onTap;
   final bool selected;
-  final bool danger;
 
   const _FooterTile({
     required this.icon,
@@ -420,7 +398,6 @@ class _FooterTile extends StatelessWidget {
     required this.expanded,
     required this.onTap,
     this.selected = false,
-    this.danger = false,
   });
 
   static const Duration _d = Duration(milliseconds: 280);
@@ -428,11 +405,7 @@ class _FooterTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = danger
-        ? AppColors.danger.withOpacity(0.9)
-        : selected
-            ? AppColors.primary
-            : AppColors.lightTextSecondary;
+    final color = selected ? AppColors.primary : AppColors.lightTextSecondary;
     final bg =
         selected ? AppColors.primary.withOpacity(0.15) : Colors.transparent;
 
@@ -502,5 +475,47 @@ class _FooterTile extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+/// Logo with SVG + hard fallback so web CanvasKit decode errors never
+/// take down the side nav.
+class _NavLogo extends StatelessWidget {
+  final double width;
+  final double height;
+
+  const _NavLogo({required this.width, required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = SizedBox(
+      width: width,
+      height: height,
+      child: Icon(
+        Icons.storefront_rounded,
+        size: height * 0.85,
+        color: Colors.black87,
+      ),
+    );
+
+    try {
+      return SizedBox(
+        width: width,
+        height: height,
+        child: SvgPicture.asset(
+          'assets/images/logo/rdx_logo_picture.svg',
+          width: width,
+          height: height,
+          fit: BoxFit.contain,
+          colorFilter: const ColorFilter.mode(
+            Colors.black,
+            BlendMode.srcIn,
+          ),
+          placeholderBuilder: (_) => fallback,
+        ),
+      );
+    } catch (_) {
+      return fallback;
+    }
   }
 }

@@ -11,9 +11,9 @@ import '../../models/menu_item_model.dart';
 import '../../providers/menu_provider.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
+import '../../widgets/buttons/rdx_header_action_button.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
-import '../../widgets/resuable_options/rdx_category_tabs.dart';
-import '../../widgets/resuable_options/rdx_search_bar.dart';
+import '../../widgets/reusable_widgets/rdx_search_bar.dart';
 
 class MenuScreen extends ConsumerStatefulWidget {
   const MenuScreen({super.key});
@@ -23,9 +23,6 @@ class MenuScreen extends ConsumerStatefulWidget {
 }
 
 class _MenuScreenState extends ConsumerState<MenuScreen> {
-  final Set<String> _appliedCategories = {};
-  Set<String>? _stagedCategories;
-  bool _hasAppliedCategories = false;
   bool _categoryPickerOpen = false;
   final GlobalKey _categoryButtonKey = GlobalKey();
   OverlayEntry? _categoryOverlay;
@@ -45,10 +42,6 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       return;
     }
 
-    _stagedCategories = !_hasAppliedCategories
-        ? provider.categoryList.map((category) => category.name).toSet()
-        : Set<String>.from(_appliedCategories);
-
     final buttonContext = _categoryButtonKey.currentContext;
     if (buttonContext == null) return;
 
@@ -61,9 +54,10 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final mediaQuery = MediaQuery.of(context);
     final screenSize = mediaQuery.size;
 
-    final panelWidth = context.w(330);
+    final panelWidth = context.w(320);
     final horizontalMargin = context.w(16);
     final verticalGap = context.h(8);
+    final panelHeight = context.h(280); // fixed height
 
     final availableBelow = screenSize.height -
         (buttonOffset.dy + buttonSize.height) -
@@ -73,20 +67,17 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final availableAbove =
         buttonOffset.dy - mediaQuery.padding.top - horizontalMargin;
 
-    final estimatedPanelHeight = context.h(430);
-
-    final showBelow = availableBelow >= estimatedPanelHeight ||
-        availableBelow >= availableAbove;
+    final showBelow =
+        availableBelow >= panelHeight || availableBelow >= availableAbove;
 
     double top;
     if (showBelow) {
       top = buttonOffset.dy + buttonSize.height + verticalGap;
     } else {
-      top = buttonOffset.dy - estimatedPanelHeight - verticalGap;
+      top = buttonOffset.dy - panelHeight - verticalGap;
     }
 
-    final maxTop = screenSize.height - estimatedPanelHeight - horizontalMargin;
-
+    final maxTop = screenSize.height - panelHeight - horizontalMargin;
     top = top.clamp(
       mediaQuery.padding.top + horizontalMargin,
       maxTop > mediaQuery.padding.top
@@ -120,8 +111,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                 child: _categoryPickerPanel(
                   AppColors.of(context),
                   provider,
-                  panelWidth: panelWidth,
-                  maxHeight: showBelow ? availableBelow : availableAbove,
+                  panelHeight: panelHeight,
                 ),
               ),
             ),
@@ -131,52 +121,21 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     );
 
     Overlay.of(context, rootOverlay: true).insert(_categoryOverlay!);
-
-    setState(() {
-      _categoryPickerOpen = true;
-    });
+    setState(() => _categoryPickerOpen = true);
   }
 
   void _closeCategoryPicker() {
     final overlay = _categoryOverlay;
     _categoryOverlay = null;
-
-    if (overlay != null) {
-      overlay.remove();
-    }
+    overlay?.remove();
 
     if (!mounted) return;
-
-    setState(() {
-      _categoryPickerOpen = false;
-      _stagedCategories = null;
-    });
+    setState(() => _categoryPickerOpen = false);
   }
 
-  void _toggleStagedCategory(String name, bool selected) {
-    final staged = _stagedCategories ?? <String>{};
-    if (selected) {
-      staged.add(name);
-    } else {
-      staged.remove(name);
-    }
-    _stagedCategories = staged;
-    _categoryOverlay?.markNeedsBuild();
-  }
-
-  void _applyCategories(MenuProvider provider) {
-    final next = Set<String>.from(_stagedCategories ?? {});
-    _appliedCategories
-      ..clear()
-      ..addAll(next);
-    _hasAppliedCategories = true;
-
-    final selectedIsVisible = provider.selectedCategory == 'All' ||
-        _appliedCategories.contains(provider.selectedCategory);
-
+  void _selectCategory(MenuProvider provider, String category) {
+    provider.setCategory(category);
     _closeCategoryPicker();
-
-    if (!selectedIsVisible) provider.setCategory('All');
   }
 
   @override
@@ -187,7 +146,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // MENU ITEM ACTIONS (edit / delete)
+  // MENU ITEM ACTIONS
   // ═══════════════════════════════════════════════════════════════
 
   void _showMenuItemActions(
@@ -264,13 +223,16 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
       if (!context.mounted) return;
 
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(
-      //     content: Text(
-      //       success ? 'Menu item deleted.' : 'Failed to delete menu item.',
-      //     ),
-      //   ),
-      // );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Menu item deleted.'
+                : ref.read(menuProvider).errorMessage ??
+                    'Failed to delete menu item.',
+          ),
+        ),
+      );
     }
   }
 
@@ -279,60 +241,122 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final provider = ref.watch(menuProvider);
     final colors = AppColors.of(context);
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      body: SafeArea(
+    final pagePad = context.defaultScreenPadding();
+
+    Widget bodyContent;
+    final showGrid = !provider.isLoading &&
+        provider.errorMessage == null &&
+        provider.filteredItems.isNotEmpty;
+
+    if (provider.isLoading) {
+      bodyContent = const LoadingIndicator();
+    } else if (provider.errorMessage != null &&
+        provider.filteredItems.isEmpty) {
+      bodyContent = Center(
         child: Padding(
-          padding: Responsive.pagePadding(
-            context,
-            top: context.h(14),
-            bottom: context.h(0),
-          ),
+          padding: EdgeInsets.all(context.w(24)),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _buildTopBar(context, colors),
-              SizedBox(height: context.h(16)),
-              _buildHeading(context, colors),
-              SizedBox(height: context.h(20)),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: context.h(10)),
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: colors.divider),
-                    bottom: BorderSide(color: colors.divider),
-                  ),
-                ),
-                child: _buildCategoryTabs(provider, colors),
+              Text(
+                provider.errorMessage!,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.body(context),
               ),
-              SizedBox(height: context.h(18)),
-              Expanded(
-                child: provider.isLoading
-                    ? const LoadingIndicator()
-                    : provider.filteredItems.isEmpty
-                        ? const EmptyState(message: 'No menu items found')
-                        : _buildGrid(context, provider, colors),
+              SizedBox(height: context.h(12)),
+              RdxActionButton(
+                label: 'Retry',
+                onPressed: () => provider.load(),
+                isPrimary: true,
               ),
             ],
           ),
+        ),
+      );
+    } else if (provider.filteredItems.isEmpty) {
+      bodyContent = const EmptyState(message: 'No menu items found');
+    } else {
+      bodyContent = const SizedBox.shrink();
+    }
+
+    return Scaffold(
+      backgroundColor: colors.background,
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            // Heading + Add Item
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  pagePad.left,
+                  pagePad.top,
+                  pagePad.right,
+                  0,
+                ),
+                child: _buildHeadingRow(context, colors),
+              ),
+            ),
+
+            // Search + Filter icon only
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _MenuFiltersHeader(
+                background: colors.background,
+                horizontalPad: pagePad.left,
+                child: _buildFiltersRow(provider, colors),
+              ),
+            ),
+
+            if (showGrid)
+              _buildGrid(context, provider, colors, pagePad)
+            else
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    pagePad.left,
+                    context.h(12),
+                    pagePad.right,
+                    pagePad.bottom,
+                  ),
+                  child: bodyContent,
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // TOP BAR
+  // HEADING ROW
   // ═══════════════════════════════════════════════════════════════
 
-  Widget _buildTopBar(BuildContext context, AppColorScheme colors) {
-    return RdxSearchToolbar(
-      hintText: 'Search menu items',
-      onChanged: (value) => ref.read(menuProvider).setSearchQuery(value),
-      actions: [
-        RdxActionButton(
+  Widget _buildHeadingRow(BuildContext context, AppColorScheme colors) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Menu Items',
+                style: AppTextStyles.heading(context),
+              ),
+              SizedBox(height: context.h(4)),
+              Text(
+                'Manage your menu items, pricing and categories.',
+                style: AppTextStyles.bodySecondary(context).copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: context.w(12)),
+        RdxHeaderActionButton(
           label: 'Add Item',
-          leadingIcon: Icons.add,
           onPressed: () async {
             await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
             if (context.mounted) ref.read(menuProvider).load();
@@ -343,89 +367,94 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // HEADING
-  //
-  // Same title + subheading pattern as CouponsScreen ("Coupons & Offers").
+  // FILTERS ROW  – search takes almost full width + filter icon
   // ═══════════════════════════════════════════════════════════════
 
-  Widget _buildHeading(BuildContext context, AppColorScheme colors) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Menu Items',
-          style: AppTextStyles.heading(context),
-        ),
-        SizedBox(height: context.h(4)),
-        Text(
-          'Manage your menu items, pricing and categories.',
-          style: AppTextStyles.bodySecondary(context).copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // CATEGORY TABS
-  // ═══════════════════════════════════════════════════════════════
-
-  Widget _buildCategoryTabs(MenuProvider provider, AppColorScheme colors) {
-    final categories = !_hasAppliedCategories
-        ? provider.categoryList.map((c) => c.name).toList()
-        : _appliedCategories.toList();
+  Widget _buildFiltersRow(MenuProvider provider, AppColorScheme colors) {
+    final searchHeight = RdxSearchBar.standardHeight(context);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: const [Colors.black, Colors.black, Colors.transparent],
-              stops: const [0.0, 0.9, 1.0],
-            ).createShader(bounds),
-            blendMode: BlendMode.dstIn,
-            child: RdxCategoryTabs(
-              labels: categories,
-              allLabel: 'All',
-              selectedLabel: provider.selectedCategory,
-              onSelected: provider.setCategory,
-              expand: false,
-            ),
+          child: RdxSearchBar(
+            height: searchHeight,
+            hintText: 'Search menu items',
+            onChanged: (value) => ref.read(menuProvider).setSearchQuery(value),
           ),
         ),
-        SizedBox(width: context.w(8)),
-        _manageCategoriesButton(colors, provider),
+        SizedBox(width: context.w(10)),
+        _filterButton(colors, provider),
       ],
     );
   }
 
-  Widget _manageCategoriesButton(AppColorScheme colors, MenuProvider provider) {
+// ─── Replace the existing _filterButton method with this ───────────────
+
+  Widget _filterButton(AppColorScheme colors, MenuProvider provider) {
+    final isActive = provider.selectedCategory != 'All';
+    final labels = ['All', ...provider.categoryList.map((c) => c.name)];
+
+    // Measure the widest label so the button never changes size
+    final textStyle = AppTextStyles.label(context);
+    double maxTextWidth = 0;
+    for (final label in labels) {
+      final tp = TextPainter(
+        text: TextSpan(text: label, style: textStyle),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      if (tp.width > maxTextWidth) maxTextWidth = tp.width;
+    }
+
+    // Extra breathing room so the button feels comfortable
+    final fixedWidth = context.w(16) * 2 + // left + right padding
+        context.h(19) + // tune icon
+        context.w(8) + // gap after icon
+        maxTextWidth + // longest label
+        context.w(20) + // extra space after text
+        context.w(4) + // gap before chevron
+        context.h(20); // chevron
+
     return InkWell(
       key: _categoryButtonKey,
       onTap: () => _openCategoryPicker(provider),
       borderRadius: BorderRadius.circular(context.h(8)),
       child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: context.w(11),
-          vertical: context.h(9),
-        ),
+        width: fixedWidth.clamp(context.w(140), context.w(260)),
+        height: RdxSearchBar.standardHeight(context),
+        padding: EdgeInsets.symmetric(horizontal: context.w(16)),
         decoration: BoxDecoration(
-          color: _categoryPickerOpen
+          color: _categoryPickerOpen || isActive
               ? AppColors.primary.withValues(alpha: 0.08)
               : colors.surface,
           borderRadius: BorderRadius.circular(context.h(8)),
           border: Border.all(
-            color: _categoryPickerOpen ? AppColors.primary : colors.border,
+            color: _categoryPickerOpen || isActive
+                ? AppColors.primary
+                : colors.border,
           ),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
-            Icon(Icons.tune, size: context.h(19), color: AppColors.primary),
+            Icon(
+              Icons.tune,
+              size: context.h(19),
+              color: AppColors.primary,
+            ),
+            SizedBox(width: context.w(8)),
+            Expanded(
+              child: Text(
+                provider
+                    .selectedCategory, // always shows "All" or the selected name
+                style: AppTextStyles.label(context).copyWith(
+                  color: isActive ? AppColors.primary : colors.textSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
             SizedBox(width: context.w(4)),
             Icon(
               _categoryPickerOpen
@@ -440,20 +469,19 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // CATEGORY PICKER PANEL  – chips that wrap + vertical scroll
+  // ═══════════════════════════════════════════════════════════════
+
   Widget _categoryPickerPanel(
     AppColorScheme colors,
     MenuProvider provider, {
-    required double panelWidth,
-    required double maxHeight,
+    required double panelHeight,
   }) {
-    final staged = _stagedCategories ?? <String>{};
-    final categoryOptions = provider.categoryList;
-
-    final listHeight =
-        (maxHeight - context.h(170)).clamp(context.h(140), context.h(270));
+    final labels = ['All', ...provider.categoryList.map((c) => c.name)];
 
     return Container(
-      width: panelWidth,
+      height: panelHeight,
       padding: EdgeInsets.fromLTRB(
         context.w(14),
         context.h(13),
@@ -473,141 +501,44 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Filter categories',
-                  style: AppTextStyles.section(context)
-                      .copyWith(color: colors.textPrimary),
-                ),
-              ),
-              Text(
-                '${staged.length} selected',
-                style: AppTextStyles.bodySecondary(context)
-                    .copyWith(color: colors.textMuted),
-              ),
-            ],
+          Text(
+            'Filter by category',
+            style: AppTextStyles.section(context)
+                .copyWith(color: colors.textPrimary),
           ),
           SizedBox(height: context.h(4)),
           Text(
-            'Choose which categories appear in the filter row.',
+            'Tap a chip to filter the menu items.',
             style: AppTextStyles.caption(context)
                 .copyWith(color: colors.textSecondary),
           ),
-          SizedBox(height: context.h(10)),
-          Container(
-            height: listHeight,
-            decoration: BoxDecoration(
-              color: colors.surfaceVariant,
-              borderRadius: BorderRadius.circular(context.h(7)),
-              border: Border.all(color: colors.border),
-            ),
-            child: categoryOptions.isEmpty
+          SizedBox(height: context.h(12)),
+          Expanded(
+            child: labels.isEmpty
                 ? Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(context.h(14)),
-                      child: Text(
-                        'No categories yet. Create one from the menu item form.',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textMuted),
-                      ),
+                    child: Text(
+                      'No categories yet.',
+                      style: AppTextStyles.bodySecondary(context)
+                          .copyWith(color: colors.textMuted),
                     ),
                   )
-                : Scrollbar(
-                    thumbVisibility: true,
-                    child: ListView.separated(
-                      padding: EdgeInsets.symmetric(vertical: context.h(5)),
-                      itemCount: categoryOptions.length,
-                      separatorBuilder: (_, __) => Divider(
-                        height: context.h(1),
-                        thickness: 1,
-                        indent: 0,
-                        endIndent: 0,
-                        color: colors.divider,
-                      ),
-                      itemBuilder: (context, index) {
-                        final category = categoryOptions[index];
-                        final selected = staged.contains(category.name);
-
-                        return InkWell(
-                          onTap: () => _toggleStagedCategory(
-                            category.name,
-                            !selected,
+                : SingleChildScrollView(
+                    child: Wrap(
+                      spacing: context.w(8),
+                      runSpacing: context.h(8),
+                      children: [
+                        for (final label in labels)
+                          _FilterChip(
+                            label: label,
+                            selected: provider.selectedCategory == label,
+                            colors: colors,
+                            onTap: () => _selectCategory(provider, label),
                           ),
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              context.w(10),
-                              context.h(2),
-                              context.w(8),
-                              context.h(2),
-                            ),
-                            child: Row(
-                              children: [
-                                Checkbox(
-                                  value: selected,
-                                  onChanged: (value) {
-                                    _toggleStagedCategory(
-                                      category.name,
-                                      value == true,
-                                    );
-                                  },
-                                  activeColor: AppColors.primary,
-                                  checkColor: colors.surface,
-                                  fillColor:
-                                      WidgetStateProperty.resolveWith((states) {
-                                    if (states.contains(WidgetState.selected)) {
-                                      return AppColors.primary;
-                                    }
-                                    return Colors.transparent;
-                                  }),
-                                  side: BorderSide(
-                                    width: 1.2,
-                                    color: selected
-                                        ? AppColors.primary
-                                        : colors.border,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(3.5),
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    category.name,
-                                    style: AppTextStyles.label(context)
-                                        .copyWith(color: colors.textPrimary),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                      ],
                     ),
                   ),
-          ),
-          SizedBox(height: context.h(10)),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              RdxActionButton(
-                label: 'Cancel',
-                isPrimary: false,
-                onPressed: _closeCategoryPicker,
-              ),
-              SizedBox(width: context.w(6)),
-              RdxActionButton(
-                label: 'Apply',
-                onPressed: () => _applyCategories(provider),
-              ),
-            ],
           ),
         ],
       ),
@@ -615,74 +546,133 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // GRID
+  // GRID — same pattern as CouponsScreen / PromotionCard
+  // Width is derived from Responsive.gridColumns so the number of
+  // cards per row adapts to screen size. Card height is intrinsic
+  // (image aspect + content); no forced height so cards stay stable.
   // ═══════════════════════════════════════════════════════════════
 
   Widget _buildGrid(
     BuildContext context,
     MenuProvider provider,
     AppColorScheme colors,
+    EdgeInsets pagePad,
   ) {
     final items = provider.filteredItems;
     final showAddItemTile = provider.selectedCategory == 'All';
 
-    final screenW = MediaQuery.sizeOf(context).width;
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        pagePad.left,
+        context.h(12),
+        pagePad.right,
+        pagePad.bottom + context.h(24),
+      ),
+      sliver: SliverLayoutBuilder(
+        builder: (context, constraints) {
+          final columns = Responsive.gridColumns(context);
+          final spacing = context.w(16);
+          // Same formula as CouponsScreen: only width is constrained;
+          // height comes from the card itself.
+          final cardWidth =
+              (constraints.crossAxisExtent - ((columns - 1) * spacing)) /
+                  columns;
+          final cards = <Widget>[];
 
-    final SliverGridDelegate gridDelegate;
-    if (screenW < 600) {
-      // Phones use full-width cards so the image and controls remain readable.
-      gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 1,
-        mainAxisExtent: context.h(420),
-        mainAxisSpacing: context.h(16),
-        crossAxisSpacing: context.w(16),
-      );
-    } else if (screenW < 1200) {
-      gridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: context.w(320),
-        mainAxisExtent: context.h(380),
-        mainAxisSpacing: context.h(18),
-        crossAxisSpacing: context.w(18),
-      );
-    } else {
-      gridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: context.w(260),
-        mainAxisExtent: context.h(390),
-        mainAxisSpacing: context.h(18),
-        crossAxisSpacing: context.w(18),
-      );
-    }
+          if (showAddItemTile) {
+            cards.add(
+              SizedBox(
+                width: cardWidth,
+                child: _AddItemTile(
+                  colors: colors,
+                  onTap: () async {
+                    await Navigator.of(context)
+                        .pushNamed(AppRoutes.editMenuItem);
+                    if (context.mounted) {
+                      ref.read(menuProvider).load();
+                    }
+                  },
+                ),
+              ),
+            );
+          }
 
-    return GridView.builder(
-      padding: EdgeInsets.only(bottom: context.h(24)),
-      gridDelegate: gridDelegate,
-      itemCount: items.length + (showAddItemTile ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (showAddItemTile && index == 0) {
-          return _AddItemTile(
-            colors: colors,
-            onTap: () async {
-              await Navigator.of(context).pushNamed(AppRoutes.editMenuItem);
-              if (context.mounted) {
-                ref.read(menuProvider).load();
-              }
-            },
+          for (final item in items) {
+            cards.add(
+              SizedBox(
+                width: cardWidth,
+                child: MenuItemCard(
+                  item: item,
+                  onToggleAvailability: () => provider.toggleAvailability(item),
+                  onActions: (buttonContext) {
+                    _showMenuItemActions(buttonContext, item);
+                  },
+                ),
+              ),
+            );
+          }
+
+          return SliverToBoxAdapter(
+            child: Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: cards,
+            ),
           );
-        }
-        final item = items[showAddItemTile ? index - 1 : index];
-        return MenuItemCard(
-          item: item,
-          onToggleAvailability: () => provider.toggleAvailability(item),
-          onActions: (buttonContext) {
-            _showMenuItemActions(buttonContext, item);
-          },
-        );
-      },
+        },
+      ),
+    );
+  }
+}
+
+// ─── Filter chip (same look as RdxCategoryTabs) ───────────────────────
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final AppColorScheme colors;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.colors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(context.h(20)),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.w(14),
+          vertical: context.h(8),
+        ),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : colors.surface,
+          borderRadius: BorderRadius.circular(context.h(20)),
+          border: Border.all(
+            color: selected ? AppColors.primary : colors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: selected
+              ? AppTextStyles.label(context).copyWith(color: Colors.white)
+              : AppTextStyles.label(context)
+                  .copyWith(color: colors.textSecondary),
+        ),
+      ),
     );
   }
 }
 
 // ─── Add Item Tile ────────────────────────────────────────────────────
+// Mirrors MenuItemCard structure (image aspect + content slots + bottom
+// bar) so it occupies the same height in the Wrap grid.
 
 class _AddItemTile extends ConsumerWidget {
   final AppColorScheme colors;
@@ -692,43 +682,68 @@ class _AddItemTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(context.h(14)),
-      child: DottedBorderContainer(
-        color: colors.border,
-        radius: context.h(14),
-        dashLength: context.h(6),
-        gapLength: context.h(5),
-        strokeWidth: context.h(1.2),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: context.w(36),
-                height: context.h(36),
-                decoration: BoxDecoration(
-                  color: colors.surfaceVariant,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.add,
-                  color: colors.textMuted.withValues(alpha: 0.5),
-                  size: context.h(30),
+    final isNarrow = context.isNarrow;
+    final outerRadius = context.h(isNarrow ? 12 : 10);
+    final imageAspect = isNarrow ? 1.7 : 1.55;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentAreaHeight = context.h(isNarrow ? 92 : 88);
+        final totalHeight = (constraints.maxWidth / imageAspect) + contentAreaHeight;
+
+        return InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(outerRadius),
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: totalHeight,
+            child: DottedBorderContainer(
+              color: colors.border,
+              radius: outerRadius,
+              dashLength: context.h(6),
+              gapLength: context.h(5),
+              strokeWidth: context.h(1.2),
+              child: Padding(
+                padding: EdgeInsets.all(context.w(10)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: AspectRatio(
+                        aspectRatio: imageAspect,
+                        child: Center(
+                          child: Container(
+                            width: context.w(40),
+                            height: context.h(40),
+                            decoration: BoxDecoration(
+                              color: colors.surface,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: colors.border),
+                            ),
+                            child: Icon(
+                              Icons.add,
+                              color: colors.textMuted.withValues(alpha: 0.55),
+                              size: context.h(24),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: context.h(10)),
+                    Text(
+                      'Add Item',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.section(context).copyWith(
+                        color: colors.textMuted.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: context.h(10)),
-              Text(
-                'Add Item',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodyTertiary(context)
-                    .copyWith(color: colors.textMuted.withValues(alpha: 0.8)),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -813,4 +828,62 @@ class _DashedRRectPainter extends CustomPainter {
       oldDelegate.dashLength != dashLength ||
       oldDelegate.gapLength != gapLength ||
       oldDelegate.strokeWidth != strokeWidth;
+}
+
+/// Pinned filter strip (search + filter button).
+class _MenuFiltersHeader extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final Color background;
+  final double horizontalPad;
+
+  _MenuFiltersHeader({
+    required this.child,
+    required this.background,
+    required this.horizontalPad,
+  });
+
+  static const double _height = 56;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Material(
+      color: background,
+      elevation: overlapsContent || shrinkOffset > 0 ? 1.5 : 0,
+      shadowColor: Colors.black26,
+      child: Container(
+        height: _height,
+        alignment: Alignment.centerLeft,
+        padding: EdgeInsets.symmetric(horizontal: horizontalPad),
+        decoration: BoxDecoration(
+          color: background,
+          border: Border(
+            bottom: BorderSide(
+              color: overlapsContent || shrinkOffset > 0
+                  ? AppColors.of(context).border
+                  : Colors.transparent,
+              width: 1,
+            ),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _MenuFiltersHeader oldDelegate) {
+    return child != oldDelegate.child ||
+        background != oldDelegate.background ||
+        horizontalPad != oldDelegate.horizontalPad;
+  }
 }

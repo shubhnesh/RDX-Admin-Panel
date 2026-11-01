@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 
+import '../buttons/rdx_action_button.dart';
+
 /// Simple notice / validation dialog with a title, message, and OK action.
 ///
 /// Prefer [RdxNoticeDialog.show] so callers don't need to build the widget.
@@ -84,24 +86,18 @@ class RdxNoticeDialog extends StatelessWidget {
       ),
       actions: [
         if (confirmButtonLabel != null) ...[
-          TextButton(
+          RdxActionButton.discard(
+            height: 36,
+            label: cancelButtonLabel ?? 'Cancel',
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              cancelButtonLabel ?? 'Cancel',
-              style: AppTextStyles.label(context).copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
           ),
-          TextButton(
+          RdxActionButton(
+            height: 36,
+            label: confirmButtonLabel!,
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(
-              confirmButtonLabel!,
-              style: AppTextStyles.label(context).copyWith(
-                color: confirmButtonColor ?? AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            backgroundColor: confirmButtonColor ?? AppColors.primary,
+            textColor: Colors.white,
+            iconColor: Colors.white,
           ),
         ] else
           TextButton(

@@ -12,7 +12,8 @@ import 'package:rdx_admin/widgets/reusable_widgets/loading_indicator.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_delete_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
-import 'package:rdx_admin/widgets/resuable_options/rdx_search_bar.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/rdx_search_bar.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_header_action_button.dart';
 
 enum _Section { category, unit }
 
@@ -102,8 +103,8 @@ class _InventoryManageCategoryScreenState
     );
     if (created == null || !mounted) return;
     setState(
-      () => _categories =
-          _sortedByName([..._categories, created], (c) => c.name),
+      () =>
+          _categories = _sortedByName([..._categories, created], (c) => c.name),
     );
   }
 
@@ -448,14 +449,9 @@ class _InventoryManageCategoryScreenState
       _Section.unit => ('Add unit', _createUnit),
     };
 
-    return TextButton.icon(
+    return RdxHeaderActionButton(
+      label: label,
       onPressed: onTap,
-      icon: Icon(Icons.add_rounded,
-          size: context.h(18), color: AppColors.primary),
-      label: Text(
-        label,
-        style: AppTextStyles.label(context).copyWith(color: AppColors.primary),
-      ),
     );
   }
 

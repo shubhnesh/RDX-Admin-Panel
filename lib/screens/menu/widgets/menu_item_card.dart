@@ -5,13 +5,20 @@ import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/menu_item_model.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_toggle_button.dart';
 
+/// Menu item card sized the same way as [PromotionCard] / coupon cards:
+/// width is controlled by the parent grid (columns × available width).
+/// Height is intrinsic — driven by image aspect ratio + content — so
+/// cards stay visually stable as the number of columns changes with
+/// screen size. No forced external height is required.
 class MenuItemCard extends StatelessWidget {
   final MenuItemModel item;
-  final VoidCallback onToggleAvailability;
-  final void Function(BuildContext buttonContext) onActions;
+  final VoidCallback? onToggleAvailability;
+  final void Function(BuildContext buttonContext)? onActions;
+  final WidgetBuilder? footerBuilder;
   final bool categorySelected;
   final bool dietarySelected;
   final bool hasTags;
+  final bool showPrice;
 
   const MenuItemCard({
     super.key,
@@ -21,7 +28,21 @@ class MenuItemCard extends StatelessWidget {
     this.categorySelected = true,
     this.dietarySelected = true,
     this.hasTags = true,
-  });
+    this.showPrice = true,
+  })  : footerBuilder = null,
+        assert(onToggleAvailability != null),
+        assert(onActions != null);
+
+  const MenuItemCard.withFooter({
+    super.key,
+    required this.item,
+    required this.footerBuilder,
+    this.categorySelected = true,
+    this.dietarySelected = true,
+    this.hasTags = true,
+    this.showPrice = true,
+  })  : onToggleAvailability = null,
+        onActions = null;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +65,7 @@ class MenuItemCard extends StatelessWidget {
     );
 
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(outerRadius),
@@ -58,9 +80,10 @@ class MenuItemCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Image ───────────────────────────────────────────────
+          // ── Image (aspect ratio keeps visual proportion stable) ──
           AspectRatio(
             aspectRatio: isNarrow ? 1.7 : 1.55,
             child: Padding(
@@ -68,30 +91,29 @@ class MenuItemCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(imageRadius),
                 child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Positioned.fill(
-                      child: item.imageUrl.trim().isEmpty
-                          ? Container(
+                    item.imageUrl.trim().isEmpty
+                        ? Container(
+                            color: colors.surfaceVariant,
+                            child: Icon(
+                              Icons.restaurant_outlined,
+                              color: colors.textMuted,
+                              size: context.h(isNarrow ? 36 : 32),
+                            ),
+                          )
+                        : Image.network(
+                            item.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
                               color: colors.surfaceVariant,
                               child: Icon(
                                 Icons.restaurant_outlined,
                                 color: colors.textMuted,
                                 size: context.h(isNarrow ? 36 : 32),
                               ),
-                            )
-                          : Image.network(
-                              item.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: colors.surfaceVariant,
-                                child: Icon(
-                                  Icons.restaurant_outlined,
-                                  color: colors.textMuted,
-                                  size: context.h(isNarrow ? 36 : 32),
-                                ),
-                              ),
                             ),
-                    ),
+                          ),
                     if (item.featuredItem)
                       Positioned(
                         left: context.w(8),
@@ -115,148 +137,172 @@ class MenuItemCard extends StatelessWidget {
             ),
           ),
 
-          // ── Content ─────────────────────────────────────────────
-Expanded(
-  child: Padding(
-    padding: EdgeInsets.fromLTRB(
-      contentHPad,
-      contentTopPad,
-      contentHPad,
-      0,
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Category (left) + Price (right) on one row
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                categorySelected ? item.category : 'Category',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.bodyTertiary(context).copyWith(
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-            SizedBox(width: context.w(8)),
-            Text(
-              '₹${item.price.toStringAsFixed(2)}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.section(context).copyWith(
-                color: colors.primary,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: context.h(2)),
-        Text(
-          item.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.section(context).copyWith(
-            color: colors.textPrimary,
-          ),
-        ),
-        if (item.ingredients.isNotEmpty) ...[
-          SizedBox(height: context.h(2)),
-          Text(
-            item.ingredients.join(', '),
-            style: AppTextStyles.bodyTertiary(context),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-        SizedBox(height: context.h(6)),
-        ClipRect(
-          child: Wrap(
-            spacing: context.w(4),
-            runSpacing: context.h(4),
-            children: hasTags
-                ? [
-                    if (preparation.trim().isNotEmpty)
-                      _detailChip(
-                        context,
-                        _titleCase(preparation),
-                        colors.textSecondary,
-                      ),
-                    for (final tag in item.tags
-                        .where((tag) => tag.toLowerCase() != 'featured')
-                        .take(item.featuredItem ? 2 : 3))
-                      _detailChip(
-                        context,
-                        _titleCase(tag),
-                        colors.textSecondary,
-                      ),
-                  ]
-                : [
-                    _detailChip(
-                      context,
-                      'Tags',
-                      colors.textSecondary,
-                    ),
-                  ],
-          ),
-        ),
-        // Price moved up next to category — no second price here
-      ],
-    ),
-  ),
-),
-
-          // ── Fixed bottom ────────────────────────────────────────
+          // ── Content body (intrinsic — no Expanded) ──────────────
           Padding(
-            padding: bottomPad,
+            padding: EdgeInsets.fromLTRB(
+              contentHPad,
+              contentTopPad,
+              contentHPad,
+              0,
+            ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Divider(height: 1, color: colors.divider),
-                SizedBox(height: context.h(6)),
+                // Category (left) + optional price (right)
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    RdxToggleButton(
-                      value: item.available,
-                      activeColor: AppColors.primary,
-                      onChanged: (_) => onToggleAvailability(),
-                    ),
-                    SizedBox(width: context.w(6)),
                     Expanded(
                       child: Text(
-                        item.available ? 'Available' : 'Sold Out',
-                        maxLines: 1,
+                        categorySelected ? item.category : 'Category',
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.bodyTertiary(context).copyWith(
-                          color: item.available
-                              ? AppColors.success
-                              : colors.textMuted,
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
-                    Builder(
-                      builder: (buttonContext) {
-                        return InkWell(
-                          onTap: () => onActions(buttonContext),
-                          borderRadius:
-                              BorderRadius.circular(context.h(6)),
-                          child: Padding(
-                            padding: EdgeInsets.all(context.w(4)),
-                            child: Icon(
-                              Icons.more_vert_rounded,
-                              size: context.h(18),
-                              color: const Color(0xFF5D687A),
-                            ),
+                    if (showPrice) ...[
+                    SizedBox(width: context.w(8)),
+                    Text(
+                      '₹${item.price.toStringAsFixed(2)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.section(context).copyWith(
+                        color: colors.primary,
+                      ),
+                    ),
+                    ],
+                  ],
+                ),
+                SizedBox(height: context.h(2)),
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.section(context).copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+                // Always reserve ingredients-line height for stable card size.
+                SizedBox(height: context.h(2)),
+                Text(
+                  item.ingredients.isNotEmpty
+                      ? item.ingredients.join(', ')
+                      : ' ',
+                  style: AppTextStyles.bodyTertiary(context).copyWith(
+                    color:
+                        item.ingredients.isNotEmpty ? null : Colors.transparent,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: context.h(6)),
+                // Always reserve one chip-row of vertical space so cards
+                // stay the same height whether tags are present or not.
+                Builder(
+                  builder: (context) {
+                    final chips = <Widget>[];
+                    if (hasTags) {
+                      if (preparation.trim().isNotEmpty) {
+                        chips.add(
+                          _detailChip(
+                            context,
+                            _titleCase(preparation),
+                            colors.textSecondary,
                           ),
                         );
-                      },
-                    ),
-                  ],
+                      }
+                      for (final tag in item.tags
+                          .where((tag) => tag.toLowerCase() != 'featured')
+                          .take(item.featuredItem ? 2 : 3)) {
+                        chips.add(
+                          _detailChip(
+                            context,
+                            _titleCase(tag),
+                            colors.textSecondary,
+                          ),
+                        );
+                      }
+                    }
+                    if (chips.isEmpty) {
+                      // Invisible placeholder matching chip height/padding
+                      // so the row never collapses.
+                      chips.add(
+                        Opacity(
+                          opacity: 0,
+                          child: _detailChip(
+                            context,
+                            'Tags',
+                            colors.textSecondary,
+                          ),
+                        ),
+                      );
+                    }
+                    return Wrap(
+                      spacing: context.w(4),
+                      runSpacing: context.h(4),
+                      children: chips,
+                    );
+                  },
                 ),
               ],
             ),
+          ),
+
+          // ── Fixed bottom bar ────────────────────────────────────
+          Padding(
+            padding: bottomPad,
+            child: footerBuilder != null
+                ? footerBuilder!(context)
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Divider(height: 1, color: colors.divider),
+                      SizedBox(height: context.h(6)),
+                      Row(
+                        children: [
+                          RdxToggleButton(
+                            value: item.available,
+                            activeColor: AppColors.primary,
+                            onChanged: (_) => onToggleAvailability!(),
+                          ),
+                          SizedBox(width: context.w(6)),
+                          Expanded(
+                            child: Text(
+                              item.available ? 'Available' : 'Sold Out',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  AppTextStyles.bodyTertiary(context).copyWith(
+                                color: item.available
+                                    ? AppColors.success
+                                    : colors.textMuted,
+                              ),
+                            ),
+                          ),
+                          Builder(
+                            builder: (buttonContext) {
+                              return InkWell(
+                                onTap: () => onActions!(buttonContext),
+                                borderRadius:
+                                    BorderRadius.circular(context.h(6)),
+                                child: Padding(
+                                  padding: EdgeInsets.all(context.w(4)),
+                                  child: Icon(
+                                    Icons.more_vert_rounded,
+                                    size: context.h(18),
+                                    color: const Color(0xFF5D687A),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),

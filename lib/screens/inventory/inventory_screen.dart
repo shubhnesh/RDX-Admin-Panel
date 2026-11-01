@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/utils/formatters.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
-import 'package:rdx_admin/widgets/reusable_widgets/rdx_action_menu_dialog.dart';
-import 'package:rdx_admin/widgets/reusable_widgets/rdx_delete_dialog.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_header_action_button.dart';
 import 'package:rdx_admin/widgets/buttons/stats_collapse_button.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
 import '../../core/theme/app_colors.dart';
@@ -13,14 +11,13 @@ import '../../core/theme/text_styles.dart';
 import '../../models/inventory_item_model.dart';
 import '../../providers/inventory_provider.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
-import '../../widgets/resuable_options/rdx_search_bar.dart';
-import '../../widgets/resuable_options/rdx_category_tabs.dart';
-import '../../widgets/resuable_options/rdx_dropdown.dart';
+import '../../widgets/reusable_widgets/rdx_search_bar.dart';
+import '../../widgets/reusable_widgets/rdx_category_tabs.dart';
+import '../../widgets/reusable_widgets/rdx_dropdown.dart';
 import 'add_material_screen.dart';
+import 'inventory_item_detail_screen.dart';
 import 'widgets/inventory_stats_row.dart';
 
-/// Which action (add/use) most recently happened for an item — used to
-/// star the more recent one in the ADDED / USED table columns.
 enum _RecentAction { added, used, none }
 
 class InventoryScreen extends ConsumerStatefulWidget {
@@ -52,248 +49,225 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     super.dispose();
   }
 
-  void _showInventoryActions(
-    BuildContext buttonContext,
-    InventoryItemModel item,
-  ) {
-    final renderBox = buttonContext.findRenderObject() as RenderBox;
-    final buttonPosition = renderBox.localToGlobal(Offset.zero);
-    showGeneralDialog<void>(
-      context: buttonContext,
-      barrierDismissible: true,
-      barrierLabel: 'Inventory actions',
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 120),
-      pageBuilder: (dialogContext, animation, secondaryAnimation) {
-        return RdxActionMenuDialog(
-          position: buttonPosition,
-          gap: 6,
-          items: [
-            RdxActionMenuItem(
-              title: 'Edit',
-              onTap: () {
-                _openAddMaterial(context, item: item);
-              },
-            ),
-            RdxActionMenuItem(
-              title: 'Delete',
-              textColor: AppColors.danger,
-              onTap: () {
-                _confirmDelete(context, item);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final provider = ref.watch(inventoryProvider);
     final colors = AppColors.of(context);
     final isNarrow = MediaQuery.sizeOf(context).width < 900;
+    final pagePad = context.defaultScreenPadding();
+    const filterHeight = 52.0;
+
+    if (provider.isLoading) {
+      return Scaffold(
+        backgroundColor: colors.background,
+        body: const SafeArea(child: LoadingIndicator()),
+      );
+    }
+
+    if (provider.errorMessage != null) {
+      return Scaffold(
+        backgroundColor: colors.background,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  provider.errorMessage!,
+                  style: AppTextStyles.body(context),
+                ),
+                SizedBox(height: context.h(12)),
+                RdxActionButton(
+                  label: 'Retry',
+                  onPressed: () => provider.load(),
+                  isPrimary: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
-        child: provider.isLoading
-            ? const LoadingIndicator()
-            : provider.errorMessage != null
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+        child: CustomScrollView(
+          // Title + stats scroll away; filters stay pinned for max table space.
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  pagePad.left,
+                  pagePad.top,
+                  pagePad.right,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ── Header: title + Add Material ───────────────────
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          provider.errorMessage!,
-                          style: AppTextStyles.body(context),
-                        ),
-                        SizedBox(height: context.h(12)),
-                        RdxActionButton(
-                          label: 'Retry',
-                          onPressed: () => provider.load(),
-                          isPrimary: true,
-                        ),
-                      ],
-                    ),
-                  )
-                : Padding(
-                    padding: context.defaultScreenPadding(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // ── Header row: title/subtitle + Add Material ───
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Inventory',
-                                    style: AppTextStyles.heading(context),
-                                  ),
-                                  SizedBox(height: context.h(4)),
-                                  Text(
-                                    'Track raw materials, stock levels, and replenishment alerts',
-                                    style: AppTextStyles.bodySecondary(context)
-                                        .copyWith(color: colors.textSecondary),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: context.w(12)),
-                            RdxActionButton(
-                              label: 'Add Material',
-                              leadingIcon: Icons.add,
-                              isPrimary: true,
-                              onPressed: () => _openAddMaterial(context),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: context.h(20)),
-                        // ── Stats collapse toggle ───────────────────────
-                        // Sits above the stat row's left edge; collapsing
-                        // hides the row entirely so the table below gets
-                        // more vertical space.
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: StatsCollapseButton(
-                            collapsed: _statsCollapsed,
-                            onPressed: () => setState(
-                              () => _statsCollapsed = !_statsCollapsed,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: context.h(8)),
-                        // ── Stats ──────────────────────────────────────
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeInOut,
-                          alignment: Alignment.topCenter,
-                          child: _statsCollapsed
-                              ? const SizedBox(width: double.infinity)
-                              : InventoryStatsRow(
-                                  expenditure: provider.periodExpenditure,
-                                  total: provider.totalItems,
-                                  addedItemCount:
-                                      provider.periodAddedItemCount,
-                                  usedItemCount: provider.periodUsedItemCount,
-                                  needsRestock: provider.needsRestockCount,
-                                  period: provider.periodFilter,
-                                  // onNeedsRestockTap: () =>
-                                  //     _openLowStock(context),
-                                ),
-                        ),
-                        SizedBox(height: context.h(20)),
-                        // ── Filters row: stock tabs, search, activity chips, period dropdown ───
-                        if (isNarrow)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              RdxCategoryTabs(
-                                labels: const ['Low Stock', 'Critical'],
-                                selectedLabel: provider.stockLevelFilter,
-                                allLabel: 'All',
-                                onSelected: (label) =>
-                                    _onStockLevelSelected(provider, label),
-                                expand: false,
-                              ),
-                              SizedBox(height: context.h(12)),
-                              RdxSearchBar(
-                                controller: _searchController,
-                                hintText: 'Search materials or categories',
-                                onChanged: provider.setSearch,
-                                height: context.h(40),
-                              ),
-                              SizedBox(height: context.h(12)),
-                              Row(
-                                children: [
-                                  _activityFilterChip(
-                                    context,
-                                    provider,
-                                    'Used',
-                                  ),
-                                  SizedBox(width: context.w(8)),
-                                  _activityFilterChip(
-                                    context,
-                                    provider,
-                                    'Added',
-                                  ),
-                                  SizedBox(width: context.w(8)),
-                                  Expanded(
-                                    child: _periodDropdown(context, provider),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          )
-                        else
-                          Row(
-                            children: [
-                              RdxCategoryTabs(
-                                labels: const ['Low Stock', 'Critical'],
-                                selectedLabel: provider.stockLevelFilter,
-                                allLabel: 'All',
-                                onSelected: (label) =>
-                                    _onStockLevelSelected(provider, label),
-                                expand: false,
-                              ),
-                              SizedBox(width: context.w(12)),
-                              Expanded(
-                                child: RdxSearchBar(
-                                  controller: _searchController,
-                                  hintText: 'Search materials or categories',
-                                  onChanged: provider.setSearch,
-                                  height: context.h(40),
-                                ),
-                              ),
-                              SizedBox(width: context.w(12)),
-                              _activityFilterChip(context, provider, 'Used'),
-                              SizedBox(width: context.w(8)),
-                              _activityFilterChip(context, provider, 'Added'),
-                              SizedBox(width: context.w(12)),
-                              SizedBox(
-                                width: context.w(150),
-                                child: _periodDropdown(context, provider),
-                              ),
-                            ],
-                          ),
-                        SizedBox(height: context.h(16)),
-                        // ── Table ──────────────────────────────────────
                         Expanded(
-                          child: _buildInventoryTable(
-                            context,
-                            provider,
-                            provider.filteredItems,
-                          ),
-                        ),
-                        // ── Footer ─────────────────────────────────────
-                        Padding(
-                          padding: EdgeInsets.only(
-                            top: context.h(8),
-                            bottom: context.h(16),
-                          ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.star_rounded,
-                                size: context.h(14),
-                                color: AppColors.warning,
-                              ),
-                              SizedBox(width: context.w(4)),
                               Text(
-                                'indicates whichever action happened most recently for that material.',
-                                style: AppTextStyles.label(context)
-                                    .copyWith(color: colors.textMuted),
+                                'Inventory',
+                                style: AppTextStyles.heading(context),
+                              ),
+                              SizedBox(height: context.h(4)),
+                              Text(
+                                'Track raw materials, stock levels, and replenishment alerts',
+                                style: AppTextStyles.bodySecondary(context)
+                                    .copyWith(color: colors.textSecondary),
                               ),
                             ],
                           ),
                         ),
+                        SizedBox(width: context.w(12)),
+                        RdxHeaderActionButton(
+                          label: 'Add Material',
+                          onPressed: () => _openAddMaterial(context),
+                        ),
                       ],
                     ),
-                  ),
+                    SizedBox(height: context.h(20)),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: StatsCollapseButton(
+                        collapsed: _statsCollapsed,
+                        onPressed: () => setState(
+                          () => _statsCollapsed = !_statsCollapsed,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: context.h(8)),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      alignment: Alignment.topCenter,
+                      child: _statsCollapsed
+                          ? const SizedBox(width: double.infinity)
+                          : InventoryStatsRow(
+                              expenditure: provider.periodExpenditure,
+                              total: provider.totalItems,
+                              addedItemCount: provider.periodAddedItemCount,
+                              usedItemCount: provider.periodUsedItemCount,
+                              needsRestock: provider.needsRestockCount,
+                            ),
+                    ),
+                    SizedBox(height: context.h(12)),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Pinned filters: tabs + search + activity + period ──────
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _InventoryFiltersHeader(
+                background: colors.background,
+                horizontalPad: pagePad.left,
+                height: filterHeight,
+                child: _buildFiltersRow(context, provider, isNarrow),
+              ),
+            ),
+
+            // ── Table + footer under pinned filters ────────────────────
+            SliverFillRemaining(
+              hasScrollBody: true,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  pagePad.left,
+                  context.h(12),
+                  pagePad.right,
+                  pagePad.bottom,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildInventoryTable(
+                        context,
+                        provider,
+                        provider.filteredItems,
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: context.h(8),
+                        bottom: context.h(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Select a row to add/use stock, edit, or delete. '
+                              '(Recently) marks the latest stock activity.',
+                              style: AppTextStyles.label(context)
+                                  .copyWith(color: colors.textMuted),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  /// Stock tabs + search + Used/Added chips + period dropdown.
+  Widget _buildFiltersRow(
+    BuildContext context,
+    InventoryProvider provider,
+    bool isNarrow,
+  ) {
+    if (isNarrow) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: context.w(940).clamp(940.0, 1100.0),
+          child: _buildFiltersRow(context, provider, false),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        RdxCategoryTabs(
+          labels: const ['Low Stock', 'Critical'],
+          selectedLabel: provider.stockLevelFilter,
+          allLabel: 'All',
+          onSelected: (label) => _onStockLevelSelected(provider, label),
+          expand: false,
+        ),
+        SizedBox(width: context.w(12)),
+        Expanded(
+          child: RdxSearchBar(
+            controller: _searchController,
+            hintText: 'Search materials or categories',
+            onChanged: provider.setSearch,
+            height: RdxSearchBar.standardHeight(context),
+          ),
+        ),
+        SizedBox(width: context.w(12)),
+        _activityFilterChip(context, provider, 'Used'),
+        SizedBox(width: context.w(8)),
+        _activityFilterChip(context, provider, 'Added'),
+        SizedBox(width: context.w(12)),
+        SizedBox(
+          width: context.w(150),
+          child: _periodDropdown(context, provider),
+        ),
+      ],
     );
   }
 
@@ -346,9 +320,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   Widget _periodDropdown(BuildContext context, InventoryProvider provider) {
     final isOverall = provider.periodFilter == StatsPeriod.overall;
     return RdxDropdown<StatsPeriod>(
-      items: StatsPeriod.values
-          .where((p) => p != StatsPeriod.overall)
-          .toList(),
+      items: StatsPeriod.values.where((p) => p != StatsPeriod.overall).toList(),
       value: isOverall ? null : provider.periodFilter,
       labelBuilder: (p) => p.label,
       hint: 'Select',
@@ -386,18 +358,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     return RdxTable(
       showFooter: false,
       columns: [
-        // Equal flex so leftover width is shared across every column
-        // instead of dumping into MATERIAL alone.
-        RdxTableColumn(title: 'MATERIAL', minWidth: context.w(100), flex: 1),
-        RdxTableColumn(title: 'CATEGORY', minWidth: context.w(85), flex: 1),
-        RdxTableColumn(title: 'STOCKS', minWidth: context.w(170), flex: 1.3),
-        RdxTableColumn(title: '₹ / UNIT', minWidth: context.w(75), flex: 1),
-        RdxTableColumn(title: 'TOTAL (₹)', minWidth: context.w(75), flex: 1),
-        RdxTableColumn(title: 'ADDED (+)', minWidth: context.w(78), flex: 0.6),
-        RdxTableColumn(title: 'USED (-)', minWidth: context.w(78), flex: 0.6),
-        RdxTableColumn(title: 'TOTAL ADDED', minWidth: context.w(100), flex: 1),
-        RdxTableColumn(title: 'TOTAL USED', minWidth: context.w(100), flex: 1),
-        RdxTableColumn(title: 'ACTIONS', minWidth: context.w(56), flex: 1),
+        RdxTableColumn(title: 'MATERIAL', minWidth: 160, flex: 1.3),
+        RdxTableColumn(title: 'CATEGORY', minWidth: 140, flex: 1),
+        RdxTableColumn(title: 'STOCKS', minWidth: 220, flex: 1.6),
+        RdxTableColumn(title: '₹ / UNIT', minWidth: 120, flex: 1),
+        RdxTableColumn(title: 'TOTAL (₹)', minWidth: 120, flex: 1),
+        RdxTableColumn(title: 'TOTAL ADDED', minWidth: 140, flex: 1),
+        RdxTableColumn(title: 'TOTAL USED', minWidth: 140, flex: 1),
       ],
       rows: items.map((item) {
         return [
@@ -432,46 +399,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
           _inventoryStockLevelCell(context, item),
           _inventoryUnitCostCell(context, item),
           _inventoryTotalCostCell(context, item),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _StockAdjustField(
-              key: ValueKey('${item.id}_added'),
-              hint: '',
-              maxValue: 999,
-              maxErrorText: 'Max 3 digits (999)',
-              onSubmit: (value) {
-                ref.read(inventoryProvider).addStock(item.id, value);
-              },
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _StockAdjustField(
-              key: ValueKey('${item.id}_used'),
-              hint: '',
-              maxValue: item.quantity > 999 ? 999 : item.quantity,
-              maxErrorText: item.quantity > 999
-                  ? 'Max 3 digits (999)'
-                  : 'Cannot use more than current stock',
-              onSubmit: (value) {
-                ref.read(inventoryProvider).useStock(item.id, value);
-              },
-            ),
-          ),
           _inventoryTotalAddedCell(context, provider, item),
           _inventoryTotalUsedCell(context, provider, item),
-          Builder(
-            builder: (buttonContext) {
-              return RdxTableMoreButton(
-                tooltip: 'More actions',
-                onPressed: () {
-                  _showInventoryActions(buttonContext, item);
-                },
-              );
-            },
-          ),
         ];
       }).toList(),
+      onRowTap: (index) => _openItemDetails(context, items[index]),
     );
   }
 
@@ -618,7 +550,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         footer: item.lastAddedAt != null
             ? _formatUpdatedAt(item.lastAddedAt!)
             : null,
-        showStar: _mostRecentAction(item) == _RecentAction.added,
+        showRecently: _mostRecentAction(item) == _RecentAction.added,
       );
     }
 
@@ -667,7 +599,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         amountLabel: '${_fmt(item.totalUsed)} ${item.unit}',
         footer:
             item.lastUsedAt != null ? _formatUpdatedAt(item.lastUsedAt!) : null,
-        showStar: _mostRecentAction(item) == _RecentAction.used,
+        showRecently: _mostRecentAction(item) == _RecentAction.used,
       );
     }
 
@@ -689,7 +621,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
 
   /// Shared layout for the ADDED / USED total cells: an icon + amount row,
   /// with an optional muted footer line underneath (either a formatted
-  /// date/time or a period label like "Today"). [showStar] marks whichever
+  /// date/time or a period label like "Today"). [showRecently] marks whichever
   /// of the two actions (add/use) happened most recently for this item.
   Widget _addedUsedCellContent(
     BuildContext context, {
@@ -697,7 +629,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     required Color color,
     required String amountLabel,
     String? footer,
-    bool showStar = false,
+    bool showRecently = false,
   }) {
     final colors = AppColors.of(context);
     return Column(
@@ -721,12 +653,16 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (showStar) ...[
+            if (showRecently) ...[
               SizedBox(width: context.w(2)),
-              Icon(
-                Icons.star_rounded,
-                size: context.h(13),
-                color: AppColors.warning,
+              Text(
+                '(Recently)',
+                style: AppTextStyles.label(context).copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ],
@@ -734,8 +670,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         if (footer != null)
           Text(
             footer,
-            style: AppTextStyles.label(context)
-                .copyWith(color: colors.textMuted),
+            style:
+                AppTextStyles.label(context).copyWith(color: colors.textMuted),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -744,8 +680,18 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   }
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   /// Formats as "DD MMM YY, HH:MM" (24-hour clock), e.g. "16 Sep 26,14:05".
@@ -774,196 +720,80 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     );
   }
 
+  void _openItemDetails(
+    BuildContext context,
+    InventoryItemModel item,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => InventoryItemDetailScreen(item: item),
+      ),
+    );
+  }
+
   // void _openLowStock(BuildContext context) {
   //   Navigator.of(context).push(
   //     MaterialPageRoute(builder: (_) => const LowStockScreen()),
   //   );
   // }
-
-  Future<void> _confirmDelete(
-    BuildContext context,
-    InventoryItemModel item,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => RdxDeleteDialog(
-        title: 'Delete Material',
-        itemName: item.name,
-        itemDetails: [
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: context.w(8),
-              vertical: context.h(3),
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.of(context).surface,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: AppColors.of(context).border),
-            ),
-            child: Text(
-              item.category,
-              style: AppTextStyles.body(context),
-            ),
-          ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: RdxDeleteMetric(
-                  label: 'Current Stock',
-                  value: '${_formatQuantity(item.quantity)} ${item.unit} / '
-                      '${_formatQuantity(item.maxCapacity)} ${item.unit} max',
-                ),
-              ),
-              SizedBox(width: context.w(16)),
-              Expanded(
-                child: RdxDeleteMetric(
-                  label: 'Total Cost',
-                  value: Formatters.currency(item.totalCost),
-                ),
-              ),
-            ],
-          ),
-        ],
-        deleteButtonLabel: 'Delete Material',
-        warningMessage:
-            'Removing this raw material will delete its inventory stock '
-            'history, supplier linkage, and usage logs from recipes and '
-            'kitchen queue orders. This cannot be undone.',
-      ),
-    );
-    if (confirmed == true && context.mounted) {
-      await ref.read(inventoryProvider).deleteItem(item.id);
-    }
-  }
-
-  String _formatQuantity(double value) {
-    if (value == value.roundToDouble()) {
-      return value.toInt().toString();
-    }
-    return value.toStringAsFixed(1);
-  }
 }
 
-/// Inline numeric entry used by the ADDED / USED table columns. Typing a
-/// quantity and pressing enter/check calls [onSubmit] once, then clears
-/// itself — it doesn't hold any running state of its own, the actual
-/// stock/cost math happens server-side in InventoryService.addStock /
-/// InventoryService.useStock.
-class _StockAdjustField extends ConsumerStatefulWidget {
-  final String hint;
-  final double maxValue;
-  final String maxErrorText;
-  final ValueChanged<double> onSubmit;
+/// Pinned filter strip for Inventory (tabs, search, activity, period).
+/// Stays fixed at the top while title and stats scroll away.
+class _InventoryFiltersHeader extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final Color background;
+  final double horizontalPad;
+  final double height;
 
-  const _StockAdjustField({
-    super.key,
-    required this.hint,
-    required this.maxValue,
-    required this.maxErrorText,
-    required this.onSubmit,
+  _InventoryFiltersHeader({
+    required this.child,
+    required this.background,
+    required this.horizontalPad,
+    required this.height,
   });
 
   @override
-  ConsumerState<_StockAdjustField> createState() => _StockAdjustFieldState();
-}
-
-class _StockAdjustFieldState extends ConsumerState<_StockAdjustField> {
-  final _controller = TextEditingController();
-  String? _errorText;
+  double get minExtent => height;
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final value = double.tryParse(_controller.text);
-    if (value == null || value <= 0) {
-      setState(() => _errorText = 'Enter a quantity greater than zero');
-      return;
-    }
-    if (value > widget.maxValue) {
-      setState(() => _errorText = widget.maxErrorText);
-      return;
-    }
-    setState(() => _errorText = null);
-    widget.onSubmit(value);
-    _controller.clear();
-  }
+  double get maxExtent => height;
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: context.w(74),
-      height: context.h(36),
-      child: TextField(
-        controller: _controller,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-          _MaxThreeDigitsFormatter(),
-          _MaxValueInputFormatter(widget.maxValue),
-        ],
-        style: AppTextStyles.bodySecondary(context),
-        textAlignVertical: TextAlignVertical.center,
-        decoration: InputDecoration(
-          isDense: true,
-          hintText: widget.hint,
-          errorText: _errorText,
-          errorMaxLines: 2,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: context.w(6),
-            vertical: context.h(6),
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(context.h(6)),
-          ),
-          suffixIcon: IconButton(
-            icon: Icon(Icons.check, size: context.h(16)),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: _submit,
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Material(
+      color: background,
+      elevation: overlapsContent || shrinkOffset > 0 ? 1.5 : 0,
+      shadowColor: Colors.black26,
+      child: Container(
+        height: height,
+        alignment: Alignment.centerLeft,
+        padding: EdgeInsets.symmetric(horizontal: horizontalPad),
+        decoration: BoxDecoration(
+          color: background,
+          border: Border(
+            bottom: BorderSide(
+              color: overlapsContent || shrinkOffset > 0
+                  ? AppColors.of(context).border
+                  : Colors.transparent,
+              width: 1,
+            ),
           ),
         ),
-        onChanged: (_) {
-          if (_errorText != null) setState(() => _errorText = null);
-        },
-        onSubmitted: (_) => _submit(),
+        child: child,
       ),
     );
   }
-}
-
-class _MaxValueInputFormatter extends TextInputFormatter {
-  final double maxValue;
-
-  _MaxValueInputFormatter(this.maxValue);
 
   @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.isEmpty) return newValue;
-    final value = double.tryParse(newValue.text);
-    if (value == null || value > maxValue) return oldValue;
-    return newValue;
-  }
-}
-
-/// Blocks any input that would contain more than 3 digit characters
-/// (e.g. "1000" or "99.99" → rejected; "999" / "99.9" → allowed).
-class _MaxThreeDigitsFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.isEmpty) return newValue;
-    final digitCount = newValue.text.replaceAll(RegExp(r'[^0-9]'), '').length;
-    if (digitCount > 3) return oldValue;
-    return newValue;
+  bool shouldRebuild(covariant _InventoryFiltersHeader oldDelegate) {
+    return child != oldDelegate.child ||
+        background != oldDelegate.background ||
+        horizontalPad != oldDelegate.horizontalPad ||
+        height != oldDelegate.height;
   }
 }

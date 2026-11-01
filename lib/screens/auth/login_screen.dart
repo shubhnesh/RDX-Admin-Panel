@@ -7,7 +7,7 @@ import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/loading_indicator.dart';
-import 'package:rdx_admin/widgets/resuable_options/rdx_text_field.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/rdx_text_field.dart';
 
 import '../../providers/auth_provider.dart';
 
@@ -467,11 +467,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           SizedBox(height: context.h(8)),
                           Expanded(
-                            child: CustomPaint(
-                              painter: _DashboardChartPainter(
-                                color: AppColors.primary,
-                              ),
-                              size: Size.infinite,
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                return CustomPaint(
+                                  size: Size(constraints.maxWidth,
+                                      constraints.maxHeight),
+                                  painter: _DashboardChartPainter(
+                                    color: AppColors.primary,
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],
@@ -627,7 +632,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         SizedBox(height: context.h(58)),
         Text(
-          _isRegister ? 'Create your account' : 'Welcome 👋',
+          _isRegister ? 'Create your account' : 'Welcome',
           style: AppTextStyles.heading(context).copyWith(
             color: const Color(0xFF182033),
             fontSize: context.w(31),
@@ -982,18 +987,16 @@ class _BackgroundPainter extends CustomPainter {
 class _DashboardChartPainter extends CustomPainter {
   final Color color;
 
-  _DashboardChartPainter({
+  const _DashboardChartPainter({
     required this.color,
   });
 
   @override
-  void paint(
-    Canvas canvas,
-    Size size,
-  ) {
-    final path = Path();
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+    if (!size.width.isFinite || !size.height.isFinite) return;
 
-    final points = [
+    final points = <Offset>[
       Offset(0, size.height * 0.72),
       Offset(size.width * 0.14, size.height * 0.58),
       Offset(size.width * 0.27, size.height * 0.64),
@@ -1004,16 +1007,9 @@ class _DashboardChartPainter extends CustomPainter {
       Offset(size.width, size.height * 0.12),
     ];
 
-    path.moveTo(
-      points.first.dx,
-      points.first.dy,
-    );
-
-    for (int i = 1; i < points.length; i++) {
-      path.lineTo(
-        points[i].dx,
-        points[i].dy,
-      );
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var i = 1; i < points.length; i++) {
+      path.lineTo(points[i].dx, points[i].dy);
     }
 
     final linePaint = Paint()
@@ -1023,28 +1019,19 @@ class _DashboardChartPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    canvas.drawPath(
-      path,
-      linePaint,
-    );
+    canvas.drawPath(path, linePaint);
 
     final dotPaint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
 
     for (final point in points) {
-      canvas.drawCircle(
-        point,
-        2.7,
-        dotPaint,
-      );
+      canvas.drawCircle(point, 2.7, dotPaint);
     }
   }
 
   @override
-  bool shouldRepaint(
-    covariant _DashboardChartPainter oldDelegate,
-  ) {
+  bool shouldRepaint(covariant _DashboardChartPainter oldDelegate) {
     return oldDelegate.color != color;
   }
 }

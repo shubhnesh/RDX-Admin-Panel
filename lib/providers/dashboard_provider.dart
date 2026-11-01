@@ -5,7 +5,6 @@ import '../models/dashboard_stats_model.dart';
 import '../providers/coupon_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/live_orders_provider.dart';
-import '../providers/settings_provider.dart';
 import '../services/dashboard_service.dart';
 import 'dashboard_data_source.dart';
 
@@ -51,6 +50,14 @@ final dashboardDataSourceProvider = Provider<DashboardDataSource>((ref) {
   return buildDashboardDataSource(ref);
 });
 
+final dashboardProvider = ChangeNotifierProvider<DashboardProvider>((ref) {
+  final dashboard = DashboardProvider(ref);
+  ref.listen(liveOrdersProvider, (_, __) => dashboard.refreshOperational());
+  ref.listen(inventoryProvider, (_, __) => dashboard.refreshOperational());
+  ref.listen(couponProvider, (_, __) => dashboard.refreshOperational());
+  return dashboard;
+});
+
 class DashboardProvider extends ChangeNotifier {
   DashboardProvider(this._ref) : _service = DashboardService();
 
@@ -60,7 +67,9 @@ class DashboardProvider extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
   DashboardStatsModel? stats;
-  String chartPeriod = 'Weekly';
+
+  /// Today | Yesterday | Last 7 days
+  String selectedPeriod = 'Today';
 
   DashboardDataSource get _source => _ref.read(dashboardDataSourceProvider);
 
@@ -70,21 +79,62 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Load operational modules first so readOperational() is meaningful.
       await Future.wait([
         _ref.read(liveOrdersProvider).load(),
         _ref.read(inventoryProvider).load(),
         _ref.read(couponProvider).load(),
       ]);
 
-      final days = DashboardService.daysForPeriod(chartPeriod);
-      final todayOrders = await _source.fetchTodayOrders();
-      final trendOrders = await _source.fetchTrendOrders(days);
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
       final ops = _source.readOperational();
-      final hours = _todaysOperatingHours();
+
+      // Always fetch enough history for sparklines + comparison
+      final trendOrders = await _source.fetchTrendOrders(14);
+
+      List<DashboardOrderInput> periodOrders;
+      List<DashboardOrderInput> previousOrders;
+      String label;
+
+      if (selectedPeriod == 'Yesterday') {
+        final yStart = todayStart.subtract(const Duration(days: 1));
+        periodOrders = trendOrders
+            .where((o) =>
+                !o.createdAt.isBefore(yStart) &&
+                o.createdAt.isBefore(todayStart))
+            .toList();
+        final prevStart = yStart.subtract(const Duration(days: 1));
+        previousOrders = trendOrders
+            .where((o) =>
+                !o.createdAt.isBefore(prevStart) &&
+                o.createdAt.isBefore(yStart))
+            .toList();
+        label = 'Yesterday';
+      } else if (selectedPeriod == 'Last 7 days') {
+        final from = todayStart.subtract(const Duration(days: 6));
+        periodOrders =
+            trendOrders.where((o) => !o.createdAt.isBefore(from)).toList();
+        final prevFrom = from.subtract(const Duration(days: 7));
+        previousOrders = trendOrders
+            .where((o) =>
+                !o.createdAt.isBefore(prevFrom) && o.createdAt.isBefore(from))
+            .toList();
+        label = 'Last 7 days';
+      } else {
+        // Today
+        periodOrders = await _source.fetchTodayOrders();
+        final yStart = todayStart.subtract(const Duration(days: 1));
+        previousOrders = trendOrders
+            .where((o) =>
+                !o.createdAt.isBefore(yStart) &&
+                o.createdAt.isBefore(todayStart))
+            .toList();
+        label = 'Today';
+      }
 
       stats = _service.buildStats(
-        todayOrders: todayOrders,
+        periodOrders: periodOrders,
+        previousOrders: previousOrders,
         trendOrders: trendOrders,
         lowStockCount: ops.lowStockCount,
         criticalStockCount: ops.criticalStockCount,
@@ -95,8 +145,7 @@ class DashboardProvider extends ChangeNotifier {
         criticalItemNames: ops.criticalItemNames,
         lowStockItemNames: ops.lowStockItemNames,
         expiringCouponCodes: ops.expiringCouponCodes,
-        openHour: hours.openHour,
-        closeHour: hours.closeHour,
+        periodLabel: label,
       );
     } catch (e, st) {
       errorMessage = 'Failed to load dashboard.';
@@ -110,25 +159,24 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
-  /// Instant pulse update when live orders / inventory / coupons change.
+  /// Instant operational pulse when live modules change.
   void refreshOperational() {
     if (stats == null) return;
     final ops = _source.readOperational();
-    final attention = _service
-        .buildStats(
-          todayOrders: const [],
-          trendOrders: const [],
-          lowStockCount: ops.lowStockCount,
-          criticalStockCount: ops.criticalStockCount,
-          activeCouponCount: ops.activeCouponCount,
-          couponUsagesToday: ops.couponUsagesToday,
-          activeOrdersCount: ops.activeOrdersCount,
-          pendingPaymentCount: ops.pendingPaymentCount,
-          criticalItemNames: ops.criticalItemNames,
-          lowStockItemNames: ops.lowStockItemNames,
-          expiringCouponCodes: ops.expiringCouponCodes,
-        )
-        .attentionItems;
+    final attention = _service.buildStats(
+      periodOrders: const [],
+      previousOrders: const [],
+      trendOrders: const [],
+      lowStockCount: ops.lowStockCount,
+      criticalStockCount: ops.criticalStockCount,
+      activeCouponCount: ops.activeCouponCount,
+      couponUsagesToday: ops.couponUsagesToday,
+      activeOrdersCount: ops.activeOrdersCount,
+      pendingPaymentCount: ops.pendingPaymentCount,
+      criticalItemNames: ops.criticalItemNames,
+      lowStockItemNames: ops.lowStockItemNames,
+      expiringCouponCodes: ops.expiringCouponCodes,
+    ).attentionItems;
 
     stats = stats!.copyWith(
       activeOrdersCount: ops.activeOrdersCount,
@@ -142,49 +190,10 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setChartPeriod(String period) async {
-    if (chartPeriod == period) return;
-    chartPeriod = period;
+  Future<void> setPeriod(String period) async {
+    if (selectedPeriod == period) return;
+    selectedPeriod = period;
     notifyListeners();
     await load();
   }
-
-  /// Picks weekday/weekend operating hours from Settings for today and
-  /// parses them into 24-hour ints for bucketing the volume trend chart.
-  ({int openHour, int closeHour}) _todaysOperatingHours() {
-    final settings = _ref.read(settingsProvider);
-    final now = DateTime.now();
-    final isWeekend = now.weekday == DateTime.saturday ||
-        now.weekday == DateTime.sunday;
-    final hours = isWeekend ? settings.weekends : settings.weekdays;
-
-    return (
-      openHour: _parseHour(hours.open) ?? 10,
-      closeHour: _parseHour(hours.close) ?? 22,
-    );
-  }
-
-  /// Parses a "08:00 AM" / "11:30 PM" style string into a 24-hour int.
-  /// Returns null if the string can't be parsed.
-  int? _parseHour(String time) {
-    final match =
-        RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)$', caseSensitive: false)
-            .firstMatch(time.trim());
-    if (match == null) return null;
-
-    var hour = int.tryParse(match.group(1)!);
-    final meridiem = match.group(3)!.toUpperCase();
-    if (hour == null) return null;
-
-    if (meridiem == 'AM') {
-      if (hour == 12) hour = 0;
-    } else {
-      if (hour != 12) hour += 12;
-    }
-    return hour % 24;
-  }
 }
-
-final dashboardProvider = ChangeNotifierProvider<DashboardProvider>((ref) {
-  return DashboardProvider(ref);
-});

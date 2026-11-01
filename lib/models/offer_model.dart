@@ -69,7 +69,7 @@ class OfferModel {
       startDate: startDate,
       endDate: endDate,
       status: _statusFromString(json['status']) ??
-          _deriveStatus(startDate, endDate),
+          deriveStatus(startDate, endDate),
       imageUrl: _nullableString(json['image_url']),
       autoApply: json['auto_apply'] as bool? ?? false,
       showOnHome: json['show_on_home'] as bool? ?? false,
@@ -102,6 +102,21 @@ class OfferModel {
         'updated_at': FieldValue.serverTimestamp(),
       };
 
+  int get daysRemaining {
+    final now = DateTime.now();
+    return endDate.difference(now).inDays;
+  }
+
+  bool get isExpiringSoon =>
+      status == CouponStatus.active && daysRemaining >= 0 && daysRemaining <= 3;
+
+  bool get isLimited => usageLimit != null && usageLimit! > 0;
+
+  double get usageProgress {
+    if (usageLimit == null || usageLimit == 0) return 0;
+    return (usageCount / usageLimit!).clamp(0.0, 1.0);
+  }
+
   static CouponStatus? _statusFromString(dynamic value) {
     if (value is! String) return null;
     final sanitized = value.trim();
@@ -110,17 +125,6 @@ class OfferModel {
       if (status.name == sanitized) return status;
     }
     return null;
-  }
-
-  static CouponStatus _deriveStatus(DateTime startDate, DateTime endDate) {
-    final now = DateTime.now();
-    if (endDate.isBefore(now) || endDate.isAtSameMomentAs(now)) {
-      return CouponStatus.expired;
-    }
-    if (startDate.isAfter(now)) {
-      return CouponStatus.scheduled;
-    }
-    return CouponStatus.active;
   }
 
   static String? _nullableString(dynamic value) {

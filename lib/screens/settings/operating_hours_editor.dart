@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_toggle_button.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
-import '../buttons/rdx_action_button.dart';
-import '../buttons/rdx_toggle_button.dart';
 
 class OperatingHoursEditor extends ConsumerStatefulWidget {
   const OperatingHoursEditor({super.key});

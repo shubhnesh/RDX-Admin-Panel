@@ -1,13 +1,14 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
 
 class RdxTableColumn {
-  /// Logical design width (scaled at runtime via [context.w]).
+  /// Design width in logical px. Used as a hard floor for horizontal overflow.
   final double minWidth;
 
-  /// Share of leftover horizontal space after min widths are applied.
+  /// Share of leftover space after min widths are applied.
   final double flex;
 
   final String title;
@@ -21,12 +22,13 @@ class RdxTableColumn {
   });
 }
 
-class RdxTable extends StatelessWidget {
+class RdxTable extends StatefulWidget {
   final List<RdxTableColumn> columns;
   final List<List<Widget>> rows;
   final Widget? footer;
   final bool showFooter;
   final bool showRowDividers;
+  final ValueChanged<int>? onRowTap;
 
   const RdxTable({
     super.key,
@@ -35,263 +37,286 @@ class RdxTable extends StatelessWidget {
     this.footer,
     this.showFooter = false,
     this.showRowDividers = true,
+    this.onRowTap,
   });
+
+  @override
+  State<RdxTable> createState() => _RdxTableState();
+}
+
+class _RdxTableState extends State<RdxTable> {
+  final ScrollController _hController = ScrollController();
+
+  @override
+  void dispose() {
+    _hController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final isNarrow = Responsive.isNarrow(context);
     final isMobile = Responsive.isMobile(context);
+    final isNarrow = Responsive.isNarrow(context);
 
-    // All layout metrics scale with screen size.
-    final horizontalPadding = isMobile
-        ? context.w(12)
+    final hPad = isMobile
+        ? context.w(10)
         : isNarrow
-            ? context.w(14)
-            : context.w(18);
+            ? context.w(12)
+            : context.w(16);
     final headerHeight = isMobile ? context.h(40) : context.h(46);
-    final rowMinHeight = isMobile ? context.h(60) : context.h(72);
-    final rowVerticalPadding = isMobile ? context.h(8) : context.h(11);
+    final rowMinHeight = isMobile ? context.h(56) : context.h(68);
+    final rowVPad = isMobile ? context.h(8) : context.h(10);
     final radius = context.h(14);
+    final gap = isMobile
+        ? 10.0
+        : isNarrow
+            ? 12.0
+            : 14.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth;
-        final minimumTableWidth = _minimumTableWidth(context);
+        final maxW = constraints.maxWidth;
+        final maxH = constraints.maxHeight;
 
-        final tableWidth = availableWidth >= minimumTableWidth
-            ? availableWidth
-            : minimumTableWidth;
+        // Hard min width from design values (not aggressively scaled down).
+        // This is what creates real horizontal overflow on phones/tablets.
+        final widths = _columnWidths(context, maxW, gap, hPad);
+        final contentW = widths.fold<double>(0, (s, w) => s + w) +
+            gap * (widget.columns.length - 1) +
+            hPad * 2;
+
+        final tableW = contentW < maxW ? maxW : contentW;
+        final canScrollH = tableW > maxW + 1;
+
+        // Prefer bounded height from parent (Expanded / SliverFillRemaining).
+        final tableH = maxH.isFinite && maxH > 0 ? maxH : context.h(420);
+
+        final body = SizedBox(
+          width: tableW,
+          height: tableH,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _header(context, colors, widths, gap, hPad, headerHeight),
+              Divider(height: 1, thickness: 1, color: colors.divider),
+              Expanded(
+                child: widget.rows.isEmpty
+                    ? const SizedBox.shrink()
+                    : ListView.builder(
+                        physics: const ClampingScrollPhysics(),
+                        itemCount: widget.rows.length,
+                        itemBuilder: (context, index) {
+                          return _row(
+                            context,
+                            colors,
+                            widget.rows[index],
+                            index,
+                            widths,
+                            gap,
+                            hPad,
+                            rowMinHeight,
+                            rowVPad,
+                          );
+                        },
+                      ),
+              ),
+              if (widget.showFooter && widget.footer != null) ...[
+                Divider(height: 1, thickness: 1, color: colors.divider),
+                widget.footer!,
+              ],
+            ],
+          ),
+        );
 
         return Container(
           width: double.infinity,
+          height: tableH,
           decoration: BoxDecoration(
             color: colors.surface,
             borderRadius: BorderRadius.circular(radius),
             border: Border.all(color: colors.border),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const ClampingScrollPhysics(),
-                  child: SizedBox(
-                    width: tableWidth,
-                    child: Column(
-                      children: [
-                        _buildHeader(
-                          context,
-                          colors,
-                          tableWidth,
-                          headerHeight: headerHeight,
-                          horizontalPadding: horizontalPadding,
-                        ),
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: colors.divider,
-                        ),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: rows.length,
-                            itemBuilder: (context, index) {
-                              return _buildRow(
-                                context,
-                                colors,
-                                rows[index],
-                                tableWidth,
-                                rowMinHeight: rowMinHeight,
-                                horizontalPadding: horizontalPadding,
-                                verticalPadding: rowVerticalPadding,
-                                showBottomBorder: showRowDividers,
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+          clipBehavior: Clip.hardEdge,
+          // Horizontal drag recognizer so parent vertical scroll does not win.
+          child: ScrollConfiguration(
+            behavior: const _HScrollBehavior(),
+            child: Scrollbar(
+              controller: _hController,
+              thumbVisibility: canScrollH,
+              trackVisibility: false,
+              thickness: canScrollH ? 6 : 0,
+              radius: const Radius.circular(8),
+              notificationPredicate: (n) => n.metrics.axis == Axis.horizontal,
+              child: SingleChildScrollView(
+                controller: _hController,
+                scrollDirection: Axis.horizontal,
+                physics: canScrollH
+                    ? const AlwaysScrollableScrollPhysics(
+                        parent: ClampingScrollPhysics(),
+                      )
+                    : const NeverScrollableScrollPhysics(),
+                child: body,
               ),
-              if (showFooter && footer != null) ...[
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: colors.divider,
-                ),
-                footer!,
-              ],
-            ],
+            ),
           ),
         );
       },
     );
   }
 
-  /// Responsive pixel min-width for a column (design value → scaled).
-  double _scaledMinWidth(BuildContext context, RdxTableColumn column) {
-    // context.w already scales with screen width.
-    // On very small phones, apply an extra slight compression so more
-    // columns fit before horizontal scroll is required.
-    final base = context.w(column.minWidth);
-    if (Responsive.isMobile(context)) {
-      return base * 0.9;
+  /// Column widths: at least design minWidth (lightly scaled), then flex extra.
+  List<double> _columnWidths(
+    BuildContext context,
+    double maxW,
+    double gap,
+    double hPad,
+  ) {
+    final n = widget.columns.length;
+    final gaps = n > 1 ? gap * (n - 1) : 0.0;
+
+    // Floor: use design minWidth with only light scale — never crush so hard
+    // that 7 inventory columns fit on a 360px screen without scrolling.
+    final mins = widget.columns.map((c) {
+      final scaled = context.w(c.minWidth);
+      // Keep a solid floor from the design token itself.
+      return scaled < c.minWidth * 0.85 ? c.minWidth * 0.85 : scaled;
+    }).toList();
+
+    final minTotal = mins.fold<double>(0, (s, w) => s + w) + gaps + hPad * 2;
+
+    // If viewport is wider than mins, distribute extra by flex.
+    if (maxW > minTotal) {
+      final extra = maxW - minTotal;
+      final flexSum =
+          widget.columns.fold<double>(0, (s, c) => s + c.flex);
+      if (flexSum <= 0) return mins;
+      return [
+        for (int i = 0; i < n; i++)
+          mins[i] + extra * (widget.columns[i].flex / flexSum),
+      ];
     }
-    if (Responsive.isNarrow(context)) {
-      return base * 0.95;
-    }
-    return base;
+
+    // Viewport narrower → keep mins (table will scroll horizontally).
+    return mins;
   }
 
-  double _minimumTableWidth(BuildContext context) {
+  TextStyle _headerStyle(BuildContext context, AppColorScheme colors) {
     final isMobile = Responsive.isMobile(context);
     final isNarrow = Responsive.isNarrow(context);
-    final horizontalPadding = isMobile
-        ? context.w(24)
+    final size = isMobile
+        ? context.h(11).clamp(10.0, 12.0)
         : isNarrow
-            ? context.w(28)
-            : context.w(36);
+            ? context.h(12).clamp(11.0, 13.0)
+            : context.h(13).clamp(12.0, 14.0);
 
-    return columns.fold<double>(
-          0,
-          (sum, column) => sum + _scaledMinWidth(context, column),
-        ) +
-        horizontalPadding;
-  }
-
-  List<double> _calculateWidths(BuildContext context, double tableWidth) {
-    final isMobile = Responsive.isMobile(context);
-    final isNarrow = Responsive.isNarrow(context);
-    final horizontalPadding = isMobile
-        ? context.w(24)
-        : isNarrow
-            ? context.w(28)
-            : context.w(36);
-
-    final availableWidth = tableWidth - horizontalPadding;
-
-    final scaledMins = columns.map((c) => _scaledMinWidth(context, c)).toList();
-    final minimumTotal = scaledMins.fold<double>(0, (sum, w) => sum + w);
-
-    if (availableWidth <= minimumTotal) {
-      return scaledMins;
-    }
-
-    final extraWidth = availableWidth - minimumTotal;
-    final totalFlex = columns.fold<double>(
-      0,
-      (sum, column) => sum + column.flex,
+    return AppTextStyles.label(context).copyWith(
+      color: colors.textMuted,
+      fontWeight: FontWeight.w600,
+      fontSize: size,
+      letterSpacing: 0.3,
     );
-
-    if (totalFlex == 0) {
-      return scaledMins;
-    }
-
-    return [
-      for (int i = 0; i < columns.length; i++)
-        scaledMins[i] + extraWidth * (columns[i].flex / totalFlex),
-    ];
   }
 
-  Widget _buildHeader(
+  Widget _header(
     BuildContext context,
     AppColorScheme colors,
-    double tableWidth, {
-    required double headerHeight,
-    required double horizontalPadding,
-  }) {
-    final widths = _calculateWidths(context, tableWidth);
+    List<double> widths,
+    double gap,
+    double hPad,
+    double height,
+  ) {
+    final style = _headerStyle(context, colors);
 
     return Container(
-      height: headerHeight,
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      color: colors.surfaceVariant.withOpacity(0.35),
+      height: height,
+      padding: EdgeInsets.symmetric(horizontal: hPad),
+      color: colors.surfaceVariant.withValues(alpha: 0.35),
       child: Row(
         children: [
-          for (int i = 0; i < columns.length; i++)
+          for (int i = 0; i < widget.columns.length; i++) ...[
             SizedBox(
               width: widths[i],
               child: Align(
-                alignment: columns[i].alignment,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: widths[i]),
-                  child: Text(
-                    columns[i].title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.section(context).copyWith(
-                      color: colors.textMuted,
-                      fontSize: Responsive.isMobile(context) ? 12 : null,
-                    ),
-                  ),
+                alignment: widget.columns[i].alignment,
+                child: Text(
+                  widget.columns[i].title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: style,
                 ),
               ),
             ),
+            if (i != widget.columns.length - 1) SizedBox(width: gap),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildRow(
+  Widget _row(
     BuildContext context,
     AppColorScheme colors,
     List<Widget> cells,
-    double tableWidth, {
-    required double rowMinHeight,
-    required double horizontalPadding,
-    required double verticalPadding,
-    required bool showBottomBorder,
-  }) {
-    final widths = _calculateWidths(context, tableWidth);
-
-    // Rows sit on the table's own `surface` background (set on the outer
-    // Container) rather than a flat `surfaceVariant` fill, so they read
-    // the same as every other card/list surface in the app. A faint
-    // hover tint (desktop/web) gives rows the same interactive feel as
-    // the rest of the UI without a heavier resting-state color. Each row
-    // also carries its own bottom border (like a card), rather than a
-    // Divider inserted only between rows, so the last row is bordered too.
+    int rowIndex,
+    List<double> widths,
+    double gap,
+    double hPad,
+    double minHeight,
+    double vPad,
+  ) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: null,
-        hoverColor: colors.surfaceVariant.withOpacity(0.35),
+        onTap: widget.onRowTap == null ? null : () => widget.onRowTap!(rowIndex),
+        mouseCursor: widget.onRowTap == null
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+        hoverColor: colors.surfaceVariant.withValues(alpha: 0.35),
         splashFactory: NoSplash.splashFactory,
         highlightColor: Colors.transparent,
         child: Container(
-          constraints: BoxConstraints(minHeight: rowMinHeight),
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: verticalPadding,
-          ),
+          constraints: BoxConstraints(minHeight: minHeight),
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
           decoration: BoxDecoration(
             color: colors.surface,
-            border: showBottomBorder
+            border: widget.showRowDividers
                 ? Border(bottom: BorderSide(color: colors.divider))
                 : null,
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              for (int i = 0; i < columns.length; i++)
+              for (int i = 0; i < widget.columns.length; i++) ...[
                 SizedBox(
                   width: widths[i],
                   child: Align(
-                    alignment: columns[i].alignment,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: widths[i]),
-                      child: cells[i],
-                    ),
+                    alignment: widget.columns[i].alignment,
+                    child: cells.length > i ? cells[i] : const SizedBox.shrink(),
                   ),
                 ),
+                if (i != widget.columns.length - 1) SizedBox(width: gap),
+              ],
             ],
           ),
         ),
       ),
     );
   }
+}
+
+/// Allows drag + mouse-wheel/trackpad horizontal scrolling inside a
+/// vertical parent scroll view (CustomScrollView / ListView).
+class _HScrollBehavior extends MaterialScrollBehavior {
+  const _HScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
 }
 
 class RdxTableActionButton extends StatelessWidget {
@@ -324,11 +349,7 @@ class RdxTableActionButton extends StatelessWidget {
             width: size,
             height: size,
             child: Center(
-              child: Icon(
-                icon,
-                size: iconSize,
-                color: colors.textMuted,
-              ),
+              child: Icon(icon, size: iconSize, color: colors.textMuted),
             ),
           ),
         ),

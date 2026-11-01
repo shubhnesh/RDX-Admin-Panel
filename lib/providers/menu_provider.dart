@@ -58,7 +58,7 @@ class MenuProvider extends ChangeNotifier {
       _items = results[0] as List<MenuItemModel>;
       _categoryList = results[1] as List<CategoryModel>;
     } catch (e) {
-      errorMessage = 'Failed to load menu.';
+      errorMessage = 'Failed to load menu: $e';
     } finally {
       isLoading = false;
       notifyListeners();

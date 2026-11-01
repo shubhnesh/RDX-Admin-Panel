@@ -28,8 +28,8 @@ class OfferProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _offers = await _service.fetchOffers();
-    } catch (_) {
-      errorMessage = 'Failed to load offers.';
+    } catch (e) {
+      errorMessage = 'Failed to load offers: $e';
     }
     isLoading = false;
     notifyListeners();

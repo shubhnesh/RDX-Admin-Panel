@@ -10,8 +10,7 @@ import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
-import '../../widgets/resuable_options/rdx_category_tabs.dart';
-import '../../widgets/resuable_options/rdx_search_bar.dart';
+import '../../widgets/reusable_widgets/rdx_search_bar.dart';
 import 'widgets/cart_panel.dart';
 import 'widgets/live_order_menu_card.dart';
 
@@ -23,12 +22,7 @@ class PlaceOrderScreen extends ConsumerStatefulWidget {
 }
 
 class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
-  // ── Manage-categories filter panel state ──────────────────────
-  // Mirrors MenuScreen exactly so the tabs row, fade, filter button
-  // and popover panel look and behave identically on both screens.
-  final Set<String> _appliedCategories = {};
-  Set<String>? _stagedCategories;
-  bool _hasAppliedCategories = false;
+  // ── Category filter (same UX as MenuScreen) ───────────────────
   bool _categoryPickerOpen = false;
   final GlobalKey _categoryButtonKey = GlobalKey();
   OverlayEntry? _categoryOverlay;
@@ -39,7 +33,6 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-
       ref.read(menuProvider).load();
     });
   }
@@ -86,24 +79,15 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
             ),
           ),
           actions: [
-            TextButton(
+            RdxActionButton.discard(
+              height: 36,
+              label: 'No',
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(
-                'No',
-                style: AppTextStyles.label(ctx).copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
             ),
-            TextButton(
+            RdxActionButton(
+              height: 36,
+              label: 'Yes',
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(
-                'Yes',
-                style: AppTextStyles.label(ctx).copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
             ),
           ],
         );
@@ -134,7 +118,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // MANAGE CATEGORIES (ported from MenuScreen, unchanged behaviour)
+  // CATEGORY FILTER — same as MenuScreen
   // ═══════════════════════════════════════════════════════════════
 
   void _openCategoryPicker(MenuProvider provider) {
@@ -142,10 +126,6 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
       _closeCategoryPicker();
       return;
     }
-
-    _stagedCategories = !_hasAppliedCategories
-        ? provider.categoryList.map((category) => category.name).toSet()
-        : Set<String>.from(_appliedCategories);
 
     final buttonContext = _categoryButtonKey.currentContext;
     if (buttonContext == null) return;
@@ -159,9 +139,10 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     final mediaQuery = MediaQuery.of(context);
     final screenSize = mediaQuery.size;
 
-    final panelWidth = context.w(330);
+    final panelWidth = context.w(320);
     final horizontalMargin = context.w(16);
     final verticalGap = context.h(8);
+    final panelHeight = context.h(280); // fixed height — same as MenuScreen
 
     final availableBelow = screenSize.height -
         (buttonOffset.dy + buttonSize.height) -
@@ -171,20 +152,17 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     final availableAbove =
         buttonOffset.dy - mediaQuery.padding.top - horizontalMargin;
 
-    final estimatedPanelHeight = context.h(430);
-
-    final showBelow = availableBelow >= estimatedPanelHeight ||
-        availableBelow >= availableAbove;
+    final showBelow =
+        availableBelow >= panelHeight || availableBelow >= availableAbove;
 
     double top;
     if (showBelow) {
       top = buttonOffset.dy + buttonSize.height + verticalGap;
     } else {
-      top = buttonOffset.dy - estimatedPanelHeight - verticalGap;
+      top = buttonOffset.dy - panelHeight - verticalGap;
     }
 
-    final maxTop = screenSize.height - estimatedPanelHeight - horizontalMargin;
-
+    final maxTop = screenSize.height - panelHeight - horizontalMargin;
     top = top.clamp(
       mediaQuery.padding.top + horizontalMargin,
       maxTop > mediaQuery.padding.top
@@ -218,8 +196,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                 child: _categoryPickerPanel(
                   AppColors.of(context),
                   provider,
-                  panelWidth: panelWidth,
-                  maxHeight: showBelow ? availableBelow : availableAbove,
+                  panelHeight: panelHeight,
                 ),
               ),
             ),
@@ -229,52 +206,21 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     );
 
     Overlay.of(context, rootOverlay: true).insert(_categoryOverlay!);
-
-    setState(() {
-      _categoryPickerOpen = true;
-    });
+    setState(() => _categoryPickerOpen = true);
   }
 
   void _closeCategoryPicker() {
     final overlay = _categoryOverlay;
     _categoryOverlay = null;
-
-    if (overlay != null) {
-      overlay.remove();
-    }
+    overlay?.remove();
 
     if (!mounted) return;
-
-    setState(() {
-      _categoryPickerOpen = false;
-      _stagedCategories = null;
-    });
+    setState(() => _categoryPickerOpen = false);
   }
 
-  void _toggleStagedCategory(String name, bool selected) {
-    final staged = _stagedCategories ?? <String>{};
-    if (selected) {
-      staged.add(name);
-    } else {
-      staged.remove(name);
-    }
-    _stagedCategories = staged;
-    _categoryOverlay?.markNeedsBuild();
-  }
-
-  void _applyCategories(MenuProvider provider) {
-    final next = Set<String>.from(_stagedCategories ?? {});
-    _appliedCategories
-      ..clear()
-      ..addAll(next);
-    _hasAppliedCategories = true;
-
-    final selectedIsVisible = provider.selectedCategory == 'All' ||
-        _appliedCategories.contains(provider.selectedCategory);
-
+  void _selectCategory(MenuProvider provider, String category) {
+    provider.setCategory(category);
     _closeCategoryPicker();
-
-    if (!selectedIsVisible) provider.setCategory('All');
   }
 
   @override
@@ -306,11 +252,19 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
               child: menuState.isLoading
                   ? const LoadingIndicator()
                   : Padding(
-                      padding: Responsive.pagePadding(
-                        context,
-                        top: context.h(10),
-                        bottom: context.h(10),
-                      ),
+                      padding: isCompact
+                          ? EdgeInsets.fromLTRB(
+                              context.w(20),
+                              context.h(16),
+                              context.w(20),
+                              context.h(8),
+                            )
+                          : EdgeInsets.fromLTRB(
+                              context.w(20),
+                              context.h(16),
+                              context.w(20),
+                              context.h(24),
+                            ),
                       child: isCompact
                           ? _buildCompactLayout(
                               context,
@@ -343,46 +297,33 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // ---------------------------------------------------------------------
-        // LEFT - MENU
+        // LEFT - MENU (same filters + grid as MenuScreen)
         // ---------------------------------------------------------------------
-
         Expanded(
           child: Padding(
             padding: EdgeInsets.only(
-              right: context.w(14),
+              right: context.w(20),
             ),
-            child: _buildMenuArea(
-              context,
-              menuState,
-              colors,
-            ),
+            child: _buildMenuArea(context, menuState, colors),
           ),
         ),
 
         // ---------------------------------------------------------------------
         // DIVIDER
         // ---------------------------------------------------------------------
-
         VerticalDivider(
           width: context.w(1),
-          thickness: 1,
+          thickness: context.h(1),
           color: colors.border,
         ),
+        SizedBox(width: context.w(20)),
 
         // ---------------------------------------------------------------------
         // RIGHT - ACTIVE ORDER / CART
         // ---------------------------------------------------------------------
-
         SizedBox(
-          width: context.w(350),
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: context.w(14),
-            ),
-            child: CartPanel(
-              onProceed: _goToCheckout,
-            ),
-          ),
+          width: context.w(360).clamp(320.0, 400.0),
+          child: CartPanel(onProceed: _goToCheckout),
         ),
       ],
     );
@@ -397,9 +338,12 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     MenuProvider menuState,
     AppColorScheme colors,
   ) {
+    final hasCartItems = ref.watch(cartProvider).isNotEmpty;
+    final cartPanelHeight =
+        (MediaQuery.sizeOf(context).height * 0.20).clamp(136.0, 164.0);
+
     return Column(
       children: [
-        // Menu section.
         Expanded(
           child: _buildMenuArea(
             context,
@@ -407,18 +351,16 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
             colors,
           ),
         ),
-
-        SizedBox(height: context.h(12)),
-
-        // Cart remains on the same screen.
-        //
-        // No bottom sheet is used.
-        SizedBox(
-          height: context.h(360),
-          child: CartPanel(
-            onProceed: _goToCheckout,
+        if (hasCartItems) ...[
+          SizedBox(height: context.h(3)),
+          SizedBox(
+            height: cartPanelHeight,
+            child: CartPanel(
+              onProceed: _goToCheckout,
+              compactLayout: true,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -426,10 +368,8 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
   // ===========================================================================
   // MENU AREA
   //
-  // Top bar, category-tabs row (fade + manage-categories filter button) and
-  // all spacing/padding here match MenuScreen's own _buildTopBar /
-  // _buildCategoryTabs exactly. Only the grid's card (LiveOrderMenuCard) and
-  // this section's own heading stay specific to the order screen.
+  // Search + category filter button + grid — same widgets and behaviour as
+  // MenuScreen. Only the card (LiveOrderMenuCard) and cart stay order-specific.
   // ===========================================================================
 
   Widget _buildMenuArea(
@@ -437,64 +377,42 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     MenuProvider menuState,
     AppColorScheme colors,
   ) {
-    final notifier = ref.read(menuProvider);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ---------------------------------------------------------------------
-        // SEARCH
-        // ---------------------------------------------------------------------
-
-        RdxSearchToolbar(
-          hintText: 'Search menu items',
-          onChanged: notifier.setSearchQuery,
-          actions: const [],
-        ),
+        // ── Filters row (identical to MenuScreen) ─────────────────
+        _buildFiltersRow(menuState, colors),
 
         SizedBox(height: context.h(16)),
 
-        // ---------------------------------------------------------------------
-        // CATEGORY TABS
-        // ---------------------------------------------------------------------
-
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(vertical: context.h(10)),
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: colors.divider),
-              bottom: BorderSide(color: colors.divider),
-            ),
-          ),
-          child: _buildCategoryTabs(menuState, colors),
-        ),
-
-        SizedBox(height: context.h(18)),
-
-        // ---------------------------------------------------------------------
-        // MENU GRID
-        // ---------------------------------------------------------------------
-
+        // ── MENU GRID ─────────────────────────────────────────────
         Expanded(
           child: menuState.filteredItems.isEmpty
               ? const EmptyState(
                   message: 'No menu items found',
                 )
-              : GridView.builder(
-                  padding: EdgeInsets.only(
-                    bottom: context.h(4),
-                  ),
-                  gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: context.w(225),
-                    mainAxisExtent: context.h(320),
-                    mainAxisSpacing: context.h(14),
-                    crossAxisSpacing: context.w(14),
-                  ),
-                  itemCount: menuState.filteredItems.length,
-                  itemBuilder: (context, index) {
-                    return LiveOrderMenuCard(
-                      item: menuState.filteredItems[index],
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Same grid formula as MenuScreen / CouponsScreen.
+                    final columns = Responsive.gridColumns(context);
+                    final spacing = context.w(16);
+                    final cardWidth =
+                        (constraints.maxWidth - ((columns - 1) * spacing)) /
+                            columns;
+
+                    return SingleChildScrollView(
+                      padding: EdgeInsets.only(bottom: context.h(24)),
+                      child: Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: [
+                          for (final item in menuState.filteredItems)
+                            SizedBox(
+                              width: cardWidth,
+                              child: LiveOrderMenuCard(item: item),
+                            ),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -504,65 +422,91 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // CATEGORY TABS (same shader-fade + manage-categories button as
-  // MenuScreen._buildCategoryTabs)
+  // FILTERS ROW — search + category filter (same as MenuScreen)
   // ═══════════════════════════════════════════════════════════════
 
-  Widget _buildCategoryTabs(MenuProvider provider, AppColorScheme colors) {
-    final categories = !_hasAppliedCategories
-        ? provider.categoryList.map((c) => c.name).toList()
-        : _appliedCategories.toList();
+  Widget _buildFiltersRow(MenuProvider provider, AppColorScheme colors) {
+    final searchHeight = RdxSearchBar.standardHeight(context);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: const [Colors.black, Colors.black, Colors.transparent],
-              stops: const [0.0, 0.9, 1.0],
-            ).createShader(bounds),
-            blendMode: BlendMode.dstIn,
-            child: RdxCategoryTabs(
-              labels: categories,
-              allLabel: 'All',
-              selectedLabel: provider.selectedCategory,
-              onSelected: provider.setCategory,
-              expand: false,
-            ),
+          child: RdxSearchBar(
+            height: searchHeight,
+            hintText: 'Search menu items',
+            onChanged: (value) => ref.read(menuProvider).setSearchQuery(value),
           ),
         ),
-        SizedBox(width: context.w(8)),
-        _manageCategoriesButton(colors, provider),
+        SizedBox(width: context.w(10)),
+        _filterButton(colors, provider),
       ],
     );
   }
 
-  Widget _manageCategoriesButton(AppColorScheme colors, MenuProvider provider) {
+  Widget _filterButton(AppColorScheme colors, MenuProvider provider) {
+    final isActive = provider.selectedCategory != 'All';
+    final labels = ['All', ...provider.categoryList.map((c) => c.name)];
+
+    // Measure the widest label so the button never changes size
+    final textStyle = AppTextStyles.label(context);
+    double maxTextWidth = 0;
+    for (final label in labels) {
+      final tp = TextPainter(
+        text: TextSpan(text: label, style: textStyle),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      if (tp.width > maxTextWidth) maxTextWidth = tp.width;
+    }
+
+    // Extra breathing room so the button feels comfortable
+    final fixedWidth = context.w(16) * 2 + // left + right padding
+        context.h(19) + // tune icon
+        context.w(8) + // gap after icon
+        maxTextWidth + // longest label
+        context.w(20) + // extra space after text
+        context.w(4) + // gap before chevron
+        context.h(20); // chevron
+
     return InkWell(
       key: _categoryButtonKey,
       onTap: () => _openCategoryPicker(provider),
       borderRadius: BorderRadius.circular(context.h(8)),
       child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: context.w(11),
-          vertical: context.h(9),
-        ),
+        width: fixedWidth.clamp(context.w(140), context.w(260)),
+        height: RdxSearchBar.standardHeight(context),
+        padding: EdgeInsets.symmetric(horizontal: context.w(16)),
         decoration: BoxDecoration(
-          color: _categoryPickerOpen
+          color: _categoryPickerOpen || isActive
               ? AppColors.primary.withValues(alpha: 0.08)
               : colors.surface,
           borderRadius: BorderRadius.circular(context.h(8)),
           border: Border.all(
-            color: _categoryPickerOpen ? AppColors.primary : colors.border,
+            color: _categoryPickerOpen || isActive
+                ? AppColors.primary
+                : colors.border,
           ),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
-            Icon(Icons.tune, size: context.h(19), color: AppColors.primary),
+            Icon(
+              Icons.tune,
+              size: context.h(19),
+              color: AppColors.primary,
+            ),
+            SizedBox(width: context.w(8)),
+            Expanded(
+              child: Text(
+                provider.selectedCategory,
+                style: AppTextStyles.label(context).copyWith(
+                  color: isActive ? AppColors.primary : colors.textSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
             SizedBox(width: context.w(4)),
             Icon(
               _categoryPickerOpen
@@ -577,20 +521,20 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // CATEGORY PICKER PANEL — chips that wrap + vertical scroll
+  // (identical to MenuScreen)
+  // ═══════════════════════════════════════════════════════════════
+
   Widget _categoryPickerPanel(
     AppColorScheme colors,
     MenuProvider provider, {
-    required double panelWidth,
-    required double maxHeight,
+    required double panelHeight,
   }) {
-    final staged = _stagedCategories ?? <String>{};
-    final categoryOptions = provider.categoryList;
-
-    final listHeight =
-        (maxHeight - context.h(170)).clamp(context.h(140), context.h(270));
+    final labels = ['All', ...provider.categoryList.map((c) => c.name)];
 
     return Container(
-      width: panelWidth,
+      height: panelHeight,
       padding: EdgeInsets.fromLTRB(
         context.w(14),
         context.h(13),
@@ -610,143 +554,91 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Filter categories',
-                  style: AppTextStyles.section(context)
-                      .copyWith(color: colors.textPrimary),
-                ),
-              ),
-              Text(
-                '${staged.length} selected',
-                style: AppTextStyles.bodySecondary(context)
-                    .copyWith(color: colors.textMuted),
-              ),
-            ],
+          Text(
+            'Filter by category',
+            style: AppTextStyles.section(context)
+                .copyWith(color: colors.textPrimary),
           ),
           SizedBox(height: context.h(4)),
           Text(
-            'Choose which categories appear in the filter row.',
+            'Tap a chip to filter the menu items.',
             style: AppTextStyles.caption(context)
                 .copyWith(color: colors.textSecondary),
           ),
-          SizedBox(height: context.h(10)),
-          Container(
-            height: listHeight,
-            decoration: BoxDecoration(
-              color: colors.surfaceVariant,
-              borderRadius: BorderRadius.circular(context.h(7)),
-              border: Border.all(color: colors.border),
-            ),
-            child: categoryOptions.isEmpty
+          SizedBox(height: context.h(12)),
+          Expanded(
+            child: labels.isEmpty
                 ? Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(context.h(14)),
-                      child: Text(
-                        'No categories yet. Create one from the menu item form.',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textMuted),
-                      ),
+                    child: Text(
+                      'No categories yet.',
+                      style: AppTextStyles.bodySecondary(context)
+                          .copyWith(color: colors.textMuted),
                     ),
                   )
-                : Scrollbar(
-                    thumbVisibility: true,
-                    child: ListView.separated(
-                      padding: EdgeInsets.symmetric(vertical: context.h(5)),
-                      itemCount: categoryOptions.length,
-                      separatorBuilder: (_, __) => Divider(
-                        height: context.h(1),
-                        thickness: 1,
-                        indent: 0,
-                        endIndent: 0,
-                        color: colors.divider,
-                      ),
-                      itemBuilder: (context, index) {
-                        final category = categoryOptions[index];
-                        final selected = staged.contains(category.name);
-
-                        return InkWell(
-                          onTap: () => _toggleStagedCategory(
-                            category.name,
-                            !selected,
+                : SingleChildScrollView(
+                    child: Wrap(
+                      spacing: context.w(8),
+                      runSpacing: context.h(8),
+                      children: [
+                        for (final label in labels)
+                          _FilterChip(
+                            label: label,
+                            selected: provider.selectedCategory == label,
+                            colors: colors,
+                            onTap: () => _selectCategory(provider, label),
                           ),
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              context.w(10),
-                              context.h(2),
-                              context.w(8),
-                              context.h(2),
-                            ),
-                            child: Row(
-                              children: [
-                                Checkbox(
-                                  value: selected,
-                                  onChanged: (value) {
-                                    _toggleStagedCategory(
-                                      category.name,
-                                      value == true,
-                                    );
-                                  },
-                                  activeColor: AppColors.primary,
-                                  checkColor: colors.surface,
-                                  fillColor:
-                                      WidgetStateProperty.resolveWith((states) {
-                                    if (states.contains(WidgetState.selected)) {
-                                      return AppColors.primary;
-                                    }
-                                    return Colors.transparent;
-                                  }),
-                                  side: BorderSide(
-                                    width: 1.2,
-                                    color: selected
-                                        ? AppColors.primary
-                                        : colors.border,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(3.5),
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    category.name,
-                                    style: AppTextStyles.label(context)
-                                        .copyWith(color: colors.textPrimary),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                      ],
                     ),
                   ),
           ),
-          SizedBox(height: context.h(10)),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              RdxActionButton(
-                label: 'Cancel',
-                isPrimary: false,
-                onPressed: _closeCategoryPicker,
-              ),
-              SizedBox(width: context.w(6)),
-              RdxActionButton(
-                label: 'Apply',
-                onPressed: () => _applyCategories(provider),
-              ),
-            ],
-          ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Filter chip (same look as MenuScreen / RdxCategoryTabs) ─────────
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final AppColorScheme colors;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.colors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(context.h(20)),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.w(14),
+          vertical: context.h(8),
+        ),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : colors.surface,
+          borderRadius: BorderRadius.circular(context.h(20)),
+          border: Border.all(
+            color: selected ? AppColors.primary : colors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: selected
+              ? AppTextStyles.label(context).copyWith(color: Colors.white)
+              : AppTextStyles.label(context)
+                  .copyWith(color: colors.textSecondary),
+        ),
       ),
     );
   }

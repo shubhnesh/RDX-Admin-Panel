@@ -19,8 +19,10 @@ import '../../services/regionality_service.dart';
 import '../../services/tag_service.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
-import '../../widgets/resuable_options/rdx_dropdown.dart';
-import '../../widgets/resuable_options/rdx_text_field.dart';
+import '../../widgets/reusable_widgets/rdx_dropdown.dart';
+import '../../widgets/reusable_widgets/rdx_text_field.dart';
+import '../../widgets/reusable_widgets/rdx_search_bar.dart';
+import '../../widgets/reusable_widgets/rdx_category_tabs.dart';
 import '../../widgets/buttons/rdx_toggle_button.dart';
 
 /// Sentinel value placed as the first entry in the category dropdown.
@@ -789,7 +791,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                                             alignment: Alignment.topCenter,
                                             child: SizedBox(
                                               width: context.w(225),
-                                              height: context.h(410),
                                               child: MenuItemCard(
                                                 item: _previewItem,
                                                 categorySelected:
@@ -826,7 +827,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
   Widget _previewCard(BuildContext context) => Center(
         child: SizedBox(
           width: context.w(225),
-          height: context.h(410),
           child: MenuItemCard(
             item: _previewItem,
             categorySelected: _primaryCategory != null,
@@ -843,15 +843,15 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
   Widget _actionButtons(BuildContext context, AppColorScheme colors) => Row(
         children: [
           Expanded(
-            child: RdxActionButton.save(
-              isLoading: _loading,
-              onPressed: _save,
+            child: RdxActionButton.discard(
+              onPressed: _loading ? null : () => Navigator.pop(context),
             ),
           ),
           SizedBox(width: context.w(10)),
           Expanded(
-            child: RdxActionButton.discard(
-              onPressed: _loading ? null : () => Navigator.pop(context),
+            child: RdxActionButton.save(
+              isLoading: _loading,
+              onPressed: _save,
             ),
           ),
         ],
@@ -903,29 +903,33 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
             SizedBox(height: context.h(15)),
 
             // ── Size-based pricing toggle ─────────────────────────
-            _switch(
-              context,
-              colors,
-              'Define sizes & prices',
-              'Optional. Turn on to set different sizes (e.g. Small, Large) '
-                  'with their own prices instead of a single price.',
-              _hasSizes,
-              _setHasSizes,
+            Row(
+              children: [
+                Expanded(
+                  child: _switch(
+                    context,
+                    colors,
+                    'Sizes',
+                    _hasSizes,
+                    _setHasSizes,
+                  ),
+                ),
+                if (_hasSizes)
+                  Text(
+                    '${_sizeNameControllers.length}/$_maxSizes',
+                    style: AppTextStyles.bodyTertiary(context)
+                        .copyWith(color: colors.textMuted),
+                  ),
+              ],
             ),
             if (_hasSizes) ...[
               SizedBox(height: context.h(12)),
-              Text(
-                '${_sizeNameControllers.length}/$_maxSizes sizes',
-                style: AppTextStyles.bodyTertiary(context)
-                    .copyWith(color: colors.textMuted),
-              ),
-              SizedBox(height: context.h(6)),
               // Size rows are packed tightly (small gap only) so adding
               // more sizes doesn't visually "spread out" the form.
               for (var i = 0; i < _sizeNameControllers.length; i++)
                 Padding(
                   padding: EdgeInsets.only(
-                    bottom: context.h(6),
+                    bottom: context.h(3),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -936,7 +940,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                           controller: _sizeNameControllers[i],
                           maxLength: 20,
                           label: i == 0 ? 'Size *' : '',
-                          hint: 'e.g. Small',
+                          hint: 'Enter Size',
                           textCapitalization: TextCapitalization.sentences,
                           onChanged: (_) => setState(() {}),
                         ),
@@ -964,23 +968,24 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
               Row(
                 children: [
                   RdxActionButton(
-                    label: '+',
-                    onPressed: _sizeNameControllers.length >= _maxSizes
-                        ? null
-                        : () => _addSizeRow(),
-                    isPrimary: true,
-                    height: context.h(35),
-                    minWidth: context.w(48),
-                  ),
-                  SizedBox(width: context.w(8)),
-                  RdxActionButton(
                     label: '−',
                     onPressed: _sizeNameControllers.length <= 1
                         ? null
                         : _removeSizeRow,
                     isPrimary: false,
-                    height: context.h(35),
-                    minWidth: context.w(48),
+                    height: context.h(35).clamp(30.0, 35.0),
+                    minWidth: context.w(48).clamp(38.0, 48.0),
+                  ),
+                  SizedBox(width: context.w(8)),
+                  RdxActionButton(
+                    label: '+',
+                    enabled: _sizeNameControllers.length < _maxSizes &&
+                        _sizeNameControllers.last.text.trim().isNotEmpty &&
+                        _sizePriceControllers.last.text.trim().isNotEmpty,
+                    onPressed: _addSizeRow,
+                    isPrimary: true,
+                    height: context.h(35).clamp(30.0, 35.0),
+                    minWidth: context.w(48).clamp(38.0, 48.0),
                   ),
                 ],
               ),
@@ -988,17 +993,21 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
             SizedBox(height: context.h(15)),
 
             // ── Ingredients ────────────────────────────────────────
-            Text(
-              'Ingredients',
-              style: AppTextStyles.bodySecondary(context).copyWith(
-                color: colors.textMuted,
-              ),
-            ),
-            SizedBox(height: context.h(4)),
-            Text(
-              '${_ingredients.length}/10 ingredients',
-              style: AppTextStyles.bodyTertiary(context)
-                  .copyWith(color: colors.textMuted),
+            Row(
+              children: [
+                Text(
+                  'Ingredients',
+                  style: AppTextStyles.bodySecondary(context).copyWith(
+                    color: colors.textMuted,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${_ingredients.length}/10',
+                  style: AppTextStyles.bodyTertiary(context)
+                      .copyWith(color: colors.textMuted),
+                ),
+              ],
             ),
             SizedBox(height: context.h(8)),
             Row(
@@ -1007,18 +1016,32 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                   child: RdxTextField(
                     controller: _ingredientInput,
                     maxLength: 25,
-                    hint: 'Add an ingredient and press add',
+                    hint: 'Enter ingredient and tap +',
                     textCapitalization: TextCapitalization.sentences,
+                    onChanged: (_) => setState(() {}),
                     onSubmitted: (_) => _addIngredient(),
                   ),
                 ),
                 SizedBox(width: context.w(8)),
-                RdxActionButton(
-                  label: 'Add',
-                  onPressed: _ingredients.length >= 10 ? null : _addIngredient,
-                  isPrimary: true,
-                  height: context.h(35),
-                  minWidth: context.w(60),
+                IconButton(
+                  tooltip: 'Add ingredient',
+                  onPressed: _ingredientInput.text.trim().isEmpty ||
+                          _ingredients.length >= 10
+                      ? null
+                      : _addIngredient,
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFFE0E0E0),
+                    disabledForegroundColor: const Color(0xFF757575),
+                    fixedSize: Size.square(context.w(40).clamp(32.0, 40.0)),
+                    shape: const CircleBorder(),
+                    padding: EdgeInsets.zero,
+                  ),
+                  icon: Icon(
+                    Icons.add,
+                    size: context.h(20).clamp(16.0, 20.0),
+                  ),
                 ),
               ],
             ),
@@ -1275,7 +1298,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                   context,
                   colors,
                   'Available on Menu',
-                  'Make this item available for ordering',
                   _available,
                   (value) => setState(() => _available = value),
                 ),
@@ -1377,7 +1399,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     BuildContext context,
     AppColorScheme colors,
     String title,
-    String subtitle,
     bool value,
     ValueChanged<bool> onChanged,
   ) =>
@@ -1398,12 +1419,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 onChanged: onChanged,
               ),
             ],
-          ),
-          SizedBox(height: context.h(3)),
-          Text(
-            subtitle,
-            style: AppTextStyles.bodyTertiary(context)
-                .copyWith(color: colors.textSecondary),
           ),
         ],
       );

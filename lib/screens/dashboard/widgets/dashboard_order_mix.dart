@@ -3,8 +3,10 @@ import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/dashboard_stats_model.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_empty.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_card_style.dart';
 
-/// Simple comparison bars: order type + staff vs app.
+/// Order type + source mix (dine-in / takeaway / delivery · staff / app).
 class DashboardOrderMix extends StatelessWidget {
   final DashboardStatsModel stats;
 
@@ -18,123 +20,76 @@ class DashboardOrderMix extends StatelessWidget {
             .clamp(1, 1 << 30);
     final sourceTotal =
         (stats.staffOrderCount + stats.appOrderCount).clamp(1, 1 << 30);
-    final hasOrders = stats.todayOrderCount > 0;
+    final hasOrders = stats.ordersDelivered > 0;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-        context.w(20),
-        context.h(18),
-        context.w(20),
+        context.w(18),
+        context.h(16),
+        context.w(18),
         context.h(16),
       ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
+      decoration: DashboardCardStyle.decoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Expanded(
-                child: Text(
-                  'Order mix',
-                  style: AppTextStyles.heading(context),
-                ),
+                child:
+                    Text('Order mix', style: DashboardCardStyle.title(context)),
               ),
               Text(
-                'Today',
-                style: AppTextStyles.label(context).copyWith(color: AppColors.primary),
+                stats.periodLabel,
+                style: AppTextStyles.label(context)
+                    .copyWith(color: AppColors.primary),
               ),
             ],
           ),
-          SizedBox(height: context.h(8)),
           if (!hasOrders)
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: context.h(20)),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.pie_chart_outline_rounded,
-                      size: context.h(28),
-                      color: colors.textMuted,
-                    ),
-                    SizedBox(height: context.h(8)),
-                    Text(
-                      'Not enough data yet',
-                      style: AppTextStyles.bodySecondary(context)
-                          .copyWith(color: colors.textSecondary),
-                    ),
-                    SizedBox(height: context.h(4)),
-                    Text(
-                      'The mix will show up once orders come in.',
-                      style: AppTextStyles.caption(context)
-                          .copyWith(color: colors.textMuted),
-                    ),
-                  ],
-                ),
-              ),
+            const DashboardEmpty(
+              icon: Icons.pie_chart_outline_rounded,
+              title: 'No order mix data available',
+              subtitle:
+                  'Service-type and order-source breakdowns appear after orders are recorded.',
             )
           else ...[
-          Text(
-            'By service type',
-            style: AppTextStyles.bodySecondary(context)
-          ),
-          SizedBox(height: context.h(8)),
-          _bar(
-            context,
-            colors,
-            label: 'Dine-in',
-            value: stats.dineInCount,
-            total: typeTotal,
-            color: AppColors.primary,
-          ),
-          SizedBox(height: context.h(8)),
-          _bar(
-            context,
-            colors,
-            label: 'Takeaway',
-            value: stats.takeawayCount,
-            total: typeTotal,
-            color: const Color(0xFF7C5CFC),
-          ),
-          SizedBox(height: context.h(8)),
-          _bar(
-            context,
-            colors,
-            label: 'Delivery',
-            value: stats.deliveryCount,
-            total: typeTotal,
-            color: const Color(0xFF20B47A),
-          ),
-          SizedBox(height: context.h(16)),
-          Text(
-            'By source',
-            style: AppTextStyles.bodySecondary(context).copyWith(
-              color: colors.textMuted,
-            ),
-          ),
-          SizedBox(height: context.h(8)),
-          _bar(
-            context,
-            colors,
-            label: 'Staff (POS)',
-            value: stats.staffOrderCount,
-            total: sourceTotal,
-            color: const Color(0xFF5AC8FA),
-          ),
-          SizedBox(height: context.h(8)),
-          _bar(
-            context,
-            colors,
-            label: 'App',
-            value: stats.appOrderCount,
-            total: sourceTotal,
-            color: const Color(0xFFE9A719),
-          ),
+            SizedBox(height: context.h(12)),
+            Text('Orders by service type',
+                style: AppTextStyles.bodySecondary(context)),
+            SizedBox(height: context.h(10)),
+            _bar(context, colors,
+                label: 'Dine-in',
+                value: stats.dineInCount,
+                total: typeTotal,
+                color: AppColors.primary),
+            SizedBox(height: context.h(8)),
+            _bar(context, colors,
+                label: 'Takeaway',
+                value: stats.takeawayCount,
+                total: typeTotal,
+                color: const Color(0xFF8B5CF6)),
+            SizedBox(height: context.h(8)),
+            _bar(context, colors,
+                label: 'Delivery',
+                value: stats.deliveryCount,
+                total: typeTotal,
+                color: const Color(0xFF22C55E)),
+            SizedBox(height: context.h(16)),
+            Text('Orders by source',
+                style: AppTextStyles.bodySecondary(context)),
+            SizedBox(height: context.h(10)),
+            _bar(context, colors,
+                label: 'Staff / POS',
+                value: stats.staffOrderCount,
+                total: sourceTotal,
+                color: const Color(0xFFF59E0B)),
+            SizedBox(height: context.h(8)),
+            _bar(context, colors,
+                label: 'App',
+                value: stats.appOrderCount,
+                total: sourceTotal,
+                color: const Color(0xFF3B82F6)),
           ],
         ],
       ),
@@ -156,28 +111,28 @@ class DashboardOrderMix extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(
-                label,
-                style: AppTextStyles.label(context).copyWith(
-                  color: colors.textPrimary,
-                ),
-              ),
+              child: Text(label,
+                  style: AppTextStyles.body(context)
+                      .copyWith(fontWeight: FontWeight.w600)),
             ),
+            Text('$value',
+                style: AppTextStyles.body(context)
+                    .copyWith(fontWeight: FontWeight.w800)),
+            SizedBox(width: context.w(8)),
             Text(
-              '$value',
-              style: AppTextStyles.label(context).copyWith(
-                color: colors.textSecondary,
-              ),
+              '${(pct * 100).toStringAsFixed(0)}%',
+              style: AppTextStyles.caption(context)
+                  .copyWith(color: colors.textSecondary),
             ),
           ],
         ),
-        SizedBox(height: context.h(4)),
+        SizedBox(height: context.h(5)),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: pct.clamp(0.0, 1.0),
-            minHeight: 8,
-            backgroundColor: colors.border,
+            minHeight: context.h(5),
+            backgroundColor: colors.border.withValues(alpha: 0.35),
             valueColor: AlwaysStoppedAnimation(color),
           ),
         ),

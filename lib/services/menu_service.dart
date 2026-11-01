@@ -12,15 +12,18 @@ class MenuService {
       _db.collection('menu_items');
 
   Future<List<MenuItemModel>> fetchMenuItems() async {
-    final snapshot = await _col.orderBy('name').get();
-
-    return snapshot.docs.map(MenuItemModel.fromFirestore).toList();
+    final snapshot = await _col.get();
+    final items = snapshot.docs.map(MenuItemModel.fromFirestore).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return items;
   }
 
   Stream<List<MenuItemModel>> streamMenuItems() {
-    return _col.orderBy('name').snapshots().map(
-          (snapshot) => snapshot.docs.map(MenuItemModel.fromFirestore).toList(),
-        );
+    return _col.snapshots().map((snapshot) {
+      final items = snapshot.docs.map(MenuItemModel.fromFirestore).toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return items;
+    });
   }
 
   Future<MenuItemModel> fetchItemById(String id) async {

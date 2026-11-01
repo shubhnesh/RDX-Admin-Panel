@@ -12,14 +12,18 @@ class UnitService {
       _db.collection('inventory_units');
 
   Future<List<UnitModel>> fetchUnits() async {
-    final snapshot = await _col.orderBy('name').get();
-    return snapshot.docs.map(UnitModel.fromFirestore).toList();
+    final snapshot = await _col.get();
+    final units = snapshot.docs.map(UnitModel.fromFirestore).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return units;
   }
 
   Stream<List<UnitModel>> streamUnits() {
-    return _col.orderBy('name').snapshots().map(
-          (snapshot) => snapshot.docs.map(UnitModel.fromFirestore).toList(),
-        );
+    return _col.snapshots().map((snapshot) {
+      final units = snapshot.docs.map(UnitModel.fromFirestore).toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return units;
+    });
   }
 
   Future<UnitModel> createUnit({required String name}) async {

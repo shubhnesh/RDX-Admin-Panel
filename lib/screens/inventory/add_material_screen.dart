@@ -14,8 +14,8 @@ import '../../providers/inventory_provider.dart';
 import '../../services/inventory_category_service.dart';
 import '../../services/unit_service.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
-import '../../widgets/resuable_options/rdx_text_field.dart';
-import '../../widgets/resuable_options/rdx_dropdown.dart';
+import '../../widgets/reusable_widgets/rdx_text_field.dart';
+import '../../widgets/reusable_widgets/rdx_dropdown.dart';
 import 'inventory_manage_category_screen.dart';
 
 /// Sentinel value placed as the first entry in the category dropdown.
@@ -421,52 +421,90 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
             subtitle:
                 'Create a new raw ingredient or packaging item in your inventory catalog.',
             showBackButton: true,
-            actions: [
-              RdxActionButton.save(
-                label: 'Done',
-                onPressed: _save,
-                isLoading: _saving,
-              ),
-              SizedBox(width: context.w(10)),
-              RdxActionButton.discard(
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
           ),
           Expanded(
-            child: SingleChildScrollView(
-              padding: Responsive.pagePadding(
-                context,
-                top: context.h(16),
-                bottom: context.h(32),
-              ),
-              child: Form(
-                key: _formKey,
-                child: isNarrow
-                    ? Column(
+            child: Form(
+              key: _formKey,
+              child: isNarrow
+                  ? SingleChildScrollView(
+                      padding: Responsive.pagePadding(
+                        context,
+                        top: context.h(16),
+                        bottom: context.h(32),
+                      ),
+                      child: Column(
                         children: [
                           _basicInfoSection(context, colors),
                           SizedBox(height: context.h(16)),
                           _stockTrackingSection(context, colors),
+                          SizedBox(height: context.h(16)),
+                          _actionButtons(context),
                         ],
-                      )
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      ),
+                    )
+                  : Padding(
+                      padding: Responsive.pagePadding(
+                        context,
+                        top: context.h(16),
+                        bottom: context.h(24),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(
-                            child: _basicInfoSection(context, colors),
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.only(right: context.w(20)),
+                              child: _basicInfoSection(context, colors),
+                            ),
+                          ),
+                          VerticalDivider(
+                            width: context.w(1),
+                            thickness: context.h(1),
+                            color: colors.border,
                           ),
                           SizedBox(width: context.w(20)),
                           Expanded(
-                            child: _stockTrackingSection(context, colors),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    child:
+                                        _stockTrackingSection(context, colors),
+                                  ),
+                                ),
+                                SizedBox(height: context.h(16)),
+                                _actionButtons(context),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-              ),
+                    ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _actionButtons(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: RdxActionButton.discard(
+            onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          ),
+        ),
+        SizedBox(width: context.w(10)),
+        Expanded(
+          child: RdxActionButton.save(
+            label: 'Done',
+            onPressed: _save,
+            isLoading: _saving,
+          ),
+        ),
+      ],
     );
   }
 

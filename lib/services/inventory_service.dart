@@ -7,8 +7,10 @@ class InventoryService {
   CollectionReference get _col => _db.collection('inventory');
 
   Future<List<InventoryItemModel>> fetchInventory() async {
-    final snap = await _col.orderBy('name').get();
-    return snap.docs.map((d) => InventoryItemModel.fromFirestore(d)).toList();
+    final snap = await _col.get();
+    final items = snap.docs.map(InventoryItemModel.fromFirestore).toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return items;
   }
 
   Future<InventoryItemModel?> getItem(String id) async {

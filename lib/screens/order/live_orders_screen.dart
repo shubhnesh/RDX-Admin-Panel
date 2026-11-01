@@ -5,15 +5,15 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/screens/order/bill_settlement_screen.dart';
 import 'package:rdx_admin/screens/order/widgets/live_order_card.dart';
 import 'package:rdx_admin/widgets/buttons/stats_collapse_button.dart';
-import 'package:rdx_admin/widgets/resuable_options/rdx_category_tabs.dart';
-import 'package:rdx_admin/widgets/resuable_options/rdx_dropdown.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/rdx_category_tabs.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/rdx_dropdown.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../core/utils/tax.dart';
 import '../../models/order_model.dart';
 import '../../providers/live_orders_provider.dart';
-import '../../widgets/buttons/rdx_action_button.dart';
+import '../../widgets/buttons/rdx_header_action_button.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/reusable_widgets/stat_card.dart';
 import 'create_order_screen.dart';
@@ -37,6 +37,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
   /// Horizontal scroll for the kanban board (All view).
   final ScrollController _boardScrollController = ScrollController();
+
+  /// Vertical scroll controllers for the order lists inside each board column.
+  final Map<int, ScrollController> _columnScrollControllers = {};
 
   /// Column index whose order list is under the cursor, or null.
   /// When non-null, mouse wheel scrolls that list vertically and only that
@@ -63,6 +66,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   @override
   void dispose() {
     _boardScrollController.dispose();
+    for (final controller in _columnScrollControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -193,6 +199,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 ? order.customerName
                 : 'Walk-in Customer',
             phoneNumber: order.customerPhone,
+            deliveryAddress: order.deliveryAddress,
             sendDigitalReceipt: false,
             invoiceReference: order.id,
             receiptDateTime: DateTime.now(),
@@ -209,112 +216,190 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     final colors = AppColors.of(context);
     final provider = ref.watch(liveOrdersProvider);
 
+    final pagePad = context.defaultScreenPadding();
+
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
-        child: Padding(
-          padding: context.defaultScreenPadding(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header row: title/subtitle + New Order ─────────────────
-              Builder(
-                builder: (context) {
-                  final titleBlock = Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Live Orders',
-                        style: AppTextStyles.heading(context),
-                      ),
-                      SizedBox(height: context.h(4)),
-                      Text(
-                        'Track orders and create orders for customers',
-                        style: AppTextStyles.bodySecondary(context).copyWith(
-                          color: colors.textSecondary,
+        child: CustomScrollView(
+          slivers: [
+            // ── Title + New Order + stats (scrolls away) ───────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  pagePad.left,
+                  pagePad.top,
+                  pagePad.right,
+                  0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Live Orders',
+                                style: AppTextStyles.heading(context),
+                              ),
+                              SizedBox(height: context.h(4)),
+                              Text(
+                                'Track orders and create orders for customers',
+                                style: AppTextStyles.bodySecondary(context)
+                                    .copyWith(color: colors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: context.w(12)),
+                        RdxHeaderActionButton(
+                          label: 'New Order',
+                          onPressed: _openPlaceOrder,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: context.h(20)),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: StatsCollapseButton(
+                        collapsed: _statsCollapsed,
+                        onPressed: () => setState(
+                          () => _statsCollapsed = !_statsCollapsed,
                         ),
                       ),
-                    ],
-                  );
-
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: titleBlock),
-                      SizedBox(width: context.w(12)),
-                      RdxActionButton(
-                        label: 'New Order',
-                        leadingIcon: Icons.add,
-                        isPrimary: true,
-                        onPressed: _openPlaceOrder,
-                      ),
-                    ],
-                  );
-                },
-              ),
-
-              SizedBox(height: context.h(20)),
-
-              // ── Overview stats (4 cards only) ──────────────────────────
-              Align(
-                alignment: Alignment.centerLeft,
-                child: StatsCollapseButton(
-                  collapsed: _statsCollapsed,
-                  onPressed: () => setState(
-                    () => _statsCollapsed = !_statsCollapsed,
-                  ),
+                    ),
+                    SizedBox(height: context.h(8)),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      alignment: Alignment.topCenter,
+                      child: _statsCollapsed
+                          ? const SizedBox(width: double.infinity)
+                          : _buildOverviewStats(provider),
+                    ),
+                    SizedBox(height: context.h(12)),
+                  ],
                 ),
               ),
-              SizedBox(height: context.h(8)),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                alignment: Alignment.topCenter,
-                child: _statsCollapsed
-                    ? const SizedBox(width: double.infinity)
-                    : _buildOverviewStats(provider),
-              ),
+            ),
 
-              SizedBox(height: context.h(20)),
-
-              // ── Source dropdown + status tabs ──────────────────────────
-              // Dropdown replaces Live / App Orders tabs.
-              // Status tabs adapt to source (Served vs Delivered).
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: context.w(120),
-                    child: RdxDropdown<_BoardSource>(
-                      value: _boardSource,
-                      items: _BoardSource.values,
-                      labelBuilder: (s) =>
-                          s == _BoardSource.live ? 'Live' : 'App',
-                      onChanged: _onSourceChanged,
-                      isDense: true,
+            // ── Pinned filters (always stay) ───────────────────────────────
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _LiveOrdersFiltersHeader(
+                background: colors.background,
+                horizontalPad: pagePad.left,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: context.w(120),
+                      child: RdxDropdown<_BoardSource>(
+                        value: _boardSource,
+                        items: _BoardSource.values,
+                        labelBuilder: (s) =>
+                            s == _BoardSource.live ? 'Live' : 'App',
+                        onChanged: _onSourceChanged,
+                        isDense: true,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: context.w(10)),
-                  RdxCategoryTabs(
-                    labels: _statusLabels,
-                    selectedLabel: _selectedStatus,
-                    onSelected: _onStatusSelected,
-                  ),
-                ],
+                    SizedBox(width: context.w(10)),
+                    Expanded(
+                      child: RdxCategoryTabs(
+                        labels: _statusLabels,
+                        selectedLabel: _selectedStatus,
+                        onSelected: _onStatusSelected,
+                        expand: false,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            ),
 
-              SizedBox(height: context.h(16)),
-
-              // ── Orders board ───────────────────────────────────────────
-              Expanded(
-                child: provider.isLoading
-                    ? const LoadingIndicator()
-                    : _buildOrdersContent(provider),
-              ),
-            ],
-          ),
+            // ── Board ──────────────────────────────────────────────────────
+            if (provider.isLoading)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: LoadingIndicator(),
+              )
+            else
+              _buildBoardSliver(provider, pagePad),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBoardSliver(LiveOrdersProvider provider, EdgeInsets pagePad) {
+    final sections = _buildVisibleSectionsData(provider);
+
+    // Single-status filtered view
+    if (_selectedStatus != 'All') {
+      if (sections.isEmpty) {
+        return const SliverToBoxAdapter(child: SizedBox.shrink());
+      }
+      if (sections.length == 1) {
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              pagePad.left,
+              context.h(8),
+              pagePad.right,
+              pagePad.bottom,
+            ),
+            child: _buildSingleSectionGrid(sections.first),
+          ),
+        );
+      }
+    }
+
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.crossAxisExtent < _kColumnsBreakpoint;
+
+        if (isNarrow) {
+          // Small screen → vertical stack, fixed-width sections,
+          // outer CustomScrollView owns the scroll → header hides immediately
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                pagePad.left,
+                context.h(8),
+                pagePad.right,
+                pagePad.bottom,
+              ),
+              child: _buildRowsBoard(sections),
+            ),
+          );
+        }
+
+        // Large screen → horizontal kanban that fills remaining height
+        return SliverFillRemaining(
+          hasScrollBody: true,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              pagePad.left,
+              context.h(8),
+              pagePad.right,
+              pagePad.bottom,
+            ),
+            child: LayoutBuilder(
+              builder: (context, c) {
+                return _buildColumnsBoard(
+                  sections,
+                  maxWidth: c.maxWidth,
+                  maxHeight: c.maxHeight,
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -400,7 +485,6 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   // ---------------------------------------------------------------------------
 
   static const double _kColumnsBreakpoint = 900;
-  static const double _kRowCardWidth = 280;
 
   // All-board columns per source: primary | Preparing | Out for Delivery | Final.
   static const int _kVisibleColumns = 4;
@@ -410,9 +494,13 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     required double maxWidth,
     required double maxHeight,
   }) {
-    final gap = context.w(16);
-    final columnWidth =
-        (maxWidth - gap * (_kVisibleColumns - 1)) / _kVisibleColumns;
+    final gap = context.w(12).clamp(8.0, 16.0);
+    final count = sections.isEmpty ? _kVisibleColumns : sections.length;
+    // Same idea as stat cards: share the row evenly when there is room;
+    // otherwise keep a readable min width and scroll horizontally.
+    final minCol = context.w(200).clamp(160.0, 240.0);
+    final equalWidth = (maxWidth - gap * (count - 1)) / count;
+    final columnWidth = equalWidth >= minCol ? equalWidth : minCol;
 
     final isFinalFilter =
         _selectedStatus == 'Served' || _selectedStatus == 'Delivered';
@@ -507,9 +595,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  Widget _buildOrdersContent(
-    LiveOrdersProvider provider,
-  ) {
+  Widget _buildOrdersContent(LiveOrdersProvider provider) {
     final sections = _buildVisibleSectionsData(provider);
 
     if (_selectedStatus != 'All') {
@@ -519,29 +605,20 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       if (sections.length == 1) {
         return _buildSingleSectionGrid(sections.first);
       }
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= _kColumnsBreakpoint;
-          if (!isWide) {
-            return _buildRowsBoard(sections);
-          }
-          return _buildColumnsBoard(
-            sections,
-            maxWidth: constraints.maxWidth,
-            maxHeight: constraints.maxHeight,
-          );
-        },
-      );
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= _kColumnsBreakpoint;
+        final isNarrow = constraints.maxWidth < _kColumnsBreakpoint;
 
-        if (!isWide) {
+        // Small screens → vertical stack of states,
+        // each state has horizontal scrolling cards.
+        if (isNarrow) {
           return _buildRowsBoard(sections);
         }
 
+        // Large screens → horizontal kanban columns,
+        // each column scrolls vertically.
         return _buildColumnsBoard(
           sections,
           maxWidth: constraints.maxWidth,
@@ -612,6 +689,10 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   }) {
     final isEmpty = data.orders.isEmpty;
     final colors = AppColors.of(context);
+    final listController = _columnScrollControllers.putIfAbsent(
+      columnIndex,
+      ScrollController.new,
+    );
     final listHovered = _hoveredListColumnIndex == columnIndex;
 
     return Column(
@@ -652,11 +733,13 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   ),
                 ),
                 child: Scrollbar(
+                  controller: listController,
                   thumbVisibility: listHovered,
                   trackVisibility: false,
                   thickness: listHovered ? 6 : 0,
                   radius: const Radius.circular(8),
                   child: ListView.builder(
+                    controller: listController,
                     primary: false,
                     padding: EdgeInsets.only(bottom: context.h(4)),
                     itemCount: data.orders.length,
@@ -686,68 +769,75 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   }
 
   Widget _buildRowsBoard(List<_SectionData> sections) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.only(
-        top: context.h(4),
-        bottom: context.h(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (int i = 0; i < sections.length; i++) ...[
-            _buildRowSection(sections[i]),
-            if (i < sections.length - 1) SizedBox(height: context.h(20)),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRowSection(_SectionData data) {
-    final isEmpty = data.orders.isEmpty;
+    // Same width the columns use on desktop
+    final sectionWidth = context.w(280).clamp(220.0, 320.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(data),
-        SizedBox(height: context.h(12)),
-        if (isEmpty)
-          _buildEmptySection(
-            emptyIcon: data.emptyIcon,
-            emptyText: data.emptyText,
-          )
-        else
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (int index = 0; index < data.orders.length; index++)
-                    Padding(
-                      padding: EdgeInsets.only(
-                        right:
-                            index == data.orders.length - 1 ? 0 : context.w(12),
-                      ),
-                      child: SizedBox(
-                        width: context.w(_kRowCardWidth),
-                        child: LiveOrderCard(
-                          order: data.orders[index],
-                          actionText: data.actionTextFor(data.orders[index]),
-                          onAdvance: data.onAdvance,
-                          secondaryActionText:
-                              data.secondaryActionTextFor(data.orders[index]),
-                          onSecondaryAction:
-                              data.secondaryOnAdvanceFor(data.orders[index]),
-                          onTap: () => _openOrderDetail(data.orders[index]),
+        for (int i = 0; i < sections.length; i++) ...[
+          _buildRowSection(sections[i], sectionWidth: sectionWidth),
+          if (i < sections.length - 1) SizedBox(height: context.h(20)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRowSection(
+    _SectionData data, {
+    required double sectionWidth,
+  }) {
+    final isEmpty = data.orders.isEmpty;
+
+    return SizedBox(
+      width: sectionWidth, // ← fixed, does not expand with screen width
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeader(data),
+          SizedBox(height: context.h(12)),
+          if (isEmpty)
+            SizedBox(
+              width: sectionWidth,
+              child: _buildEmptySection(
+                emptyIcon: data.emptyIcon,
+                emptyText: data.emptyText,
+              ),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (int index = 0; index < data.orders.length; index++)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          right: index == data.orders.length - 1
+                              ? 0
+                              : context.w(12),
+                        ),
+                        child: SizedBox(
+                          width: sectionWidth,
+                          child: LiveOrderCard(
+                            order: data.orders[index],
+                            actionText: data.actionTextFor(data.orders[index]),
+                            onAdvance: data.onAdvance,
+                            secondaryActionText:
+                                data.secondaryActionTextFor(data.orders[index]),
+                            onSecondaryAction:
+                                data.secondaryOnAdvanceFor(data.orders[index]),
+                            onTap: () => _openOrderDetail(data.orders[index]),
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1195,5 +1285,65 @@ class _DashedBorderPainter extends CustomPainter {
     covariant _DashedBorderPainter oldDelegate,
   ) {
     return oldDelegate.color != color || oldDelegate.radius != radius;
+  }
+}
+
+/// Pinned filter strip: source dropdown + status chips.
+/// Stays fixed at the top while title/stats scroll away.
+class _LiveOrdersFiltersHeader extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final Color background;
+  final double horizontalPad;
+
+  _LiveOrdersFiltersHeader({
+    required this.child,
+    required this.background,
+    required this.horizontalPad,
+  });
+
+  // Fixed strip height (filters only).
+  static const double _height = 52;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Material(
+      color: background,
+      elevation: overlapsContent || shrinkOffset > 0 ? 1.5 : 0,
+      shadowColor: Colors.black26,
+      child: Container(
+        height: _height,
+        alignment: Alignment.centerLeft,
+        padding: EdgeInsets.symmetric(horizontal: horizontalPad),
+        decoration: BoxDecoration(
+          color: background,
+          border: Border(
+            bottom: BorderSide(
+              color: overlapsContent || shrinkOffset > 0
+                  ? AppColors.of(context).border
+                  : Colors.transparent,
+              width: 1,
+            ),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _LiveOrdersFiltersHeader oldDelegate) {
+    return child != oldDelegate.child ||
+        background != oldDelegate.background ||
+        horizontalPad != oldDelegate.horizontalPad;
   }
 }

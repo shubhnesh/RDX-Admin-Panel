@@ -3,20 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
-import 'package:rdx_admin/providers/coupon_provider.dart';
 import 'package:rdx_admin/providers/dashboard_provider.dart';
-import 'package:rdx_admin/providers/inventory_provider.dart';
-import 'package:rdx_admin/providers/live_orders_provider.dart';
 import 'package:rdx_admin/screens/dashboard/widgets/dashboard_attention_panel.dart';
-import 'package:rdx_admin/screens/dashboard/widgets/dashboard_hourly_chart.dart';
-import 'package:rdx_admin/screens/dashboard/widgets/dashboard_order_mix.dart';
-import 'package:rdx_admin/screens/dashboard/widgets/dashboard_pulse_cards.dart';
-import 'package:rdx_admin/screens/dashboard/widgets/dashboard_revenue_chart.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_aov_trend.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_customer_insights.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_funnel.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_kpi_cards.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_mealtime_breakdown.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_offers_summary.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_sales_chart.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_section.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_service_quality.dart';
 import 'package:rdx_admin/screens/dashboard/widgets/dashboard_top_selling.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/loading_indicator.dart';
-import 'package:rdx_admin/widgets/resuable_options/rdx_search_bar.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/rdx_category_tabs.dart';
 
-/// Real-data dashboard: revenue/charts from orders, pulse from live modules.
+/// Dashboard arranged as sections (Attention, Sales, Funnel, Service,
+/// Customers, Offers). Sections are plain headings over cards.
 class DashboardScreen extends ConsumerStatefulWidget {
   final ValueChanged<String>? onNavigate;
 
@@ -27,6 +30,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  static const _periods = ['Today', 'Yesterday', 'Last 7 days'];
+
   @override
   void initState() {
     super.initState();
@@ -38,17 +43,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final provider = ref.watch(dashboardProvider);
     final colors = AppColors.of(context);
 
-    // Instant reflection when operational modules change.
-    ref.listen(liveOrdersProvider, (_, __) {
-      ref.read(dashboardProvider).refreshOperational();
-    });
-    ref.listen(inventoryProvider, (_, __) {
-      ref.read(dashboardProvider).refreshOperational();
-    });
-    ref.listen(couponProvider, (_, __) {
-      ref.read(dashboardProvider).refreshOperational();
-    });
-
     return Scaffold(
       backgroundColor: colors.background,
       body: provider.isLoading && provider.stats == null
@@ -59,28 +53,102 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   color: AppColors.primary,
                   onRefresh: provider.load,
                   child: ListView(
-                    padding: Responsive.pagePadding(
-                      context,
-                      top: context.h(14),
-                      bottom: context.h(24),
-                    ),
+                    padding: () {
+                      final pagePad = context.defaultScreenPadding();
+                      return EdgeInsets.fromLTRB(
+                        pagePad.left,
+                        pagePad.top,
+                        pagePad.right,
+                        pagePad.bottom +
+                            (Responsive.useBottomNav(context)
+                                ? context.h(12)
+                                : 0),
+                      );
+                    }(),
                     children: [
-                      _buildTopBar(colors),
-                      SizedBox(height: context.h(20)),
-                      DashboardPulseCards(
-                        stats: provider.stats!,
-                        onNavigate: widget.onNavigate,
+                      _header(provider, colors),
+                      SizedBox(height: context.h(24)),
+
+                      // Needs attention
+                      DashboardSection(
+                        title: 'Needs attention',
+                        subtitle: 'Stock, payment and coupon issues',
+                        children: [
+                          DashboardAttentionPanel(
+                            items: provider.stats!.attentionItems,
+                            onItemTap: (item) {
+                              if (item.route != null) {
+                                widget.onNavigate?.call(item.route!);
+                              }
+                            },
+                          ),
+                        ],
                       ),
-                      SizedBox(height: context.h(20)),
-                      DashboardRevenueChart(
-                        stats: provider.stats!,
-                        period: provider.chartPeriod,
-                        onPeriodChanged: provider.setChartPeriod,
+
+                      // Sales
+                      DashboardSection(
+                        title: 'Sales',
+                        subtitle:
+                            'Revenue, order volume and average order value',
+                        children: [
+                          DashboardKpiCards(stats: provider.stats!),
+                          DashboardSalesChart(stats: provider.stats!),
+                          _twoCol(
+                            DashboardAovTrend(stats: provider.stats!),
+                            DashboardMealtimeBreakdown(stats: provider.stats!),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: context.h(20)),
-                      _buildAttentionAndVolumeRow(provider),
-                      SizedBox(height: context.h(20)),
-                      _buildMiddleRow(provider),
+
+                      // Funnel
+                      DashboardSection(
+                        title: 'Funnel',
+                        subtitle: 'Order volume by fulfilment status',
+                        children: [
+                          _twoCol(
+                            DashboardFunnel(stats: provider.stats!),
+                            DashboardTopSelling(
+                              items: provider.stats!.topSellingItems,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Service quality + Customers, side by side on wide screens
+                      _sectionRow(
+                        DashboardSection(
+                          title: 'Service quality',
+                          subtitle:
+                              'Cancellation, delivery, payments and stock',
+                          actionLabel: 'Live orders',
+                          onAction: () =>
+                              widget.onNavigate?.call('/live-orders'),
+                          children: [
+                            DashboardServiceQuality(
+                              stats: provider.stats!,
+                              onNavigate: widget.onNavigate,
+                            ),
+                          ],
+                        ),
+                        DashboardSection(
+                          title: 'Customers',
+                          subtitle: 'Order sources and service types',
+                          children: [
+                            DashboardCustomerInsights(stats: provider.stats!),
+                          ],
+                        ),
+                      ),
+
+                      // Offers
+                      DashboardSection(
+                        title: 'Offers',
+                        subtitle: 'Active coupons and redemption activity',
+                        actionLabel: 'Manage',
+                        onAction: () => widget.onNavigate?.call('/coupons'),
+                        children: [
+                          DashboardOffersSummary(stats: provider.stats!),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -97,134 +165,116 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             style: AppTextStyles.body(context),
           ),
           SizedBox(height: context.h(12)),
-          TextButton(
-            onPressed: provider.load,
-            child: const Text('Retry'),
-          ),
+          TextButton(onPressed: provider.load, child: const Text('Retry')),
         ],
       ),
     );
   }
 
-  Widget _buildTopBar(AppColorScheme colors) {
-    return RdxSearchToolbar(
-      hintText: 'Search orders, items..',
-      actions: [
-        _plainIconBtn(
-          colors,
-          icon: Icons.notifications_outlined,
-          badge: true,
-          onTap: () => widget.onNavigate?.call('/notifications'),
+  Widget _header(DashboardProvider provider, AppColorScheme colors) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Insights',
+                style: AppTextStyles.heading(context).copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.4,
+                ),
+              ),
+              SizedBox(height: context.h(4)),
+              Text(
+                'Performance overview for your restaurant',
+                style: AppTextStyles.bodySecondary(context)
+                    .copyWith(color: colors.textSecondary),
+              ),
+            ],
+          ),
         ),
-        _plainIconBtn(
+        Padding(
+          padding: EdgeInsets.only(right: context.w(8)),
+          child: _periodChips(provider, colors),
+        ),
+        _iconBtn(
           colors,
-          icon: Icons.settings_outlined,
-          onTap: () => widget.onNavigate?.call('/settings'),
+          Icons.notifications_outlined,
+          () => widget.onNavigate?.call('/notifications'),
+        ),
+        SizedBox(width: context.w(8)),
+        _iconBtn(
+          colors,
+          Icons.settings_outlined,
+          () => widget.onNavigate?.call('/settings'),
         ),
       ],
     );
   }
 
-  Widget _plainIconBtn(
-    AppColorScheme colors, {
-    required IconData icon,
-    bool badge = false,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: EdgeInsets.all(context.h(6)),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(icon, size: context.h(25), color: colors.textSecondary),
-            if (badge)
-              Positioned(
-                top: -1,
-                right: -1,
-                child: Container(
-                  width: context.w(7),
-                  height: context.h(7),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: colors.background,
-                      width: context.w(1),
-                    ),
-                  ),
-                ),
-              ),
-          ],
+  Widget _iconBtn(AppColorScheme colors, IconData icon, VoidCallback onTap) {
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: EdgeInsets.all(context.h(9)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: colors.border),
+          ),
+          child: Icon(icon, size: context.h(19), color: colors.textSecondary),
         ),
       ),
     );
   }
 
-  Widget _buildAttentionAndVolumeRow(DashboardProvider provider) {
-    final stats = provider.stats!;
-    final isNarrow = !Responsive.isDesktop(context);
-
-    final attention = DashboardAttentionPanel(
-      items: stats.attentionItems,
-      onItemTap: (item) {
-        if (item.route != null) {
-          widget.onNavigate?.call(item.route!);
-        }
-      },
-    );
-    final volume = DashboardHourlyChart(stats: stats);
-
-    if (isNarrow) {
-      return Column(
-        children: [
-          attention,
-          SizedBox(height: context.h(16)),
-          volume,
-        ],
-      );
-    }
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: attention),
-          SizedBox(width: context.w(16)),
-          Expanded(child: volume),
-        ],
-      ),
+  Widget _periodChips(DashboardProvider provider, AppColorScheme colors) {
+    return RdxCategoryTabs(
+      labels: _periods,
+      selectedLabel: provider.selectedPeriod,
+      onSelected: (p) => provider.setPeriod(p),
+      expand: false,
     );
   }
 
-  Widget _buildMiddleRow(DashboardProvider provider) {
-    final stats = provider.stats!;
+  /// Two sections in one row on wide screens; stacked otherwise.
+  Widget _sectionRow(Widget left, Widget right) {
+    if (Responsive.isNarrow(context)) {
+      return Column(children: [left, right]);
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: left),
+        SizedBox(width: context.w(16)),
+        Expanded(child: right),
+      ],
+    );
+  }
+
+  Widget _twoCol(Widget a, Widget b) {
     final isNarrow = !Responsive.isDesktop(context);
-
-    final topSelling = DashboardTopSelling(items: stats.topSellingItems);
-    final orderMix = DashboardOrderMix(stats: stats);
-
     if (isNarrow) {
       return Column(
         children: [
-          topSelling,
-          SizedBox(height: context.h(16)),
-          orderMix,
+          a,
+          SizedBox(height: context.h(12)),
+          b,
         ],
       );
     }
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: topSelling),
-          SizedBox(width: context.w(16)),
-          Expanded(child: orderMix),
-        ],
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: a),
+        SizedBox(width: context.w(12)),
+        Expanded(child: b),
+      ],
     );
   }
 }

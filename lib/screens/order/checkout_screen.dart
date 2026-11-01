@@ -15,8 +15,9 @@ import '../../providers/settings_provider.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/buttons/rdx_toggle_button.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
-import '../../widgets/resuable_options/rdx_dropdown.dart';
-import '../../widgets/resuable_options/rdx_text_field.dart';
+import '../../widgets/reusable_widgets/rdx_dropdown.dart';
+import '../../widgets/reusable_widgets/rdx_text_field.dart';
+import 'widgets/order_summary_widgets.dart';
 
 /// Sentinel value as the first entry in the table dropdown.
 /// Selecting it opens the set/edit total-tables dialog (same pattern as
@@ -151,11 +152,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final subtotal = ref.read(cartTotalProvider);
     final tax = subtotal * (AppTax.gstPercentage / 100);
     final settings = ref.read(settingsProvider);
-    final lateNightFee = _orderType == OrderType.delivery &&
-            settings.lateNightDelivery &&
-            settings.isLateNightDeliveryTime()
-        ? 5.0
-        : 0.0;
+    // Late-night fee: auto-applied on Delivery when the setting is enabled.
+    final lateNightFee =
+        _orderType == OrderType.delivery && settings.lateNightDelivery
+            ? 5.0
+            : 0.0;
     final longDistanceFee =
         _orderType == OrderType.delivery && _longDistanceFeeSelected
             ? 29.0
@@ -253,6 +254,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               longDistanceFee: longDistanceFee,
               guestName: guestName,
               phoneNumber: phoneNumber,
+              deliveryAddress: _orderType == OrderType.delivery
+                  ? _deliveryAddress.text.trim()
+                  : '',
               sendDigitalReceipt: false,
               invoiceReference: newOrderId,
               receiptDateTime: DateTime.now(),
@@ -281,18 +285,292 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final colors = AppColors.of(context);
     final cart = ref.watch(cartProvider);
     final subtotal = ref.watch(cartTotalProvider);
+    final totalItems =
+        cart.fold<int>(0, (count, line) => count + line.quantity);
     final tax = subtotal * (AppTax.gstPercentage / 100);
     final settings = ref.watch(settingsProvider);
-    final lateNightActive = _orderType == OrderType.delivery &&
-        settings.lateNightDelivery &&
-        settings.isLateNightDeliveryTime();
-    final lateNightFee = lateNightActive ? 5.0 : 0.0;
+    // Late-night fee: auto-applied on Delivery when the setting is enabled.
+    final lateNightFee =
+        _orderType == OrderType.delivery && settings.lateNightDelivery
+            ? 5.0
+            : 0.0;
     final longDistanceFee =
         _orderType == OrderType.delivery && _longDistanceFeeSelected
             ? 29.0
             : 0.0;
     final total = subtotal + tax + lateNightFee + longDistanceFee;
     final placing = ref.watch(placeOrderControllerProvider).isLoading;
+    final isNarrow = MediaQuery.sizeOf(context).width < 900;
+
+    final emptyOrderMessage = Text(
+      'No items in the order.',
+      style: AppTextStyles.body(context).copyWith(
+        color: colors.textSecondary,
+      ),
+    );
+    final orderItems = LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = context.w(10);
+        final maxCardWidth = context.w(280);
+        final columns =
+            (constraints.maxWidth / (maxCardWidth + spacing)).floor().clamp(
+                  1,
+                  3,
+                );
+        final cardWidth =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        final cards = Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final line in cart)
+              SizedBox(
+                width: cardWidth,
+                child: OrderSummaryItemCard(line: line),
+              ),
+          ],
+        );
+        final scrollView = SingleChildScrollView(child: cards);
+
+        if (!isNarrow) return scrollView;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: context.h(360)),
+          child: scrollView,
+        );
+      },
+    );
+
+    final orderSummary = OrderSummaryPanel(
+      title: 'Order Summary',
+      icon: Icons.receipt_long_outlined,
+      itemCount: cart.length,
+      expandedContent: isNarrow
+          ? null
+          : cart.isEmpty
+              ? emptyOrderMessage
+              : orderItems,
+      children: [
+        if (isNarrow) cart.isEmpty ? emptyOrderMessage : orderItems,
+        Divider(
+          color: colors.divider,
+          height: context.h(20),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Total items',
+                style: AppTextStyles.bodySecondary(context)
+                    .copyWith(color: colors.textSecondary),
+              ),
+            ),
+            Text(
+              '$totalItems',
+              style: AppTextStyles.bodySecondary(context)
+                  .copyWith(color: colors.textPrimary),
+            ),
+          ],
+        ),
+        SizedBox(height: context.h(6)),
+        _summaryAmountRow(context, colors, 'Subtotal', subtotal),
+        SizedBox(height: context.h(6)),
+        _summaryAmountRow(
+          context,
+          colors,
+          'GST (${AppTax.gstPercentage.toStringAsFixed(0)}%)',
+          tax,
+        ),
+        if (lateNightFee > 0) ...[
+          SizedBox(height: context.h(6)),
+          _summaryAmountRow(
+            context,
+            colors,
+            'Late Night Delivery',
+            lateNightFee,
+          ),
+        ],
+        if (longDistanceFee > 0) ...[
+          SizedBox(height: context.h(6)),
+          _summaryAmountRow(
+            context,
+            colors,
+            'Long Distance Fee',
+            longDistanceFee,
+          ),
+        ],
+        SizedBox(height: context.h(10)),
+        Row(
+          children: [
+            Text(
+              'Total',
+              style: AppTextStyles.section(context).copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '₹${total.toStringAsFixed(2)}',
+              style: AppTextStyles.section(context).copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final detailPanels = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _panel(
+          context,
+          colors,
+          title: 'Customer Details',
+          icon: Icons.person_outline_rounded,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stack = constraints.maxWidth < 400;
+                final nameField = RdxTextField(
+                  controller: _customerName,
+                  maxLength: 20,
+                  label: 'Customer Name',
+                  hint: 'Enter customer name',
+                );
+                final phoneField = RdxTextField(
+                  controller: _customerPhone,
+                  maxLength: 10,
+                  label: 'Phone Number',
+                  hint: 'Enter phone number',
+                  keyboardType: TextInputType.phone,
+                );
+                if (stack) {
+                  return Column(
+                    children: [
+                      nameField,
+                      SizedBox(height: context.h(14)),
+                      phoneField,
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: nameField),
+                    SizedBox(width: context.w(14)),
+                    Expanded(child: phoneField),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: context.h(16)),
+        _panel(
+          context,
+          colors,
+          title: 'Order Type',
+          icon: Icons.room_service_outlined,
+          children: [
+            RdxDropdown<OrderType>(
+              label: 'Order Type *',
+              value: _orderType,
+              items: OrderType.values,
+              labelBuilder: (type) => type.label,
+              hint: 'Select order type',
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _orderType = value;
+                  if (value != OrderType.dineIn) {
+                    _selectedTable = null;
+                  }
+                  if (value != OrderType.delivery) {
+                    _deliveryAddress.clear();
+                    _longDistanceFeeSelected = false;
+                  }
+                });
+              },
+            ),
+            if (_orderType == OrderType.dineIn) ...[
+              SizedBox(height: context.h(14)),
+              RdxDropdown<String>(
+                label: 'Table Number *',
+                value: _selectedTable,
+                searchable: true,
+                items: [
+                  _kSetTableCountValue,
+                  if (_totalTables != null)
+                    for (var i = 1; i <= _totalTables!; i++) '$i',
+                ],
+                labelBuilder: (value) {
+                  if (value == _kSetTableCountValue) {
+                    return _totalTables == null
+                        ? '+ Set table count'
+                        : '+ Edit table count ($_totalTables)';
+                  }
+                  return 'Table $value';
+                },
+                hint: _totalTables == null
+                    ? 'Set table count first'
+                    : 'Select or search table',
+                onChanged: (value) {
+                  if (value == null) return;
+                  if (value == _kSetTableCountValue) {
+                    _openTableCountDialog();
+                    return;
+                  }
+                  setState(() => _selectedTable = value);
+                },
+              ),
+            ],
+            if (_orderType == OrderType.delivery) ...[
+              SizedBox(height: context.h(14)),
+              RdxTextField(
+                controller: _deliveryAddress,
+                maxLength: 200,
+                label: 'Delivery Address *',
+                hint: 'Enter delivery address',
+                maxLines: 3,
+              ),
+              SizedBox(height: context.h(12)),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Long Distance Fee (₹29)',
+                    style: AppTextStyles.bodySecondary(context)
+                        .copyWith(color: colors.textMuted),
+                  ),
+                  SizedBox(width: context.w(8)),
+                  RdxToggleButton(
+                    value: _longDistanceFeeSelected,
+                    onChanged: (value) =>
+                        setState(() => _longDistanceFeeSelected = value),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+        SizedBox(height: context.h(16)),
+        _panel(
+          context,
+          colors,
+          title: 'Order Notes',
+          icon: Icons.sticky_note_2_outlined,
+          children: [
+            RdxTextField(
+              controller: _orderNotes,
+              maxLength: 40,
+              label: 'Kitchen Notes',
+              hint: 'Write any special instructions for your order',
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ],
+    );
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -305,281 +583,98 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           Expanded(
             child: Form(
               key: _formKey,
-              child: SingleChildScrollView(
+              child: isNarrow
+                  ? SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        context.w(20),
+                        context.h(16),
+                        context.w(20),
+                        context.h(28),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          orderSummary,
+                          SizedBox(height: context.h(16)),
+                          detailPanels,
+                        ],
+                      ),
+                    )
+                  : Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        context.w(20),
+                        context.h(16),
+                        context.w(20),
+                        context.h(24),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.only(right: context.w(20)),
+                              child: detailPanels,
+                            ),
+                          ),
+                          VerticalDivider(
+                            width: context.w(1),
+                            thickness: context.h(1),
+                            color: colors.border,
+                          ),
+                          SizedBox(width: context.w(20)),
+                          SizedBox(
+                            width: context.w(360).clamp(320.0, 400.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(child: orderSummary),
+                                SizedBox(height: context.h(16)),
+                                _actionButtons(
+                                    context, cart.isNotEmpty, placing),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+          if (isNarrow)
+            SafeArea(
+              top: false,
+              child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   context.w(20),
-                  context.h(16),
+                  context.h(10),
                   context.w(20),
-                  context.h(28),
+                  context.h(14),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Order Summary ────────────────────────────────────
-                    _panel(
-                      context,
-                      colors,
-                      title: 'Order Summary',
-                      icon: Icons.receipt_long_outlined,
-                      children: [
-                        if (cart.isEmpty)
-                          Text(
-                            'No items in the order.',
-                            style: AppTextStyles.body(context).copyWith(
-                              color: colors.textSecondary,
-                            ),
-                          )
-                        else
-                          for (final line in cart) ...[
-                            _CheckoutItemCard(line: line),
-                            SizedBox(height: context.h(10)),
-                          ],
-                        Divider(
-                          color: colors.divider,
-                          height: context.h(20),
-                        ),
-                        _summaryAmountRow(
-                            context, colors, 'Subtotal', subtotal),
-                        SizedBox(height: context.h(6)),
-                        _summaryAmountRow(
-                          context,
-                          colors,
-                          'GST (${AppTax.gstPercentage.toStringAsFixed(0)}%)',
-                          tax,
-                        ),
-                        if (lateNightFee > 0) ...[
-                          SizedBox(height: context.h(6)),
-                          _summaryAmountRow(
-                            context,
-                            colors,
-                            'Late Night Delivery',
-                            lateNightFee,
-                          ),
-                        ],
-                        if (longDistanceFee > 0) ...[
-                          SizedBox(height: context.h(6)),
-                          _summaryAmountRow(
-                            context,
-                            colors,
-                            'Long Distance Fee',
-                            longDistanceFee,
-                          ),
-                        ],
-                        SizedBox(height: context.h(10)),
-                        Row(
-                          children: [
-                            Text(
-                              'Total',
-                              style: AppTextStyles.section(context).copyWith(
-                                color: colors.textPrimary,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              '₹${total.toStringAsFixed(2)}',
-                              style: AppTextStyles.section(context).copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: context.h(16)),
-
-                    // ── Customer Details ─────────────────────────────────
-                    _panel(
-                      context,
-                      colors,
-                      title: 'Customer Details',
-                      icon: Icons.person_outline_rounded,
-                      children: [
-                        LayoutBuilder(
-                          builder: (context, c) {
-                            final stack = c.maxWidth < 400;
-                            final nameField = RdxTextField(
-                              controller: _customerName,
-                              maxLength: 20,
-                              label: 'Customer Name',
-                              hint: 'Enter customer name',
-                            );
-                            final phoneField = RdxTextField(
-                              controller: _customerPhone,
-                              maxLength: 10,
-                              label: 'Phone Number',
-                              hint: 'Enter phone number',
-                              keyboardType: TextInputType.phone,
-                            );
-                            if (stack) {
-                              return Column(
-                                children: [
-                                  nameField,
-                                  SizedBox(height: context.h(14)),
-                                  phoneField,
-                                ],
-                              );
-                            }
-                            return Row(
-                              children: [
-                                Expanded(child: nameField),
-                                SizedBox(width: context.w(14)),
-                                Expanded(child: phoneField),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: context.h(16)),
-
-                    // ── Order Type ───────────────────────────────────────
-                    _panel(
-                      context,
-                      colors,
-                      title: 'Order Type',
-                      icon: Icons.room_service_outlined,
-                      children: [
-                        RdxDropdown<OrderType>(
-                          label: 'Order Type *',
-                          value: _orderType,
-                          items: OrderType.values,
-                          labelBuilder: (type) => type.label,
-                          hint: 'Select order type',
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() {
-                              _orderType = value;
-                              if (value != OrderType.dineIn) {
-                                _selectedTable = null;
-                              }
-                              if (value != OrderType.delivery) {
-                                _deliveryAddress.clear();
-                                _longDistanceFeeSelected = false;
-                              }
-                            });
-                          },
-                        ),
-
-                        // Table number — same sentinel pattern as
-                        // create-category on the menu screen.
-                        if (_orderType == OrderType.dineIn) ...[
-                          SizedBox(height: context.h(14)),
-                          RdxDropdown<String>(
-                            label: 'Table Number *',
-                            value: _selectedTable,
-                            searchable: true,
-                            items: [
-                              _kSetTableCountValue,
-                              if (_totalTables != null)
-                                for (var i = 1; i <= _totalTables!; i++) '$i',
-                            ],
-                            labelBuilder: (value) {
-                              if (value == _kSetTableCountValue) {
-                                return _totalTables == null
-                                    ? '+ Set table count'
-                                    : '+ Edit table count ($_totalTables)';
-                              }
-                              return 'Table $value';
-                            },
-                            hint: _totalTables == null
-                                ? 'Set table count first'
-                                : 'Select or search table',
-                            onChanged: (value) {
-                              if (value == null) return;
-                              if (value == _kSetTableCountValue) {
-                                _openTableCountDialog();
-                                return;
-                              }
-                              setState(() => _selectedTable = value);
-                            },
-                          ),
-                        ],
-
-                        if (_orderType == OrderType.delivery) ...[
-                          SizedBox(height: context.h(14)),
-                          RdxTextField(
-                            controller: _deliveryAddress,
-                            maxLength: 200,
-                            label: 'Delivery Address *',
-                            hint: 'Enter delivery address',
-                            maxLines: 3,
-                          ),
-                          SizedBox(height: context.h(12)),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Long Distance Fee (₹29)',
-                                style: AppTextStyles.bodySecondary(context)
-                                    .copyWith(color: colors.textMuted),
-                              ),
-                              SizedBox(width: context.w(8)),
-                              RdxToggleButton(
-                                value: _longDistanceFeeSelected,
-                                onChanged: (value) => setState(
-                                  () => _longDistanceFeeSelected = value,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-
-                    SizedBox(height: context.h(16)),
-
-                    // ── Order Notes ──────────────────────────────────────
-                    _panel(
-                      context,
-                      colors,
-                      title: 'Order Notes',
-                      icon: Icons.sticky_note_2_outlined,
-                      children: [
-                        RdxTextField(
-                          controller: _orderNotes,
-                          maxLength: 40,
-                          label: 'Kitchen Notes',
-                          hint: 'Write any special instructions for your order',
-                          maxLines: 3,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                child: _actionButtons(context, cart.isNotEmpty, placing),
               ),
             ),
-          ),
-
-          // ── Bottom actions (fixed width, not expanded) ───────────────
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                context.w(20),
-                context.h(10),
-                context.w(20),
-                context.h(14),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  RdxActionButton.save(
-                    isLoading: placing,
-                    onPressed: cart.isEmpty ? null : _placeOrder,
-                  ),
-                  SizedBox(width: context.w(10)),
-                  RdxActionButton.discard(
-                    onPressed: placing ? null : () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
+    );
+  }
+
+  Widget _actionButtons(BuildContext context, bool hasItems, bool placing) {
+    return Row(
+      children: [
+        Expanded(
+          child: RdxActionButton.discard(
+            enabled: !placing,
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        SizedBox(width: context.w(10)),
+        Expanded(
+          child: RdxActionButton.save(
+            isLoading: placing,
+            enabled: hasItems,
+            onPressed: _placeOrder,
+          ),
+        ),
+      ],
     );
   }
 
@@ -624,6 +719,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     required IconData icon,
     required List<Widget> children,
     Widget? headerTrailing,
+    Widget? expandedContent,
   }) {
     return Container(
       width: double.infinity,
@@ -652,154 +748,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ],
           ),
           SizedBox(height: context.h(16)),
+          if (expandedContent != null) Expanded(child: expandedContent),
           ...children,
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// CHECKOUT ITEM CARD — same layout as cart panel (image + details)
-// but Qty text instead of quantity stepper (read-only on checkout).
-// =============================================================================
-
-class _CheckoutItemCard extends StatelessWidget {
-  final CartLineItem line;
-
-  const _CheckoutItemCard({required this.line});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    final imageUrl = line.menuItem.imageUrl.trim();
-
-    return Container(
-      padding: EdgeInsets.all(context.w(10)),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(context.h(10)),
-        border: Border.all(color: colors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: context.h(10),
-            offset: Offset(0, context.h(3)),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Thumbnail
-          ClipRRect(
-            borderRadius: BorderRadius.circular(context.h(8)),
-            child: SizedBox(
-              width: context.w(64),
-              height: context.w(64),
-              child: imageUrl.isEmpty
-                  ? Container(
-                      color: colors.surfaceVariant,
-                      child: Icon(
-                        Icons.restaurant_outlined,
-                        color: colors.textMuted,
-                        size: context.h(22),
-                      ),
-                    )
-                  : Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: colors.surfaceVariant,
-                        child: Icon(
-                          Icons.restaurant_outlined,
-                          color: colors.textMuted,
-                          size: context.h(22),
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-          SizedBox(width: context.w(10)),
-          // Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        line.menuItem.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.section(context).copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: context.w(8)),
-                    Text(
-                      '₹${line.subtotal.toStringAsFixed(2)}',
-                      style: AppTextStyles.section(context).copyWith(
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: context.h(2)),
-                Text(
-                  '₹${line.unitPrice.toStringAsFixed(2)} each',
-                  style: AppTextStyles.bodyTertiary(context).copyWith(
-                    color: AppColors.primary,
-                  ),
-                ),
-                SizedBox(height: context.h(6)),
-                Text(
-                  'Qty: ${line.quantity}',
-                  style: AppTextStyles.caption(context).copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-                if (line.spiceLevel != null &&
-                    line.spiceLevel!.trim().isNotEmpty) ...[
-                  SizedBox(height: context.h(4)),
-                  Text(
-                    line.spiceLevel!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption(context).copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-                if (line.addOns.isNotEmpty) ...[
-                  SizedBox(height: context.h(2)),
-                  Text(
-                    line.addOns.map((a) => a.displayLabel).join(' · '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption(context).copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-                if (line.notes != null && line.notes!.trim().isNotEmpty) ...[
-                  SizedBox(height: context.h(2)),
-                  Text(
-                    line.notes!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption(context).copyWith(
-                      color: colors.textMuted,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
         ],
       ),
     );

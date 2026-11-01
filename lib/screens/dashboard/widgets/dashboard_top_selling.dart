@@ -4,6 +4,8 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/formatters.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/dashboard_stats_model.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_empty.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_card_style.dart';
 
 class DashboardTopSelling extends StatelessWidget {
   final List<TopSellingItem> items;
@@ -15,64 +17,51 @@ class DashboardTopSelling extends StatelessWidget {
     final colors = AppColors.of(context);
 
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        context.w(20),
-        context.h(18),
-        context.w(20),
-        context.h(12),
+        context.w(18),
+        context.h(16),
+        context.w(18),
+        context.h(14),
       ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
+      decoration: DashboardCardStyle.decoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Top Selling Items',
-                  style: AppTextStyles.heading(context),
-                ),
-              ),
-              Text(
-                'Today',
-                style: AppTextStyles.label(context).copyWith(color: AppColors.primary),
-              ),
-            ],
-          ),
-          SizedBox(height: context.h(6)),
-          Text(
-            'By order count',
-            style: AppTextStyles.bodySecondary(context),
-          ),
-          SizedBox(height: context.h(14)),
+          Text('Popular menu items', style: DashboardCardStyle.title(context)),
+          SizedBox(height: context.h(4)),
+          Text('Sales and order count for this period',
+              style: AppTextStyles.bodySecondary(context)),
           if (items.isEmpty)
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: context.h(12)),
-              child: Text(
-                'No sales data yet',
-                style: AppTextStyles.bodySecondary(context),
-              ),
+            const DashboardEmpty(
+              icon: Icons.restaurant_menu_rounded,
+              title: 'No item data available',
+              subtitle: 'Top sellers will appear after orders are recorded.',
             )
-          else
-            for (final item in items) ...[
-              _row(context, colors, item),
-              if (item != items.last)
-                Divider(height: context.h(20), color: colors.divider),
+          else ...[
+            SizedBox(height: context.h(12)),
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) SizedBox(height: context.h(10)),
+              _row(context, colors, items[i]),
             ],
+          ],
         ],
       ),
     );
   }
 
   Widget _row(
-    BuildContext context,
-    AppColorScheme colors,
-    TopSellingItem item,
-  ) {
+      BuildContext context, AppColorScheme colors, TopSellingItem item) {
+    final rankColors = [
+      const Color(0xFFF59E0B),
+      const Color(0xFF94A3B8),
+      const Color(0xFFCD7F32),
+      AppColors.primary,
+      AppColors.primary,
+    ];
+    final rankColor =
+        rankColors[(item.rank - 1).clamp(0, rankColors.length - 1)];
+
     return Row(
       children: [
         Container(
@@ -80,16 +69,14 @@ class DashboardTopSelling extends StatelessWidget {
           height: context.h(28),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: item.rank == 1
-                ? AppColors.primary.withValues(alpha: 0.15)
-                : colors.surfaceVariant,
+            color: rankColor.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
-            '${item.rank}',
+            '#${item.rank}',
             style: AppTextStyles.label(context).copyWith(
-              color:
-                  item.rank == 1 ? AppColors.primary : colors.textSecondary,
+              color: rankColor,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),
@@ -100,21 +87,25 @@ class DashboardTopSelling extends StatelessWidget {
             children: [
               Text(
                 item.name,
-                style: AppTextStyles.label(context)
-                    .copyWith(color: colors.textPrimary),
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.body(context)
+                    .copyWith(fontWeight: FontWeight.w600),
               ),
               Text(
-                '${item.orders} Orders',
-                style: AppTextStyles.caption(context),
+                '${item.orders} sold',
+                style: AppTextStyles.caption(context)
+                    .copyWith(color: colors.textMuted),
               ),
             ],
           ),
         ),
         Text(
           Formatters.currency(item.revenue, symbol: '₹'),
-          style: AppTextStyles.label(context)
-              .copyWith(color: colors.textPrimary),
+          style: AppTextStyles.body(context).copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.primary,
+          ),
         ),
       ],
     );

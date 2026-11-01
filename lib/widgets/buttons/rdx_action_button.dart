@@ -13,6 +13,7 @@ class RdxActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isPrimary;
   final bool isLoading;
+  final bool enabled;
   final double? height;
   final double? minWidth;
 
@@ -38,6 +39,7 @@ class RdxActionButton extends StatelessWidget {
     required this.onPressed,
     this.isPrimary = true,
     this.isLoading = false,
+    this.enabled = true,
     this.height,
     this.minWidth,
     this.leadingIcon,
@@ -57,6 +59,7 @@ class RdxActionButton extends StatelessWidget {
     this.label = 'Done',
     required this.onPressed,
     this.isLoading = false,
+    this.enabled = true,
     this.height,
     this.minWidth,
     this.leadingIcon,
@@ -76,6 +79,7 @@ class RdxActionButton extends StatelessWidget {
     this.label = 'Discard',
     required this.onPressed,
     this.isLoading = false,
+    this.enabled = true,
     this.height,
     this.minWidth,
     this.leadingIcon,
@@ -94,38 +98,46 @@ class RdxActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
 
-    final btnHeight = height ?? context.h(40);
+    final btnHeight = height ?? context.h(40).clamp(32.0, 40.0);
 
-    // Default colors preserve the existing behavior.
+    // Keep primary actions on-brand and secondary actions visually neutral.
     final defaultTextColor = isPrimary ? Colors.white : colors.textPrimary;
 
     final resolvedTextColor = textColor ?? defaultTextColor;
 
     final resolvedIconColor = iconColor ?? resolvedTextColor;
 
-    final resolvedBackgroundColor =
-        backgroundColor ?? (isPrimary ? AppColors.primary : Colors.transparent);
+    final resolvedBackgroundColor = backgroundColor ??
+        (isPrimary ? AppColors.primary : const Color(0xFFF1F2F4));
 
-    final resolvedBorderColor = borderColor ??
-        (isPrimary ? Colors.transparent : colors.textPrimary.withAlpha(75));
+    final resolvedBorderColor =
+        borderColor ?? (isPrimary ? Colors.transparent : colors.border);
 
     final resolvedDisabledBackgroundColor = disabledBackgroundColor ??
-        (isPrimary ? AppColors.primary.withOpacity(0.55) : Colors.transparent);
+        (isPrimary ? const Color(0xFFE0E0E0) : const Color(0xFFF5F5F5));
 
     final resolvedDisabledTextColor = disabledTextColor ??
-        (isPrimary ? Colors.white70 : colors.textPrimary.withAlpha(120));
+        (isPrimary
+            ? const Color(0xFF757575)
+            : colors.textPrimary.withAlpha(120));
+    final resolvedDisabledIconColor =
+        disabledIconColor ?? resolvedDisabledTextColor;
+    final isDisabled = !enabled || isLoading || onPressed == null;
+    final effectiveTextColor =
+        isDisabled ? resolvedDisabledTextColor : resolvedTextColor;
+    final effectiveIconColor =
+        isDisabled ? resolvedDisabledIconColor : resolvedIconColor;
 
-    final textStyle = AppTextStyles.section(context).copyWith(
-      color: isLoading ? resolvedTextColor : resolvedTextColor,
-    );
+    final textStyle =
+        AppTextStyles.section(context).copyWith(color: effectiveTextColor);
 
     final child = isLoading
         ? SizedBox(
-            height: context.h(18),
-            width: context.h(18),
+            height: context.h(18).clamp(14.0, 18.0),
+            width: context.h(18).clamp(14.0, 18.0),
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: resolvedIconColor,
+              color: effectiveIconColor,
             ),
           )
         : Row(
@@ -135,10 +147,10 @@ class RdxActionButton extends StatelessWidget {
               if (leadingIcon != null) ...[
                 Icon(
                   leadingIcon,
-                  size: iconSize,
-                  color: resolvedIconColor,
+                  size: (iconSize ?? context.h(24)).clamp(14.0, 24.0),
+                  color: effectiveIconColor,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: context.w(8).clamp(5.0, 8.0)),
               ],
               Flexible(
                 child: Text(
@@ -150,11 +162,11 @@ class RdxActionButton extends StatelessWidget {
                 ),
               ),
               if (trailingIcon != null) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: context.w(8).clamp(5.0, 8.0)),
                 Icon(
                   trailingIcon,
-                  size: iconSize,
-                  color: resolvedIconColor,
+                  size: (iconSize ?? context.h(24)).clamp(14.0, 24.0),
+                  color: effectiveIconColor,
                 ),
               ],
             ],
@@ -169,7 +181,7 @@ class RdxActionButton extends StatelessWidget {
         height: btnHeight,
         width: minWidth,
         child: ElevatedButton(
-          onPressed: isLoading ? null : onPressed,
+          onPressed: isDisabled ? null : onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: resolvedBackgroundColor,
             foregroundColor: resolvedTextColor,
@@ -177,7 +189,7 @@ class RdxActionButton extends StatelessWidget {
             disabledForegroundColor: resolvedDisabledTextColor,
             elevation: 0,
             padding: EdgeInsets.symmetric(
-              horizontal: context.w(16),
+              horizontal: context.w(16).clamp(10.0, 16.0),
             ),
             shape: shape,
             minimumSize: Size(
@@ -195,17 +207,19 @@ class RdxActionButton extends StatelessWidget {
       height: btnHeight,
       width: minWidth,
       child: OutlinedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: isDisabled ? null : onPressed,
         style: OutlinedButton.styleFrom(
           backgroundColor: resolvedBackgroundColor,
           foregroundColor: resolvedTextColor,
+          disabledBackgroundColor: resolvedDisabledBackgroundColor,
+          disabledForegroundColor: resolvedDisabledTextColor,
           side: BorderSide(
             color: resolvedBorderColor,
             width: 1,
           ),
           elevation: 0,
           padding: EdgeInsets.symmetric(
-            horizontal: context.w(16),
+            horizontal: context.w(16).clamp(10.0, 16.0),
           ),
           shape: shape,
           minimumSize: Size(

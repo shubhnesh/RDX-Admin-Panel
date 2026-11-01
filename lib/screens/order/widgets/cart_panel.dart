@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/screens/order/checkout_screen.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
@@ -6,222 +7,86 @@ import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/responsive_size.dart';
-import '../../../core/utils/tax.dart';
 import '../../../providers/cart_provider.dart';
+import 'order_summary_widgets.dart';
 
+/// Right-side panel for Create Order — same sectional layout as
+/// CheckoutScreen's Order Summary, but each item shows a quantity
+/// counter + delete button instead of static "Qty: N".
 class CartPanel extends ConsumerWidget {
   final VoidCallback? onClose;
   final VoidCallback? onProceed;
+  final bool compactLayout;
 
   const CartPanel({
     super.key,
     this.onClose,
     this.onProceed,
+    this.compactLayout = false,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
     final cart = ref.watch(cartProvider);
-    final subtotal = ref.watch(cartTotalProvider);
 
-    final tax = subtotal * (AppTax.gstPercentage / 100);
-    final total = subtotal + tax;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(
-          context.h(10),
-        ),
-        border: Border.all(
-          color: colors.border,
-        ),
-      ),
-      child: Column(
-        children: [
-          // -----------------------------------------------------------------
-          // HEADER
-          // -----------------------------------------------------------------
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              context.w(12),
-              context.h(10),
-              context.w(10),
-              context.h(8),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  'Added Items',
-                  style: AppTextStyles.section(context)
-                      .copyWith(color: colors.textPrimary),
-                ),
-                if (cart.isNotEmpty) ...[
-                  SizedBox(width: context.w(6)),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: context.w(7),
-                      vertical: context.h(2),
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(context.h(20)),
-                    ),
-                    child: Text(
-                      '${cart.length}',
-                      style: AppTextStyles.caption(context).copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: OrderSummaryPanel(
+            title: 'Added Items',
+            icon: Icons.receipt_long_outlined,
+            itemCount: cart.length,
+            compactLayout: compactLayout,
+            expandedContent: cart.isEmpty
+                ? _emptyCart(context, colors)
+                : compactLayout
+                    ? _CompactCartItems(items: cart)
+                    : ListView.separated(
+                        padding: EdgeInsets.zero,
+                        itemCount: cart.length,
+                        separatorBuilder: (_, __) =>
+                            SizedBox(height: context.h(10)),
+                        itemBuilder: (context, index) =>
+                            _CartItem(line: cart[index]),
                       ),
-                    ),
-                  ),
-                ],
-                const Spacer(),
-              ],
-            ),
           ),
-
-          Divider(
-            height: 1,
-            color: colors.divider,
-          ),
-
-          // -----------------------------------------------------------------
-          // CART ITEMS
-          // -----------------------------------------------------------------
-          Expanded(
-            child: cart.isEmpty
-                ? _emptyCart(
-                    context,
-                    colors,
-                  )
-                : ListView.separated(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: context.w(10),
-                      vertical: context.h(10),
-                    ),
-                    itemCount: cart.length,
-                    separatorBuilder: (_, __) => SizedBox(
-                      height: context.h(10),
-                    ),
-                    itemBuilder: (context, index) {
-                      return _CartItem(
-                        line: cart[index],
-                      );
-                    },
-                  ),
-          ),
-
-          // -----------------------------------------------------------------
-          // BOTTOM SUMMARY
-          // -----------------------------------------------------------------
-          Container(
-            padding: EdgeInsets.fromLTRB(
-              context.w(12),
-              context.h(8),
-              context.w(12),
-              context.h(10),
-            ),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: colors.border,
-                ),
+        ),
+        SizedBox(height: context.h(compactLayout ? 8 : 16)),
+        // Keep the actions outside the summary container, like Checkout.
+        Row(
+          children: [
+            Expanded(
+              child: RdxActionButton.discard(
+                label: 'Discard',
+                height: compactLayout ? 32 : null,
+                onPressed: cart.isEmpty
+                    ? null
+                    : () => ref.read(cartProvider.notifier).clear(),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // SUBTOTAL
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Subtotal',
-                      style: AppTextStyles.bodySecondary(context),
-                    ),
-                    Text(
-                      '₹${subtotal.toStringAsFixed(2)}',
-                      style: AppTextStyles.bodySecondary(context),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: context.h(6)),
-
-                // GST
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'GST (${AppTax.gstPercentage.toStringAsFixed(0)}%)',
-                      style: AppTextStyles.bodySecondary(context),
-                    ),
-                    Text(
-                      '₹${tax.toStringAsFixed(2)}',
-                      style: AppTextStyles.bodySecondary(context),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: context.h(10)),
-
-                // TOTAL
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total Due',
-                      style: AppTextStyles.section(context),
-                    ),
-                    Text(
-                      '₹${total.toStringAsFixed(2)}',
-                      style: AppTextStyles.section(context).copyWith(
-                        color: colors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: context.h(14)),
-
-                // PROCEED
-                SizedBox(
-                  width: double.infinity,
-                  child: RdxActionButton(
-                    label: 'Proceed',
-                    isPrimary: cart.isNotEmpty,
-                    onPressed: cart.isEmpty
-                        ? null
-                        : onProceed ??
-                            () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const CheckoutScreen(),
-                                ),
-                              );
-                            },
-                  ),
-                ),
-
-                SizedBox(
-                  height: context.h(10),
-                ),
-
-                // CANCEL
-                RdxActionButton.discard(
-                  onPressed: cart.isEmpty
-                      ? null
-                      : () {
-                          ref.read(cartProvider.notifier).clear();
+            SizedBox(width: context.w(10)),
+            Expanded(
+              child: RdxActionButton(
+                label: 'Next',
+                height: compactLayout ? 32 : null,
+                isPrimary: cart.isNotEmpty,
+                onPressed: cart.isEmpty
+                    ? null
+                    : onProceed ??
+                        () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const CheckoutScreen(),
+                            ),
+                          );
                         },
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        )
+      ],
     );
   }
 
@@ -231,9 +96,7 @@ class CartPanel extends ConsumerWidget {
   ) {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(
-          context.h(20),
-        ),
+        padding: EdgeInsets.all(context.h(20)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -265,209 +128,158 @@ class CartPanel extends ConsumerWidget {
   }
 }
 
+class _CompactCartItems extends StatefulWidget {
+  final List<CartLineItem> items;
+
+  const _CompactCartItems({required this.items});
+
+  @override
+  State<_CompactCartItems> createState() => _CompactCartItemsState();
+}
+
+class _CompactCartItemsState extends State<_CompactCartItems> {
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent ||
+        event.scrollDelta.dx != 0 ||
+        event.scrollDelta.dy == 0 ||
+        !_scrollController.hasClients) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    final offset = (_scrollController.offset + event.scrollDelta.dy)
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    _scrollController.jumpTo(offset);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = context.w(10);
+        final cardWidth = (constraints.maxWidth - spacing * 2) / 2.5;
+
+        return Listener(
+          onPointerSignal: _handlePointerSignal,
+          child: ScrollConfiguration(
+            behavior: const _MouseDragScrollBehavior(),
+            child: ListView.separated(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.zero,
+              itemCount: widget.items.length,
+              separatorBuilder: (_, __) => SizedBox(width: spacing),
+              itemBuilder: (context, index) => SizedBox(
+                width: cardWidth,
+                child: _CartItem(
+                  line: widget.items[index],
+                  compactLayout: true,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MouseDragScrollBehavior extends MaterialScrollBehavior {
+  const _MouseDragScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        ...super.dragDevices,
+        PointerDeviceKind.mouse,
+      };
+}
+
 // =============================================================================
 // CART ITEM
+// Same card shell as Checkout Order Summary, but the "Qty: N" line is
+// replaced by:  [ −  N  + ] ………… [delete]
 // =============================================================================
 
 class _CartItem extends ConsumerWidget {
   final CartLineItem line;
+  final bool compactLayout;
 
   const _CartItem({
     required this.line,
+    this.compactLayout = false,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColors.of(context);
     final cartNotifier = ref.read(cartProvider.notifier);
-    final imageUrl = line.menuItem.imageUrl.trim();
 
-    return Container(
-      padding: EdgeInsets.all(context.w(10)),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(context.h(10)),
-        border: Border.all(color: colors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: context.h(10),
-            offset: Offset(0, context.h(3)),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // -----------------------------------------------------------------
-          // THUMBNAIL
-          // -----------------------------------------------------------------
-          _itemThumbnail(context, colors, imageUrl),
-          SizedBox(width: context.w(10)),
-
-          // -----------------------------------------------------------------
-          // DETAILS
-          // -----------------------------------------------------------------
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Name + line total
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        line.menuItem.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.section(context).copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: context.w(8)),
-                    Text(
-                      '₹${line.subtotal.toStringAsFixed(2)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.section(context).copyWith(
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: context.h(2)),
-                Text(
-                  '₹${line.menuItem.price.toStringAsFixed(2)} each',
-                  style: AppTextStyles.bodyTertiary(context).copyWith(
-                    color: AppColors.primary,
-                  ),
-                ),
-                SizedBox(height: context.h(8)),
-
-                // Quantity + spice + delete
-                Row(
-                  children: [
-                    _stepperPill(
-                      context,
-                      colors: colors,
-                      quantity: line.quantity,
-                      onDecrement: () => cartNotifier.updateQuantity(
-                        line.id,
-                        line.quantity - 1,
-                      ),
-                      onIncrement: () => cartNotifier.updateQuantity(
-                        line.id,
-                        line.quantity + 1,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (line.spiceLevel != null &&
-                        line.spiceLevel!.isNotEmpty) ...[
-                      Flexible(
-                        child: Padding(
-                          padding: EdgeInsets.only(right: context.w(6)),
-                          child: Text(
-                            line.spiceLevel!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style:
-                                AppTextStyles.bodySecondary(context).copyWith(
-                              color: colors.textMuted,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    _deleteButton(
-                      context,
-                      colors: colors,
-                      onPressed: () => cartNotifier.removeLine(line.id),
-                    ),
-                  ],
-                ),
-
-                if (line.addOns.isNotEmpty) ...[
-                  SizedBox(height: context.h(6)),
-                  Text(
-                    line.addOns.join(', '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodySecondary(context).copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-
-                if (line.notes != null && line.notes!.isNotEmpty) ...[
-                  SizedBox(height: context.h(2)),
-                  Text(
-                    line.notes!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodySecondary(context).copyWith(
-                      color: colors.textMuted,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ],
+    return OrderSummaryItemCard(
+      line: line,
+      compactLayout: compactLayout,
+      // Replaces the static "Qty: N" text with counter + delete on one row
+      quantityControlBuilder: (context, quantity) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Quantity counter
+            _stepperPill(
+              context,
+              compactLayout: compactLayout,
+              quantity: quantity,
+              onDecrement: () =>
+                  cartNotifier.updateQuantity(line.id, quantity - 1),
+              onIncrement: () =>
+                  cartNotifier.updateQuantity(line.id, quantity + 1),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _itemThumbnail(
-    BuildContext context,
-    AppColorScheme colors,
-    String imageUrl,
-  ) {
-    final size = context.w(64);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(context.h(8)),
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: imageUrl.isEmpty
-            ? Container(
-                color: colors.surfaceVariant,
-                child: Icon(
-                  Icons.restaurant_outlined,
-                  color: colors.textMuted,
-                  size: context.h(22),
-                ),
-              )
-            : Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: colors.surfaceVariant,
+            // Delete at the end of the same row
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => cartNotifier.updateQuantity(line.id, 0),
+                borderRadius: BorderRadius.circular(context.h(6)),
+                child: Container(
+                  width: compactLayout ? 18 : context.h(28),
+                  height: compactLayout ? 18 : context.h(28),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE05151).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(context.h(6)),
+                    border: Border.all(
+                      color: const Color(0xFFE05151).withValues(alpha: 0.35),
+                    ),
+                  ),
                   child: Icon(
-                    Icons.restaurant_outlined,
-                    color: colors.textMuted,
-                    size: context.h(22),
+                    Icons.delete_outline_rounded,
+                    size: compactLayout ? 13 : context.h(16),
+                    color: const Color(0xFFE05151),
                   ),
                 ),
               ),
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  /// − / count / + control using the same square, filled-primary buttons
-  /// as LiveOrderMenuCard's stepper, so the two look like one family.
   Widget _stepperPill(
     BuildContext context, {
-    required AppColorScheme colors,
+    required bool compactLayout,
     required int quantity,
     required VoidCallback onDecrement,
     required VoidCallback onIncrement,
   }) {
     return SizedBox(
-      height: context.h(28),
+      height: compactLayout ? 18 : context.h(28),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -476,21 +288,26 @@ class _CartItem extends ConsumerWidget {
             context,
             icon: Icons.remove,
             onTap: onDecrement,
+            compactLayout: compactLayout,
           ),
           SizedBox(
-            width: context.w(28),
+            width: compactLayout ? 20 : context.w(28),
             child: Text(
               '$quantity',
               textAlign: TextAlign.center,
-              style: AppTextStyles.section(context).copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: (compactLayout
+                      ? AppTextStyles.caption(context).copyWith(
+                          fontSize: 12,
+                        )
+                      : AppTextStyles.section(context))
+                  .copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           _stepperButton(
             context,
             icon: Icons.add,
             onTap: onIncrement,
+            compactLayout: compactLayout,
           ),
         ],
       ),
@@ -501,54 +318,25 @@ class _CartItem extends ConsumerWidget {
     BuildContext context, {
     required IconData icon,
     required VoidCallback onTap,
+    required bool compactLayout,
   }) {
+    final buttonSize = compactLayout ? 16.0 : context.h(24);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(context.h(6)),
         child: Container(
-          width: context.h(24),
-          height: context.h(24),
+          width: buttonSize,
+          height: buttonSize,
           decoration: BoxDecoration(
             color: AppColors.primary,
             borderRadius: BorderRadius.circular(context.h(6)),
           ),
           child: Icon(
             icon,
-            size: context.h(14),
+            size: compactLayout ? 11 : context.h(14),
             color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Quiet outlined icon button — sits inline with the stepper instead
-  /// of floating disconnected, and stays understated (like the card's
-  /// dietary badge) rather than a loud red block.
-  Widget _deleteButton(
-    BuildContext context, {
-    required AppColorScheme colors,
-    required VoidCallback onPressed,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(context.h(6)),
-        child: Container(
-          width: context.h(35),
-          height: context.h(35),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            border: Border.all(color: colors.border),
-            borderRadius: BorderRadius.circular(context.h(6)),
-          ),
-          child: Icon(
-            Icons.delete_outline_rounded,
-            size: context.h(20),
-            color: AppColors.danger,
           ),
         ),
       ),

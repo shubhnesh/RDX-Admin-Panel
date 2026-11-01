@@ -9,7 +9,7 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
-import '../../widgets/resuable_options/rdx_text_field.dart';
+import '../../widgets/reusable_widgets/rdx_text_field.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 
@@ -171,13 +171,13 @@ class _RestaurantProfileScreenState
             title: 'Restaurant Profile',
             showBackButton: true,
             actions: [
+              RdxActionButton.discard(
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+              SizedBox(width: context.w(10)),
               RdxActionButton.save(
                 isLoading: provider.isLoading,
                 onPressed: _save,
-              ),
-              SizedBox(width: context.w(10)),
-              RdxActionButton.discard(
-                onPressed: () => Navigator.of(context).maybePop(),
               ),
             ],
           ),

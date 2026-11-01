@@ -24,15 +24,22 @@ class RegionalityService {
       _db.collection('menu_regionalities');
 
   Future<List<RegionalityModel>> fetchRegionalities() async {
-    final snapshot = await _col.orderBy('name').get();
-    return snapshot.docs.map(RegionalityModel.fromFirestore).toList();
+    final snapshot = await _col.get();
+    final regionalities = snapshot.docs
+        .map(RegionalityModel.fromFirestore)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return regionalities;
   }
 
   Stream<List<RegionalityModel>> streamRegionalities() {
-    return _col.orderBy('name').snapshots().map(
-          (snapshot) =>
-              snapshot.docs.map(RegionalityModel.fromFirestore).toList(),
-        );
+    return _col.snapshots().map((snapshot) {
+      final regionalities = snapshot.docs
+          .map(RegionalityModel.fromFirestore)
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return regionalities;
+    });
   }
 
   /// Creates a regionality with a readable slug ID derived from the name

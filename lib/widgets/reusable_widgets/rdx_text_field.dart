@@ -63,11 +63,17 @@ class RdxTextField extends StatefulWidget {
         assert(minLines == null || minLines <= maxLines);
 
   /// Shared sizing constants with [RdxDropdown] trigger.
-  static double verticalPad(BuildContext context) => context.h(17);
+  static double verticalPad(BuildContext context) =>
+      context.h(17).clamp(9.0, 17.0);
 
-  static double horizontalPad(BuildContext context) => context.w(12);
+  static double horizontalPad(BuildContext context) =>
+      context.w(12).clamp(8.0, 12.0);
 
-  static double fontSize(BuildContext context) => context.h(14);
+  static double fontSize(BuildContext context) =>
+      context.h(14).clamp(12.0, 14.0);
+
+  static double textFontSize(BuildContext context) =>
+      context.h(16).clamp(12.0, 16.0);
 
   /// Exact outer height of a single-line field / dropdown trigger.
   static double singleLineHeight(BuildContext context) {
@@ -117,7 +123,8 @@ class _RdxTextFieldState extends State<RdxTextField> {
     final hPad = RdxTextField.horizontalPad(context);
     final vPad = RdxTextField.verticalPad(context);
     final fs = RdxTextField.fontSize(context);
-    final radius = BorderRadius.circular(context.h(8));
+    final textFontSize = RdxTextField.textFontSize(context);
+    final radius = BorderRadius.circular(context.h(8).clamp(6.0, 8.0));
     const lineHeightFactor = 1.2;
 
     final border = OutlineInputBorder(
@@ -152,16 +159,19 @@ class _RdxTextFieldState extends State<RdxTextField> {
         focusNode: _focusNode,
         textAlignVertical:
             isMultiline ? TextAlignVertical.top : TextAlignVertical.center,
-        style: AppTextStyles.bodySecondary(context),
+        style: AppTextStyles.bodySecondary(context)
+            .copyWith(fontSize: textFontSize),
         cursorColor: AppColors.primary,
         decoration: InputDecoration(
           hintText: widget.hint,
           hintStyle: AppTextStyles.bodySecondary(context)
-              .copyWith(color: colors.textMuted),
+              .copyWith(color: colors.textMuted, fontSize: textFontSize),
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
           prefixText: widget.prefixText,
-          prefixStyle: AppTextStyles.bodySecondary(context),
+          prefixStyle: AppTextStyles.bodySecondary(context).copyWith(
+            fontSize: textFontSize,
+          ),
           counterText: widget.counterText ?? '',
           filled: true,
           fillColor: _focusNode.hasFocus || hasText
@@ -200,7 +210,7 @@ class _RdxTextFieldState extends State<RdxTextField> {
           style: AppTextStyles.bodySecondary(context)
               .copyWith(color: colors.textMuted),
         ),
-        SizedBox(height: context.h(6)),
+        SizedBox(height: context.h(6).clamp(4.0, 6.0)),
         field,
       ],
     );

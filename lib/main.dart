@@ -9,15 +9,14 @@ import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main/main_screen.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
+  final hasDefaultApp = Firebase.apps.any((app) => app.name == '[DEFAULT]');
+  if (!hasDefaultApp) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-  } catch (e) {
-    debugPrint('Firebase initialization failed: $e');
   }
 
   runApp(

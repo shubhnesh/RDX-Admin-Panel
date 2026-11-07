@@ -29,7 +29,7 @@ class _SupportScreenState extends State<SupportScreen> {
     ('Order Issues', Icons.receipt_long_outlined),
     ('Payment Failure', Icons.payment_outlined),
     ('App Errors', Icons.bug_report_outlined),
-    ('Store Closure', Icons.storefront_outlined),
+    ('Other', Icons.more_horiz),
   ];
 
   @override
@@ -157,10 +157,12 @@ class _SupportScreenState extends State<SupportScreen> {
         ),
         SizedBox(height: context.h(12)),
         Wrap(
-          spacing: context.w(10),
-          runSpacing: context.h(10),
+          spacing: context.w(8).clamp(6.0, 10.0),
+          runSpacing: context.h(8).clamp(6.0, 10.0),
           children: _categories.map((c) {
             final selected = _selectedCategory == c.$1;
+            final horizontalPadding = context.w(10).clamp(8.0, 12.0);
+            final verticalPadding = context.h(8).clamp(6.0, 10.0);
             return Material(
               color: selected
                   ? AppColors.primary.withOpacity(0.15)
@@ -171,8 +173,8 @@ class _SupportScreenState extends State<SupportScreen> {
                 borderRadius: BorderRadius.circular(context.h(10)),
                 child: Container(
                   padding: EdgeInsets.symmetric(
-                    horizontal: context.w(14),
-                    vertical: context.h(12),
+                    horizontal: horizontalPadding,
+                    vertical: verticalPadding,
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(context.h(10)),
@@ -185,11 +187,11 @@ class _SupportScreenState extends State<SupportScreen> {
                     children: [
                       Icon(
                         c.$2,
-                        size: context.h(18),
+                        size: context.h(16).clamp(14.0, 18.0),
                         color:
                             selected ? AppColors.primary : colors.textSecondary,
                       ),
-                      SizedBox(width: context.w(8)),
+                      SizedBox(width: context.w(6).clamp(4.0, 8.0)),
                       Text(
                         c.$1,
                         style: selected

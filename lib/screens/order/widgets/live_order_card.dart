@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
@@ -37,6 +38,27 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
   ValueChanged<OrderModel>? get onSecondaryAction => widget.onSecondaryAction;
   VoidCallback? get onTap => widget.onTap;
 
+  void _log(String message) {
+    if (kDebugMode) debugPrint('[LiveOrderCard] $message');
+  }
+
+  void _tapAdvance() {
+    _log(
+      'Status action tapped (order: ${order.id}, action: $actionText, '
+      'status: ${order.status.name}, callback: ${onAdvance != null}).',
+    );
+    onAdvance?.call(order);
+  }
+
+  void _tapSecondaryAction() {
+    _log(
+      'Secondary action tapped (order: ${order.id}, '
+      'action: $secondaryActionText, '
+      'callback: ${onSecondaryAction != null}).',
+    );
+    onSecondaryAction?.call(order);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -62,51 +84,51 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(context.h(10)),
-          onTap: onTap,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              context.w(14),
-              context.h(13),
-              context.w(14),
-              context.h(13),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ---------------------------------------------------------
-                // PRIMARY ORDER INFORMATION
-                // ---------------------------------------------------------
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── UPPER HALF (larger) — tappable → opens order details ──────
+          // Everything above the divider is one big hit target.
+          // Lower half is completely non-interactive except the two buttons.
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(context.h(10)),
+              ),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  context.w(14),
+                  context.h(14),
+                  context.w(14),
+                  context.h(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: context.w(28),
-                      height: context.w(28), // same scale → 1:1
-                      decoration: BoxDecoration(
-                        color: colors.surfaceVariant,
-                        borderRadius: BorderRadius.circular(
-                          context.w(7), // keep radius on the same scale
+                    // PRIMARY ORDER INFORMATION
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: context.w(28),
+                          height: context.w(28),
+                          decoration: BoxDecoration(
+                            color: colors.surfaceVariant,
+                            borderRadius: BorderRadius.circular(context.w(7)),
+                            border: Border.all(color: colors.border),
+                          ),
+                          child: Icon(
+                            primaryIcon,
+                            size: context.w(15),
+                            color: colors.textPrimary,
+                          ),
                         ),
-                        border: Border.all(
-                          color: colors.border,
-                        ),
-                      ),
-                      child: Icon(
-                        primaryIcon,
-                        size: context.w(15), // icon size on the same scale
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(width: context.w(9)),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
+                        SizedBox(width: context.w(9)),
+                        Expanded(
+                          child: Text(
                             primaryTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -116,114 +138,89 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: context.w(6)),
-                    _orderTypeBadge(context, colors),
-                  ],
-                ),
-
-                SizedBox(height: context.h(15)),
-
-                // ---------------------------------------------------------
-                // ORDER DATE + TIME
-                // ---------------------------------------------------------
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today_outlined,
-                      size: context.h(15),
-                      color: colors.textMuted,
-                    ),
-                    SizedBox(width: context.w(5)),
-                    Expanded(
-                      child: Text(
-                        _formatOrderDateTime(order.createdAt),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodyTertiary(context).copyWith(
-                          color: colors.textSecondary,
                         ),
-                      ),
+                        SizedBox(width: context.w(6)),
+                        _orderTypeBadge(context, colors),
+                      ],
                     ),
-                  ],
-                ),
 
-                // ---------------------------------------------------------
-                // PHONE NUMBER
-                // ---------------------------------------------------------
-                if (_hasCustomerPhone) ...[
-                  SizedBox(height: context.h(6)),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.call_outlined,
-                        size: context.h(15),
-                        color: colors.textMuted,
-                      ),
-                      SizedBox(width: context.w(5)),
-                      Expanded(
-                        child: Text(
-                          order.customerPhone.trim(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.bodyTertiary(context).copyWith(
-                            color: colors.textSecondary,
+                    SizedBox(height: context.h(15)),
+
+                    // ORDER DATE + TIME
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          size: context.h(15),
+                          color: colors.textMuted,
+                        ),
+                        SizedBox(width: context.w(5)),
+                        Expanded(
+                          child: Text(
+                            _formatOrderDateTime(order.createdAt),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.bodyTertiary(context).copyWith(
+                              color: colors.textSecondary,
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+
+                    // PHONE NUMBER
+                    if (_hasCustomerPhone) ...[
+                      SizedBox(height: context.h(6)),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.call_outlined,
+                            size: context.h(15),
+                            color: colors.textMuted,
+                          ),
+                          SizedBox(width: context.w(5)),
+                          Expanded(
+                            child: Text(
+                              order.customerPhone.trim(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  AppTextStyles.bodyTertiary(context).copyWith(
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
 
-                SizedBox(height: context.h(9)),
+                    SizedBox(height: context.h(9)),
 
-                // ---------------------------------------------------------
-                // ITEMS (always column; circular expand button when > 1)
-                // ---------------------------------------------------------
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: AnimatedSize(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
-                        alignment: Alignment.topLeft,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (order.items.isEmpty)
-                              Text(
-                                'Order',
-                                style: AppTextStyles.bodySecondary(context)
-                                    .copyWith(
-                                  color: colors.textSecondary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              )
-                            else if (!_itemsExpanded && hasMultipleItems)
-                              // Collapsed: first item + "and more..."
-                              Text(
-                                '${order.items.first.quantity}x '
-                                '${order.items.first.name} and more...',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.bodySecondary(context)
-                                    .copyWith(
-                                  color: colors.textSecondary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              )
-                            else
-                              // Expanded (or only 1 item): full column list
-                              for (final item in order.items)
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    bottom: context.h(3),
-                                  ),
-                                  child: Text(
-                                    '${item.quantity}x ${item.name}',
+                    // ITEMS
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: AnimatedSize(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeInOut,
+                            alignment: Alignment.topLeft,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (order.items.isEmpty)
+                                  Text(
+                                    'Order',
+                                    style: AppTextStyles.bodySecondary(context)
+                                        .copyWith(
+                                      color: colors.textSecondary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  )
+                                else if (!_itemsExpanded && hasMultipleItems)
+                                  Text(
+                                    '${order.items.first.quantity}x '
+                                    '${order.items.first.name} and more...',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTextStyles.bodySecondary(context)
@@ -231,96 +228,119 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                                       color: colors.textSecondary,
                                       fontWeight: FontWeight.w700,
                                     ),
-                                  ),
-                                ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (hasMultipleItems) ...[
-                      SizedBox(width: context.w(6)),
-                      // Same concept as StatsCollapseButton:
-                      // circular surface → primary on hover, icon flips.
-                      MouseRegion(
-                        onEnter: (_) => setState(() => _itemsHovering = true),
-                        onExit: (_) => setState(() => _itemsHovering = false),
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            setState(() {
-                              _itemsExpanded = !_itemsExpanded;
-                            });
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 160),
-                            curve: Curves.easeOut,
-                            width: context.h(28).clamp(24.0, 28.0),
-                            height: context.h(28).clamp(24.0, 28.0),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _itemsHovering
-                                  ? AppColors.primary
-                                  : colors.surface,
-                              border: Border.all(
-                                color: _itemsHovering
-                                    ? AppColors.primary
-                                    : colors.border,
-                              ),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                _itemsExpanded
-                                    ? Icons.keyboard_arrow_up_rounded
-                                    : Icons.keyboard_arrow_down_rounded,
-                                size: context.h(18).clamp(14.0, 18.0),
-                                color: _itemsHovering
-                                    ? AppColors.surface
-                                    : AppColors.lightTextPrimary,
-                              ),
+                                  )
+                                else
+                                  for (final item in order.items)
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                        bottom: context.h(3),
+                                      ),
+                                      child: Text(
+                                        '${item.quantity}x ${item.name}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style:
+                                            AppTextStyles.bodySecondary(context)
+                                                .copyWith(
+                                          color: colors.textSecondary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-
-                SizedBox(height: context.h(10)),
-
-                // ---------------------------------------------------------
-                // TOTAL + PAYMENT STATUS
-                // ---------------------------------------------------------
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      '₹${_orderTotal.toStringAsFixed(0)}',
-                      style: AppTextStyles.section(context).copyWith(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
+                        if (hasMultipleItems) ...[
+                          SizedBox(width: context.w(6)),
+                          MouseRegion(
+                            onEnter: (_) =>
+                                setState(() => _itemsHovering = true),
+                            onExit: (_) =>
+                                setState(() => _itemsHovering = false),
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {
+                                setState(() {
+                                  _itemsExpanded = !_itemsExpanded;
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 160),
+                                curve: Curves.easeOut,
+                                width: context.h(28).clamp(24.0, 28.0),
+                                height: context.h(28).clamp(24.0, 28.0),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _itemsHovering
+                                      ? AppColors.primary
+                                      : colors.surface,
+                                  border: Border.all(
+                                    color: _itemsHovering
+                                        ? AppColors.primary
+                                        : colors.border,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    _itemsExpanded
+                                        ? Icons.keyboard_arrow_up_rounded
+                                        : Icons.keyboard_arrow_down_rounded,
+                                    size: context.h(18).clamp(14.0, 18.0),
+                                    color: _itemsHovering
+                                        ? AppColors.surface
+                                        : AppColors.lightTextPrimary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const Spacer(),
-                    _paymentStatusBadge(context, isPaid: isPaid),
+
+                    SizedBox(height: context.h(10)),
+
+                    // TOTAL + PAYMENT STATUS
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          '₹${_orderTotal.toStringAsFixed(0)}',
+                          style: AppTextStyles.section(context).copyWith(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const Spacer(),
+                        _paymentStatusBadge(context, isPaid: isPaid),
+                      ],
+                    ),
                   ],
                 ),
+              ),
+            ),
+          ),
 
-                SizedBox(height: context.h(12)),
-
-                // ---------------------------------------------------------
-                // DIVIDER
-                // ---------------------------------------------------------
+          // ── LOWER HALF (smaller) — NOT tappable as a whole ─────────────
+          // Only the Pay Now / action chips receive taps.
+          // No InkWell / GestureDetector here on the container itself.
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              context.w(14),
+              context.h(6),
+              context.w(14),
+              context.h(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Container(
                   height: 1,
                   color: colors.divider,
                 ),
-
-                SizedBox(height: context.h(11)),
-
-                // ---------------------------------------------------------
-                // ITEMS COUNT + ACTION
-                // ---------------------------------------------------------
+                SizedBox(height: context.h(10)),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -331,12 +351,8 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                       ),
                       decoration: BoxDecoration(
                         color: colors.surfaceVariant,
-                        borderRadius: BorderRadius.circular(
-                          context.h(5),
-                        ),
-                        border: Border.all(
-                          color: colors.border,
-                        ),
+                        borderRadius: BorderRadius.circular(context.h(5)),
+                        border: Border.all(color: colors.border),
                       ),
                       child: Text(
                         '${order.items.length} '
@@ -353,7 +369,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                         context,
                         label: secondaryActionText!,
                         primary: false,
-                        onTap: () => onSecondaryAction!(order),
+                        onTap: _tapSecondaryAction,
                       ),
                       SizedBox(width: context.w(6)),
                     ],
@@ -362,18 +378,17 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                         context,
                         label: actionText!,
                         primary: true,
-                        onTap: () => onAdvance!(order),
+                        onTap: _tapAdvance,
                       ),
                   ],
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
-
 
   Widget _actionChip(
     BuildContext context, {
@@ -384,6 +399,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
     final colors = AppColors.of(context);
     return Material(
       color: Colors.transparent,
+      borderRadius: BorderRadius.circular(context.h(5)),
       child: InkWell(
         borderRadius: BorderRadius.circular(context.h(5)),
         onTap: onTap,
@@ -392,14 +408,16 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
           padding: EdgeInsets.symmetric(
             horizontal: context.w(11).clamp(7.0, 11.0),
           ),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: primary ? AppColors.primary : colors.surface,
             borderRadius: BorderRadius.circular(context.h(5)),
             border: primary
                 ? null
-                : Border.all(color: AppColors.primary.withValues(alpha: 0.45)),
+                : Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.45),
+                  ),
           ),
-          alignment: Alignment.center,
           child: Text(
             label,
             style: AppTextStyles.caption(context).copyWith(
@@ -431,9 +449,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
   Widget _orderTypeBadge(BuildContext context, AppColorScheme colors) {
     final isApp = order.orderSource == OrderSource.app;
     final label = isApp ? 'App' : _formatEnumLabel(order.orderType.name);
-    final accent = isApp
-        ? const Color(0xFF7C5CFC)
-        : AppColors.primary;
+    final accent = isApp ? const Color(0xFF7C5CFC) : AppColors.primary;
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -511,7 +527,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
     }
 
     if (_hasCustomerName) {
-      return order.customerName!.trim();
+      return order.customerName.trim();
     }
 
     return order.id;

@@ -142,42 +142,50 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
       return;
     }
 
+    // Map UI labels → Cloud Function values (cash | upi | card only).
+    final method = _paymentMethodString(selected);
+    if (method == null) {
+      await _showNotice('Unsupported payment method. Use Cash, UPI or Card.');
+      return;
+    }
+
     setState(() => _isSettling = true);
 
     try {
-      await ref.read(orderServiceProvider).updatePaymentStatus(
+      // Secure path — marks paid + records payment_method server-side.
+      await ref.read(orderServiceProvider).settleOrder(
             orderId: widget.bill.orderNumber,
-            paymentMethod: _paymentMethodFromLabel(selected),
+            paymentMethod: method,
           );
 
       if (!mounted) return;
-
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   const SnackBar(content: Text('Payment recorded and order completed.')),
-      // );
       _close();
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      await _showNotice('Failed to complete payment. Please try again.');
+      final message = e.toString().replaceFirst('Exception: ', '');
+      await _showNotice(
+        message.isNotEmpty
+            ? message
+            : 'Failed to complete payment. Please try again.',
+      );
     } finally {
       if (mounted) setState(() => _isSettling = false);
     }
   }
 
-  PaymentMethod _paymentMethodFromLabel(String label) {
-    switch (label.trim()) {
-      case 'Cash':
-        return PaymentMethod.cash;
-      case 'Card':
-        return PaymentMethod.card;
-      case 'UPI':
-        return PaymentMethod.upi;
-      case 'Online':
-        return PaymentMethod.online;
-      case 'Split':
-        return PaymentMethod.split;
+  /// Converts the payment tile label to the string expected by settleOrder.
+  String? _paymentMethodString(String label) {
+    switch (label.trim().toLowerCase()) {
+      case 'cash':
+        return 'cash';
+      case 'card':
+      case 'credit / debit':
+        return 'card';
+      case 'upi':
+      case 'upi / qr':
+        return 'upi';
       default:
-        throw ArgumentError('Unsupported payment method: $label');
+        return null;
     }
   }
 

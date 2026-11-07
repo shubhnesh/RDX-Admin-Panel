@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
-import 'package:rdx_admin/core/utils/formatters.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/dashboard_stats_model.dart';
 import 'package:rdx_admin/screens/dashboard/widgets/dashboard_empty.dart';
@@ -19,9 +18,9 @@ class DashboardTopSelling extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        context.w(18),
+        context.w(22),
         context.h(16),
-        context.w(18),
+        context.w(22),
         context.h(14),
       ),
       decoration: DashboardCardStyle.decoration(context),
@@ -29,14 +28,22 @@ class DashboardTopSelling extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Popular menu items', style: DashboardCardStyle.title(context)),
-          SizedBox(height: context.h(4)),
-          Text('Sales and order count for this period',
-              style: AppTextStyles.bodySecondary(context)),
+          if (items.isNotEmpty) ...[
+            SizedBox(height: context.h(4)),
+            Text('Sales and order count for this period',
+                style: DashboardCardStyle.description(context)),
+          ],
           if (items.isEmpty)
-            const DashboardEmpty(
-              icon: Icons.restaurant_menu_rounded,
-              title: 'No item data available',
-              subtitle: 'Top sellers will appear after orders are recorded.',
+            SizedBox(
+              height: context.h(300),
+              child: const Center(
+                child: DashboardEmpty(
+                  icon: Icons.restaurant_menu_rounded,
+                  title: 'No item data available',
+                  subtitle:
+                      'Top sellers will appear after orders are recorded.',
+                ),
+              ),
             )
           else ...[
             SizedBox(height: context.h(12)),
@@ -52,31 +59,17 @@ class DashboardTopSelling extends StatelessWidget {
 
   Widget _row(
       BuildContext context, AppColorScheme colors, TopSellingItem item) {
-    final rankColors = [
-      const Color(0xFFF59E0B),
-      const Color(0xFF94A3B8),
-      const Color(0xFFCD7F32),
-      AppColors.primary,
-      AppColors.primary,
-    ];
-    final rankColor =
-        rankColors[(item.rank - 1).clamp(0, rankColors.length - 1)];
-
     return Row(
       children: [
-        Container(
+        SizedBox(
           width: context.w(28),
-          height: context.h(28),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: rankColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
-          ),
           child: Text(
             '#${item.rank}',
+            textAlign: TextAlign.center,
             style: AppTextStyles.label(context).copyWith(
-              color: rankColor,
-              fontWeight: FontWeight.w800,
+              color: colors.textMuted,
+              fontSize: context.h(18),
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -92,19 +85,15 @@ class DashboardTopSelling extends StatelessWidget {
                 style: AppTextStyles.body(context)
                     .copyWith(fontWeight: FontWeight.w600),
               ),
-              Text(
-                '${item.orders} sold',
-                style: AppTextStyles.caption(context)
-                    .copyWith(color: colors.textMuted),
-              ),
             ],
           ),
         ),
         Text(
-          Formatters.currency(item.revenue, symbol: '₹'),
+          '${item.orders} sold',
           style: AppTextStyles.body(context).copyWith(
-            fontWeight: FontWeight.w700,
-            color: AppColors.primary,
+            fontSize: context.h(18),
+            fontWeight: FontWeight.w800,
+            color: colors.textSecondary,
           ),
         ),
       ],

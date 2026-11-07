@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
+import 'package:rdx_admin/screens/dashboard/widgets/dashboard_card_style.dart';
 
 /// Large module wrapper — title, optional subtitle, optional action, children.
 class DashboardSection extends StatelessWidget {
@@ -11,6 +12,7 @@ class DashboardSection extends StatelessWidget {
   final Color? accent;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final String? periodLabel;
   final List<Widget> children;
 
   const DashboardSection({
@@ -21,6 +23,7 @@ class DashboardSection extends StatelessWidget {
     this.accent,
     this.actionLabel,
     this.onAction,
+    this.periodLabel,
     required this.children,
   });
 
@@ -80,22 +83,36 @@ class DashboardSection extends StatelessWidget {
                   ],
                 ),
               ),
-              if (actionLabel != null && onAction != null)
-                TextButton(
-                  onPressed: onAction,
-                  style: TextButton.styleFrom(
-                    foregroundColor: color,
-                    padding: EdgeInsets.symmetric(horizontal: context.w(8)),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    actionLabel!,
-                    style: AppTextStyles.label(context).copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+              if (periodLabel != null ||
+                  (actionLabel != null && onAction != null))
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (periodLabel != null)
+                      DashboardCardStyle.periodBadge(context, periodLabel!),
+                    if (periodLabel != null &&
+                        actionLabel != null &&
+                        onAction != null)
+                      SizedBox(width: context.w(8)),
+                    if (actionLabel != null && onAction != null)
+                      TextButton(
+                        onPressed: onAction,
+                        style: TextButton.styleFrom(
+                          foregroundColor: color,
+                          padding:
+                              EdgeInsets.symmetric(horizontal: context.w(8)),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          actionLabel!,
+                          style: AppTextStyles.label(context).copyWith(
+                            color: color,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
             ],
           ),

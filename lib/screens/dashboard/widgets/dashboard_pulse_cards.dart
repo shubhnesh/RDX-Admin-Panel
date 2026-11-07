@@ -66,7 +66,7 @@ class DashboardPulseCards extends StatelessWidget {
       ),
       StatCard(
         label: 'STOCK ALERTS',
-        value: '${stats.criticalStockCount + stats.lowStockCount}',
+        value: '${stats.stockAlertCount}',
         subtitle: stats.criticalStockCount > 0
             ? '${stats.criticalStockCount} critical · ${stats.lowStockCount} low'
             : '${stats.lowStockCount} low',

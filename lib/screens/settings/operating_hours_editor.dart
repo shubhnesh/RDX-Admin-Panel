@@ -1,7 +1,9 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_toggle_button.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
@@ -9,7 +11,9 @@ import '../../core/utils/responsive_size.dart';
 import '../../providers/settings_provider.dart';
 
 class OperatingHoursEditor extends ConsumerStatefulWidget {
-  const OperatingHoursEditor({super.key});
+  final bool canEdit;
+
+  const OperatingHoursEditor({super.key, this.canEdit = false});
 
   @override
   ConsumerState<OperatingHoursEditor> createState() =>
@@ -24,6 +28,11 @@ class _OperatingHoursEditorState extends ConsumerState<OperatingHoursEditor> {
   late bool _weekdaysEnabled;
   late bool _weekendsEnabled;
   bool _saving = false;
+  Future<void> _saveQueue = Future<void>.value();
+
+  void _log(String message) {
+    if (kDebugMode) debugPrint('[OperatingHoursEditor] $message');
+  }
 
   @override
   void initState() {
@@ -54,27 +63,68 @@ class _OperatingHoursEditorState extends ConsumerState<OperatingHoursEditor> {
     return '${hour12.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $suffix';
   }
 
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    final ok = await ref.read(settingsProvider).saveOperatingHours(
-          weekdaysHours: OperatingHours(
-            open: _weekdaysOpen,
-            close: _weekdaysClose,
-            isOpen: _weekdaysEnabled,
-          ),
-          weekendsHours: OperatingHours(
-            open: _weekendsOpen,
-            close: _weekendsClose,
-            isOpen: _weekendsEnabled,
-          ),
-        );
-    if (!mounted) return;
-    setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(
-              ok ? 'Operating hours saved' : 'Failed to save operating hours')),
+  Future<void> _save() {
+    final weekdays = OperatingHours(
+      open: _weekdaysOpen,
+      close: _weekdaysClose,
+      isOpen: _weekdaysEnabled,
     );
+    final weekends = OperatingHours(
+      open: _weekendsOpen,
+      close: _weekendsClose,
+      isOpen: _weekendsEnabled,
+    );
+
+    final save = _saveQueue.then((_) async {
+      if (!mounted) return;
+      setState(() => _saving = true);
+      final ok = await ref.read(settingsProvider).saveOperatingHours(
+            weekdaysHours: weekdays,
+            weekendsHours: weekends,
+          );
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _log(ok
+          ? 'Operating-hours save completed.'
+          : 'Operating-hours save failed.');
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save operating hours')),
+        );
+      }
+    });
+    _saveQueue = save;
+    return save;
+  }
+
+  void _updateWeekdaysEnabled(bool value) {
+    setState(() => _weekdaysEnabled = value);
+    unawaited(_save());
+  }
+
+  void _updateWeekendsEnabled(bool value) {
+    setState(() => _weekendsEnabled = value);
+    unawaited(_save());
+  }
+
+  void _updateWeekdaysOpen(String value) {
+    setState(() => _weekdaysOpen = value);
+    unawaited(_save());
+  }
+
+  void _updateWeekdaysClose(String value) {
+    setState(() => _weekdaysClose = value);
+    unawaited(_save());
+  }
+
+  void _updateWeekendsOpen(String value) {
+    setState(() => _weekendsOpen = value);
+    unawaited(_save());
+  }
+
+  void _updateWeekendsClose(String value) {
+    setState(() => _weekendsClose = value);
+    unawaited(_save());
   }
 
   @override
@@ -82,36 +132,63 @@ class _OperatingHoursEditorState extends ConsumerState<OperatingHoursEditor> {
     final colors = AppColors.of(context);
     return Column(
       children: [
+        if (widget.canEdit)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: context.h(8)),
+              child: Text(
+                'Turn a schedule off to edit its hours. Changes save automatically.',
+                style: AppTextStyles.label(context)
+                    .copyWith(color: colors.textSecondary),
+              ),
+            ),
+          ),
         _HoursRow(
           label: 'Weekdays',
           openText: _weekdaysOpen,
           closeText: _weekdaysClose,
           isOpen: _weekdaysEnabled,
+          canEdit: widget.canEdit,
           colors: colors,
-          onChanged: (value) => setState(() => _weekdaysEnabled = value),
-          onOpenChanged: (value) => setState(() => _weekdaysOpen = value),
-          onCloseChanged: (value) => setState(() => _weekdaysClose = value),
+          onChanged: _updateWeekdaysEnabled,
+          onOpenChanged: _updateWeekdaysOpen,
+          onCloseChanged: _updateWeekdaysClose,
         ),
         _HoursRow(
           label: 'Weekends',
           openText: _weekendsOpen,
           closeText: _weekendsClose,
           isOpen: _weekendsEnabled,
+          canEdit: widget.canEdit,
           colors: colors,
-          onChanged: (value) => setState(() => _weekendsEnabled = value),
-          onOpenChanged: (value) => setState(() => _weekendsOpen = value),
-          onCloseChanged: (value) => setState(() => _weekendsClose = value),
+          onChanged: _updateWeekendsEnabled,
+          onOpenChanged: _updateWeekendsOpen,
+          onCloseChanged: _updateWeekendsClose,
         ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: RdxActionButton(
-            label: 'Save hours',
-            isPrimary: true,
-            isLoading: _saving,
-            onPressed: _saving ? null : _save,
-            minWidth: context.w(120),
+        if (_saving)
+          Padding(
+            padding: EdgeInsets.only(top: context.h(8)),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: context.h(14),
+                    height: context.h(14),
+                    child: const CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: context.w(8)),
+                  Text(
+                    'Saving...',
+                    style: AppTextStyles.label(context)
+                        .copyWith(color: colors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -151,6 +228,7 @@ class _HoursRow extends StatelessWidget {
   final String openText;
   final String closeText;
   final bool isOpen;
+  final bool canEdit;
   final AppColorScheme colors;
   final ValueChanged<bool> onChanged;
   final ValueChanged<String> onOpenChanged;
@@ -161,6 +239,7 @@ class _HoursRow extends StatelessWidget {
     required this.openText,
     required this.closeText,
     required this.isOpen,
+    required this.canEdit,
     required this.colors,
     required this.onChanged,
     required this.onOpenChanged,
@@ -173,62 +252,79 @@ class _HoursRow extends StatelessWidget {
     final times = Row(
       children: [
         Expanded(
-            child: _ProfileTime(
-                text: openText,
-                opening: true,
-                colors: colors,
-                onChanged: onOpenChanged)),
+          child: _ProfileTime(
+            text: openText,
+            opening: true,
+            enabled: canEdit && !isOpen,
+            colors: colors,
+            onChanged: onOpenChanged,
+          ),
+        ),
         SizedBox(width: context.w(12)),
         Expanded(
-            child: _ProfileTime(
-                text: closeText,
-                opening: false,
-                colors: colors,
-                onChanged: onCloseChanged)),
+          child: _ProfileTime(
+            text: closeText,
+            opening: false,
+            enabled: canEdit && !isOpen,
+            colors: colors,
+            onChanged: onCloseChanged,
+          ),
+        ),
       ],
     );
-    final toggle = RdxToggleButton(value: isOpen, onChanged: onChanged);
-    final title = Row(
-      children: [
-        Expanded(
-            child: Text(label,
-                style: AppTextStyles.bodySecondary(context)
-                    .copyWith(color: colors.textSecondary))),
-        toggle,
-      ],
-    );
+    final toggle =
+        canEdit ? RdxToggleButton(value: isOpen, onChanged: onChanged) : null;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: narrow
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [title, const SizedBox(height: 8), times])
-          : Row(children: [
-              Expanded(
-                flex: 2,
-                child: Text(
-                  label,
-                  style: AppTextStyles.bodySecondary(context)
-                      .copyWith(color: colors.textSecondary),
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: AppTextStyles.bodySecondary(context)
+                            .copyWith(color: colors.textSecondary),
+                      ),
+                    ),
+                    if (toggle != null) toggle,
+                  ],
                 ),
-              ),
-              Expanded(
-                flex: 3,
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: context.w(420)),
-                    child: times,
+                const SizedBox(height: 8),
+                times,
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    label,
+                    style: AppTextStyles.bodySecondary(context)
+                        .copyWith(color: colors.textSecondary),
                   ),
                 ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: toggle,
+                Expanded(
+                  flex: 3,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: context.w(420)),
+                      child: times,
+                    ),
+                  ),
                 ),
-              ),
-            ]),
+                if (toggle != null)
+                  Expanded(
+                    flex: 1,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: toggle,
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 }
@@ -236,14 +332,17 @@ class _HoursRow extends StatelessWidget {
 class _ProfileTime extends StatefulWidget {
   final String text;
   final bool opening;
+  final bool enabled;
   final AppColorScheme colors;
   final ValueChanged<String> onChanged;
 
-  const _ProfileTime(
-      {required this.text,
-      required this.opening,
-      required this.colors,
-      required this.onChanged});
+  const _ProfileTime({
+    required this.text,
+    required this.opening,
+    required this.enabled,
+    required this.colors,
+    required this.onChanged,
+  });
 
   @override
   State<_ProfileTime> createState() => _ProfileTimeState();
@@ -292,33 +391,35 @@ class _ProfileTimeState extends State<_ProfileTime> {
   Widget build(BuildContext context) {
     final box = BoxDecoration(
       color: widget.colors.background,
-      borderRadius: BorderRadius.circular(5),
+      borderRadius: BorderRadius.circular(context.h(5)),
       border: Border.all(color: widget.colors.border),
     );
     if (_editing) {
       return Container(
-        height: 38,
+        height: context.h(38),
         alignment: Alignment.center,
         decoration: box,
         child: TextField(
           controller: _controller,
           focusNode: _focusNode,
+          enabled: widget.enabled,
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
           maxLength: 5,
           inputFormatters: [_HHMMInputFormatter()],
           style: AppTextStyles.section(context)
               .copyWith(color: widget.colors.textPrimary),
-          decoration: InputDecoration(
-              isCollapsed: true,
-              counterText: '',
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              disabledBorder: InputBorder.none,
-              errorBorder: InputBorder.none,
-              focusedErrorBorder: InputBorder.none,
-              contentPadding: EdgeInsets.zero),
+          decoration: const InputDecoration(
+            isCollapsed: true,
+            counterText: '',
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            focusedErrorBorder: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+          ),
           onSubmitted: (_) => _commit(),
         ),
       );
@@ -327,22 +428,35 @@ class _ProfileTimeState extends State<_ProfileTime> {
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
       overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-      onTap: () {
-        setState(() => _editing = true);
-        _controller.text = widget.text.split(' ').first;
-        _controller.selection =
-            TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
-        WidgetsBinding.instance
-            .addPostFrameCallback((_) => _focusNode.requestFocus());
-      },
+      onTap: widget.enabled
+          ? () {
+              setState(() => _editing = true);
+              _controller.text = widget.text.split(' ').first;
+              _controller.selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: _controller.text.length,
+              );
+              WidgetsBinding.instance
+                  .addPostFrameCallback((_) => _focusNode.requestFocus());
+            }
+          : null,
       child: Container(
-        height: 38,
+        height: context.h(38),
         alignment: Alignment.center,
         decoration: box,
-        child: Text(widget.text,
-            style: AppTextStyles.section(context)
-                .copyWith(color: widget.colors.textSecondary)),
+        child: Text(
+          widget.text,
+          style: _smallScreenTextStyle(
+            context,
+            AppTextStyles.section(context),
+          ).copyWith(color: widget.colors.textSecondary),
+        ),
       ),
     );
   }
+}
+
+TextStyle _smallScreenTextStyle(BuildContext context, TextStyle style) {
+  if (MediaQuery.sizeOf(context).width >= 600) return style;
+  return style.copyWith(fontSize: (style.fontSize ?? 14) + 1.5);
 }

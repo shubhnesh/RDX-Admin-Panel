@@ -1,10 +1,26 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/inventory_item_model.dart';
 import '../services/inventory_service.dart';
 
-/// Time window used to scope the stats row + Used/Added table filters.
 enum StatsPeriod { overall, today, yesterday, thisWeek, thisMonth }
+
+enum InventoryStockMode { add, use }
+
+class InventoryStockChange {
+  const InventoryStockChange({
+    required this.mode,
+    required this.quantity,
+    this.purchaseCost,
+  });
+
+  final InventoryStockMode mode;
+  final double quantity;
+  final double? purchaseCost;
+}
 
 extension StatsPeriodLabel on StatsPeriod {
   String get label {
@@ -21,270 +37,231 @@ extension StatsPeriodLabel on StatsPeriod {
         return 'This Month';
     }
   }
+
+  String get cloudKey {
+    switch (this) {
+      case StatsPeriod.overall:
+        return 'overall';
+      case StatsPeriod.today:
+        return 'today';
+      case StatsPeriod.yesterday:
+        return 'yesterday';
+      case StatsPeriod.thisWeek:
+        return 'this_week';
+      case StatsPeriod.thisMonth:
+        return 'this_month';
+    }
+  }
 }
 
 class InventoryProvider extends ChangeNotifier {
-  final InventoryService _service;
   InventoryProvider(this._service);
 
+  final InventoryService _service;
+  Timer? _searchDebounce;
+  int _requestId = 0;
+
   List<InventoryItemModel> items = [];
+  List<InventoryItemModel> filteredItems = [];
+  List<String> categories = [];
   bool isLoading = false;
   String? errorMessage;
 
-  // ── Filters / search ────────────────────────────────────────────────
   String searchQuery = '';
   String selectedCategory = 'All';
-  String stockLevelFilter = 'All'; // All | Low Stock | Critical | Used | Added
-
-  // ── Stats period (drives the stats row + Used/Added filters) ────────
+  String stockLevelFilter = 'All';
   StatsPeriod periodFilter = StatsPeriod.overall;
 
-  // ── Derived counts ──────────────────────────────────────────────────
-  int get totalItems => items.length;
-  int get inStockCount =>
-      items.where((e) => e.status == StockStatus.inStock).length;
-  int get lowStockCount =>
-      items.where((e) => e.status == StockStatus.lowStock).length;
-  int get criticalCount =>
-      items.where((e) => e.status == StockStatus.critical).length;
-  int get needsRestockCount => lowStockCount + criticalCount;
+  double periodExpenditure = 0;
+  int totalItems = 0;
+  int periodAddedItemCount = 0;
+  int periodUsedItemCount = 0;
+  int needsRestockCount = 0;
 
-  /// Overall cost of every material currently in inventory. This is a
-  /// straight sum of each item's `totalCost`, which itself is the value
-  /// persisted in Firestore (quantity x unit cost, computed and saved by
-  /// InventoryService) — not a value recomputed here on the fly.
-  double get overallCost =>
-      items.fold<double>(0, (sum, item) => sum + item.totalCost);
-
-  double get restockCostEstimate {
-    double total = 0;
-    for (final item in items.where((e) => e.needsRestock)) {
-      final short = item.shortage;
-      if (short > 0) total += short * item.unitCost;
-    }
-    return total;
+  void _log(String message) {
+    if (kDebugMode) debugPrint('[InventoryProvider] $message');
   }
 
-  // ── Period-scoped stats ───────────────────────────────────────────
-  //
-  // The model only persists each item's *most recent* add/use event
-  // (lastAddedAt/lastAddedQty, lastUsedAt/lastUsedQty) rather than a
-  // full transaction history, so "Today" / "Yesterday" / "This Week" /
-  // "This Month" are computed from that last event: an item counts
-  // toward a given window only if its most recent add (or use)
-  // happened inside that window. "Overall" ignores dates entirely and
-  // falls back to each item's lifetime totals (totalAdded / totalUsed).
+  Future<void> load() => _loadFromCloud();
 
-  bool _inPeriod(DateTime? dt, StatsPeriod period) {
-    if (dt == null) return false;
-    if (period == StatsPeriod.overall) return true;
-    final now = DateTime.now();
-    final d = dt.toLocal();
-    switch (period) {
-      case StatsPeriod.overall:
-        return true;
-      case StatsPeriod.today:
-        return d.year == now.year && d.month == now.month && d.day == now.day;
-      case StatsPeriod.yesterday:
-        final y = now.subtract(const Duration(days: 1));
-        return d.year == y.year && d.month == y.month && d.day == y.day;
-      case StatsPeriod.thisWeek:
-        final startOfWeek =
-            DateTime(now.year, now.month, now.day)
-                .subtract(Duration(days: now.weekday - 1));
-        final endOfWeek = startOfWeek.add(const Duration(days: 7));
-        return !d.isBefore(startOfWeek) && d.isBefore(endOfWeek);
-      case StatsPeriod.thisMonth:
-        return d.year == now.year && d.month == now.month;
-    }
-  }
-
-  /// Whether [dt] falls inside the currently selected [periodFilter].
-  /// Exposed so the table UI can decide, per row, whether an item's last
-  /// add/use event belongs to the active window (used to swap the ADDED /
-  /// USED column's date stamp for a period label like "Today").
-  bool isInCurrentPeriod(DateTime? dt) => _inPeriod(dt, periodFilter);
-
-  /// Total cost of stock added within [periodFilter]. For "Overall" this
-  /// is the same as [overallCost] (current value of everything on hand).
-  /// For a specific window it's the cost of the restocks that happened
-  /// in that window, i.e. the spend for that period.
-  double get periodExpenditure {
-    if (periodFilter == StatsPeriod.overall) return overallCost;
-    double total = 0;
-    for (final item in items) {
-      if (_inPeriod(item.lastAddedAt, periodFilter)) {
-        total += (item.lastAddedQty ?? 0) * item.unitCost;
-      }
-    }
-    return total;
-  }
-
-  /// Total quantity added within [periodFilter], summed across items.
-  /// "Overall" uses each item's lifetime totalAdded.
-  double get periodAddedQty {
-    if (periodFilter == StatsPeriod.overall) {
-      return items.fold<double>(0, (sum, item) => sum + item.totalAdded);
-    }
-    double total = 0;
-    for (final item in items) {
-      if (_inPeriod(item.lastAddedAt, periodFilter)) {
-        total += item.lastAddedQty ?? 0;
-      }
-    }
-    return total;
-  }
-
-  /// Total quantity used within [periodFilter], summed across items.
-  /// "Overall" uses each item's lifetime totalUsed.
-  double get periodUsedQty {
-    if (periodFilter == StatsPeriod.overall) {
-      return items.fold<double>(0, (sum, item) => sum + item.totalUsed);
-    }
-    double total = 0;
-    for (final item in items) {
-      if (_inPeriod(item.lastUsedAt, periodFilter)) {
-        total += item.lastUsedQty ?? 0;
-      }
-    }
-    return total;
-  }
-
-  /// Number of distinct materials that had an add/use event within
-  /// [periodFilter] — used for the Added/Used stat card subtitles.
-  int get periodAddedItemCount => items
-      .where((item) => periodFilter == StatsPeriod.overall
-          ? item.totalAdded > 0
-          : _inPeriod(item.lastAddedAt, periodFilter))
-      .length;
-
-  int get periodUsedItemCount => items
-      .where((item) => periodFilter == StatsPeriod.overall
-          ? item.totalUsed > 0
-          : _inPeriod(item.lastUsedAt, periodFilter))
-      .length;
-
-  /// Categories present in the current inventory (for filter chips).
-  List<String> get categories {
-    final set = <String>{};
-    for (final i in items) {
-      set.add(i.category);
-    }
-    final list = set.toList()..sort();
-    return list;
-  }
-
-  /// Filtered list used by the main table.
-  List<InventoryItemModel> get filteredItems {
-    return items.where((item) {
-      // Search
-      if (searchQuery.isNotEmpty) {
-        final q = searchQuery.toLowerCase();
-        if (!item.name.toLowerCase().contains(q) &&
-            !item.category.toLowerCase().contains(q)) {
-          return false;
-        }
-      }
-      // Category
-      if (selectedCategory != 'All' && item.category != selectedCategory) {
-        return false;
-      }
-      // Stock level / activity
-      switch (stockLevelFilter) {
-        case 'Low Stock':
-          if (item.status != StockStatus.lowStock) return false;
-          break;
-        case 'Critical':
-          if (item.status != StockStatus.critical) return false;
-          break;
-        case 'Added':
-          final added = periodFilter == StatsPeriod.overall
-              ? item.totalAdded > 0
-              : _inPeriod(item.lastAddedAt, periodFilter);
-          if (!added) return false;
-          break;
-        case 'Used':
-          final used = periodFilter == StatsPeriod.overall
-              ? item.totalUsed > 0
-              : _inPeriod(item.lastUsedAt, periodFilter);
-          if (!used) return false;
-          break;
-        default:
-          break;
-      }
-      return true;
-    }).toList();
-  }
-
-  List<InventoryItemModel> get lowStockItems =>
-      items.where((e) => e.needsRestock).toList();
-
-  // ── Actions ─────────────────────────────────────────────────────────
-  Future<void> load() async {
+  Future<void> _loadFromCloud() async {
+    final requestId = ++_requestId;
     isLoading = true;
     errorMessage = null;
     notifyListeners();
+    _log(
+      'Inventory request started '
+      '(period: ${periodFilter.cloudKey}, category: $selectedCategory, '
+      'stock level: $stockLevelFilter).',
+    );
+
     try {
-      items = await _service.fetchInventory();
-    } catch (e) {
-      errorMessage = 'Failed to load inventory: $e';
+      final response = await _service.fetchInventoryData(
+        period: periodFilter.cloudKey,
+        search: searchQuery,
+        category: selectedCategory,
+        stockLevel: stockLevelFilter,
+      );
+      if (requestId != _requestId) return;
+
+      final rawItems = response['items'];
+      final rawFilteredItems = response['filtered_items'];
+      final rawCategories = response['categories'];
+      final stats = Map<String, dynamic>.from(
+        response['stats'] as Map? ?? const {},
+      );
+      items = _parseItems(rawItems);
+      filteredItems = _parseItems(rawFilteredItems);
+      categories = rawCategories is List
+          ? rawCategories.map((value) => value.toString()).toList()
+          : const [];
+      periodExpenditure = _number(stats['expenditure']);
+      totalItems = _integer(stats['total_items']);
+      periodAddedItemCount = _integer(stats['added_item_count']);
+      periodUsedItemCount = _integer(stats['used_item_count']);
+      needsRestockCount = _integer(stats['needs_restock_count']);
+      errorMessage = null;
+      _log(
+        'Inventory response applied '
+        '(items: ${items.length}, filtered: ${filteredItems.length}).',
+      );
+    } catch (error, stackTrace) {
+      if (requestId != _requestId) return;
+      errorMessage = 'Failed to load inventory: $error';
+      _log('Inventory request failed: $error\n$stackTrace');
+    } finally {
+      if (requestId == _requestId) {
+        isLoading = false;
+        notifyListeners();
+      }
     }
-    isLoading = false;
-    notifyListeners();
   }
 
-  void setSearch(String q) {
-    searchQuery = q;
-    notifyListeners();
+  List<InventoryItemModel> _parseItems(dynamic value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<Map>()
+        .map((item) => InventoryItemModel.fromCloud(
+              Map<String, dynamic>.from(item),
+            ))
+        .toList();
   }
 
-  void setCategory(String cat) {
-    selectedCategory = cat;
-    notifyListeners();
+  double _number(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0;
+    return 0;
   }
 
-  void setStockLevelFilter(String level) {
+  int _integer(dynamic value) {
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  void setSearch(String query) {
+    searchQuery = query;
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 250),
+      () => unawaited(_loadFromCloud()),
+    );
+  }
+
+  void setCategory(String category) {
+    if (selectedCategory == category) return;
+    selectedCategory = category;
+    unawaited(_loadFromCloud());
+  }
+
+  void setStockLevelFilter(String level, {StatsPeriod? period}) {
+    if (stockLevelFilter == level &&
+        (period == null || periodFilter == period)) {
+      return;
+    }
     stockLevelFilter = level;
-    notifyListeners();
+    if (period != null) periodFilter = period;
+    unawaited(_loadFromCloud());
   }
 
   void setPeriodFilter(StatsPeriod period) {
+    if (periodFilter == period) return;
     periodFilter = period;
-    notifyListeners();
+    unawaited(_loadFromCloud());
   }
 
-  Future<void> updateQuantity(String id, double quantity) async {
-    await _service.updateQuantity(id, quantity, timestamp: DateTime.now());
+  Future<void> addStock(
+    String id,
+    double quantity, {
+    required double purchaseCost,
+  }) async {
+    await _service.addStock(
+      id,
+      quantity,
+      purchaseCost: purchaseCost,
+    );
     await load();
   }
 
-  /// Restock: adds [quantity] to the item's current stock and adds
-  /// (quantity * current unit cost) to its existing totalCost — the
-  /// cost basis of stock already on hand is never re-priced.
-  ///
-  /// A single [DateTime.now()] is captured here and sent down to the
-  /// service so `updated_at` and `last_added_at` are written with the
-  /// exact same value.
-  Future<void> addStock(String id, double quantity) async {
-    final ts = DateTime.now();
-    await _service.addStock(id, quantity, timestamp: ts);
-    await load();
-  }
-
-  /// Consumption: subtracts [quantity] from the item's current stock.
-  /// totalCost is left unchanged — using already-paid-for stock isn't a
-  /// new financial transaction.
   Future<void> useStock(String id, double quantity) async {
-    final ts = DateTime.now();
-    await _service.useStock(id, quantity, timestamp: ts);
+    await _service.useStock(id, quantity);
     await load();
   }
 
-  /// [timestamp] lets the caller (e.g. AddMaterialScreen) pin created_at /
-  /// updated_at to the exact same moment it used to build [item]. Falls
-  /// back to now when not provided.
-  Future<String> saveItem(InventoryItemModel item, {DateTime? timestamp}) async {
-    final id = await _service.saveItem(item, timestamp: timestamp);
+  Future<InventoryStockHistoryPage> fetchStockHistory(
+    String id, {
+    String? cursor,
+  }) {
+    return _service.fetchStockHistory(id, cursor: cursor);
+  }
+
+  Future<Map<String, String>> applyStockChanges(
+    Map<String, InventoryStockChange> changes,
+  ) async {
+    final failures = <String, String>{};
+    final currentItems = {for (final item in items) item.id: item};
+
+    for (final entry in changes.entries) {
+      final item = currentItems[entry.key];
+      if (item == null) {
+        failures[entry.key] = 'Item is no longer available.';
+        continue;
+      }
+
+      final change = entry.value;
+      if (change.quantity <= 0) {
+        failures[entry.key] = 'Enter a quantity greater than zero.';
+        continue;
+      }
+
+      try {
+        if (change.mode == InventoryStockMode.add) {
+          final purchaseCost = change.purchaseCost;
+          if (purchaseCost == null) {
+            failures[entry.key] =
+                'Enter the total cost paid for this stock purchase.';
+            continue;
+          }
+          await _service.addStock(
+            item.id,
+            change.quantity,
+            purchaseCost: purchaseCost,
+          );
+        } else {
+          await _service.useStock(item.id, change.quantity);
+        }
+      } catch (error) {
+        failures[entry.key] = error.toString();
+        _log('Stock update failed for ${item.name}: $error');
+      }
+    }
+
+    await load();
+    return failures;
+  }
+
+  Future<String> saveItem(InventoryItemModel item) async {
+    final id = await _service.saveItem(item);
     await load();
     return id;
   }
@@ -293,9 +270,14 @@ class InventoryProvider extends ChangeNotifier {
     await _service.deleteItem(id);
     await load();
   }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
 }
 
-/// Riverpod provider wrapping [InventoryProvider].
 final inventoryProvider = ChangeNotifierProvider<InventoryProvider>(
   (ref) => InventoryProvider(InventoryService()),
 );

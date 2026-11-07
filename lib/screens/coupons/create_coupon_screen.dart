@@ -11,6 +11,7 @@ import '../../core/utils/responsive_size.dart';
 import '../../models/category_model.dart';
 import '../../models/coupon_model.dart';
 import '../../models/menu_item_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/coupon_provider.dart';
 import '../../services/category_service.dart';
 import '../../services/menu_service.dart';
@@ -19,16 +20,13 @@ import '../../widgets/reusable_widgets/rdx_dropdown.dart';
 import '../../widgets/reusable_widgets/rdx_text_field.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 
-/// Sentinel placed as the first entry in the category dropdown so the
-/// user can leave the coupon unrestricted (or clear a mistaken pick).
+/// Sentinel for an unrestricted category selection.
 const String _kNoneCategoryValue = '__none_category__';
 
-/// Sentinel placed as the first entry in the subcategory dropdown so the
-/// user can leave the coupon unrestricted (or clear a mistaken pick).
+/// Sentinel for all subcategories in the selected category.
 const String _kNoneSubCategoryValue = '__none_subcategory__';
 
-/// Sentinel placed as the first entry in the item dropdown, same
-/// contract as [_kNoneSubCategoryValue].
+/// Sentinel for all items in the selected subcategory.
 const String _kNoneItemValue = '__none_item__';
 
 class CreateCouponScreen extends ConsumerStatefulWidget {
@@ -123,7 +121,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   }
 
   String _categoryLabel(String id) {
-    if (id == _kNoneCategoryValue) return 'None';
+    if (id == _kNoneCategoryValue) return 'All';
     final match = _categories.where((c) => c.id == id).toList();
     return match.isEmpty ? id : match.first.name;
   }
@@ -136,11 +134,16 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       setState(() {
         _categories = _sortedByName(categories, (c) => c.name);
         _categoriesLoading = false;
-        // Editing an existing coupon only stores the subcategory id, so
-        // once categories arrive, back-fill which category owns it.
+        // Older coupons may only have stored a subcategory id. Restore its
+        // owning category when one is available.
         if (_selectedSubCategoryId != _kNoneSubCategoryValue) {
           final owner = _categoryForSubcategoryId(_selectedSubCategoryId);
-          _selectedCategoryId = owner?.id ?? _kNoneCategoryValue;
+          if (owner != null) {
+            _selectedCategoryId = owner.id;
+          }
+        } else if (_selectedCategoryId != _kNoneCategoryValue &&
+            !_categories.any((c) => c.id == _selectedCategoryId)) {
+          _selectedCategoryId = _kNoneCategoryValue;
         }
       });
     } catch (_) {
@@ -165,7 +168,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   }
 
   String _subCategoryLabel(String id) {
-    if (id == _kNoneSubCategoryValue) return 'None';
+    if (id == _kNoneSubCategoryValue) return 'All';
     final match = _categories
         .expand((c) => c.subcategories)
         .where((s) => s.id == id)
@@ -174,7 +177,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   }
 
   String _itemLabel(String id) {
-    if (id == _kNoneItemValue) return 'None';
+    if (id == _kNoneItemValue) return 'All';
     final match = _menuItems.where((i) => i.id == id).toList();
     return match.isEmpty ? id : match.first.name;
   }
@@ -182,6 +185,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
   @override
   void initState() {
     super.initState();
+    if (!ref.read(authProvider).permissions.canEditCoupons) return;
 
     final existing = widget.existing;
 
@@ -200,6 +204,9 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       _selectedSubCategoryId =
           existing.applicableSubCategoryId ?? _kNoneSubCategoryValue;
       _selectedItemId = existing.applicableItemId ?? _kNoneItemValue;
+      if (existing.applicableCategories.isNotEmpty) {
+        _selectedCategoryId = existing.applicableCategories.first;
+      }
     }
 
     _loadCategories();
@@ -303,14 +310,6 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       return;
     }
 
-    if (_selectedCategoryId != _kNoneCategoryValue &&
-        _selectedSubCategoryId == _kNoneSubCategoryValue) {
-      await _showNotice(
-        'Please select a subcategory, or set the category back to None.',
-      );
-      return;
-    }
-
     final coupon = CouponModel(
       // Keep existing ID while editing.
       id: isEdit
@@ -333,6 +332,9 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
           ? CouponStatus.scheduled
           : CouponStatus.active,
 
+      applicableCategories: _selectedCategoryId == _kNoneCategoryValue
+          ? const []
+          : [_selectedCategoryId],
       applicableSubCategoryId: _selectedSubCategoryId == _kNoneSubCategoryValue
           ? null
           : _selectedSubCategoryId,
@@ -386,6 +388,11 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!ref.watch(authProvider).permissions.canEditCoupons) {
+      return const Scaffold(
+        body: Center(child: Text('Coupons and offers are admin-only.')),
+      );
+    }
     final colors = AppColors.of(context);
     final narrow = MediaQuery.sizeOf(context).width < 900;
 
@@ -625,8 +632,8 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
           title: 'Applicability (Optional)',
           children: [
             Text(
-              'Restrict this coupon to a specific subcategory or item. '
-              'Select Category first',
+              'By default, this coupon applies to all categories, '
+              'subcategories, and items. Choose a category or narrow it further.',
               style: AppTextStyles.bodySecondary(context)
                   .copyWith(color: colors.textSecondary),
             ),
@@ -658,9 +665,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
             LayoutBuilder(builder: (context, c) {
               final stack = c.maxWidth < 420;
               final subCategoryField = RdxDropdown<String>(
-                label: _selectedCategoryId == _kNoneCategoryValue
-                    ? 'Subcategory'
-                    : 'Subcategory *',
+                label: 'Subcategory',
                 value: _selectedSubCategoryId,
                 items: [
                   _kNoneSubCategoryValue,
@@ -668,10 +673,10 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
                 ],
                 labelBuilder: _subCategoryLabel,
                 hint: _selectedCategoryId == _kNoneCategoryValue
-                    ? 'Select a category first'
+                    ? 'All'
                     : _categoriesLoading
                         ? 'Loading...'
-                        : 'Select subcategory',
+                        : 'All',
                 onChanged: (_categoriesLoading ||
                         _selectedCategoryId == _kNoneCategoryValue)
                     ? null
@@ -695,10 +700,10 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
                 ],
                 labelBuilder: _itemLabel,
                 hint: _selectedSubCategoryId == _kNoneSubCategoryValue
-                    ? 'Select a subcategory first'
+                    ? 'All'
                     : _itemsLoading
                         ? 'Loading...'
-                        : 'Select item',
+                        : 'All',
                 onChanged: (_itemsLoading ||
                         _selectedSubCategoryId == _kNoneSubCategoryValue)
                     ? null

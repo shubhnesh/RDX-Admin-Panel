@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/screens/menu/widgets/menu_item_card.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/dotted_border_container.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_action_menu_dialog.dart';
-import 'package:rdx_admin/widgets/reusable_widgets/rdx_delete_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/rdx_delete_dialog.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/menu_item_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/menu_provider.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/buttons/rdx_header_action_button.dart';
+import '../../widgets/buttons/stats_collapse_button.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/reusable_widgets/rdx_search_bar.dart';
+import '../../widgets/reusable_widgets/stat_card.dart';
 
 class MenuScreen extends ConsumerStatefulWidget {
   const MenuScreen({super.key});
@@ -24,6 +28,7 @@ class MenuScreen extends ConsumerStatefulWidget {
 
 class _MenuScreenState extends ConsumerState<MenuScreen> {
   bool _categoryPickerOpen = false;
+  bool _statsCollapsed = false;
   final GlobalKey _categoryButtonKey = GlobalKey();
   OverlayEntry? _categoryOverlay;
 
@@ -31,7 +36,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted ||
+          !ref.read(authProvider).permissions.canViewMenu) return;
       ref.read(menuProvider).load();
     });
   }
@@ -238,10 +244,19 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!ref.watch(authProvider).permissions.canViewMenu) {
+      return const Scaffold(
+        body: Center(child: Text('Menu management is admin-only.')),
+      );
+    }
     final provider = ref.watch(menuProvider);
     final colors = AppColors.of(context);
 
     final pagePad = context.defaultScreenPadding();
+    final totalItems = provider.items.length;
+    final availableItems =
+        provider.items.where((item) => item.available).length;
+    final unavailableItems = totalItems - availableItems;
 
     Widget bodyContent;
     final showGrid = !provider.isLoading &&
@@ -293,7 +308,72 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                   pagePad.right,
                   0,
                 ),
-                child: _buildHeadingRow(context, colors),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildHeadingRow(context, colors),
+                    SizedBox(height: context.h(20)),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: StatsCollapseButton(
+                        collapsed: _statsCollapsed,
+                        onPressed: () => setState(
+                          () => _statsCollapsed = !_statsCollapsed,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: context.h(8)),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      alignment: Alignment.topCenter,
+                      child: _statsCollapsed
+                          ? const SizedBox(width: double.infinity)
+                          : LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isNarrow = constraints.maxWidth < 600;
+                                final spacing =
+                                    isNarrow ? context.w(6) : context.w(16);
+                                final minHeight =
+                                    isNarrow ? context.h(62) : context.h(72);
+                                final cards = [
+                                  StatCard(
+                                    label: 'Total Items',
+                                    value: '$totalItems',
+                                    icon: Icons.restaurant_menu_rounded,
+                                    minHeight: minHeight,
+                                  ),
+                                  StatCard(
+                                    label: 'Available Items',
+                                    value: '$availableItems',
+                                    icon: Icons.check_circle_outline_rounded,
+                                    accentColor: AppColors.success,
+                                    minHeight: minHeight,
+                                  ),
+                                  StatCard(
+                                    label: 'Unavailable Items',
+                                    value: '$unavailableItems',
+                                    icon: Icons.remove_circle_outline_rounded,
+                                    accentColor: AppColors.danger,
+                                    minHeight: minHeight,
+                                  ),
+                                ];
+
+                                return Row(
+                                  children: [
+                                    for (var i = 0; i < cards.length; i++) ...[
+                                      Expanded(child: cards[i]),
+                                      if (i != cards.length - 1)
+                                        SizedBox(width: spacing),
+                                    ],
+                                  ],
+                                );
+                              },
+                            ),
+                    ),
+                    SizedBox(height: context.h(12)),
+                  ],
+                ),
               ),
             ),
 
@@ -384,14 +464,18 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
           ),
         ),
         SizedBox(width: context.w(10)),
-        _filterButton(colors, provider),
+        _filterButton(colors, provider, height: searchHeight),
       ],
     );
   }
 
 // ─── Replace the existing _filterButton method with this ───────────────
 
-  Widget _filterButton(AppColorScheme colors, MenuProvider provider) {
+  Widget _filterButton(
+    AppColorScheme colors,
+    MenuProvider provider, {
+    required double height,
+  }) {
     final isActive = provider.selectedCategory != 'All';
     final labels = ['All', ...provider.categoryList.map((c) => c.name)];
 
@@ -416,54 +500,56 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
         context.w(4) + // gap before chevron
         context.h(20); // chevron
 
-    return InkWell(
-      key: _categoryButtonKey,
-      onTap: () => _openCategoryPicker(provider),
-      borderRadius: BorderRadius.circular(context.h(8)),
-      child: Container(
-        width: fixedWidth.clamp(context.w(140), context.w(260)),
-        height: RdxSearchBar.standardHeight(context),
-        padding: EdgeInsets.symmetric(horizontal: context.w(16)),
-        decoration: BoxDecoration(
-          color: _categoryPickerOpen || isActive
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : colors.surface,
-          borderRadius: BorderRadius.circular(context.h(8)),
-          border: Border.all(
+    return SizedBox(
+      width: fixedWidth.clamp(context.w(140), context.w(260)),
+      height: height,
+      child: InkWell(
+        key: _categoryButtonKey,
+        onTap: () => _openCategoryPicker(provider),
+        borderRadius: BorderRadius.circular(context.h(8)),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: context.w(16)),
+          decoration: BoxDecoration(
             color: _categoryPickerOpen || isActive
-                ? AppColors.primary
-                : colors.border,
+                ? AppColors.primary.withValues(alpha: 0.08)
+                : colors.surface,
+            borderRadius: BorderRadius.circular(context.h(8)),
+            border: Border.all(
+              color: _categoryPickerOpen || isActive
+                  ? AppColors.primary
+                  : colors.border,
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Icon(
-              Icons.tune,
-              size: context.h(19),
-              color: AppColors.primary,
-            ),
-            SizedBox(width: context.w(8)),
-            Expanded(
-              child: Text(
-                provider
-                    .selectedCategory, // always shows "All" or the selected name
-                style: AppTextStyles.label(context).copyWith(
-                  color: isActive ? AppColors.primary : colors.textSecondary,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Icon(
+                Icons.tune,
+                size: context.h(19),
+                color: AppColors.primary,
               ),
-            ),
-            SizedBox(width: context.w(4)),
-            Icon(
-              _categoryPickerOpen
-                  ? Icons.keyboard_arrow_up
-                  : Icons.keyboard_arrow_down,
-              size: context.h(20),
-              color: colors.textMuted,
-            ),
-          ],
+              SizedBox(width: context.w(8)),
+              Expanded(
+                child: Text(
+                  provider
+                      .selectedCategory, // always shows "All" or selected name
+                  style: AppTextStyles.label(context).copyWith(
+                    color: isActive ? AppColors.primary : colors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+              SizedBox(width: context.w(4)),
+              Icon(
+                _categoryPickerOpen
+                    ? Icons.keyboard_arrow_up
+                    : Icons.keyboard_arrow_down,
+                size: context.h(20),
+                color: colors.textMuted,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -688,8 +774,9 @@ class _AddItemTile extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final contentAreaHeight = context.h(isNarrow ? 92 : 88);
-        final totalHeight = (constraints.maxWidth / imageAspect) + contentAreaHeight;
+        final contentAreaHeight = context.h(isNarrow ? 166 : 160);
+        final totalHeight =
+            (constraints.maxWidth / imageAspect) + contentAreaHeight;
 
         return InkWell(
           onTap: onTap,
@@ -703,41 +790,37 @@ class _AddItemTile extends ConsumerWidget {
               dashLength: context.h(6),
               gapLength: context.h(5),
               strokeWidth: context.h(1.2),
-              child: Padding(
-                padding: EdgeInsets.all(context.w(10)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: AspectRatio(
-                        aspectRatio: imageAspect,
-                        child: Center(
-                          child: Container(
-                            width: context.w(40),
-                            height: context.h(40),
-                            decoration: BoxDecoration(
-                              color: colors.surface,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: colors.border),
-                            ),
-                            child: Icon(
-                              Icons.add,
-                              color: colors.textMuted.withValues(alpha: 0.55),
-                              size: context.h(24),
-                            ),
-                          ),
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(context.w(10)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: context.w(40),
+                        height: context.h(40),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: colors.border),
+                        ),
+                        child: Icon(
+                          Icons.add,
+                          color: colors.textMuted.withValues(alpha: 0.55),
+                          size: context.h(24),
                         ),
                       ),
-                    ),
-                    SizedBox(height: context.h(10)),
-                    Text(
-                      'Add Item',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.section(context).copyWith(
-                        color: colors.textMuted.withValues(alpha: 0.8),
+                      SizedBox(height: context.h(10)),
+                      Text(
+                        'Add Item',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.section(context).copyWith(
+                          color: colors.textMuted.withValues(alpha: 0.8),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -746,88 +829,6 @@ class _AddItemTile extends ConsumerWidget {
       },
     );
   }
-}
-
-// ─── Dotted Border helpers ────────────────────────────────────────────
-
-class DottedBorderContainer extends ConsumerWidget {
-  final Color color;
-  final double radius;
-  final double dashLength;
-  final double gapLength;
-  final double strokeWidth;
-  final Widget child;
-
-  const DottedBorderContainer({
-    super.key,
-    required this.color,
-    required this.radius,
-    required this.dashLength,
-    required this.gapLength,
-    required this.strokeWidth,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return CustomPaint(
-      painter: _DashedRRectPainter(
-        color: color,
-        radius: radius,
-        dashLength: dashLength,
-        gapLength: gapLength,
-        strokeWidth: strokeWidth,
-      ),
-      child: child,
-    );
-  }
-}
-
-class _DashedRRectPainter extends CustomPainter {
-  final Color color;
-  final double radius;
-  final double dashLength;
-  final double gapLength;
-  final double strokeWidth;
-
-  _DashedRRectPainter({
-    required this.color,
-    required this.radius,
-    required this.dashLength,
-    required this.gapLength,
-    required this.strokeWidth,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0.6, 0.6, size.width - 1.2, size.height - 1.2),
-      Radius.circular(radius),
-    );
-    final path = Path()..addRRect(rrect);
-
-    for (final metric in path.computeMetrics()) {
-      double distance = 0;
-      while (distance < metric.length) {
-        final next = (distance + dashLength).clamp(0, metric.length);
-        canvas.drawPath(metric.extractPath(distance, next.toDouble()), paint);
-        distance += dashLength + gapLength;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedRRectPainter oldDelegate) =>
-      oldDelegate.color != color ||
-      oldDelegate.radius != radius ||
-      oldDelegate.dashLength != dashLength ||
-      oldDelegate.gapLength != gapLength ||
-      oldDelegate.strokeWidth != strokeWidth;
 }
 
 /// Pinned filter strip (search + filter button).

@@ -1,28 +1,98 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum StockStatus { inStock, lowStock, critical, outOfStock }
+
+class InventoryStockHistoryEntry {
+  final String id;
+  final String type;
+  final double quantity;
+  final DateTime? occurredAt;
+  final double stockBefore;
+  final double stockAfter;
+  final double? purchaseCost;
+  final double? unitCost;
+  final double? totalCost;
+
+  const InventoryStockHistoryEntry({
+    required this.id,
+    required this.type,
+    required this.quantity,
+    required this.occurredAt,
+    required this.stockBefore,
+    required this.stockAfter,
+    this.purchaseCost,
+    this.unitCost,
+    this.totalCost,
+  });
+
+  factory InventoryStockHistoryEntry.fromCloud(Map<String, dynamic> data) {
+    double number(dynamic value) {
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0;
+      return 0;
+    }
+
+    double? nullableNumber(dynamic value) =>
+        value == null ? null : number(value);
+    final dateValue = data['occurred_at'];
+
+    return InventoryStockHistoryEntry(
+      id: data['id']?.toString() ?? '',
+      type: data['type']?.toString() ?? 'unknown',
+      quantity: number(data['quantity']),
+      occurredAt:
+          dateValue is String ? DateTime.tryParse(dateValue)?.toLocal() : null,
+      stockBefore: number(data['stock_before']),
+      stockAfter: number(data['stock_after']),
+      purchaseCost: nullableNumber(data['purchase_cost']),
+      unitCost: nullableNumber(data['unit_cost']),
+      totalCost: nullableNumber(data['total_cost']),
+    );
+  }
+}
+
+class InventoryStockHistoryPage {
+  final List<InventoryStockHistoryEntry> entries;
+  final String? nextCursor;
+
+  const InventoryStockHistoryPage({
+    required this.entries,
+    required this.nextCursor,
+  });
+
+  bool get hasMore => nextCursor != null;
+}
 
 class InventoryItemModel {
   final String id;
   final String name;
   final String category;
   final double quantity;
-  final double minRequired; // a.k.a. lowStockThreshold in older seed data
+  final double minRequired;
   final double maxCapacity;
   final String unit;
+  final double portionSize;
+  final String? portionUnit;
   final double unitCost;
-  final double totalCost; // persisted: quantity * unitCost
+  final double totalCost;
   final DateTime? createdAt;
   final DateTime? updatedAt;
-  final DateTime? lastAddedAt; // timestamp of the most recent restock ("added")
-  final DateTime? lastUsedAt; // timestamp of the most recent consumption ("used")
-  final double? lastAddedQty; // amount added in that most recent restock
-  final double? lastUsedQty; // amount used in that most recent consumption
-  /// Lifetime cumulative quantity ever added (initial stock + all restocks).
+  final DateTime? lastAddedAt;
+  final DateTime? lastUsedAt;
+  final DateTime? initialStockAt;
+  final double? initialStockQty;
+  final double? lastAddedQty;
+  final double? lastAddedCost;
+  final double? lastAddedStockBefore;
+  final double? lastUsedQty;
+  final double? lastUsedStockBefore;
   final double totalAdded;
-  /// Lifetime cumulative quantity ever consumed.
   final double totalUsed;
   final String? notes;
+  final StockStatus status;
+  final double stockPercent;
+  final double stockFillFraction;
+  final bool addedInPeriod;
+  final bool usedInPeriod;
+  final String recentAction;
 
   const InventoryItemModel({
     required this.id,
@@ -32,166 +102,97 @@ class InventoryItemModel {
     required this.minRequired,
     this.maxCapacity = 0,
     required this.unit,
+    this.portionSize = 0,
+    this.portionUnit,
     this.unitCost = 0,
     this.totalCost = 0,
     this.createdAt,
     this.updatedAt,
     this.lastAddedAt,
     this.lastUsedAt,
+    this.initialStockAt,
+    this.initialStockQty,
     this.lastAddedQty,
+    this.lastAddedCost,
+    this.lastAddedStockBefore,
     this.lastUsedQty,
+    this.lastUsedStockBefore,
     this.totalAdded = 0,
     this.totalUsed = 0,
     this.notes,
+    this.status = StockStatus.inStock,
+    this.stockPercent = 0,
+    this.stockFillFraction = 0,
+    this.addedInPeriod = false,
+    this.usedInPeriod = false,
+    this.recentAction = 'none',
   });
 
-  /// Alias kept for older call-sites / seed data that used `lowStockThreshold`.
-  double get lowStockThreshold => minRequired;
-
-  /// Backward-compatible alias: previously the model exposed a single
-  /// `lastUpdated` field. It now maps onto [updatedAt].
   DateTime? get lastUpdated => updatedAt;
 
-  /// The correct total cost given current quantity/unitCost. Use this when
-  /// you need a guaranteed-fresh value (e.g. right before saving); the
-  /// stored [totalCost] field is what gets persisted/read from Firestore.
-  double get computedTotalCost => quantity * unitCost;
+  factory InventoryItemModel.fromCloud(Map<String, dynamic> data) {
+    double number(dynamic value) {
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0;
+      return 0;
+    }
 
-  /// Percentage of max capacity currently held (0–100+).
-  /// Falls back to minRequired-based estimate when maxCapacity is not set.
-  double get stockPercent {
-    if (maxCapacity > 0) return (quantity / maxCapacity) * 100;
-    // When only a threshold exists, treat 2× threshold as a soft "full" level.
-    if (minRequired > 0) return (quantity / (minRequired * 2)).clamp(0, 1.5) * 100;
-    return quantity > 0 ? 100 : 0;
-  }
+    double? nullableNumber(dynamic value) =>
+        value == null ? null : number(value);
 
-  /// Amount short of the minimum required level (negative = surplus).
-  double get shortage => minRequired - quantity;
+    DateTime? date(dynamic value) =>
+        value is String ? DateTime.tryParse(value)?.toLocal() : null;
 
-  StockStatus get status {
-    if (quantity <= 0) return StockStatus.outOfStock;
-    if (quantity < minRequired * 0.25) return StockStatus.critical;
-    if (quantity < minRequired) return StockStatus.lowStock;
-    return StockStatus.inStock;
-  }
+    final createdAt = date(data['created_at']);
+    final lastAddedAt = date(data['last_added_at']);
+    final lastAddedQty = nullableNumber(data['last_added_qty']);
+    final initialStockQty = nullableNumber(data['initial_stock_qty']) ??
+        (createdAt != null &&
+                lastAddedAt != null &&
+                createdAt.isAtSameMomentAs(lastAddedAt)
+            ? lastAddedQty
+            : null);
 
-  bool get needsRestock =>
-      status == StockStatus.lowStock || status == StockStatus.critical;
-
-  InventoryItemModel copyWith({
-    String? id,
-    String? name,
-    String? category,
-    double? quantity,
-    double? minRequired,
-    double? maxCapacity,
-    String? unit,
-    double? unitCost,
-    double? totalCost,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    DateTime? lastAddedAt,
-    DateTime? lastUsedAt,
-    double? lastAddedQty,
-    double? lastUsedQty,
-    double? totalAdded,
-    double? totalUsed,
-    String? notes,
-  }) {
     return InventoryItemModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      category: category ?? this.category,
-      quantity: quantity ?? this.quantity,
-      minRequired: minRequired ?? this.minRequired,
-      maxCapacity: maxCapacity ?? this.maxCapacity,
-      unit: unit ?? this.unit,
-      unitCost: unitCost ?? this.unitCost,
-      totalCost: totalCost ?? this.totalCost,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      lastAddedAt: lastAddedAt ?? this.lastAddedAt,
-      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
-      lastAddedQty: lastAddedQty ?? this.lastAddedQty,
-      lastUsedQty: lastUsedQty ?? this.lastUsedQty,
-      totalAdded: totalAdded ?? this.totalAdded,
-      totalUsed: totalUsed ?? this.totalUsed,
-      notes: notes ?? this.notes,
+      id: data['id']?.toString() ?? '',
+      name: data['name']?.toString() ?? '',
+      category: data['category']?.toString() ?? 'Uncategorized',
+      quantity: number(data['quantity']),
+      minRequired: number(data['min_required']),
+      maxCapacity: number(data['max_capacity']),
+      unit: data['unit']?.toString() ?? 'pcs',
+      portionSize: number(data['portion_size']),
+      portionUnit: data['portion_unit']?.toString(),
+      unitCost: number(data['unit_cost']),
+      totalCost: number(data['total_cost']),
+      createdAt: createdAt,
+      updatedAt: date(data['updated_at']),
+      lastAddedAt: lastAddedAt,
+      lastUsedAt: date(data['last_used_at']),
+      initialStockAt: date(data['initial_stock_at']) ?? createdAt,
+      initialStockQty: initialStockQty,
+      lastAddedQty: lastAddedQty,
+      lastAddedCost: nullableNumber(data['last_added_cost']),
+      lastAddedStockBefore: nullableNumber(data['last_added_stock_before']),
+      lastUsedQty: nullableNumber(data['last_used_qty']),
+      lastUsedStockBefore: nullableNumber(data['last_used_stock_before']),
+      totalAdded: number(data['total_added']),
+      totalUsed: number(data['total_used']),
+      notes: data['notes']?.toString(),
+      status: switch (data['status']) {
+        'low_stock' => StockStatus.lowStock,
+        'critical' => StockStatus.critical,
+        'out_of_stock' => StockStatus.outOfStock,
+        _ => StockStatus.inStock,
+      },
+      stockPercent: number(data['stock_percent']),
+      stockFillFraction: number(data['stock_fill_fraction']),
+      addedInPeriod: data['added_in_period'] == true,
+      usedInPeriod: data['used_in_period'] == true,
+      recentAction: data['recent_action']?.toString() ?? 'none',
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'category': category,
-      'quantity': quantity,
-      'min_required': minRequired,
-      // Keep legacy key so older readers still work
-      'low_stock_threshold': minRequired,
-      'max_capacity': maxCapacity,
-      'unit': unit,
-      'unit_cost': unitCost,
-      'total_cost': totalCost,
-      'created_at': createdAt != null
-          ? Timestamp.fromDate(createdAt!)
-          : FieldValue.serverTimestamp(),
-      'updated_at': updatedAt != null
-          ? Timestamp.fromDate(updatedAt!)
-          : FieldValue.serverTimestamp(),
-      if (lastAddedAt != null) 'last_added_at': Timestamp.fromDate(lastAddedAt!),
-      if (lastUsedAt != null) 'last_used_at': Timestamp.fromDate(lastUsedAt!),
-      if (lastAddedQty != null) 'last_added_qty': lastAddedQty,
-      if (lastUsedQty != null) 'last_used_qty': lastUsedQty,
-      'total_added': totalAdded,
-      'total_used': totalUsed,
-      if (notes != null) 'notes': notes,
-    };
-  }
-
-  factory InventoryItemModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>? ?? {};
-    // Prefer the new field; fall back to the legacy seed field.
-    final minReq = (data['min_required'] as num?)?.toDouble() ??
-        (data['low_stock_threshold'] as num?)?.toDouble() ??
-        0;
-    final quantity = (data['quantity'] as num?)?.toDouble() ?? 0;
-    final unitCost = (data['unit_cost'] as num?)?.toDouble() ?? 0;
-    return InventoryItemModel(
-      id: doc.id,
-      name: data['name'] as String? ?? '',
-      category: data['category'] as String? ?? 'Uncategorized',
-      quantity: quantity,
-      minRequired: minReq,
-      maxCapacity: (data['max_capacity'] as num?)?.toDouble() ?? 0,
-      unit: data['unit'] as String? ?? 'pcs',
-      unitCost: unitCost,
-      // Read the stored total cost; if it's missing (older docs), fall
-      // back to computing it from quantity/unitCost so the UI never
-      // shows a blank value.
-      totalCost:
-          (data['total_cost'] as num?)?.toDouble() ?? (quantity * unitCost),
-      createdAt: (data['created_at'] as Timestamp?)?.toDate() ??
-          // Older docs only ever wrote `last_updated`; use it as a
-          // best-effort createdAt so nothing shows up blank.
-          (data['last_updated'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updated_at'] as Timestamp?)?.toDate() ??
-          (data['last_updated'] as Timestamp?)?.toDate(),
-      lastAddedAt: (data['last_added_at'] as Timestamp?)?.toDate(),
-      lastUsedAt: (data['last_used_at'] as Timestamp?)?.toDate(),
-      lastAddedQty: (data['last_added_qty'] as num?)?.toDouble(),
-      lastUsedQty: (data['last_used_qty'] as num?)?.toDouble(),
-      totalAdded: (data['total_added'] as num?)?.toDouble() ??
-          (data['last_added_qty'] as num?)?.toDouble() ??
-          0,
-      totalUsed: (data['total_used'] as num?)?.toDouble() ??
-          (data['last_used_qty'] as num?)?.toDouble() ??
-          0,
-      notes: data['notes'] as String?,
-    );
-  }
-
-  /// Empty template used by the Add Material form.
   factory InventoryItemModel.empty() => const InventoryItemModel(
         id: '',
         name: '',

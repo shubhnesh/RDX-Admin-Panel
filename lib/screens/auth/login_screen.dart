@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
@@ -6,7 +7,6 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
-import 'package:rdx_admin/widgets/reusable_widgets/loading_indicator.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_text_field.dart';
 
 import '../../providers/auth_provider.dart';
@@ -23,7 +23,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _isRegister = false;
+
+  void _log(String message) {
+    if (kDebugMode) debugPrint('[LoginScreen] $message');
+  }
 
   @override
   void initState() {
@@ -38,21 +41,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    _log('Step 1: login form submitted.');
     FocusScope.of(context).unfocus();
 
     final auth = ref.read(authProvider);
 
-    final success = _isRegister
-        ? await auth.register(
-            _emailController.text.trim(),
-            _passwordController.text,
-          )
-        : await auth.signIn(
-            _emailController.text.trim(),
-            _passwordController.text,
-          );
+    // Accounts are provisioned by an admin; sign-in also verifies the role claim.
+    _log('Step 2: forwarding sign-in to AuthProvider.');
+    final success = await auth.signIn(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
+    _log('Step 3: sign-in flow returned success=$success.');
 
     if (!success && mounted) {
+      _log('Step 4: displaying login failure message.');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -63,6 +66,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           elevation: 0,
         ),
       );
+    } else if (success) {
+      _log('Step 4: login accepted; app navigation is handled by auth state.');
     }
   }
 
@@ -99,7 +104,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
-          if (auth.isLoading) _buildLoadingOverlay(),
         ],
       ),
     );
@@ -632,7 +636,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         SizedBox(height: context.h(58)),
         Text(
-          _isRegister ? 'Create your account' : 'Welcome',
+          'Welcome',
           style: AppTextStyles.heading(context).copyWith(
             color: const Color(0xFF182033),
             fontSize: context.w(31),
@@ -643,9 +647,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         SizedBox(height: context.h(9)),
         Text(
-          _isRegister
-              ? 'Enter your details to create your RDX admin account.'
-              : 'Sign in to your RDX admin account to continue.',
+          'Sign in with your RDX admin or staff account to continue.',
           style: AppTextStyles.bodySecondary(context).copyWith(
             color: const Color(0xFF7B8494),
             fontSize: context.w(14),
@@ -698,31 +700,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
-        if (!_isRegister) ...[
-          SizedBox(height: context.h(9)),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: auth.isLoading ? null : _showForgotPassword,
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.w(2),
-                  vertical: context.h(5),
-                ),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        SizedBox(height: context.h(9)),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: auth.isLoading ? null : _showForgotPassword,
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.symmetric(
+                horizontal: context.w(2),
+                vertical: context.h(5),
               ),
-              child: Text(
-                'Forgot password?',
-                style: AppTextStyles.label(context).copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: context.w(13),
-                ),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'Forgot password?',
+              style: AppTextStyles.label(context).copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: context.w(13),
               ),
             ),
           ),
-        ],
+        ),
         SizedBox(height: context.h(22)),
         _buildSignInButton(
           context,
@@ -730,44 +730,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         SizedBox(height: context.h(24)),
         Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _isRegister
-                    ? 'Already have an account?'
-                    : 'Don\'t have an account?',
-                style: AppTextStyles.label(context).copyWith(
-                  color: const Color(0xFF7B8494),
-                  fontSize: context.w(13),
-                ),
-              ),
-              TextButton(
-                onPressed: auth.isLoading
-                    ? null
-                    : () {
-                        setState(() {
-                          _isRegister = !_isRegister;
-                        });
-                      },
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.w(4),
-                    vertical: context.h(5),
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  _isRegister ? 'Sign in' : 'Create one',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: context.w(13),
-                  ),
-                ),
-              ),
-            ],
+          child: Text(
+            'Need access? Ask your restaurant admin to create an account.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.label(context).copyWith(
+              color: const Color(0xFF7B8494),
+              fontSize: context.w(13),
+            ),
           ),
         ),
       ],
@@ -802,11 +771,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   ) {
     return Container(
       width: double.infinity,
-      height: context.h(52),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(
-          context.w(13),
-        ),
+        borderRadius: BorderRadius.circular(context.w(24)),
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withOpacity(0.22),
@@ -816,28 +782,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(
-          context.w(13),
-        ),
+        borderRadius: BorderRadius.circular(context.w(24)),
         child: RdxActionButton(
-          label: _isRegister ? 'Create Account' : 'Sign In',
-          onPressed: auth.isLoading ? null : _submit,
+          label: 'Sign In',
+          onPressed: _submit,
           isPrimary: true,
-          isLoading: false,
+          isLoading: auth.isLoading,
         ),
-      ),
-    );
-  }
-
-  // ===========================================================================
-  // LOADING
-  // ===========================================================================
-
-  Widget _buildLoadingOverlay() {
-    return Positioned.fill(
-      child: Container(
-        color: Colors.white.withOpacity(0.62),
-        child: const LoadingIndicator(),
       ),
     );
   }
@@ -847,6 +798,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // ===========================================================================
 
   Future<void> _showForgotPassword() async {
+    _log('Password reset flow opened.');
     final sent = await CategoryEntryDialog.show<bool>(
       context,
       title: 'Reset password',
@@ -857,16 +809,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       initialName: _emailController.text,
       saveButtonLabel: 'Send reset link',
       onSave: (email, _) async {
+        _log('Password reset request submitted to AuthProvider.');
         final success = await ref.read(authProvider).sendPasswordReset(email);
         if (!success) {
+          _log('Password reset request failed.');
           throw StateError(
             ref.read(authProvider).errorMessage ?? 'Unable to send reset link.',
           );
         }
+        _log('Password reset request accepted.');
         return true;
       },
     );
 
+    _log('Password reset dialog completed (sent: ${sent == true}).');
     if (sent == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

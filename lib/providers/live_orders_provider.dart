@@ -12,6 +12,10 @@ class LiveOrdersProvider extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
+  void _log(String message) {
+    if (kDebugMode) debugPrint('[LiveOrdersProvider] $message');
+  }
+
   List<OrderModel> get pending =>
       _orders.where((o) => o.status == OrderStatus.pending).toList();
 
@@ -70,12 +74,15 @@ class LiveOrdersProvider extends ChangeNotifier {
       cancelled.where((o) => o.orderSource == OrderSource.app).toList();
 
   Future<void> load() async {
+    _log('Order list refresh started.');
     isLoading = true;
     errorMessage = null;
     notifyListeners();
     try {
       _orders = await _service.fetchLiveOrders();
-    } catch (e) {
+      _log('Order list refresh completed (${_orders.length} orders).');
+    } catch (error) {
+      _log('Order list refresh failed (${error.runtimeType}): $error');
       errorMessage = 'Failed to load live orders.';
     }
     isLoading = false;
@@ -85,20 +92,37 @@ class LiveOrdersProvider extends ChangeNotifier {
   /// Marks the order as cancelled. Order is kept (not deleted) for history.
   Future<void> cancelOrder(OrderModel order) async {
     if (order.status == OrderStatus.cancelled) return;
-    await _service.updateOrderStatus(order.id, OrderStatus.cancelled);
+    await _service.updateOrderStatus(
+      orderId: order.id,
+      newStatus: OrderStatus.cancelled,
+    );
     await load();
   }
 
   Future<void> advanceStatus(OrderModel order) async {
-    final next = switch (order.status) {
-      OrderStatus.pending => OrderStatus.preparing,
-      OrderStatus.preparing => OrderStatus.ready,
-      OrderStatus.ready => OrderStatus.delivered,
-      OrderStatus.cancelled => OrderStatus.cancelled,
-      OrderStatus.delivered => OrderStatus.delivered,
-    };
-    await _service.updateOrderStatus(order.id, next);
-    await load();
+    final next = order.status.nextStatus;
+    if (next == null) {
+      throw StateError('Order ${order.id} has no next status.');
+    }
+    if (next == OrderStatus.delivered && !order.isPaid) {
+      throw StateError('Payment must be completed before delivering this order.');
+    }
+    _log(
+      'Status advance requested (order: ${order.id}, '
+      '${order.status.name} -> ${next.name}).',
+    );
+    try {
+      await _service.updateOrderStatus(orderId: order.id, newStatus: next);
+      _log('Status update accepted by service (order: ${order.id}).');
+      await load();
+    } catch (error) {
+      _log(
+        'Status advance failed (order: ${order.id}, '
+        '${order.status.name} -> ${next.name}, '
+        '${error.runtimeType}): $error',
+      );
+      rethrow;
+    }
   }
 }
 

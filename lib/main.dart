@@ -8,6 +8,7 @@ import 'core/theme/text_styles.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main/main_screen.dart';
+import 'widgets/reusable_widgets/loading_indicator.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,7 +38,15 @@ class RdxAdminApp extends ConsumerWidget {
       title: 'RDX Admin',
       debugShowCheckedModeBanner: false,
       theme: AppTextStyles.themeData(context),
-      home: auth.isLoggedIn ? const MainScreen() : const LoginScreen(),
+      home: !auth.isLoggedIn
+          ? const LoginScreen()
+          : auth.isLoading
+              ? const LoginScreen()
+              : auth.isResolvingAccess
+                  ? const Scaffold(body: LoadingIndicator())
+                  : auth.canAccessApp
+                      ? const MainScreen()
+                      : const LoginScreen(),
       onGenerateRoute: AppRoutes.generateRoute,
     );
   }

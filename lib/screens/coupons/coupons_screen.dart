@@ -4,8 +4,10 @@ import 'package:rdx_admin/screens/coupons/create_coupon_screen.dart';
 import 'package:rdx_admin/screens/coupons/create_offer_screen.dart';
 import 'package:rdx_admin/screens/coupons/widgets/coupon_card.dart';
 import 'package:rdx_admin/screens/coupons/widgets/offer_card.dart';
+import 'package:rdx_admin/widgets/reusable_widgets/dotted_border_container.dart';
+
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_action_menu_dialog.dart';
-import 'package:rdx_admin/widgets/reusable_widgets/rdx_delete_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/rdx_delete_dialog.dart';
 import 'package:rdx_admin/widgets/buttons/stats_collapse_button.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_header_action_button.dart';
 import '../../core/theme/app_colors.dart';
@@ -14,6 +16,7 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/coupon_model.dart';
 import '../../models/offer_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/coupon_provider.dart';
 import '../../providers/offer_provider.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
@@ -43,7 +46,9 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || !ref.read(authProvider).permissions.canViewCoupons) {
+        return;
+      }
       ref.read(couponProvider).load();
       ref.read(offerProvider).load();
     });
@@ -268,8 +273,101 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     );
   }
 
+  Future<void> _createCoupon() async {
+    await _openCreateCoupon(context);
+    if (!mounted) return;
+    await ref.read(couponProvider).load();
+    await ref.read(offerProvider).load();
+  }
+
+  Future<void> _createOffer() async {
+    await _openCreateOffer(context);
+    if (!mounted) return;
+    await ref.read(couponProvider).load();
+    await ref.read(offerProvider).load();
+  }
+
+  Future<void> _createPromotion() async {
+    if (_typeFilter == PromotionTypeFilter.offers) {
+      await _createOffer();
+      return;
+    }
+    await _createCoupon();
+  }
+
+  Widget _buildPromotionGrid(
+    BuildContext context,
+    AppColorScheme colors,
+    List<CouponModel> coupons,
+    List<OfferModel> offers,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = Responsive.gridColumns(context);
+        final spacing = context.w(16);
+        final cardWidth =
+            (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
+        final cards = <Widget>[];
+
+        if (_query.trim().isEmpty) {
+          cards.add(
+            SizedBox(
+              width: cardWidth,
+              child: _AddPromotionTile(
+                title: switch (_typeFilter) {
+                  PromotionTypeFilter.all => 'Add Coupon',
+                  PromotionTypeFilter.coupons => 'Add Coupon',
+                  PromotionTypeFilter.offers => 'Add Offer',
+                },
+                colors: colors,
+                onTap: _createPromotion,
+              ),
+            ),
+          );
+        }
+        for (final coupon in coupons) {
+          cards.add(
+            SizedBox(
+              width: cardWidth,
+              child: CouponCard(
+                coupon: coupon,
+                onActions: (buttonContext) {
+                  _showCouponActions(buttonContext, coupon);
+                },
+              ),
+            ),
+          );
+        }
+        for (final offer in offers) {
+          cards.add(
+            SizedBox(
+              width: cardWidth,
+              child: OfferCard(
+                offer: offer,
+                onActions: (buttonContext) {
+                  _showOfferActions(buttonContext, offer);
+                },
+              ),
+            ),
+          );
+        }
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: cards,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!ref.watch(authProvider).permissions.canViewCoupons) {
+      return const Scaffold(
+        body: Center(child: Text('Coupons and offers are admin-only.')),
+      );
+    }
     final colors = AppColors.of(context);
     final couponState = ref.watch(couponProvider);
     final offerState = ref.watch(offerProvider);
@@ -323,6 +421,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
           offerState.errorMessage != null)
         offerState.errorMessage!,
     ].join('\n');
+    final hasCreateTiles = _query.trim().isEmpty && loadErrors.isEmpty;
     final emptyMessage = switch (_typeFilter) {
       PromotionTypeFilter.coupons => 'No coupons found',
       PromotionTypeFilter.offers => 'No offers found',
@@ -359,53 +458,18 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
           ),
         ),
       );
-    } else if (!hasVisibleResults) {
+    } else if (!hasVisibleResults &&
+        (_query.trim().isNotEmpty || loadErrors.isNotEmpty)) {
       listBody = EmptyState(
         message: emptyMessage,
         icon: Icons.local_offer_outlined,
       );
     } else {
-      listBody = LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = Responsive.gridColumns(context);
-          final spacing = context.w(16);
-          final cardWidth =
-              (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
-
-          final cards = <Widget>[];
-          for (final coupon in filteredCoupons) {
-            cards.add(
-              SizedBox(
-                width: cardWidth,
-                child: CouponCard(
-                  coupon: coupon,
-                  onActions: (buttonContext) {
-                    _showCouponActions(buttonContext, coupon);
-                  },
-                ),
-              ),
-            );
-          }
-          for (final offer in filteredOffers) {
-            cards.add(
-              SizedBox(
-                width: cardWidth,
-                child: OfferCard(
-                  offer: offer,
-                  onActions: (buttonContext) {
-                    _showOfferActions(buttonContext, offer);
-                  },
-                ),
-              ),
-            );
-          }
-
-          return Wrap(
-            spacing: spacing,
-            runSpacing: spacing,
-            children: cards,
-          );
-        },
+      listBody = _buildPromotionGrid(
+        context,
+        colors,
+        filteredCoupons,
+        filteredOffers,
       );
     }
 
@@ -563,9 +627,11 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                     // Type dropdown (right)
                     SizedBox(
                       width: context.w(140),
+                      height: RdxSearchBar.standardHeight(context),
                       child: RdxDropdown<PromotionTypeFilter>(
                         items: PromotionTypeFilter.values,
                         value: _typeFilter,
+                        height: RdxSearchBar.standardHeight(context),
                         labelBuilder: (type) => switch (type) {
                           PromotionTypeFilter.all => 'All',
                           PromotionTypeFilter.coupons => 'Coupons',
@@ -586,7 +652,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
 
             if (!couponState.isLoading &&
                 !offerState.isLoading &&
-                hasVisibleResults)
+                (hasVisibleResults || hasCreateTiles))
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(
@@ -614,6 +680,77 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AddPromotionTile extends StatelessWidget {
+  final String title;
+  final AppColorScheme colors;
+  final VoidCallback onTap;
+
+  const _AddPromotionTile({
+    required this.title,
+    required this.colors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = context.h(14);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final height = constraints.maxWidth / 2.4 + context.h(158);
+
+        return InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(radius),
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: height,
+            child: DottedBorderContainer(
+              color: colors.border,
+              radius: radius,
+              dashLength: context.h(6),
+              gapLength: context.h(5),
+              strokeWidth: context.h(1.2),
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(context.w(12)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: context.w(40),
+                        height: context.h(40),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: colors.border),
+                        ),
+                        child: Icon(
+                          Icons.add,
+                          color: colors.textMuted.withValues(alpha: 0.55),
+                          size: context.h(24),
+                        ),
+                      ),
+                      SizedBox(height: context.h(10)),
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.section(context).copyWith(
+                          color: colors.textMuted.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

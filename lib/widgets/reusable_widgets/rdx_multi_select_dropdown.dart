@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
+import 'rdx_search_bar.dart';
 import 'rdx_text_field.dart';
 
 class RdxMultiDropdown<T> extends StatefulWidget {
@@ -429,64 +430,12 @@ class _MultiDropdownMenuPanelState<T>
                 context.w(10),
                 context.h(6),
               ),
-              child: TextField(
+              child: RdxSearchBar(
                 controller: widget.searchController,
                 focusNode: widget.searchFocus,
+                hintText: widget.searchHint,
+                height: RdxSearchBar.standardHeight(context),
                 maxLength: 20,
-                style: optionTextStyle,
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: widget.searchHint,
-                  hintStyle:
-                      optionTextStyle.copyWith(color: widget.colors.textMuted),
-                  counterText: '',
-                  prefixIcon: Icon(
-                    Icons.search_rounded,
-                    size: context.h(18),
-                    color: widget.colors.textSecondary,
-                  ),
-                  prefixIconConstraints: BoxConstraints(
-                    minWidth: context.w(36),
-                    minHeight: context.h(36),
-                  ),
-                  suffixIcon: widget.searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(
-                            Icons.close_rounded,
-                            size: context.h(16),
-                            color: widget.colors.textSecondary,
-                          ),
-                          onPressed: () => widget.searchController.clear(),
-                          splashRadius: context.h(16),
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(
-                            minWidth: context.w(32),
-                            minHeight: context.h(32),
-                          ),
-                        )
-                      : null,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: context.w(10),
-                    vertical: context.h(10),
-                  ),
-                  filled: true,
-                  fillColor: widget.colors.surfaceVariant,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(context.h(8)),
-                    borderSide: BorderSide(color: widget.colors.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(context.h(8)),
-                    borderSide: BorderSide(color: widget.colors.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(context.h(8)),
-                    borderSide: BorderSide(
-                      color: AppColors.primary,
-                      width: 1.5,
-                    ),
-                  ),
-                ),
               ),
             ),
             Divider(

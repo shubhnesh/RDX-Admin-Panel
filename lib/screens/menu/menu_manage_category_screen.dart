@@ -12,7 +12,7 @@ import '../../services/category_service.dart';
 import '../../services/preparation_service.dart';
 import '../../services/regionality_service.dart';
 import '../../services/tag_service.dart';
-import '../../widgets/reusable_widgets/rdx_delete_dialog.dart';
+import '../../widgets/dialogs/rdx_delete_dialog.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 import '../../widgets/buttons/rdx_header_action_button.dart';
 import '../../widgets/reusable_widgets/empty_state.dart';
@@ -30,8 +30,8 @@ enum _CategorySection { category, preparation, regionality, tag }
 /// category types are standalone entities managed independently of any
 /// menu item, so they persist to Firestore right away.
 ///
-/// On narrow screens the data is shown as stacked cards (one per row)
-/// instead of a wide table so nothing overflows or breaks the layout.
+/// Tables keep the same layout at every screen size and scroll horizontally
+/// when their minimum column widths exceed the available space.
 class MenuManageCategoryScreen extends StatefulWidget {
   const MenuManageCategoryScreen({super.key});
 
@@ -90,11 +90,12 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
         _tags = _sortedByName(results[3] as List<TagModel>, (t) => t.name);
         _loading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('MenuManageCategoryScreen._loadAll failed: $e\n$st');
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Failed to load. Pull to refresh or try again.';
+        _error = 'Failed to load. ${e.toString()}';
       });
     }
   }
@@ -475,7 +476,26 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
             child: _loading
                 ? const LoadingIndicator()
                 : _error != null
-                    ? EmptyState(message: _error!)
+                    ? Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(context.w(24)),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.body(context),
+                              ),
+                              SizedBox(height: context.h(12)),
+                              TextButton(
+                                onPressed: _loadAll,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
                     : Padding(
                         padding: EdgeInsets.fromLTRB(
                           horizontal,
@@ -483,7 +503,7 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
                           horizontal,
                           context.h(20),
                         ),
-                        child: _sectionContent(context, colors, isNarrow),
+                        child: _sectionContent(context, colors),
                       ),
           ),
         ],
@@ -575,17 +595,16 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   Widget _sectionContent(
     BuildContext context,
     AppColorScheme colors,
-    bool isNarrow,
   ) {
     switch (_section) {
       case _CategorySection.category:
-        return _categorySection(context, colors, isNarrow);
+        return _categorySection(context, colors);
       case _CategorySection.preparation:
-        return _preparationSection(context, colors, isNarrow);
+        return _preparationSection(context);
       case _CategorySection.regionality:
-        return _regionalitySection(context, colors, isNarrow);
+        return _regionalitySection(context);
       case _CategorySection.tag:
-        return _tagSection(context, colors, isNarrow);
+        return _tagSection(context);
     }
   }
 
@@ -594,13 +613,10 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   Widget _categorySection(
     BuildContext context,
     AppColorScheme colors,
-    bool isNarrow,
   ) {
     return _categories.isEmpty
         ? const EmptyState(message: 'No categories yet.')
-        : isNarrow
-            ? _categoryCards(context, colors)
-            : _categoryTable(context, colors);
+        : _categoryTable(context, colors);
   }
 
   /// Case-insensitive alphabetical sort for named entities.
@@ -615,8 +631,8 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
     return list;
   }
 
-  /// Formats subcategory names for the table/card: alphabetically sorted,
-  /// up to 8 per line, then continues on the next line.
+  /// Formats subcategory names for the table in alphabetical order, up to 8
+  /// per line.
   String _formatSubcategories(List<SubcategoryModel> subs) {
     if (subs.isEmpty) return '—';
     final names =
@@ -630,36 +646,13 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   }
 
   Widget _categoryTable(BuildContext context, AppColorScheme colors) {
-    final isMobile = Responsive.isMobile(context);
-    final isNarrow = Responsive.isNarrow(context);
-
-    final categoryMin = isMobile
-        ? 140.0
-        : isNarrow
-            ? 160.0
-            : 180.0;
-    final subcategoriesMin = isMobile
-        ? 150.0
-        : isNarrow
-            ? 170.0
-            : 200.0;
-    final actionsMin = isMobile
-        ? 80.0
-        : isNarrow
-            ? 85.0
-            : 90.0;
-
     return RdxTable(
       columns: [
-        RdxTableColumn(
-            title: 'Category', minWidth: context.w(categoryMin), flex: 2),
-        RdxTableColumn(
-            title: 'Subcategories',
-            minWidth: context.w(subcategoriesMin),
-            flex: 3),
+        RdxTableColumn(title: 'Category', minWidth: 180, flex: 2),
+        RdxTableColumn(title: 'Subcategories', minWidth: 200, flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: context.w(actionsMin),
+          minWidth: 90,
           alignment: Alignment.centerRight,
         ),
       ],
@@ -683,64 +676,21 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
     );
   }
 
-  Widget _categoryCards(BuildContext context, AppColorScheme colors) {
-    return ListView.separated(
-      itemCount: _categories.length,
-      separatorBuilder: (_, __) => SizedBox(height: context.h(10)),
-      itemBuilder: (context, index) {
-        final category = _categories[index];
-        final subs = category.subcategories.isEmpty
-            ? 'No subcategories'
-            : _formatSubcategories(category.subcategories);
-
-        return _categoryCard(
-          context: context,
-          colors: colors,
-          title: category.name,
-          subtitle: subs,
-          onEdit: () => _editCategory(category),
-          onDelete: () => _deleteCategory(category),
-        );
-      },
-    );
-  }
-
   // ─── Preparation ────────────────────────────────────────────────────
 
-  Widget _preparationSection(
-    BuildContext context,
-    AppColorScheme colors,
-    bool isNarrow,
-  ) {
+  Widget _preparationSection(BuildContext context) {
     return _preparations.isEmpty
         ? const EmptyState(message: 'No preparation styles yet.')
-        : isNarrow
-            ? _preparationCards(context, colors)
-            : _preparationTable(context, colors);
+        : _preparationTable(context);
   }
 
-  Widget _preparationTable(BuildContext context, AppColorScheme colors) {
-    final isMobile = Responsive.isMobile(context);
-    final isNarrow = Responsive.isNarrow(context);
-
-    final nameMin = isMobile
-        ? 160.0
-        : isNarrow
-            ? 190.0
-            : 220.0;
-    final actionsMin = isMobile
-        ? 80.0
-        : isNarrow
-            ? 85.0
-            : 90.0;
-
+  Widget _preparationTable(BuildContext context) {
     return RdxTable(
       columns: [
-        RdxTableColumn(
-            title: 'Preparation Style', minWidth: context.w(nameMin), flex: 3),
+        RdxTableColumn(title: 'Preparation Style', minWidth: 220, flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: context.w(actionsMin),
+          minWidth: 90,
           alignment: Alignment.centerRight,
         ),
       ],
@@ -757,59 +707,21 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
     );
   }
 
-  Widget _preparationCards(BuildContext context, AppColorScheme colors) {
-    return ListView.separated(
-      itemCount: _preparations.length,
-      separatorBuilder: (_, __) => SizedBox(height: context.h(10)),
-      itemBuilder: (context, index) {
-        final preparation = _preparations[index];
-        return _categoryCard(
-          context: context,
-          colors: colors,
-          title: preparation.name,
-          onEdit: () => _editPreparation(preparation),
-          onDelete: () => _deletePreparation(preparation),
-        );
-      },
-    );
-  }
-
   // ─── Regionality ────────────────────────────────────────────────────
 
-  Widget _regionalitySection(
-    BuildContext context,
-    AppColorScheme colors,
-    bool isNarrow,
-  ) {
+  Widget _regionalitySection(BuildContext context) {
     return _regionalities.isEmpty
         ? const EmptyState(message: 'No regionalities yet.')
-        : isNarrow
-            ? _regionalityCards(context, colors)
-            : _regionalityTable(context, colors);
+        : _regionalityTable(context);
   }
 
-  Widget _regionalityTable(BuildContext context, AppColorScheme colors) {
-    final isMobile = Responsive.isMobile(context);
-    final isNarrow = Responsive.isNarrow(context);
-
-    final nameMin = isMobile
-        ? 160.0
-        : isNarrow
-            ? 190.0
-            : 220.0;
-    final actionsMin = isMobile
-        ? 80.0
-        : isNarrow
-            ? 85.0
-            : 90.0;
-
+  Widget _regionalityTable(BuildContext context) {
     return RdxTable(
       columns: [
-        RdxTableColumn(
-            title: 'Regionality', minWidth: context.w(nameMin), flex: 3),
+        RdxTableColumn(title: 'Regionality', minWidth: 220, flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: context.w(actionsMin),
+          minWidth: 90,
           alignment: Alignment.centerRight,
         ),
       ],
@@ -826,67 +738,24 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
     );
   }
 
-  Widget _regionalityCards(BuildContext context, AppColorScheme colors) {
-    return ListView.separated(
-      itemCount: _regionalities.length,
-      separatorBuilder: (_, __) => SizedBox(height: context.h(10)),
-      itemBuilder: (context, index) {
-        final regionality = _regionalities[index];
-        return _categoryCard(
-          context: context,
-          colors: colors,
-          title: regionality.name,
-          onEdit: () => _editRegionality(regionality),
-          onDelete: () => _deleteRegionality(regionality),
-        );
-      },
-    );
-  }
-
   // ─── Tags ───────────────────────────────────────────────────────────
 
   Widget _tagSection(
     BuildContext context,
-    AppColorScheme colors,
-    bool isNarrow,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Helper text only on wider screens (add button already lives in the tabs row)
-        if (!isNarrow)
-          Expanded(
-            child: _tags.isEmpty
-                ? const EmptyState(message: 'No custom tags yet.')
-                : isNarrow
-                    ? _tagCards(context, colors)
-                    : _tagTable(context, colors),
-          ),
-      ],
-    );
+    if (_tags.isEmpty) {
+      return const EmptyState(message: 'No custom tags yet.');
+    }
+    return _tagTable(context);
   }
 
-  Widget _tagTable(BuildContext context, AppColorScheme colors) {
-    final isMobile = Responsive.isMobile(context);
-    final isNarrow = Responsive.isNarrow(context);
-
-    final tagMin = isMobile
-        ? 150.0
-        : isNarrow
-            ? 170.0
-            : 200.0;
-    final actionsMin = isMobile
-        ? 80.0
-        : isNarrow
-            ? 85.0
-            : 90.0;
-
+  Widget _tagTable(BuildContext context) {
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Tag', minWidth: context.w(tagMin), flex: 3),
+        RdxTableColumn(title: 'Tag', minWidth: 200, flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: context.w(actionsMin),
+          minWidth: 90,
           alignment: Alignment.centerRight,
         ),
       ],
@@ -900,76 +769,6 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
             ),
           ],
       ],
-    );
-  }
-
-  Widget _tagCards(BuildContext context, AppColorScheme colors) {
-    return ListView.separated(
-      itemCount: _tags.length,
-      separatorBuilder: (_, __) => SizedBox(height: context.h(10)),
-      itemBuilder: (context, index) {
-        final tag = _tags[index];
-        return _categoryCard(
-          context: context,
-          colors: colors,
-          title: tag.name,
-          onEdit: () => _editTag(tag),
-          onDelete: () => _deleteTag(tag),
-        );
-      },
-    );
-  }
-
-  // ─── Shared mobile card ─────────────────────────────────────────────
-
-  Widget _categoryCard({
-    required BuildContext context,
-    required AppColorScheme colors,
-    required String title,
-    String? subtitle,
-    required VoidCallback onEdit,
-    required VoidCallback onDelete,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: context.w(14),
-        vertical: context.h(12),
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(context.h(12)),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.body(context).copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (subtitle != null && subtitle.isNotEmpty) ...[
-                  SizedBox(height: context.h(4)),
-                  Text(
-                    subtitle,
-                    style: AppTextStyles.bodyTertiary(context)
-                        .copyWith(color: colors.textSecondary),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          SizedBox(width: context.w(8)),
-          _actionsCell(onEdit: onEdit, onDelete: onDelete),
-        ],
-      ),
     );
   }
 

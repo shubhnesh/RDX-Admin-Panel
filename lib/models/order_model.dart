@@ -73,8 +73,13 @@ extension OrderStatusX on OrderStatus {
       return OrderStatus.pending;
     }
 
+    final normalized = value.trim().toLowerCase();
+    if (normalized == 'served') {
+      return OrderStatus.delivered;
+    }
+
     return OrderStatus.values.firstWhere(
-      (status) => status.name == value,
+      (status) => status.name == normalized,
       orElse: () => OrderStatus.pending,
     );
   }
@@ -444,6 +449,16 @@ class OrderModel {
 
   final double total;
 
+  /// Server-calculated (Cloud Functions). Clients must not invent these.
+  final double itemTotal;
+  final double taxes;
+  final double gstPercent;
+  final double deliveryFee;
+  final double lateNightFee;
+  final double longDistanceFee;
+  final double couponDiscount;
+  final double rewardDiscount;
+
   final DateTime createdAt;
 
   final List<OrderItemModel> items;
@@ -471,6 +486,14 @@ class OrderModel {
     required this.deliveryAddress,
     required this.status,
     required this.total,
+    this.itemTotal = 0,
+    this.taxes = 0,
+    this.gstPercent = 0,
+    this.deliveryFee = 0,
+    this.lateNightFee = 0,
+    this.longDistanceFee = 0,
+    this.couponDiscount = 0,
+    this.rewardDiscount = 0,
     required this.createdAt,
     required this.items,
     this.deliveryLat,
@@ -540,6 +563,14 @@ class OrderModel {
   OrderModel copyWith({
     OrderStatus? status,
     double? total,
+    double? itemTotal,
+    double? taxes,
+    double? gstPercent,
+    double? deliveryFee,
+    double? lateNightFee,
+    double? longDistanceFee,
+    double? couponDiscount,
+    double? rewardDiscount,
     List<OrderItemModel>? items,
     PaymentMethod? paymentMethod,
     PaymentStatus? paymentStatus,
@@ -555,6 +586,14 @@ class OrderModel {
       deliveryAddress: deliveryAddress,
       status: status ?? this.status,
       total: total ?? this.total,
+      itemTotal: itemTotal ?? this.itemTotal,
+      taxes: taxes ?? this.taxes,
+      gstPercent: gstPercent ?? this.gstPercent,
+      deliveryFee: deliveryFee ?? this.deliveryFee,
+      lateNightFee: lateNightFee ?? this.lateNightFee,
+      longDistanceFee: longDistanceFee ?? this.longDistanceFee,
+      couponDiscount: couponDiscount ?? this.couponDiscount,
+      rewardDiscount: rewardDiscount ?? this.rewardDiscount,
       createdAt: createdAt,
       items: items ?? this.items,
       deliveryLat: deliveryLat,
@@ -603,6 +642,14 @@ class OrderModel {
       total: _parseDouble(
         json['total'],
       ),
+      itemTotal: _parseDouble(json['item_total']),
+      taxes: _parseDouble(json['taxes']),
+      gstPercent: _parseDouble(json['gst_percent']),
+      deliveryFee: _parseDouble(json['delivery_fee']),
+      lateNightFee: _parseDouble(json['late_night_fee']),
+      longDistanceFee: _parseDouble(json['long_distance_fee']),
+      couponDiscount: _parseDouble(json['coupon_discount']),
+      rewardDiscount: _parseDouble(json['reward_discount']),
       createdAt: _parseTimestamp(json['created_at']) ?? DateTime.now(),
       items: _parseItems(
         json['items'],
@@ -648,6 +695,14 @@ class OrderModel {
       'delivery_address': deliveryAddress,
       'status': status.name,
       'total': total,
+      'item_total': itemTotal,
+      'taxes': taxes,
+      'gst_percent': gstPercent,
+      'delivery_fee': deliveryFee,
+      'late_night_fee': lateNightFee,
+      'long_distance_fee': longDistanceFee,
+      'coupon_discount': couponDiscount,
+      'reward_discount': rewardDiscount,
       'created_at': Timestamp.fromDate(
         createdAt,
       ),

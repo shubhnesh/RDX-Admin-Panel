@@ -16,37 +16,10 @@ class SidebarItem {
   });
 }
 
-const List<SidebarItem> kPrimaryNavItems = [
-  SidebarItem(
-    label: 'Dashboard',
-    icon: Icons.dashboard_outlined,
-    route: '/dashboard',
-  ),
-  SidebarItem(
-    label: 'Live Orders',
-    icon: Icons.receipt_long_outlined,
-    route: '/live-orders',
-  ),
-  SidebarItem(
-    label: 'Menu',
-    icon: Icons.restaurant_menu_outlined,
-    route: '/menu',
-  ),
-  SidebarItem(
-    label: 'Coupons',
-    icon: Icons.local_offer_outlined,
-    route: '/coupons',
-  ),
-  SidebarItem(
-    label: 'Inventory',
-    icon: Icons.inventory_2_outlined,
-    route: '/inventory',
-  ),
-];
-
 /// Professional collapsible side navigation rail.
 /// Expanded width ~240, collapsed ~78. Smooth width + fade animation.
 class MainSideNav extends StatelessWidget {
+  final List<SidebarItem> items;
   final String currentRoute;
   final ValueChanged<String> onNavigate;
   final bool expanded;
@@ -63,6 +36,7 @@ class MainSideNav extends StatelessWidget {
 
   const MainSideNav({
     super.key,
+    required this.items,
     required this.currentRoute,
     required this.onNavigate,
     required this.expanded,
@@ -111,7 +85,7 @@ class MainSideNav extends StatelessWidget {
                       vertical: context.h(10),
                     ),
                     children: [
-                      for (final item in kPrimaryNavItems)
+                      for (final item in items)
                         _NavTile(
                           item: item,
                           selected: currentRoute == item.route,

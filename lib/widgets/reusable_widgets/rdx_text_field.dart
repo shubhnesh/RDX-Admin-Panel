@@ -11,7 +11,7 @@ class RdxTextField extends StatefulWidget {
   final String? initialValue;
   final int maxLines;
   final int? minLines;
-  final int maxLength;
+  final int? maxLength;
   final TextInputType? keyboardType;
   final bool obscureText;
   final bool enabled;
@@ -41,7 +41,7 @@ class RdxTextField extends StatefulWidget {
     this.initialValue,
     this.maxLines = 1,
     this.minLines,
-    required this.maxLength,
+    this.maxLength,
     this.keyboardType,
     this.obscureText = false,
     this.enabled = true,

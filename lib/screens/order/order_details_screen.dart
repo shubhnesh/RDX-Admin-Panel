@@ -6,7 +6,6 @@ import 'package:rdx_admin/screens/order/bill_settlement_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
-import '../../core/utils/tax.dart';
 import '../../models/order_model.dart';
 import '../../services/order_service.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
@@ -100,12 +99,13 @@ class _OrderDetailBody extends ConsumerWidget {
         .clamp(context.h(480), 720.0)
         .toDouble();
 
-    double subtotal = 0;
-    for (final item in order.items) {
-      subtotal += item.price * item.quantity;
-    }
-    final tax = subtotal * (AppTax.gstPercentage / 100);
-    final taxPercent = AppTax.gstPercentage;
+    // Snapshot amounts from the order document only.
+    // Never recompute from current settings — fee changes must not alter past orders.
+    final subtotal = order.itemTotal > 0
+        ? order.itemTotal
+        : order.items.fold<double>(0, (s, i) => s + i.price * i.quantity);
+    final taxPercent = order.gstPercent;
+    final tax = order.taxes;
 
     if (narrow) {
       return SingleChildScrollView(
@@ -191,7 +191,7 @@ class _LeftFormColumn extends ConsumerWidget {
     return Column(
       children: [
         // ── Service & Customer ──────────────────────────────────────
-        _FormPanel(
+        _FormSection(
           title: 'Service & customer',
           icon: Icons.receipt_long_outlined,
           children: [
@@ -296,7 +296,7 @@ class _LeftFormColumn extends ConsumerWidget {
         SizedBox(height: context.h(16)),
 
         // ── Workflow — step line; advance + terminate when active
-        _FormPanel(
+        _FormSection(
           title: 'Workflow',
           icon: Icons.sync_alt_outlined,
           children: [
@@ -315,7 +315,7 @@ class _LeftFormColumn extends ConsumerWidget {
 
         if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
           SizedBox(height: context.h(16)),
-          _FormPanel(
+          _FormSection(
             title: 'Kitchen notes',
             icon: Icons.notes_outlined,
             children: [
@@ -340,7 +340,7 @@ class _LeftFormColumn extends ConsumerWidget {
         SizedBox(height: context.h(16)),
 
         // ── Payment ─────────────────────────────────────────────────
-        _FormPanel(
+        _FormSection(
           title: 'Payment',
           icon: Icons.payments_outlined,
           children: [
@@ -509,6 +509,28 @@ class _RightOrderSummary extends ConsumerWidget {
                   'GST (${taxPercent.toStringAsFixed(0)}%)',
                   tax,
                 ),
+                if (order.deliveryFee > 0) ...[
+                  SizedBox(height: context.h(6)),
+                  _amountRow(context, colors, 'Delivery fee', order.deliveryFee),
+                ],
+                if (order.lateNightFee > 0) ...[
+                  SizedBox(height: context.h(6)),
+                  _amountRow(
+                    context,
+                    colors,
+                    'Late Night Delivery',
+                    order.lateNightFee,
+                  ),
+                ],
+                if (order.longDistanceFee > 0) ...[
+                  SizedBox(height: context.h(6)),
+                  _amountRow(
+                    context,
+                    colors,
+                    'Long Distance Fee',
+                    order.longDistanceFee,
+                  ),
+                ],
                 SizedBox(height: context.h(10)),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -596,6 +618,11 @@ class _RightOrderSummary extends ConsumerWidget {
   Future<void> _openSettlement(BuildContext context, WidgetRef ref) async {
     if (order.paymentStatus == PaymentStatus.paid) return;
 
+    // Snapshot only — never current settings (past orders stay frozen).
+    final subtotal = order.itemTotal > 0
+        ? order.itemTotal
+        : order.items.fold<double>(0, (s, i) => s + i.price * i.quantity);
+
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => BillSettlementScreen(
@@ -627,7 +654,9 @@ class _RightOrderSummary extends ConsumerWidget {
             paymentMethod: order.paymentMethod?.label,
             cardLastFour: null,
             subtotal: subtotal,
-            taxPercentage: AppTax.gstPercentage,
+            taxPercentage: order.gstPercent,
+            lateNightFee: order.lateNightFee,
+            longDistanceFee: order.longDistanceFee,
             guestName: order.customerName.trim().isEmpty
                 ? 'Walk-in customer'
                 : order.customerName,
@@ -765,12 +794,12 @@ class _CartStyleItemCard extends StatelessWidget {
 // SHARED LEFT-COLUMN WIDGETS
 // =============================================================================
 
-class _FormPanel extends StatelessWidget {
+class _FormSection extends StatelessWidget {
   final String title;
   final IconData icon;
   final List<Widget> children;
 
-  const _FormPanel({
+  const _FormSection({
     required this.title,
     required this.icon,
     required this.children,
@@ -958,12 +987,24 @@ class _WorkflowAction extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nextStatus = order.status.nextStatus;
     if (nextStatus == null) return const SizedBox.shrink();
+    if (nextStatus == OrderStatus.delivered && !order.isPaid) {
+      final colors = AppColors.of(context);
+      return Text(
+        'Complete payment before marking this order delivered.',
+        textAlign: TextAlign.center,
+        style: AppTextStyles.bodySecondary(context).copyWith(
+          color: colors.textSecondary,
+        ),
+      );
+    }
+
+    // Safe check for delivery (needsDelivery may not exist on all OrderModel versions)
+    final isDelivery = order.orderType == OrderType.delivery;
 
     final buttonLabel = switch (order.status) {
       OrderStatus.pending => 'Move to preparing',
       OrderStatus.preparing => 'Mark ready',
-      OrderStatus.ready =>
-        order.needsDelivery ? 'Mark delivered' : 'Mark served',
+      OrderStatus.ready => isDelivery ? 'Mark delivered' : 'Mark served',
       OrderStatus.delivered => 'Delivered',
       OrderStatus.cancelled => 'Cancelled',
     };
@@ -976,16 +1017,13 @@ class _WorkflowAction extends ConsumerWidget {
         isPrimary: true,
         onPressed: () async {
           try {
-            await OrderService().updateOrderStatus(order.id, nextStatus);
+            await OrderService().updateOrderStatus(
+              orderId: order.id,
+              newStatus: nextStatus,
+            );
             if (!context.mounted) return;
             ref.invalidate(orderDetailProvider(order.id));
             await ref.read(liveOrdersProvider).load();
-            if (!context.mounted) return;
-            // ScaffoldMessenger.of(context).showSnackBar(
-            //   SnackBar(
-            //     content: Text('Order moved to ${nextStatus.label}.'),
-            //   ),
-            // );
           } catch (e) {
             if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
@@ -1017,14 +1055,14 @@ class _TerminateAction extends ConsumerWidget {
     if (confirmed != true) return;
 
     try {
+      // ✅ FIXED — named parameters
       await OrderService().updateOrderStatus(
-        order.id,
-        OrderStatus.cancelled,
+        orderId: order.id,
+        newStatus: OrderStatus.cancelled,
       );
       if (!context.mounted) return;
       ref.invalidate(orderDetailProvider(order.id));
       await ref.read(liveOrdersProvider).load();
-      if (!context.mounted) return;
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

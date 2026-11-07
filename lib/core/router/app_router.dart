@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/screens/profile/restaurant_profile_screen.dart';
 import '../../screens/main/main_screen.dart';
 import '../../screens/order/order_details_screen.dart';
 import '../../screens/menu/create_menu_screen.dart';
 import '../../screens/coupons/create_coupon_screen.dart';
-import '../../screens/settings/restaurant_profile_screen.dart';
 
 /// Simple centralized named-route table. No routing package needed for an
 /// app this size — Navigator + named routes keeps it easy to reason about.

@@ -12,6 +12,7 @@ import '../../models/menu_item_model.dart';
 import '../../models/preparation_model.dart';
 import '../../models/regionality_model.dart';
 import '../../models/tag_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/menu_provider.dart';
 import '../../services/category_service.dart';
 import '../../services/preparation_service.dart';
@@ -21,8 +22,6 @@ import '../../widgets/reusable_widgets/rdx_header.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
 import '../../widgets/reusable_widgets/rdx_dropdown.dart';
 import '../../widgets/reusable_widgets/rdx_text_field.dart';
-import '../../widgets/reusable_widgets/rdx_search_bar.dart';
-import '../../widgets/reusable_widgets/rdx_category_tabs.dart';
 import '../../widgets/buttons/rdx_toggle_button.dart';
 
 /// Sentinel value placed as the first entry in the category dropdown.
@@ -458,6 +457,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
   @override
   void initState() {
     super.initState();
+    if (!ref.read(authProvider).permissions.canEditMenu) return;
     _loadCategories();
     _loadRegionalities();
     _loadPreparations();
@@ -710,6 +710,11 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!ref.watch(authProvider).permissions.canEditMenu) {
+      return const Scaffold(
+        body: Center(child: Text('Menu management is admin-only.')),
+      );
+    }
     final colors = AppColors.of(context);
     final narrow = MediaQuery.sizeOf(context).width < 900;
 
@@ -726,97 +731,95 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : Form(
                     key: _formKey,
-                    child: narrow
-                        ? SingleChildScrollView(
-                            padding: EdgeInsets.fromLTRB(
-                              context.w(20),
-                              context.h(16),
-                              context.w(20),
-                              context.h(28),
-                            ),
-                            child: Column(
-                              children: [
-                                _mainColumn(context, colors),
-                                SizedBox(height: context.h(16)),
-                                _previewCard(context),
-                                SizedBox(height: context.h(14)),
-                                _actionButtons(context, colors),
-                              ],
-                            ),
-                          )
-                        : Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              context.w(20),
-                              context.h(16),
-                              context.w(20),
-                              context.h(24),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  child: SingleChildScrollView(
-                                    padding:
-                                        EdgeInsets.only(right: context.w(22)),
-                                    child: Column(
-                                      children: [
-                                        _mainColumn(context, colors),
-                                      ],
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final pagePadding = Responsive.pagePadding(context);
+                        final columns = Responsive.gridColumns(context);
+                        final spacing = context.w(16);
+                        final previewCardWidth = (constraints.maxWidth -
+                                pagePadding.horizontal -
+                                ((columns - 1) * spacing)) /
+                            columns;
+                        final preview = _previewCard(previewCardWidth);
+
+                        return narrow
+                            ? SingleChildScrollView(
+                                padding: EdgeInsets.fromLTRB(
+                                  Responsive.pageHorizontal(context),
+                                  context.h(16),
+                                  Responsive.pageHorizontal(context),
+                                  context.h(28),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _mainColumn(context, colors),
+                                    SizedBox(height: context.h(16)),
+                                    Text(
+                                      'Preview',
+                                      style: AppTextStyles.section(context)
+                                          .copyWith(color: colors.textPrimary),
                                     ),
-                                  ),
+                                    SizedBox(height: context.h(10)),
+                                    preview,
+                                    SizedBox(height: context.h(14)),
+                                    _actionButtons(context, colors),
+                                  ],
                                 ),
-                                VerticalDivider(
-                                  width: context.w(1),
-                                  thickness: context.h(1),
-                                  color: colors.border,
+                              )
+                            : Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  Responsive.pageHorizontal(context),
+                                  context.h(16),
+                                  Responsive.pageHorizontal(context),
+                                  context.h(24),
                                 ),
-                                SizedBox(
-                                  width: context.w(320),
-                                  child: Padding(
-                                    padding:
-                                        EdgeInsets.only(left: context.w(22)),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        Text(
-                                          'Preview',
-                                          style: AppTextStyles.section(context)
-                                              .copyWith(
-                                                  color: colors.textPrimary),
-                                        ),
-                                        SizedBox(height: context.h(10)),
-                                        Expanded(
-                                          child: Align(
-                                            alignment: Alignment.topCenter,
-                                            child: SizedBox(
-                                              width: context.w(225),
-                                              child: MenuItemCard(
-                                                item: _previewItem,
-                                                categorySelected:
-                                                    _primaryCategory != null,
-                                                dietarySelected:
-                                                    _dietaryType != null,
-                                                hasTags: _tags.any((t) =>
-                                                        t != 'Featured') ||
-                                                    _preparation != null,
-                                                onToggleAvailability: () {
-                                                  setState(() =>
-                                                      _available = !_available);
-                                                },
-                                                onActions: (_) {},
-                                              ),
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: SingleChildScrollView(
+                                        padding: EdgeInsets.only(
+                                            right: context.w(22)),
+                                        child: _mainColumn(context, colors),
+                                      ),
+                                    ),
+                                    VerticalDivider(
+                                      width: context.w(1),
+                                      thickness: context.h(1),
+                                      color: colors.border,
+                                    ),
+                                    SizedBox(
+                                      width: previewCardWidth + context.w(22),
+                                      child: Padding(
+                                        padding: EdgeInsets.only(
+                                            left: context.w(22)),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            Text(
+                                              'Preview',
+                                              style:
+                                                  AppTextStyles.section(context)
+                                                      .copyWith(
+                                                          color: colors
+                                                              .textPrimary),
                                             ),
-                                          ),
+                                            SizedBox(height: context.h(10)),
+                                            preview,
+                                            const Spacer(),
+                                            _actionButtons(context, colors),
+                                          ],
                                         ),
-                                        _actionButtons(context, colors),
-                                      ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
+                              );
+                      },
+                    ),
                   ),
           ),
         ],
@@ -824,19 +827,17 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     );
   }
 
-  Widget _previewCard(BuildContext context) => Center(
-        child: SizedBox(
-          width: context.w(225),
-          child: MenuItemCard(
-            item: _previewItem,
-            categorySelected: _primaryCategory != null,
-            dietarySelected: _dietaryType != null,
-            hasTags: _tags.any((t) => t != 'Featured') || _preparation != null,
-            onToggleAvailability: () {
-              setState(() => _available = !_available);
-            },
-            onActions: (_) {},
-          ),
+  Widget _previewCard(double width) => SizedBox(
+        width: width,
+        child: MenuItemCard(
+          item: _previewItem,
+          categorySelected: _primaryCategory != null,
+          dietarySelected: _dietaryType != null,
+          hasTags: _tags.any((t) => t != 'Featured') || _preparation != null,
+          onToggleAvailability: () {
+            setState(() => _available = !_available);
+          },
+          onActions: (_) {},
         ),
       );
 

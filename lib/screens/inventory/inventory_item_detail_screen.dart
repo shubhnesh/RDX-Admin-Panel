@@ -1,21 +1,17 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../models/inventory_item_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/inventory_provider.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
-import '../../widgets/dialogs/rdx_notice_dialog.dart';
-import '../../widgets/reusable_widgets/rdx_delete_dialog.dart';
+import '../../widgets/dialogs/rdx_delete_dialog.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
-import '../../widgets/reusable_widgets/rdx_text_field.dart';
 import '../../widgets/reusable_widgets/stat_card.dart';
-import 'add_material_screen.dart';
-
-enum _StockAction { add, use }
 
 class InventoryItemDetailScreen extends ConsumerStatefulWidget {
   final InventoryItemModel item;
@@ -32,15 +28,78 @@ class InventoryItemDetailScreen extends ConsumerStatefulWidget {
 
 class _InventoryItemDetailScreenState
     extends ConsumerState<InventoryItemDetailScreen> {
-  final _addController = TextEditingController();
-  final _useController = TextEditingController();
-  _StockAction? _saving;
+  final ScrollController _historyScrollController = ScrollController();
+  final List<InventoryStockHistoryEntry> _stockHistory = [];
+  String? _historyCursor;
+  String? _historyError;
+  String? _historyNotice;
+  bool _historyLoading = true;
+  bool _historyLoadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadStockHistory();
+    });
+  }
 
   @override
   void dispose() {
-    _addController.dispose();
-    _useController.dispose();
+    _historyScrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadStockHistory({bool loadMore = false}) async {
+    if (loadMore && (_historyCursor == null || _historyLoadingMore)) return;
+    setState(() {
+      _historyError = null;
+      if (loadMore) {
+        _historyLoadingMore = true;
+      } else {
+        _historyLoading = true;
+      }
+    });
+    try {
+      final page = await ref.read(inventoryProvider).fetchStockHistory(
+            widget.item.id,
+            cursor: loadMore ? _historyCursor : null,
+          );
+      if (!mounted) return;
+      setState(() {
+        if (!loadMore) _stockHistory.clear();
+        _stockHistory.addAll(page.entries);
+        _historyCursor = page.nextCursor;
+        _historyNotice = null;
+        _historyLoading = false;
+        _historyLoadingMore = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      if (error is FirebaseFunctionsException &&
+          error.code == 'invalid-argument' &&
+          error.message?.contains('Unsupported inventory action') == true) {
+        final item = _currentItem(ref.read(inventoryProvider).items);
+        setState(() {
+          _stockHistory
+            ..clear()
+            ..addAll(_legacyHistory(item));
+          _historyCursor = null;
+          _historyError = null;
+          _historyNotice =
+              'Showing available legacy history. Deploy the updated '
+              'manageInventory Cloud Function to load all stock movements.';
+          _historyLoading = false;
+          _historyLoadingMore = false;
+        });
+        return;
+      }
+      setState(() {
+        _historyError = error.toString();
+        _historyLoading = false;
+        _historyLoadingMore = false;
+      });
+    }
   }
 
   InventoryItemModel _currentItem(List<InventoryItemModel> items) {
@@ -50,93 +109,72 @@ class _InventoryItemDetailScreenState
     return widget.item;
   }
 
-  Future<void> _saveStockChange(
-    InventoryItemModel item,
-    _StockAction action,
-  ) async {
-    final controller =
-        action == _StockAction.add ? _addController : _useController;
-    final quantity = double.tryParse(controller.text.trim());
-    if (quantity == null || quantity <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a quantity greater than zero.')),
-      );
-      return;
-    }
+  List<InventoryStockHistoryEntry> _legacyHistory(InventoryItemModel item) {
+    final entries = <InventoryStockHistoryEntry>[];
+    final initialAt = item.initialStockAt ?? item.createdAt;
+    final initialQuantity = item.initialStockQty ??
+        (initialAt != null &&
+                item.lastAddedAt != null &&
+                initialAt.isAtSameMomentAs(item.lastAddedAt!)
+            ? item.lastAddedQty
+            : null);
 
-    if (action == _StockAction.add) {
-      if (quantity > 999) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cannot add more than 999 units at once.'),
-          ),
-        );
-        return;
-      }
-      if (item.maxCapacity > 0 && item.quantity + quantity > item.maxCapacity) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Available capacity is ${_format(item.maxCapacity - item.quantity)} ${item.unit}.',
-            ),
-          ),
-        );
-        return;
-      }
-    } else if (quantity > item.quantity) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot use more than current stock.')),
-      );
-      return;
-    }
-
-    final actionLabel = action == _StockAction.add ? 'add to' : 'use from';
-    final confirmed = await RdxNoticeDialog.showConfirmation(
-      context,
-      title: 'Update inventory?',
-      message:
-          'Confirm ${_format(quantity)} ${item.unit} to $actionLabel ${item.name}.',
-      cancelButtonLabel: 'Cancel',
-      confirmButtonLabel: 'Update',
-    );
-    if (confirmed != true || !mounted) return;
-
-    setState(() => _saving = action);
-    try {
-      final provider = ref.read(inventoryProvider);
-      if (action == _StockAction.add) {
-        await provider.addStock(item.id, quantity);
-      } else {
-        await provider.useStock(item.id, quantity);
-      }
-      if (!mounted) return;
-      controller.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            action == _StockAction.add
-                ? 'Stock added successfully.'
-                : 'Stock usage saved successfully.',
-          ),
+    if (initialAt != null && initialQuantity != null) {
+      entries.add(
+        InventoryStockHistoryEntry(
+          id: 'legacy-initial',
+          type: 'initial',
+          quantity: initialQuantity,
+          occurredAt: initialAt,
+          stockBefore: 0,
+          stockAfter: initialQuantity,
         ),
       );
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save stock change. $error')),
-      );
-    } finally {
-      if (mounted) setState(() => _saving = null);
     }
-  }
 
-  Future<void> _editItem(InventoryItemModel item) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => AddMaterialScreen(existing: item),
-      ),
-    );
-    if (mounted) await ref.read(inventoryProvider).load();
+    if (item.lastAddedAt != null &&
+        item.lastAddedQty != null &&
+        (initialAt == null || !initialAt.isAtSameMomentAs(item.lastAddedAt!))) {
+      entries.add(
+        InventoryStockHistoryEntry(
+          id: 'legacy-added',
+          type: 'added',
+          quantity: item.lastAddedQty!,
+          occurredAt: item.lastAddedAt,
+          stockBefore: item.lastAddedStockBefore ?? 0,
+          stockAfter: (item.lastAddedStockBefore ?? 0) + item.lastAddedQty!,
+          purchaseCost: item.lastAddedCost,
+          unitCost: item.lastAddedCost == null
+              ? null
+              : item.lastAddedCost! / item.lastAddedQty!,
+          totalCost: item.lastAddedCost,
+        ),
+      );
+    }
+
+    if (item.lastUsedAt != null && item.lastUsedQty != null) {
+      final before = item.lastUsedStockBefore ?? item.lastUsedQty!;
+      entries.add(
+        InventoryStockHistoryEntry(
+          id: 'legacy-used',
+          type: 'used',
+          quantity: item.lastUsedQty!,
+          occurredAt: item.lastUsedAt,
+          stockBefore: before,
+          stockAfter:
+              (before - item.lastUsedQty!).clamp(0, double.infinity).toDouble(),
+        ),
+      );
+    }
+
+    entries.sort((a, b) {
+      final aTime = a.occurredAt;
+      final bTime = b.occurredAt;
+      if (aTime == null) return bTime == null ? 0 : 1;
+      if (bTime == null) return -1;
+      return bTime.compareTo(aTime);
+    });
+    return entries;
   }
 
   Future<void> _deleteItem(InventoryItemModel item) async {
@@ -162,15 +200,219 @@ class _InventoryItemDetailScreenState
     }
   }
 
-  String _format(double value) => value == value.roundToDouble()
-      ? value.toInt().toString()
-      : value.toStringAsFixed(1);
+  Widget _buildStockHistory(
+    BuildContext context,
+    InventoryItemModel item,
+  ) {
+    if (_historyLoading && _stockHistory.isEmpty) {
+      return _stockHistorySection(
+        context,
+        const Center(child: CircularProgressIndicator()),
+        expandChild: true,
+      );
+    }
+
+    if (_historyError != null && _stockHistory.isEmpty) {
+      return _stockHistorySection(
+        context,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Could not load stock history: $_historyError'),
+            TextButton(
+              onPressed: () => _loadStockHistory(),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+        expandChild: true,
+      );
+    }
+
+    if (_stockHistory.isEmpty) {
+      return _stockHistorySection(
+        context,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_historyNotice != null) ...[
+              Text(
+                _historyNotice!,
+                style: AppTextStyles.bodySecondary(context).copyWith(
+                  color: AppColors.of(context).textSecondary,
+                ),
+              ),
+              SizedBox(height: context.h(8)),
+            ],
+            Text(
+              'No stock history is available.',
+              style: AppTextStyles.bodySecondary(context),
+            ),
+          ],
+        ),
+        expandChild: true,
+      );
+    }
+
+    final sortedHistory = List<InventoryStockHistoryEntry>.of(_stockHistory)
+      ..sort((a, b) {
+        final aTime = a.occurredAt;
+        final bTime = b.occurredAt;
+        if (aTime == null) return bTime == null ? 0 : 1;
+        if (bTime == null) return -1;
+        final byTime = bTime.compareTo(aTime);
+        return byTime != 0 ? byTime : b.id.compareTo(a.id);
+      });
+    final grouped = <String, List<InventoryStockHistoryEntry>>{};
+    for (final entry in sortedHistory) {
+      final date = entry.occurredAt;
+      final key = date == null
+          ? 'Date unavailable'
+          : '${date.year}-${date.month.toString().padLeft(2, '0')}-'
+              '${date.day.toString().padLeft(2, '0')}';
+      grouped.putIfAbsent(key, () => []).add(entry);
+    }
+    final sortedDateKeys = grouped.keys.toList()
+      ..sort((a, b) {
+        if (a == 'Date unavailable') return 1;
+        if (b == 'Date unavailable') return -1;
+        return b.compareTo(a);
+      });
+
+    return _stockHistorySection(
+      context,
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_historyNotice != null) ...[
+            Text(
+              _historyNotice!,
+              style: AppTextStyles.bodySecondary(context).copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
+            ),
+            SizedBox(height: context.h(12)),
+          ],
+          Expanded(
+            child: Scrollbar(
+              controller: _historyScrollController,
+              thumbVisibility: true,
+              child: ListView(
+                controller: _historyScrollController,
+                primary: false,
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: ClampingScrollPhysics(),
+                ),
+                padding: EdgeInsets.zero,
+                children: [
+                  for (final dateKey in sortedDateKeys) ...[
+                    Text(
+                      _historyDateLabel(grouped[dateKey]!.first.occurredAt),
+                      style: AppTextStyles.label(context).copyWith(
+                        color: AppColors.of(context).textMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: context.h(8)),
+                    for (final entry in grouped[dateKey]!) ...[
+                      _StockHistoryTile(item: item, entry: entry),
+                      SizedBox(height: context.h(8)),
+                    ],
+                  ],
+                  if (_historyError != null) ...[
+                    SizedBox(height: context.h(4)),
+                    Text(
+                      'Could not load more history: $_historyError',
+                      style: AppTextStyles.bodySecondary(context).copyWith(
+                        color: AppColors.danger,
+                      ),
+                    ),
+                  ],
+                  if (_historyCursor != null)
+                    Align(
+                      alignment: Alignment.center,
+                      child: TextButton(
+                        onPressed: _historyLoadingMore
+                            ? null
+                            : () => _loadStockHistory(loadMore: true),
+                        child: Text(
+                          _historyLoadingMore
+                              ? 'Loading...'
+                              : 'Load more history',
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (_historyLoadingMore) const LinearProgressIndicator(),
+          if (_stockHistory.isNotEmpty && _historyCursor == null)
+            Padding(
+              padding: EdgeInsets.only(top: context.h(8)),
+              child: Text(
+                'End of stock history',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.label(context).copyWith(
+                  color: AppColors.of(context).textMuted,
+                ),
+              ),
+            ),
+        ],
+      ),
+      expandChild: true,
+    );
+  }
+
+  Widget _stockHistorySection(
+    BuildContext context,
+    Widget child, {
+    bool expandChild = false,
+  }) {
+    return _SectionCard(
+      title: 'Stock History',
+      icon: Icons.receipt_long_outlined,
+      expandChild: expandChild,
+      child: child,
+    );
+  }
+
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  static String _historyDateLabel(DateTime? value) {
+    if (value == null) return 'Date unavailable';
+    final date = value.toLocal();
+    return '${date.day.toString().padLeft(2, '0')} '
+        '${_months[date.month - 1]} ${date.year}';
+  }
+
+  static String _formatTime(DateTime? value) {
+    if (value == null) return 'Time unavailable';
+    final date = value.toLocal();
+    final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+    final minute = date.minute.toString().padLeft(2, '0');
+    final period = date.hour < 12 ? 'AM' : 'PM';
+    return '$hour:$minute $period';
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final item = _currentItem(ref.watch(inventoryProvider).items);
-    final narrow = MediaQuery.sizeOf(context).width < 760;
+    final canEdit = ref.watch(authProvider).permissions.canEditInventory;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -182,85 +424,21 @@ class _InventoryItemDetailScreenState
               showBackButton: true,
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: Responsive.pagePadding(context, top: 12, bottom: 20),
+              child: Padding(
+                padding: Responsive.pagePadding(context, top: 12, bottom: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // 1) Stats
                     _InventoryItemSummary(item: item),
-                    SizedBox(height: context.h(14)),
-
-                    // 2) Add / Use stock
-                    if (narrow) ...[
-                      _StockChangeCard(
-                        title: 'Add Stock',
-                        icon: Icons.add_circle_outline,
-                        color: AppColors.success,
-                        subtitle: 'Restock ${item.name}.',
-                        unit: item.unit,
-                        controller: _addController,
-                        saving: _saving == _StockAction.add,
-                        disabled: _saving != null,
-                        onSave: () =>
-                            _saveStockChange(item, _StockAction.add),
+                    SizedBox(height: context.h(10)),
+                    Expanded(child: _buildStockHistory(context, item)),
+                    if (canEdit) ...[
+                      SizedBox(height: context.h(10)),
+                      _ActionsSection(
+                        enabled: true,
+                        onDelete: () => _deleteItem(item),
                       ),
-                      SizedBox(height: context.h(14)),
-                      _StockChangeCard(
-                        title: 'Use Stock',
-                        icon: Icons.remove_circle_outline,
-                        color: AppColors.danger,
-                        subtitle: 'Record material used.',
-                        unit: item.unit,
-                        controller: _useController,
-                        saving: _saving == _StockAction.use,
-                        disabled: _saving != null,
-                        onSave: () =>
-                            _saveStockChange(item, _StockAction.use),
-                      ),
-                    ] else
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _StockChangeCard(
-                              title: 'Add Stock',
-                              icon: Icons.add_circle_outline,
-                              color: AppColors.success,
-                              subtitle: 'Restock ${item.name}.',
-                              unit: item.unit,
-                              controller: _addController,
-                              saving: _saving == _StockAction.add,
-                              disabled: _saving != null,
-                              onSave: () =>
-                                  _saveStockChange(item, _StockAction.add),
-                            ),
-                          ),
-                          SizedBox(width: context.w(14)),
-                          Expanded(
-                            child: _StockChangeCard(
-                              title: 'Use Stock',
-                              icon: Icons.remove_circle_outline,
-                              color: AppColors.danger,
-                              subtitle: 'Record material used.',
-                              unit: item.unit,
-                              controller: _useController,
-                              saving: _saving == _StockAction.use,
-                              disabled: _saving != null,
-                              onSave: () =>
-                                  _saveStockChange(item, _StockAction.use),
-                            ),
-                          ),
-                        ],
-                      ),
-                    SizedBox(height: context.h(14)),
-
-                    // 3) Actions LAST — Edit primary, Delete discard, no icons
-                    _ActionsSection(
-                      enabled: _saving == null,
-                      onEdit: () => _editItem(item),
-                      onDelete: () => _deleteItem(item),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -268,6 +446,154 @@ class _InventoryItemDetailScreenState
           ],
         ),
       ),
+    );
+  }
+
+  static String _formatQuantity(double value) => value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(1);
+
+  static String _formatStockQuantity(InventoryItemModel item, double value) {
+    if (item.portionSize <= 0 ||
+        item.portionUnit == null ||
+        item.portionUnit!.isEmpty) {
+      return '${_formatQuantity(value)} ${item.unit}';
+    }
+    final whole = value.floorToDouble();
+    final portions = double.parse(
+      ((value - whole) * item.portionSize).toStringAsFixed(4),
+    );
+    if (portions >= item.portionSize) {
+      return '${_formatQuantity(whole + 1)} ${item.unit} + '
+          '0 ${item.portionUnit}';
+    }
+    return '${_formatQuantity(whole)} ${item.unit} + '
+        '${_formatQuantity(portions)} ${item.portionUnit}';
+  }
+}
+
+class _StockHistoryTile extends StatelessWidget {
+  final InventoryItemModel item;
+  final InventoryStockHistoryEntry entry;
+
+  const _StockHistoryTile({
+    required this.item,
+    required this.entry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final isAdded = entry.type == 'added' || entry.type == 'initial';
+    final title = switch (entry.type) {
+      'initial' => 'Initial stock',
+      'added' => 'Stock added',
+      'used' => 'Stock used',
+      _ => 'Stock updated',
+    };
+    final icon = switch (entry.type) {
+      'initial' => Icons.inventory_2_outlined,
+      'added' => Icons.add_circle_outline,
+      'used' => Icons.remove_circle_outline,
+      _ => Icons.history,
+    };
+    final color = isAdded ? AppColors.success : AppColors.danger;
+    final amount = _InventoryItemDetailScreenState._formatStockQuantity(
+      item,
+      entry.quantity,
+    );
+    final timestamp = entry.occurredAt;
+    final time = _InventoryItemDetailScreenState._formatTime(timestamp);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: context.w(10),
+        vertical: context.h(7),
+      ),
+      decoration: BoxDecoration(
+        color: colors.surfaceVariant.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(context.h(8)),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: context.h(16), color: color),
+              SizedBox(width: context.w(6)),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.bodySecondary(context).copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                time,
+                style: AppTextStyles.label(context).copyWith(
+                  color: colors.textMuted,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: context.h(5)),
+          Wrap(
+            spacing: context.w(14),
+            runSpacing: context.h(4),
+            children: [
+              _detail(context, isAdded ? 'Quantity added' : 'Quantity used',
+                  amount),
+              _detail(
+                context,
+                'Stock before → after',
+                '${_InventoryItemDetailScreenState._formatStockQuantity(item, entry.stockBefore)}'
+                    ' → '
+                    '${_InventoryItemDetailScreenState._formatStockQuantity(item, entry.stockAfter)}',
+              ),
+              if (entry.totalCost != null)
+                _detail(
+                  context,
+                  entry.type == 'used' ? 'Value at use' : 'Purchase cost',
+                  Formatters.currency(entry.totalCost!),
+                ),
+              if (entry.unitCost != null)
+                _detail(
+                  context,
+                  'Rate at this time',
+                  '${Formatters.currency(entry.unitCost!)} / ${item.unit}',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detail(BuildContext context, String label, String value) {
+    final colors = AppColors.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.label(context).copyWith(
+            color: colors.textMuted,
+          ),
+        ),
+        SizedBox(width: context.w(6)),
+        Text(
+          value,
+          style: AppTextStyles.bodySecondary(context).copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -281,13 +607,13 @@ class _SectionCard extends StatelessWidget {
   final String title;
   final IconData icon;
   final Widget child;
-  final Color? iconColor;
+  final bool expandChild;
 
   const _SectionCard({
     required this.title,
     required this.icon,
     required this.child,
-    this.iconColor,
+    this.expandChild = false,
   });
 
   @override
@@ -317,7 +643,7 @@ class _SectionCard extends StatelessWidget {
                 Icon(
                   icon,
                   size: context.h(18),
-                  color: iconColor ?? AppColors.primary,
+                  color: AppColors.primary,
                 ),
                 SizedBox(width: context.w(8)),
                 Text(
@@ -331,15 +657,28 @@ class _SectionCard extends StatelessWidget {
           ),
           // Full-bleed underline (touches card edges)
           Divider(height: 1, thickness: 1, color: colors.divider),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              context.w(16),
-              context.h(14),
-              context.w(16),
-              context.h(16),
+          if (expandChild)
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  context.w(16),
+                  context.h(14),
+                  context.w(16),
+                  context.h(16),
+                ),
+                child: child,
+              ),
+            )
+          else
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                context.w(16),
+                context.h(14),
+                context.w(16),
+                context.h(16),
+              ),
+              child: child,
             ),
-            child: child,
-          ),
         ],
       ),
     );
@@ -359,6 +698,22 @@ class _InventoryItemSummary extends StatelessWidget {
       ? value.toInt().toString()
       : value.toStringAsFixed(1);
 
+  static String _formatStock(InventoryItemModel item) {
+    if (item.portionSize <= 0 ||
+        item.portionUnit == null ||
+        item.portionUnit!.isEmpty) {
+      return _format(item.quantity);
+    }
+    final whole = item.quantity.floorToDouble();
+    final portions = double.parse(
+      ((item.quantity - whole) * item.portionSize).toStringAsFixed(4),
+    );
+    if (portions >= item.portionSize) {
+      return '${_format(whole + 1)} + 0';
+    }
+    return '${_format(whole)} + ${_format(portions)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -371,28 +726,16 @@ class _InventoryItemSummary extends StatelessWidget {
 
           final cards = <Widget>[
             StatCard(
-              label: 'Current Stock (${item.unit})',
-              value: _format(item.quantity),
+              label: item.portionSize > 0 && item.portionUnit != null
+                  ? 'Current Stock (${item.unit} + ${item.portionUnit})'
+                  : 'Current Stock (${item.unit})',
+              value: _formatStock(item),
               icon: Icons.inventory_2_outlined,
               accentColor: AppColors.primary,
               minHeight: minH,
             ),
             StatCard(
-              label: 'Added (${item.unit})',
-              value: _format(item.totalAdded),
-              icon: Icons.add_circle_outline,
-              accentColor: AppColors.success,
-              minHeight: minH,
-            ),
-            StatCard(
-              label: 'Used (${item.unit})',
-              value: _format(item.totalUsed),
-              icon: Icons.remove_circle_outline,
-              accentColor: AppColors.danger,
-              minHeight: minH,
-            ),
-            StatCard(
-              label: 'Total Cost (₹)',
+              label: 'Total Expenditure (₹)',
               value: Formatters.currency(item.totalCost),
               icon: Icons.payments_outlined,
               accentColor: AppColors.primary,
@@ -422,116 +765,38 @@ class _InventoryItemSummary extends StatelessWidget {
 }
 
 // =============================================================================
-// Actions — LAST section; Edit = primary, Delete = discard; no icons
+// Actions — LAST section.
 // =============================================================================
 
 class _ActionsSection extends StatelessWidget {
   final bool enabled;
-  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _ActionsSection({
     required this.enabled,
-    required this.onEdit,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-
     return _SectionCard(
       title: 'Actions',
       icon: Icons.tune_rounded,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            'Edit material details or remove this item from inventory.',
-            style: AppTextStyles.bodySecondary(context).copyWith(
-              color: colors.textSecondary,
+          Expanded(
+            child: Text(
+              'Remove this item from inventory.',
+              style: AppTextStyles.bodySecondary(context).copyWith(
+                color: colors.textSecondary,
+              ),
             ),
           ),
-          SizedBox(height: context.h(14)),
-          Wrap(
-            spacing: context.w(10),
-            runSpacing: context.h(10),
-            children: [
-              RdxActionButton(
-                label: 'Edit',
-                isPrimary: true,
-                onPressed: enabled ? onEdit : null,
-              ),
-              RdxActionButton.discard(
-                label: 'Delete',
-                onPressed: enabled ? onDelete : null,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// Add / Use stock — Settings-style section card
-// =============================================================================
-
-class _StockChangeCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final String unit;
-  final TextEditingController controller;
-  final bool saving;
-  final bool disabled;
-  final VoidCallback onSave;
-
-  const _StockChangeCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.unit,
-    required this.controller,
-    required this.saving,
-    required this.disabled,
-    required this.onSave,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _SectionCard(
-      title: title,
-      icon: icon,
-      iconColor: color,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(subtitle, style: AppTextStyles.bodySecondary(context)),
-          SizedBox(height: context.h(14)),
-          RdxTextField(
-            controller: controller,
-            enabled: !disabled,
-            label: 'Quantity ($unit)',
-            hint: 'Enter quantity',
-            maxLength: 12,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-            ],
-          ),
-          SizedBox(height: context.h(12)),
-          Align(
-            alignment: Alignment.centerRight,
-            child: RdxActionButton(
-              label: saving ? 'Updating...' : 'Update',
-              isPrimary: true,
-              isLoading: saving,
-              onPressed: disabled ? null : onSave,
-            ),
+          SizedBox(width: context.w(12)),
+          RdxActionButton.discard(
+            label: 'Delete',
+            onPressed: enabled ? onDelete : null,
           ),
         ],
       ),

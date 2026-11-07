@@ -7,7 +7,6 @@ import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
-import '../../core/utils/tax.dart';
 import '../../models/order_model.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/order_providers.dart';
@@ -128,8 +127,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   // ===========================================================================
 
   Future<void> _placeOrder() async {
-    // Same pattern as CreateCouponScreen: one notice dialog per missing
-    // mandatory field (no inline Form validators for these checks).
+    // Validation only — no client-side money calculation.
+    // All prices, taxes and fees are computed by createStaffOrder Cloud Function.
     final cart = ref.read(cartProvider);
 
     if (cart.isEmpty) {
@@ -149,83 +148,115 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
-    final subtotal = ref.read(cartTotalProvider);
-    final tax = subtotal * (AppTax.gstPercentage / 100);
-    final settings = ref.read(settingsProvider);
-    // Late-night fee: auto-applied on Delivery when the setting is enabled.
-    final lateNightFee =
-        _orderType == OrderType.delivery && settings.lateNightDelivery
-            ? 5.0
-            : 0.0;
-    final longDistanceFee =
-        _orderType == OrderType.delivery && _longDistanceFeeSelected
-            ? 29.0
-            : 0.0;
-    final total = subtotal + tax + lateNightFee + longDistanceFee;
+    // Map cart → clean payload (no prices).
+    final cleanItems = <Map<String, dynamic>>[
+      for (final line in cart)
+        {
+          'product_id': line.menuItem.id,
+          'quantity': line.quantity,
+          // Size is not yet stored on CartLineItem in admin; omit for now.
+          'notes': line.notes,
+          'spice_level': line.spiceLevel,
+          'add_ons': line.addOns.map((a) => a.name).toList(),
+        },
+    ];
 
-    final order = OrderModel(
-      id: '',
-      customerName: _customerName.text.trim(),
-      customerPhone: _customerPhone.text.trim(),
-      deliveryAddress:
-          _orderType == OrderType.delivery ? _deliveryAddress.text.trim() : '',
-      status: OrderStatus.pending,
-      paymentStatus: PaymentStatus.unpaid,
-      paymentMethod: null,
-      total: total,
-      createdAt: DateTime.now(),
-      items: [
-        for (final line in cart)
-          OrderItemModel(
-            name: line.menuItem.name,
-            quantity: line.quantity,
-            price: line.unitPrice,
-            spiceLevel: line.spiceLevel,
-            addOns: line.addOns.map((addOn) => addOn.displayLabel).toList(),
-            notes: line.notes,
-          ),
-      ],
-      notes: _orderNotes.text.trim().isEmpty ? null : _orderNotes.text.trim(),
-      orderType: _orderType,
-      tableNumber: _orderType == OrderType.dineIn ? _selectedTable : null,
-      // Admin / POS checkout always creates a staff (restaurant) order.
-      orderSource: OrderSource.staff,
-    );
+    final guestName = _customerName.text.trim().isEmpty
+        ? 'Walk-in Customer'
+        : _customerName.text.trim();
+    final phoneNumber = _customerPhone.text.trim();
+    final tableNumber = _orderType == OrderType.dineIn ? _selectedTable : null;
+    final deliveryAddress =
+        _orderType == OrderType.delivery ? _deliveryAddress.text.trim() : '';
+    final orderNotes =
+        _orderNotes.text.trim().isEmpty ? null : _orderNotes.text.trim();
+
+    // Drive the Place Order button spinner via the existing controller.
+    final controller = ref.read(placeOrderControllerProvider.notifier);
 
     try {
-      final newOrderId =
-          await ref.read(placeOrderControllerProvider.notifier).submit(order);
+      final orderService = ref.read(orderServiceProvider);
+      controller.state = const AsyncLoading();
+
+      final created = await orderService.createStaffOrder(
+        items: cleanItems,
+        orderType: _orderType.name, // dineIn | takeaway | delivery
+        tableNumber: tableNumber,
+        customerName: guestName,
+        customerPhone: phoneNumber,
+        deliveryAddress: deliveryAddress,
+        notes: orderNotes,
+        applyLongDistanceFee:
+            _orderType == OrderType.delivery && _longDistanceFeeSelected,
+        // paymentMethod left null → order stays unpaid until settleOrder
+      );
+
+      controller.state = AsyncData(created.id);
 
       if (!mounted) return;
 
-      if (newOrderId == null || newOrderId.isEmpty) {
+      if (created.id.isEmpty) {
         await _showNotice('Failed to place order. Please try again.');
         return;
       }
 
+      // Prefer server-side item prices for the bill when available.
       final billItems = <BillItemData>[
-        for (final line in cart)
-          BillItemData(
-            name: line.menuItem.name,
-            quantity: line.quantity,
-            amount: line.subtotal,
-            modifiers: [
-              if (line.spiceLevel != null && line.spiceLevel!.trim().isNotEmpty)
-                'Spice: ${line.spiceLevel}',
-              ...line.addOns.map((addOn) => addOn.displayLabel),
-              if (line.notes != null && line.notes!.trim().isNotEmpty)
-                'Note: ${line.notes}',
-            ],
-          ),
+        if (created.items.isNotEmpty)
+          for (final item in created.items)
+            BillItemData(
+              name: item.name,
+              quantity: item.quantity,
+              amount: item.price * item.quantity,
+              modifiers: [
+                if (item.spiceLevel != null &&
+                    item.spiceLevel!.trim().isNotEmpty)
+                  'Spice: ${item.spiceLevel}',
+                ...item.addOns,
+                if (item.notes != null && item.notes!.trim().isNotEmpty)
+                  'Note: ${item.notes}',
+              ],
+            )
+        else
+          // Fallback to cart display if CF returned empty items (shouldn't happen).
+          for (final line in cart)
+            BillItemData(
+              name: line.menuItem.name,
+              quantity: line.quantity,
+              amount: line.subtotal,
+              modifiers: [
+                if (line.spiceLevel != null &&
+                    line.spiceLevel!.trim().isNotEmpty)
+                  'Spice: ${line.spiceLevel}',
+                ...line.addOns.map((a) => a.displayLabel),
+                if (line.notes != null && line.notes!.trim().isNotEmpty)
+                  'Note: ${line.notes}',
+              ],
+            ),
       ];
 
-      final guestName = _customerName.text.trim().isEmpty
-          ? 'Walk-in Customer'
-          : _customerName.text.trim();
+      // Subtotal from server item lines (authoritative).
+      final serverSubtotal = billItems.fold<double>(
+        0,
+        (sum, b) => sum + b.amount,
+      );
 
-      final phoneNumber = _customerPhone.text.trim();
-      final tableNumber =
-          _orderType == OrderType.dineIn ? _selectedTable : null;
+      // Fee breakdown for receipt UI only. Amounts from settings/fees
+      // via SettingsProvider (preview). Stored order.total is always from CF.
+      final feeSettings = ref.read(settingsProvider);
+      final isLateNightNow = _isWithinLateNightWindow(
+        feeSettings.lateNightStart,
+        feeSettings.lateNightEnd,
+      );
+      final lateNightFee = _orderType == OrderType.delivery &&
+              feeSettings.lateNightDelivery &&
+              isLateNightNow
+          ? feeSettings.lateNightFee
+          : 0.0;
+      final longDistanceFee = _orderType == OrderType.delivery &&
+              _longDistanceFeeSelected
+          ? feeSettings.longDistanceFee
+          : 0.0;
 
       ref.read(cartProvider.notifier).clear();
 
@@ -235,7 +266,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         MaterialPageRoute(
           builder: (_) => BillSettlementScreen(
             bill: BillSettlementData(
-              orderNumber: newOrderId,
+              orderNumber: created.id,
               restaurantName: 'RDX Fast Food',
               orderType: _orderType.label,
               tableNumber: tableNumber,
@@ -248,25 +279,30 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               items: billItems,
               paymentMethod: null,
               cardLastFour: null,
-              subtotal: subtotal,
-              taxPercentage: AppTax.gstPercentage,
+              subtotal: serverSubtotal,
+              // GST is always applied — never gated by orderFeesEnabled.
+              taxPercentage: feeSettings.gstPercent,
               lateNightFee: lateNightFee,
               longDistanceFee: longDistanceFee,
               guestName: guestName,
               phoneNumber: phoneNumber,
-              deliveryAddress: _orderType == OrderType.delivery
-                  ? _deliveryAddress.text.trim()
-                  : '',
+              deliveryAddress: deliveryAddress,
               sendDigitalReceipt: false,
-              invoiceReference: newOrderId,
+              invoiceReference: created.id,
               receiptDateTime: DateTime.now(),
             ),
           ),
         ),
       );
-    } catch (_) {
+    } catch (e) {
+      controller.state = AsyncError(e, StackTrace.current);
       if (!mounted) return;
-      await _showNotice('Failed to place order. Please try again.');
+      final message = e.toString().replaceFirst('Exception: ', '');
+      await _showNotice(
+        message.isNotEmpty
+            ? message
+            : 'Failed to place order. Please try again.',
+      );
     }
   }
 
@@ -274,6 +310,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Future<void> _showNotice(String message) async {
     if (!mounted) return;
     await RdxNoticeDialog.show(context, message: message);
+  }
+
+  /// Matches Cloud Function late-night window (supports overnight, e.g. 22:00–06:00).
+  bool _isWithinLateNightWindow(String startStr, String endStr) {
+    int? toMinutes(String value) {
+      final parts = value.trim().split(':');
+      if (parts.length < 2) return null;
+      final h = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      if (h == null || m == null) return null;
+      if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+      return h * 60 + m;
+    }
+
+    final start = toMinutes(startStr);
+    final end = toMinutes(endStr);
+    if (start == null || end == null) return false;
+    final now = DateTime.now();
+    final current = now.hour * 60 + now.minute;
+    if (start > end) {
+      return current >= start || current < end;
+    }
+    return current >= start && current < end;
   }
 
   // ===========================================================================
@@ -287,18 +346,34 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final subtotal = ref.watch(cartTotalProvider);
     final totalItems =
         cart.fold<int>(0, (count, line) => count + line.quantity);
-    final tax = subtotal * (AppTax.gstPercentage / 100);
     final settings = ref.watch(settingsProvider);
-    // Late-night fee: auto-applied on Delivery when the setting is enabled.
-    final lateNightFee =
-        _orderType == OrderType.delivery && settings.lateNightDelivery
-            ? 5.0
-            : 0.0;
-    final longDistanceFee =
-        _orderType == OrderType.delivery && _longDistanceFeeSelected
-            ? 29.0
-            : 0.0;
-    final total = subtotal + tax + lateNightFee + longDistanceFee;
+    // Preview only — authoritative totals come from createStaffOrder CF.
+    // GST always. Late-night when settings toggle is ON and current time is
+    // inside the late-night window. Long-distance only when staff enables
+    // the optional toggle on this screen (delivery orders).
+    final gstPercent = settings.gstPercent;
+    final tax = subtotal * (gstPercent / 100);
+    final isLateNightNow = _isWithinLateNightWindow(
+      settings.lateNightStart,
+      settings.lateNightEnd,
+    );
+    final lateNightFee = _orderType == OrderType.delivery &&
+            settings.lateNightDelivery &&
+            isLateNightNow
+        ? settings.lateNightFee
+        : 0.0;
+    final longDistanceFee = _orderType == OrderType.delivery &&
+            _longDistanceFeeSelected
+        ? settings.longDistanceFee
+        : 0.0;
+    final deliveryFeePreview = _orderType == OrderType.delivery
+        ? (settings.freeDeliveryAbove > 0 &&
+                subtotal >= settings.freeDeliveryAbove
+            ? 0.0
+            : settings.deliveryFee)
+        : 0.0;
+    final total =
+        subtotal + tax + deliveryFeePreview + lateNightFee + longDistanceFee;
     final placing = ref.watch(placeOrderControllerProvider).isLoading;
     final isNarrow = MediaQuery.sizeOf(context).width < 900;
 
@@ -377,9 +452,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         _summaryAmountRow(
           context,
           colors,
-          'GST (${AppTax.gstPercentage.toStringAsFixed(0)}%)',
+          'GST (${gstPercent.toStringAsFixed(0)}%)',
           tax,
         ),
+        if (deliveryFeePreview > 0) ...[
+          SizedBox(height: context.h(6)),
+          _summaryAmountRow(
+            context,
+            colors,
+            'Delivery fee',
+            deliveryFeePreview,
+          ),
+        ],
         if (lateNightFee > 0) ...[
           SizedBox(height: context.h(6)),
           _summaryAmountRow(
@@ -533,23 +617,59 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 hint: 'Enter delivery address',
                 maxLines: 3,
               ),
-              SizedBox(height: context.h(12)),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Long Distance Fee (₹29)',
-                    style: AppTextStyles.bodySecondary(context)
-                        .copyWith(color: colors.textMuted),
+              // Optional fee — staff chooses per order on checkout (not a settings toggle).
+              if (settings.longDistanceFee > 0) ...[
+                SizedBox(height: context.h(14)),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.w(12),
+                    vertical: context.h(12),
                   ),
-                  SizedBox(width: context.w(8)),
-                  RdxToggleButton(
-                    value: _longDistanceFeeSelected,
-                    onChanged: (value) =>
-                        setState(() => _longDistanceFeeSelected = value),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(context.h(8)),
+                    border: Border.all(color: colors.border),
                   ),
-                ],
-              ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.route_outlined,
+                        size: context.h(18),
+                        color: AppColors.primary,
+                      ),
+                      SizedBox(width: context.w(10)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Optional: Long distance fee',
+                              style: AppTextStyles.bodySecondary(context)
+                                  .copyWith(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: context.h(2)),
+                            Text(
+                              'Add ₹${settings.longDistanceFee == settings.longDistanceFee.roundToDouble() ? settings.longDistanceFee.toInt() : settings.longDistanceFee.toStringAsFixed(0)} for long-distance delivery',
+                              style: AppTextStyles.caption(context).copyWith(
+                                color: colors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      RdxToggleButton(
+                        value: _longDistanceFeeSelected,
+                        onChanged: (value) =>
+                            setState(() => _longDistanceFeeSelected = value),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ],
         ),

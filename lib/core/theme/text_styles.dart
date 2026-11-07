@@ -5,6 +5,9 @@ import '../utils/responsive_size.dart';
 class AppTextStyles {
   AppTextStyles._();
 
+  static double _narrowWidthScale(BuildContext context) =>
+      (MediaQuery.sizeOf(context).width / 1024).clamp(0.82, 1.0);
+
   // ---------------------------------------------------------------------------
   // HEADINGS
   // ---------------------------------------------------------------------------
@@ -12,7 +15,7 @@ class AppTextStyles {
   /// Main page heading.
   static TextStyle heading(BuildContext context) => TextStyle(
         color: AppColors.lightTextPrimary,
-        fontSize: context.h(24),
+        fontSize: context.h(24) * _narrowWidthScale(context),
         fontWeight: FontWeight.w700,
       );
 
@@ -37,7 +40,7 @@ class AppTextStyles {
   /// Secondary / muted application text.
   static TextStyle bodySecondary(BuildContext context) => TextStyle(
         color: AppColors.lightTextSecondary,
-        fontSize: context.h(16),
+        fontSize: context.h(16) * _narrowWidthScale(context),
         fontWeight: FontWeight.w400,
       );
 
@@ -57,8 +60,6 @@ class AppTextStyles {
         fontSize: context.h(15),
         fontWeight: FontWeight.w500,
       );
-
-      
 
   // ---------------------------------------------------------------------------
   // CAPTION

@@ -13,12 +13,14 @@ class RdxTableColumn {
 
   final String title;
   final Alignment alignment;
+  final Widget? header;
 
   const RdxTableColumn({
     required this.title,
     required this.minWidth,
     this.flex = 1,
     this.alignment = Alignment.centerLeft,
+    this.header,
   });
 }
 
@@ -188,8 +190,7 @@ class _RdxTableState extends State<RdxTable> {
     // If viewport is wider than mins, distribute extra by flex.
     if (maxW > minTotal) {
       final extra = maxW - minTotal;
-      final flexSum =
-          widget.columns.fold<double>(0, (s, c) => s + c.flex);
+      final flexSum = widget.columns.fold<double>(0, (s, c) => s + c.flex);
       if (flexSum <= 0) return mins;
       return [
         for (int i = 0; i < n; i++)
@@ -239,12 +240,13 @@ class _RdxTableState extends State<RdxTable> {
               width: widths[i],
               child: Align(
                 alignment: widget.columns[i].alignment,
-                child: Text(
-                  widget.columns[i].title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: style,
-                ),
+                child: widget.columns[i].header ??
+                    Text(
+                      widget.columns[i].title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style,
+                    ),
               ),
             ),
             if (i != widget.columns.length - 1) SizedBox(width: gap),
@@ -268,7 +270,8 @@ class _RdxTableState extends State<RdxTable> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: widget.onRowTap == null ? null : () => widget.onRowTap!(rowIndex),
+        onTap:
+            widget.onRowTap == null ? null : () => widget.onRowTap!(rowIndex),
         mouseCursor: widget.onRowTap == null
             ? SystemMouseCursors.basic
             : SystemMouseCursors.click,
@@ -292,7 +295,8 @@ class _RdxTableState extends State<RdxTable> {
                   width: widths[i],
                   child: Align(
                     alignment: widget.columns[i].alignment,
-                    child: cells.length > i ? cells[i] : const SizedBox.shrink(),
+                    child:
+                        cells.length > i ? cells[i] : const SizedBox.shrink(),
                   ),
                 ),
                 if (i != widget.columns.length - 1) SizedBox(width: gap),

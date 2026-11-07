@@ -24,9 +24,9 @@ class DashboardAttentionPanel extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        context.w(18),
+        context.w(22),
         context.h(16),
-        context.w(18),
+        context.w(22),
         context.h(12),
       ),
       decoration: DashboardCardStyle.decoration(context),

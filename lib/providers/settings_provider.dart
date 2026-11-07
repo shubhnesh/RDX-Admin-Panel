@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:rdx_admin/services/settings_service.dart';
 
 /// Domain model for operating hours of one period (e.g. weekdays / weekends).
@@ -61,6 +63,20 @@ class SettingsProvider extends ChangeNotifier {
 
   final SettingsService _service;
 
+  void _log(String message) {
+    if (kDebugMode) debugPrint('[SettingsProvider] $message');
+  }
+
+  void _logFailure(String operation, Object error) {
+    if (error is FirebaseFunctionsException) {
+      _log('$operation failed (Functions code: ${error.code}).');
+    } else if (error is FirebaseException) {
+      _log('$operation failed (Firebase code: ${error.code}).');
+    } else {
+      _log('$operation failed (${error.runtimeType}).');
+    }
+  }
+
   bool isLoading = false;
   String? errorMessage;
 
@@ -76,6 +92,7 @@ class SettingsProvider extends ChangeNotifier {
   bool requireManagerApprovalForRefunds = true;
   bool keepPricingConsistent = false;
   bool lateNightDelivery = false;
+  bool longDistanceDelivery = true;
 
   // ── Operating hours ─────────────────────────────────────────────────────
   OperatingHours weekdays = const OperatingHours(
@@ -88,6 +105,16 @@ class SettingsProvider extends ChangeNotifier {
     close: '02:00 PM',
     isOpen: true,
   );
+
+  // ── Fees (source of truth: settings/fees — server only for order totals) ─
+  double gstPercent = 0;
+  double lateNightFee = 0;
+  String lateNightStart = '22:00';
+  String lateNightEnd = '06:00';
+  double longDistanceFee = 0;
+  double deliveryFee = 0;
+  double freeDeliveryAbove = 0;
+  bool orderFeesEnabled = false;
 
   bool isLateNightDeliveryTime([DateTime? now]) {
     final current = now ?? DateTime.now();
@@ -117,11 +144,13 @@ class SettingsProvider extends ChangeNotifier {
 
   // ── Load ────────────────────────────────────────────────────────────────
   Future<void> load() async {
+    _log('Settings load started.');
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
+      _log('Loading restaurant settings.');
       final d = await _service.load();
       if (d != null) {
         restaurantName = d['restaurant_name'] as String? ?? restaurantName;
@@ -135,6 +164,7 @@ class SettingsProvider extends ChangeNotifier {
             d['require_manager_approval_for_refunds'] as bool? ?? true;
         keepPricingConsistent = d['keep_pricing_consistent'] as bool? ?? false;
         lateNightDelivery = d['late_night_delivery'] as bool? ?? false;
+        longDistanceDelivery = d['long_distance_delivery'] as bool? ?? true;
 
         weekdays = OperatingHours.fromMap(
           d['weekdays'] as Map<String, dynamic>?,
@@ -147,7 +177,27 @@ class SettingsProvider extends ChangeNotifier {
           defaultClose: '02:00 PM',
         );
       }
-    } catch (_) {
+
+      _log('Loading order fee configuration.');
+      final fees = await _service.loadFees();
+      orderFeesEnabled = false;
+      if (fees != null) {
+        orderFeesEnabled = fees['fees_enabled'] as bool? ?? false;
+        gstPercent = (fees['gst_percent'] as num?)?.toDouble() ?? 0;
+        lateNightFee = (fees['late_night_fee'] as num?)?.toDouble() ?? 0;
+        lateNightStart = fees['late_night_start'] as String? ?? lateNightStart;
+        lateNightEnd = fees['late_night_end'] as String? ?? lateNightEnd;
+        longDistanceFee = (fees['long_distance_fee'] as num?)?.toDouble() ?? 0;
+        deliveryFee = (fees['delivery_fee'] as num?)?.toDouble() ?? 0;
+        freeDeliveryAbove =
+            (fees['free_delivery_above'] as num?)?.toDouble() ?? 0;
+      }
+      _log(
+        'Settings load completed (restaurant document: ${d != null}, '
+        'fee document: ${fees != null}).',
+      );
+    } catch (error) {
+      _logFailure('Settings load', error);
       errorMessage = 'Failed to load settings';
     }
 
@@ -157,6 +207,7 @@ class SettingsProvider extends ChangeNotifier {
 
   // ── Toggles ─────────────────────────────────────────────────────────────
   Future<void> toggleAutoAccept(bool value) async {
+    _log('Auto-accept toggle requested: $value.');
     final previous = autoAcceptOrders;
     autoAcceptOrders = value;
     notifyListeners();
@@ -168,6 +219,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> toggleManagerApproval(bool value) async {
+    _log('Manager approval toggle requested: $value.');
     final previous = requireManagerApprovalForRefunds;
     requireManagerApprovalForRefunds = value;
     notifyListeners();
@@ -179,6 +231,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> toggleKeepPricing(bool value) async {
+    _log('Keep-pricing toggle requested: $value.');
     final previous = keepPricingConsistent;
     keepPricingConsistent = value;
     notifyListeners();
@@ -190,6 +243,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> toggleLateNightDelivery(bool value) async {
+    _log('Late-night delivery toggle requested: $value.');
     final previous = lateNightDelivery;
     lateNightDelivery = value;
     notifyListeners();
@@ -200,21 +254,93 @@ class SettingsProvider extends ChangeNotifier {
     );
   }
 
+  Future<void> toggleLongDistanceDelivery(bool value) async {
+    _log('Long-distance delivery toggle requested: $value.');
+    final previous = longDistanceDelivery;
+    longDistanceDelivery = value;
+    notifyListeners();
+    await _persistToggle(
+      field: 'long_distance_delivery',
+      value: value,
+      rollback: () => longDistanceDelivery = previous,
+    );
+  }
+
+  Future<void> toggleOrderFees(bool value) async {
+    _log('Order-fees enabled update requested: $value.');
+    final previous = orderFeesEnabled;
+    orderFeesEnabled = value;
+    errorMessage = null;
+    notifyListeners();
+    try {
+      await _service.setOrderFeesEnabled(value);
+      _log('Order-fees enabled update completed.');
+    } catch (error) {
+      _logFailure('Order-fees enabled update', error);
+      orderFeesEnabled = previous;
+      errorMessage = 'Failed to update order fees: $error';
+      notifyListeners();
+    }
+  }
+
   Future<bool> saveOperatingHours({
     required OperatingHours weekdaysHours,
     required OperatingHours weekendsHours,
   }) async {
+    _log('Operating-hours save requested.');
     try {
-      await _service.save({
-        'weekdays': weekdaysHours.toMap(),
-        'weekends': weekendsHours.toMap(),
-      });
+      await _service.saveOperatingHours(
+        weekdays: weekdaysHours.toMap(),
+        weekends: weekendsHours.toMap(),
+      );
       weekdays = weekdaysHours;
       weekends = weekendsHours;
       notifyListeners();
+      _log('Operating-hours save completed.');
       return true;
-    } catch (_) {
+    } catch (error) {
+      _logFailure('Operating-hours save', error);
       errorMessage = 'Failed to save operating hours.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Saves fee config through the server-side validation callable.
+  Future<bool> saveFees({
+    required double gstPercent,
+    required double lateNightFee,
+    required String lateNightStart,
+    required String lateNightEnd,
+    required double longDistanceFee,
+    required double deliveryFee,
+    double freeDeliveryAbove = 0,
+  }) async {
+    _log('Order-fees save requested.');
+    errorMessage = null;
+    try {
+      await _service.saveFees({
+        'gst_percent': gstPercent,
+        'late_night_fee': lateNightFee,
+        'late_night_start': lateNightStart.trim(),
+        'late_night_end': lateNightEnd.trim(),
+        'long_distance_fee': longDistanceFee,
+        'delivery_fee': deliveryFee,
+        'free_delivery_above': freeDeliveryAbove,
+      });
+      this.gstPercent = gstPercent;
+      this.lateNightFee = lateNightFee;
+      this.lateNightStart = lateNightStart.trim();
+      this.lateNightEnd = lateNightEnd.trim();
+      this.longDistanceFee = longDistanceFee;
+      this.deliveryFee = deliveryFee;
+      this.freeDeliveryAbove = freeDeliveryAbove;
+      notifyListeners();
+      _log('Order-fees save completed.');
+      return true;
+    } catch (error) {
+      _logFailure('Order-fees save', error);
+      errorMessage = 'Failed to save fees: $error';
       notifyListeners();
       return false;
     }
@@ -225,9 +351,13 @@ class SettingsProvider extends ChangeNotifier {
     required bool value,
     required void Function() rollback,
   }) async {
+    errorMessage = null;
+    _log('Settings toggle "$field" update started.');
     try {
       await _service.updateToggle(field, value);
-    } catch (_) {
+      _log('Settings toggle "$field" update completed.');
+    } catch (error) {
+      _logFailure('Settings toggle "$field" update', error);
       rollback();
       errorMessage = 'Failed to save setting.';
       notifyListeners();
@@ -244,41 +374,40 @@ class SettingsProvider extends ChangeNotifier {
     OperatingHours? weekdaysHours,
     OperatingHours? weekendsHours,
   }) async {
+    _log('Restaurant settings save requested.');
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
-    final newWeekdays = weekdaysHours ?? weekdays;
-    final newWeekends = weekendsHours ?? weekends;
-
     try {
-      await _service.save({
-        'restaurant_name': name,
-        'description': desc,
-        'address': addr,
-        'phone': ph,
-        'email': em,
-        'auto_accept_orders': autoAcceptOrders,
-        'require_manager_approval_for_refunds':
-            requireManagerApprovalForRefunds,
-        'keep_pricing_consistent': keepPricingConsistent,
-        'late_night_delivery': lateNightDelivery,
-        'weekdays': newWeekdays.toMap(),
-        'weekends': newWeekends.toMap(),
-      });
+      await _service.saveProfile(
+        name: name,
+        description: desc,
+        address: addr,
+        phone: ph,
+        email: em,
+      );
+      if (weekdaysHours != null && weekendsHours != null) {
+        await _service.saveOperatingHours(
+          weekdays: weekdaysHours.toMap(),
+          weekends: weekendsHours.toMap(),
+        );
+      }
 
       restaurantName = name;
       description = desc;
       address = addr;
       phone = ph;
       email = em;
-      weekdays = newWeekdays;
-      weekends = newWeekends;
+      if (weekdaysHours != null) weekdays = weekdaysHours;
+      if (weekendsHours != null) weekends = weekendsHours;
 
       isLoading = false;
       notifyListeners();
+      _log('Restaurant settings save completed.');
       return true;
-    } catch (_) {
+    } catch (error) {
+      _logFailure('Restaurant settings save', error);
       errorMessage = 'Failed to save settings.';
       isLoading = false;
       notifyListeners();

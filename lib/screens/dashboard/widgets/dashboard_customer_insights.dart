@@ -17,22 +17,28 @@ class DashboardCustomerInsights extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final total = stats.ordersDelivered;
+    final total = stats.totalOrders;
     final staff = stats.staffOrderCount;
     final app = stats.appOrderCount;
-    final sourceTotal = (staff + app).clamp(1, 1 << 30);
 
     if (total == 0) {
       return Container(
         width: double.infinity,
         constraints: BoxConstraints(minHeight: context.h(360)),
-        padding: EdgeInsets.all(context.w(16)),
+        padding: EdgeInsets.fromLTRB(
+          context.w(20),
+          context.h(14),
+          context.w(20),
+          context.h(16),
+        ),
         decoration: DashboardCardStyle.decoration(context),
-        child: const DashboardEmpty(
-          icon: Icons.people_outline_rounded,
-          title: 'No customer data available',
-          subtitle:
-              'Order-source insights will appear after orders are recorded.',
+        child: const Center(
+          child: DashboardEmpty(
+            icon: Icons.people_outline_rounded,
+            title: 'No customer data available',
+            subtitle:
+                'Order-source insights will appear after orders are recorded.',
+          ),
         ),
       );
     }
@@ -41,9 +47,9 @@ class DashboardCustomerInsights extends StatelessWidget {
       width: double.infinity,
       constraints: BoxConstraints(minHeight: context.h(360)),
       padding: EdgeInsets.fromLTRB(
-        context.w(16),
+        context.w(20),
         context.h(14),
-        context.w(16),
+        context.w(20),
         context.h(16),
       ),
       decoration: DashboardCardStyle.decoration(context),
@@ -51,11 +57,6 @@ class DashboardCustomerInsights extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Customer source', style: DashboardCardStyle.title(context)),
-          SizedBox(height: context.h(2)),
-          Text(
-            'Order sources and service types for this period',
-            style: AppTextStyles.bodySecondary(context),
-          ),
           SizedBox(height: context.h(16)),
           Row(
             children: [
@@ -68,13 +69,13 @@ class DashboardCustomerInsights extends StatelessWidget {
                     centerSpaceRadius: context.w(28),
                     sections: [
                       PieChartSectionData(
-                        value: staff.toDouble().clamp(0.1, double.infinity),
+                        value: stats.orderSourceFractions['staff'] ?? 0,
                         color: const Color(0xFFF59E0B),
                         radius: context.w(22),
                         showTitle: false,
                       ),
                       PieChartSectionData(
-                        value: app.toDouble().clamp(0.1, double.infinity),
+                        value: stats.orderSourceFractions['app'] ?? 0,
                         color: const Color(0xFF3B82F6),
                         radius: context.w(22),
                         showTitle: false,
@@ -93,7 +94,7 @@ class DashboardCustomerInsights extends StatelessWidget {
                       color: const Color(0xFFF59E0B),
                       label: 'Staff / POS',
                       count: staff,
-                      pct: staff / sourceTotal * 100,
+                      pct: stats.staffOrderPercent,
                     ),
                     SizedBox(height: context.h(10)),
                     _legendRow(
@@ -102,7 +103,7 @@ class DashboardCustomerInsights extends StatelessWidget {
                       color: const Color(0xFF3B82F6),
                       label: 'Customer app',
                       count: app,
-                      pct: app / sourceTotal * 100,
+                      pct: stats.appOrderPercent,
                     ),
                   ],
                 ),
@@ -114,14 +115,35 @@ class DashboardCustomerInsights extends StatelessWidget {
           SizedBox(height: context.h(14)),
           Text('Service type', style: AppTextStyles.bodySecondary(context)),
           SizedBox(height: context.h(10)),
-          _miniBar(context, colors, 'Dine-in', stats.dineInCount, total,
-              AppColors.primary),
+          _miniBar(
+            context,
+            colors,
+            'Dine-in',
+            stats.dineInCount,
+            stats.dineInPercent,
+            stats.orderTypeFractions['dine_in'] ?? 0,
+            const Color(0xFF22C55E),
+          ),
           SizedBox(height: context.h(8)),
-          _miniBar(context, colors, 'Takeaway', stats.takeawayCount, total,
-              const Color(0xFF8B5CF6)),
+          _miniBar(
+            context,
+            colors,
+            'Takeaway',
+            stats.takeawayCount,
+            stats.takeawayPercent,
+            stats.orderTypeFractions['takeaway'] ?? 0,
+            const Color(0xFF22C55E),
+          ),
           SizedBox(height: context.h(8)),
-          _miniBar(context, colors, 'Delivery', stats.deliveryCount, total,
-              const Color(0xFF22C55E)),
+          _miniBar(
+            context,
+            colors,
+            'Delivery',
+            stats.deliveryCount,
+            stats.deliveryPercent,
+            stats.orderTypeFractions['delivery'] ?? 0,
+            const Color(0xFF22C55E),
+          ),
         ],
       ),
     );
@@ -151,14 +173,26 @@ class DashboardCustomerInsights extends StatelessWidget {
               style: AppTextStyles.body(context)
                   .copyWith(fontWeight: FontWeight.w600)),
         ),
-        Text('$count',
+        SizedBox(
+          width: context.w(36),
+          child: Text(
+            '$count',
+            textAlign: TextAlign.right,
             style: AppTextStyles.body(context)
-                .copyWith(fontWeight: FontWeight.w800)),
+                .copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
         SizedBox(width: context.w(8)),
-        Text(
-          '${pct.toStringAsFixed(0)}%',
-          style: AppTextStyles.caption(context)
-              .copyWith(color: colors.textSecondary),
+        SizedBox(
+          width: context.w(40),
+          child: Text(
+            '${pct.toStringAsFixed(0)}%',
+            textAlign: TextAlign.right,
+            style: AppTextStyles.caption(context).copyWith(
+              color: const Color(0xFF16A34A),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ],
     );
@@ -169,10 +203,10 @@ class DashboardCustomerInsights extends StatelessWidget {
     AppColorScheme colors,
     String label,
     int value,
-    int total,
+    double percent,
+    double fraction,
     Color color,
   ) {
-    final pct = total == 0 ? 0.0 : value / total;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -183,16 +217,30 @@ class DashboardCustomerInsights extends StatelessWidget {
                   style: AppTextStyles.body(context)
                       .copyWith(fontWeight: FontWeight.w600)),
             ),
-            Text('$value · ${(pct * 100).toStringAsFixed(0)}%',
-                style: AppTextStyles.caption(context)
-                    .copyWith(color: colors.textSecondary)),
+            Text(
+              '$value',
+              style: AppTextStyles.caption(context)
+                  .copyWith(color: colors.textSecondary),
+            ),
+            SizedBox(width: context.w(4)),
+            SizedBox(
+              width: context.w(40),
+              child: Text(
+                '${percent.toStringAsFixed(0)}%',
+                textAlign: TextAlign.right,
+                style: AppTextStyles.caption(context).copyWith(
+                  color: const Color(0xFF16A34A),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ],
         ),
         SizedBox(height: context.h(4)),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
-            value: pct.clamp(0.0, 1.0),
+            value: fraction.clamp(0.0, 1.0),
             minHeight: context.h(5),
             backgroundColor: colors.border.withValues(alpha: 0.35),
             valueColor: AlwaysStoppedAnimation(color),

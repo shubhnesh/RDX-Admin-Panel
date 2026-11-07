@@ -14,6 +14,7 @@ class RdxActionButton extends StatelessWidget {
   final bool isPrimary;
   final bool isLoading;
   final bool enabled;
+  final bool compact;
   final double? height;
   final double? minWidth;
 
@@ -40,6 +41,7 @@ class RdxActionButton extends StatelessWidget {
     this.isPrimary = true,
     this.isLoading = false,
     this.enabled = true,
+    this.compact = false,
     this.height,
     this.minWidth,
     this.leadingIcon,
@@ -60,6 +62,7 @@ class RdxActionButton extends StatelessWidget {
     required this.onPressed,
     this.isLoading = false,
     this.enabled = true,
+    this.compact = false,
     this.height,
     this.minWidth,
     this.leadingIcon,
@@ -80,6 +83,7 @@ class RdxActionButton extends StatelessWidget {
     required this.onPressed,
     this.isLoading = false,
     this.enabled = true,
+    this.compact = false,
     this.height,
     this.minWidth,
     this.leadingIcon,
@@ -122,14 +126,17 @@ class RdxActionButton extends StatelessWidget {
             : colors.textPrimary.withAlpha(120));
     final resolvedDisabledIconColor =
         disabledIconColor ?? resolvedDisabledTextColor;
-    final isDisabled = !enabled || isLoading || onPressed == null;
+    final isDisabled = !enabled || (!isLoading && onPressed == null);
+    final isInteractive = enabled && !isLoading && onPressed != null;
     final effectiveTextColor =
         isDisabled ? resolvedDisabledTextColor : resolvedTextColor;
     final effectiveIconColor =
         isDisabled ? resolvedDisabledIconColor : resolvedIconColor;
 
-    final textStyle =
-        AppTextStyles.section(context).copyWith(color: effectiveTextColor);
+    final textStyle = AppTextStyles.section(context).copyWith(
+      color: effectiveTextColor,
+      fontSize: compact ? context.h(12).clamp(11.0, 12.0) : null,
+    );
 
     final child = isLoading
         ? SizedBox(
@@ -137,7 +144,7 @@ class RdxActionButton extends StatelessWidget {
             width: context.h(18).clamp(14.0, 18.0),
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: effectiveIconColor,
+              color: resolvedTextColor,
             ),
           )
         : Row(
@@ -147,10 +154,13 @@ class RdxActionButton extends StatelessWidget {
               if (leadingIcon != null) ...[
                 Icon(
                   leadingIcon,
-                  size: (iconSize ?? context.h(24)).clamp(14.0, 24.0),
+                  size: (iconSize ?? context.h(compact ? 14 : 24))
+                      .clamp(14.0, 24.0),
                   color: effectiveIconColor,
                 ),
-                SizedBox(width: context.w(8).clamp(5.0, 8.0)),
+                SizedBox(
+                  width: context.w(compact ? 5 : 8).clamp(4.0, 8.0),
+                ),
               ],
               Flexible(
                 child: Text(
@@ -162,10 +172,13 @@ class RdxActionButton extends StatelessWidget {
                 ),
               ),
               if (trailingIcon != null) ...[
-                SizedBox(width: context.w(8).clamp(5.0, 8.0)),
+                SizedBox(
+                  width: context.w(compact ? 5 : 8).clamp(4.0, 8.0),
+                ),
                 Icon(
                   trailingIcon,
-                  size: (iconSize ?? context.h(24)).clamp(14.0, 24.0),
+                  size: (iconSize ?? context.h(compact ? 14 : 24))
+                      .clamp(14.0, 24.0),
                   color: effectiveIconColor,
                 ),
               ],
@@ -173,7 +186,7 @@ class RdxActionButton extends StatelessWidget {
           );
 
     final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(context.h(8)),
+      borderRadius: BorderRadius.circular(context.h(18).clamp(14.0, 22.0)),
     );
 
     if (isPrimary) {
@@ -181,7 +194,7 @@ class RdxActionButton extends StatelessWidget {
         height: btnHeight,
         width: minWidth,
         child: ElevatedButton(
-          onPressed: isDisabled ? null : onPressed,
+          onPressed: isInteractive ? onPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: resolvedBackgroundColor,
             foregroundColor: resolvedTextColor,
@@ -189,7 +202,8 @@ class RdxActionButton extends StatelessWidget {
             disabledForegroundColor: resolvedDisabledTextColor,
             elevation: 0,
             padding: EdgeInsets.symmetric(
-              horizontal: context.w(16).clamp(10.0, 16.0),
+              horizontal:
+                  context.w(compact ? 8 : 16).clamp(compact ? 6.0 : 10.0, 16.0),
             ),
             shape: shape,
             minimumSize: Size(
@@ -207,7 +221,7 @@ class RdxActionButton extends StatelessWidget {
       height: btnHeight,
       width: minWidth,
       child: OutlinedButton(
-        onPressed: isDisabled ? null : onPressed,
+        onPressed: isInteractive ? onPressed : null,
         style: OutlinedButton.styleFrom(
           backgroundColor: resolvedBackgroundColor,
           foregroundColor: resolvedTextColor,
@@ -219,7 +233,8 @@ class RdxActionButton extends StatelessWidget {
           ),
           elevation: 0,
           padding: EdgeInsets.symmetric(
-            horizontal: context.w(16).clamp(10.0, 16.0),
+            horizontal:
+                context.w(compact ? 8 : 16).clamp(compact ? 6.0 : 10.0, 16.0),
           ),
           shape: shape,
           minimumSize: Size(

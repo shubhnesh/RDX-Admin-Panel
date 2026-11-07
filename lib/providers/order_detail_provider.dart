@@ -26,7 +26,7 @@ class OrderDetailProvider extends ChangeNotifier {
 
   Future<void> updateStatus(OrderStatus status) async {
     if (order == null) return;
-    await _service.updateOrderStatus(order!.id, status);
+    await _service.updateOrderStatus(orderId: order!.id, newStatus: status);
     order = order!.copyWith(status: status);
     notifyListeners();
   }

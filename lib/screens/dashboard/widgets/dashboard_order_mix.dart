@@ -15,12 +15,7 @@ class DashboardOrderMix extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final typeTotal =
-        (stats.dineInCount + stats.takeawayCount + stats.deliveryCount)
-            .clamp(1, 1 << 30);
-    final sourceTotal =
-        (stats.staffOrderCount + stats.appOrderCount).clamp(1, 1 << 30);
-    final hasOrders = stats.ordersDelivered > 0;
+    final hasOrders = stats.totalOrders > 0;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -61,19 +56,22 @@ class DashboardOrderMix extends StatelessWidget {
             _bar(context, colors,
                 label: 'Dine-in',
                 value: stats.dineInCount,
-                total: typeTotal,
+                percent: stats.dineInPercent,
+                fraction: stats.orderTypeFractions['dine_in'] ?? 0,
                 color: AppColors.primary),
             SizedBox(height: context.h(8)),
             _bar(context, colors,
                 label: 'Takeaway',
                 value: stats.takeawayCount,
-                total: typeTotal,
+                percent: stats.takeawayPercent,
+                fraction: stats.orderTypeFractions['takeaway'] ?? 0,
                 color: const Color(0xFF8B5CF6)),
             SizedBox(height: context.h(8)),
             _bar(context, colors,
                 label: 'Delivery',
                 value: stats.deliveryCount,
-                total: typeTotal,
+                percent: stats.deliveryPercent,
+                fraction: stats.orderTypeFractions['delivery'] ?? 0,
                 color: const Color(0xFF22C55E)),
             SizedBox(height: context.h(16)),
             Text('Orders by source',
@@ -82,13 +80,15 @@ class DashboardOrderMix extends StatelessWidget {
             _bar(context, colors,
                 label: 'Staff / POS',
                 value: stats.staffOrderCount,
-                total: sourceTotal,
+                percent: stats.staffOrderPercent,
+                fraction: stats.orderSourceFractions['staff'] ?? 0,
                 color: const Color(0xFFF59E0B)),
             SizedBox(height: context.h(8)),
             _bar(context, colors,
                 label: 'App',
                 value: stats.appOrderCount,
-                total: sourceTotal,
+                percent: stats.appOrderPercent,
+                fraction: stats.orderSourceFractions['app'] ?? 0,
                 color: const Color(0xFF3B82F6)),
           ],
         ],
@@ -101,10 +101,10 @@ class DashboardOrderMix extends StatelessWidget {
     AppColorScheme colors, {
     required String label,
     required int value,
-    required int total,
+    required double percent,
+    required double fraction,
     required Color color,
   }) {
-    final pct = total == 0 ? 0.0 : value / total;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -120,7 +120,7 @@ class DashboardOrderMix extends StatelessWidget {
                     .copyWith(fontWeight: FontWeight.w800)),
             SizedBox(width: context.w(8)),
             Text(
-              '${(pct * 100).toStringAsFixed(0)}%',
+              '${percent.toStringAsFixed(0)}%',
               style: AppTextStyles.caption(context)
                   .copyWith(color: colors.textSecondary),
             ),
@@ -130,7 +130,7 @@ class DashboardOrderMix extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
-            value: pct.clamp(0.0, 1.0),
+            value: fraction.clamp(0.0, 1.0),
             minHeight: context.h(5),
             backgroundColor: colors.border.withValues(alpha: 0.35),
             valueColor: AlwaysStoppedAnimation(color),

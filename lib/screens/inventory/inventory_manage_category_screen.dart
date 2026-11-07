@@ -9,7 +9,7 @@ import 'package:rdx_admin/services/unit_service.dart';
 import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/empty_state.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/loading_indicator.dart';
-import 'package:rdx_admin/widgets/reusable_widgets/rdx_delete_dialog.dart';
+import 'package:rdx_admin/widgets/dialogs/rdx_delete_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_search_bar.dart';
@@ -30,20 +30,13 @@ class _InventoryManageCategoryScreenState
   final _categoryService = InventoryCategoryService();
   final _unitService = UnitService();
 
-  final _tagSearchController = TextEditingController();
   final _itemSearchController = TextEditingController();
 
   _Section _section = _Section.category;
   bool _loading = true;
   String? _error;
 
-  /// Filters the scrollable tag row on top (searches the section tags,
-  /// e.g. "Categories" / "Units of Measurement" — and, once a category
-  /// has many categories, each category's own tag).
-  String _tagQuery = '';
-
-  /// Filters the rows shown inside the active table (category or unit
-  /// names), independent from the tag search above.
+  /// Filters the rows shown inside the active table (category or unit names).
   String _itemQuery = '';
 
   List<InventoryCategoryModel> _categories = [];
@@ -57,7 +50,6 @@ class _InventoryManageCategoryScreenState
 
   @override
   void dispose() {
-    _tagSearchController.dispose();
     _itemSearchController.dispose();
     super.dispose();
   }
@@ -81,11 +73,12 @@ class _InventoryManageCategoryScreenState
         _units = _sortedByName(results[1] as List<UnitModel>, (u) => u.name);
         _loading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('InventoryManageCategoryScreen._loadAll failed: $e\n$st');
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Failed to load. Try again.';
+        _error = 'Failed to load. ${e.toString()}';
       });
     }
   }
@@ -229,21 +222,6 @@ class _InventoryManageCategoryScreenState
 
   // ── Filtering helpers ───────────────────────────────────────────────
 
-  /// Section tags shown in the top scrollable row, filtered by whatever
-  /// has been typed into the top search bar. Today this is just the two
-  /// section tags ("Categories" / "Units of Measurement"), but it is
-  /// built generically so any future per-category tags slot in the same
-  /// way.
-  List<(_Section, String)> get _visibleTags {
-    final all = <(_Section, String)>[
-      (_Section.category, 'Categories'),
-      (_Section.unit, 'Units of Measurement'),
-    ];
-    if (_tagQuery.trim().isEmpty) return all;
-    final q = _tagQuery.trim().toLowerCase();
-    return all.where((t) => t.$2.toLowerCase().contains(q)).toList();
-  }
-
   /// Case-insensitive alphabetical sort for named entities.
   List<T> _sortedByName<T>(
     Iterable<T> items,
@@ -293,40 +271,47 @@ class _InventoryManageCategoryScreenState
           SizedBox(height: context.h(isNarrow ? 10 : 14)),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: horizontal),
-            child: isNarrow
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _tabs(context, colors),
-                      SizedBox(height: context.h(10)),
-                      Row(
-                        children: [
-                          Expanded(child: _tagSearchBar(context)),
-                          SizedBox(width: context.w(8)),
-                          _addButton(context),
-                        ],
-                      ),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      Expanded(child: _tabs(context, colors)),
-                      SizedBox(width: context.w(8)),
-                      SizedBox(
-                        width: context.w(220),
-                        child: _tagSearchBar(context),
-                      ),
-                      SizedBox(width: context.w(8)),
-                      _addButton(context),
-                    ],
-                  ),
+            child: Row(
+              children: [
+                Expanded(child: _itemSearchBar(context)),
+                SizedBox(width: context.w(8)),
+                _addButton(context),
+              ],
+            ),
+          ),
+          SizedBox(height: context.h(10)),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: horizontal),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _tabs(context, colors),
+            ),
           ),
           SizedBox(height: context.h(isNarrow ? 10 : 14)),
           Expanded(
             child: _loading
                 ? const LoadingIndicator()
                 : _error != null
-                    ? EmptyState(message: _error!)
+                    ? Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(context.w(24)),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.body(context),
+                              ),
+                              SizedBox(height: context.h(12)),
+                              TextButton(
+                                onPressed: _loadAll,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
                     : Padding(
                         padding: EdgeInsets.fromLTRB(
                           horizontal,
@@ -337,12 +322,10 @@ class _InventoryManageCategoryScreenState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _itemSearchBar(context),
-                            SizedBox(height: context.h(12)),
                             Expanded(
                               child: _section == _Section.category
-                                  ? _categoryContent(context, colors, isNarrow)
-                                  : _unitContent(context, colors, isNarrow),
+                                  ? _categoryContent(context)
+                                  : _unitContent(context),
                             ),
                           ],
                         ),
@@ -353,60 +336,32 @@ class _InventoryManageCategoryScreenState
     );
   }
 
-  /// Search bar that filters the scrollable tag row on top of the screen.
-  Widget _tagSearchBar(BuildContext context) {
-    return RdxSearchBar(
-      controller: _tagSearchController,
-      hintText: 'Search categories',
-      height: context.h(40),
-      onChanged: (value) => setState(() => _tagQuery = value),
-    );
-  }
-
   /// Search bar that filters the rows inside the active table.
   Widget _itemSearchBar(BuildContext context) {
     return RdxSearchBar(
       controller: _itemSearchController,
-      hintText: 'Search materials',
-      height: context.h(40),
+      hintText:
+          _section == _Section.category ? 'Search categories' : 'Search units',
+      height: RdxSearchBar.standardHeight(context),
       onChanged: (value) => setState(() => _itemQuery = value),
     );
   }
 
-  /// Scrollable row of section tags. Fades out on the trailing edge —
-  /// the same treatment used for the category tags on the Menu screen —
-  /// so it reads cleanly against whatever sits to its right (the tag
-  /// search bar / Add button).
+  /// Scrollable row of sections.
   Widget _tabs(BuildContext context, AppColorScheme colors) {
-    final tags = _visibleTags;
-    return ShaderMask(
-      shaderCallback: (bounds) => LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: const [Colors.black, Colors.black, Colors.transparent],
-        stops: const [0.0, 0.9, 1.0],
-      ).createShader(bounds),
-      blendMode: BlendMode.dstIn,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.only(right: context.w(24)),
-        child: Row(
-          children: [
-            for (int i = 0; i < tags.length; i++) ...[
-              _tab(context, colors, tags[i].$1, tags[i].$2),
-              if (i != tags.length - 1) SizedBox(width: context.w(8)),
-            ],
-            if (tags.isEmpty)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: context.h(9)),
-                child: Text(
-                  'No tags match your search.',
-                  style: AppTextStyles.label(context)
-                      .copyWith(color: colors.textMuted),
-                ),
-              ),
+    const tags = <(_Section, String)>[
+      (_Section.category, 'Categories'),
+      (_Section.unit, 'Units of Measurement'),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (int i = 0; i < tags.length; i++) ...[
+            _tab(context, colors, tags[i].$1, tags[i].$2),
+            if (i != tags.length - 1) SizedBox(width: context.w(8)),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -455,11 +410,7 @@ class _InventoryManageCategoryScreenState
     );
   }
 
-  Widget _categoryContent(
-    BuildContext context,
-    AppColorScheme colors,
-    bool isNarrow,
-  ) {
+  Widget _categoryContent(BuildContext context) {
     final categories = _filteredCategories;
     if (categories.isEmpty) {
       return EmptyState(
@@ -468,42 +419,29 @@ class _InventoryManageCategoryScreenState
             : 'No categories match your search.',
       );
     }
-    return isNarrow
-        ? _simpleCards(
-            context,
-            colors,
-            items: categories.map((c) => (c.name, c as Object)).toList(),
-            onEdit: (c) => _editCategory(c as InventoryCategoryModel),
-            onDelete: (c) => _deleteCategory(c as InventoryCategoryModel),
-          )
-        : RdxTable(
-            columns: [
-              RdxTableColumn(
-                  title: 'Category', minWidth: context.w(180), flex: 3),
-              RdxTableColumn(
-                title: 'Actions',
-                minWidth: context.w(90),
-                alignment: Alignment.centerRight,
-              ),
-            ],
-            rows: [
-              for (final c in categories)
-                [
-                  Text(c.name, style: AppTextStyles.body(context)),
-                  _actions(
-                    onEdit: () => _editCategory(c),
-                    onDelete: () => _deleteCategory(c),
-                  ),
-                ],
-            ],
-          );
+    return RdxTable(
+      columns: [
+        RdxTableColumn(title: 'Category', minWidth: 180, flex: 3),
+        RdxTableColumn(
+          title: 'Actions',
+          minWidth: 90,
+          alignment: Alignment.centerRight,
+        ),
+      ],
+      rows: [
+        for (final c in categories)
+          [
+            Text(c.name, style: AppTextStyles.body(context)),
+            _actions(
+              onEdit: () => _editCategory(c),
+              onDelete: () => _deleteCategory(c),
+            ),
+          ],
+      ],
+    );
   }
 
-  Widget _unitContent(
-    BuildContext context,
-    AppColorScheme colors,
-    bool isNarrow,
-  ) {
+  Widget _unitContent(BuildContext context) {
     final units = _filteredUnits;
     if (units.isEmpty) {
       return EmptyState(
@@ -511,80 +449,25 @@ class _InventoryManageCategoryScreenState
             _units.isEmpty ? 'No units yet.' : 'No units match your search.',
       );
     }
-    return isNarrow
-        ? _simpleCards(
-            context,
-            colors,
-            items: units.map((u) => (u.name, u as Object)).toList(),
-            onEdit: (u) => _editUnit(u as UnitModel),
-            onDelete: (u) => _deleteUnit(u as UnitModel),
-          )
-        : RdxTable(
-            columns: [
-              RdxTableColumn(
-                  title: 'Unit of Measurement',
-                  minWidth: context.w(180),
-                  flex: 3),
-              RdxTableColumn(
-                title: 'Actions',
-                minWidth: context.w(90),
-                alignment: Alignment.centerRight,
-              ),
-            ],
-            rows: [
-              for (final u in units)
-                [
-                  Text(u.name, style: AppTextStyles.body(context)),
-                  _actions(
-                    onEdit: () => _editUnit(u),
-                    onDelete: () => _deleteUnit(u),
-                  ),
-                ],
-            ],
-          );
-  }
-
-  Widget _simpleCards(
-    BuildContext context,
-    AppColorScheme colors, {
-    required List<(String, Object)> items,
-    required void Function(Object) onEdit,
-    required void Function(Object) onDelete,
-  }) {
-    return ListView.separated(
-      itemCount: items.length,
-      separatorBuilder: (_, __) => SizedBox(height: context.h(10)),
-      itemBuilder: (context, index) {
-        final (title, item) = items[index];
-        return Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: context.w(14),
-            vertical: context.h(12),
-          ),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(context.h(12)),
-            border: Border.all(color: colors.border),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: AppTextStyles.body(context).copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              _actions(
-                onEdit: () => onEdit(item),
-                onDelete: () => onDelete(item),
-              ),
-            ],
-          ),
-        );
-      },
+    return RdxTable(
+      columns: [
+        RdxTableColumn(title: 'Unit of Measurement', minWidth: 180, flex: 3),
+        RdxTableColumn(
+          title: 'Actions',
+          minWidth: 90,
+          alignment: Alignment.centerRight,
+        ),
+      ],
+      rows: [
+        for (final u in units)
+          [
+            Text(u.name, style: AppTextStyles.body(context)),
+            _actions(
+              onEdit: () => _editUnit(u),
+              onDelete: () => _deleteUnit(u),
+            ),
+          ],
+      ],
     );
   }
 

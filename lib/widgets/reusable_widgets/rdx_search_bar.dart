@@ -7,8 +7,10 @@ import 'rdx_text_field.dart';
 
 /// Shared search field used across Inventory, Menu, Coupons, and elsewhere.
 ///
-/// Default outer height matches Inventory (`context.h(40)`). Text and hint
-/// are vertically centered in every size (same technique as [RdxTextField]).
+/// Visually identical to [RdxTextField]: same height, same padding, same
+/// radius, same border, same fill behaviour (grey when idle, white when
+/// focused / has text), same font size and same text/hint placement.
+/// The only differences are the leading search icon and the clear button.
 class RdxSearchBar extends StatefulWidget {
   final String hintText;
   final TextEditingController? controller;
@@ -19,9 +21,14 @@ class RdxSearchBar extends StatefulWidget {
   final VoidCallback? onClear;
 
   final double? width;
+
+  /// Optional override. Defaults to [RdxTextField.singleLineHeight].
   final double? height;
 
   final EdgeInsetsGeometry? margin;
+
+  /// Optional override of the inner content padding. Defaults to the same
+  /// padding [RdxTextField] uses.
   final EdgeInsetsGeometry? padding;
 
   final Widget? leading;
@@ -30,6 +37,7 @@ class RdxSearchBar extends StatefulWidget {
   final bool enabled;
   final bool readOnly;
   final bool autofocus;
+  final int? maxLength;
 
   final FocusNode? focusNode;
   final TextInputAction textInputAction;
@@ -40,7 +48,8 @@ class RdxSearchBar extends StatefulWidget {
   final Color? textColor;
   final Color? hintColor;
 
-  final double borderRadius;
+  /// Null = same radius as [RdxTextField].
+  final double? borderRadius;
   final double borderWidth;
 
   final TextStyle? textStyle;
@@ -48,9 +57,9 @@ class RdxSearchBar extends StatefulWidget {
 
   final bool showClearButton;
 
-  /// Canonical height used by Inventory and every other screen.
+  /// Canonical height — exactly the same as a single-line [RdxTextField].
   static double standardHeight(BuildContext context) =>
-      context.h(40).clamp(32.0, 48.0);
+      RdxTextField.singleLineHeight(context);
 
   const RdxSearchBar({
     super.key,
@@ -68,6 +77,7 @@ class RdxSearchBar extends StatefulWidget {
     this.enabled = true,
     this.readOnly = false,
     this.autofocus = false,
+    this.maxLength,
     this.focusNode,
     this.textInputAction = TextInputAction.search,
     this.keyboardType,
@@ -75,7 +85,7 @@ class RdxSearchBar extends StatefulWidget {
     this.borderColor,
     this.textColor,
     this.hintColor,
-    this.borderRadius = 10,
+    this.borderRadius,
     this.borderWidth = 1,
     this.textStyle,
     this.hintStyle,
@@ -193,13 +203,8 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
     _controller.removeListener(_controllerListener);
     _focusNode.removeListener(_focusListener);
 
-    if (_ownsController) {
-      _internalController.dispose();
-    }
-
-    if (_ownsFocusNode) {
-      _internalFocusNode.dispose();
-    }
+    if (_ownsController) _internalController.dispose();
+    if (_ownsFocusNode) _internalFocusNode.dispose();
 
     super.dispose();
   }
@@ -220,111 +225,133 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasText = _controller.text.isNotEmpty;
     final colors = AppColors.of(context);
+    final hasText = _controller.text.isNotEmpty;
 
-    final double effectiveHeight =
-        (widget.height ?? RdxSearchBar.standardHeight(context))
-            .clamp(32.0, 56.0);
+    // ---- Same sizing tokens as RdxTextField -------------------------------
+    final hPad = RdxTextField.horizontalPad(context);
+    final vPad = RdxTextField.verticalPad(context);
+    final textFontSize = RdxTextField.textFontSize(context);
+    final radius = BorderRadius.circular(
+      widget.borderRadius ?? context.h(8).clamp(6.0, 8.0),
+    );
+    final fieldHeight = widget.height ?? RdxTextField.singleLineHeight(context);
 
-    // Same text style family as RdxTextField
-    // height: 1.0 prevents the previous 1.2 line-height from pushing text up
+    // ---- Same text styles as RdxTextField ---------------------------------
     final textStyle = widget.textStyle ??
-        AppTextStyles.label(context).copyWith(
-          fontSize: RdxTextField.textFontSize(context),
-          color: widget.textColor ?? colors.textPrimary,
-          height: 1.0,
+        AppTextStyles.bodySecondary(context).copyWith(
+          fontSize: textFontSize,
+          color: widget.textColor,
         );
     final hintStyle = widget.hintStyle ??
-        AppTextStyles.label(context).copyWith(
-          fontSize: RdxTextField.textFontSize(context),
+        AppTextStyles.bodySecondary(context).copyWith(
           color: widget.hintColor ?? colors.textMuted,
-          height: 1.0,
+          fontSize: textFontSize,
         );
 
-    final double fontSize =
-        textStyle.fontSize ?? RdxTextField.fontSize(context);
+    // ---- Same border / fill behaviour as RdxTextField ---------------------
+    final border = OutlineInputBorder(
+      borderRadius: radius,
+      borderSide: BorderSide(
+        color: widget.borderColor ?? colors.border,
+        width: widget.borderWidth,
+      ),
+    );
 
-    return SizedBox(
-      width: widget.width,
-      height: effectiveHeight,
-      child: Container(
-        margin: widget.margin,
-        padding: widget.padding ??
-            EdgeInsets.symmetric(
-              horizontal: RdxTextField.horizontalPad(context),
-            ),
-        decoration: BoxDecoration(
-          color: widget.backgroundColor ?? Colors.white,
-          borderRadius: BorderRadius.circular(
-            context.h(8).clamp(6.0, 8.0),
+    final fillColor = widget.backgroundColor ??
+        (_focusNode.hasFocus || hasText ? Colors.white : colors.surfaceVariant);
+
+    final iconColor = widget.hintColor ?? colors.textMuted;
+
+    // ---- Prefix (search icon) --------------------------------------------
+    final prefix = Padding(
+      padding: EdgeInsets.only(left: hPad, right: context.w(8)),
+      child: widget.leading ??
+          Icon(
+            Icons.search_rounded,
+            size: context.h(20).clamp(14.0, 20.0),
+            color: iconColor,
           ),
-          border: Border.all(
-            color: widget.borderColor ?? colors.border,
-            width: widget.borderWidth,
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            widget.leading ??
-                Icon(
-                  Icons.search_rounded,
-                  size: context.h(20).clamp(14.0, 20.0),
-                  color: widget.hintColor ?? colors.textMuted,
-                ),
-            SizedBox(width: context.w(8)),
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                enabled: widget.enabled,
-                readOnly: widget.readOnly,
-                autofocus: widget.autofocus,
-                textInputAction: widget.textInputAction,
-                keyboardType: widget.keyboardType,
-                maxLines: 1,
-                textAlignVertical: TextAlignVertical.center,
-                style: textStyle,
-                cursorColor: AppColors.primary,
-                cursorHeight: fontSize * 1.1,
-                onChanged: widget.onChanged,
-                onSubmitted: widget.onSubmitted,
-                decoration: InputDecoration(
-                  hintText: widget.hintText,
-                  hintStyle: hintStyle,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  isDense: true,
-                  filled: true,
-                  fillColor: Colors.transparent,
-                  hoverColor: Colors.transparent,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-            if (widget.showClearButton && hasText)
-              GestureDetector(
-                onTap: _clear,
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: EdgeInsets.only(left: context.w(6)),
-                  child: Icon(
-                    Icons.close_rounded,
-                    size: context.h(18).clamp(14.0, 18.0),
-                    color: colors.textMuted,
+    );
+
+    // ---- Suffix (clear button + optional trailing) ------------------------
+    final showClear = widget.showClearButton && hasText;
+    final hasSuffix = showClear || widget.trailing != null;
+
+    final Widget? suffix = hasSuffix
+        ? Padding(
+            padding: EdgeInsets.only(right: hPad),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showClear)
+                  GestureDetector(
+                    onTap: _clear,
+                    behavior: HitTestBehavior.opaque,
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: context.h(18).clamp(14.0, 18.0),
+                      color: iconColor,
+                    ),
                   ),
-                ),
+                if (showClear && widget.trailing != null)
+                  SizedBox(width: context.w(6)),
+                if (widget.trailing != null) widget.trailing!,
+              ],
+            ),
+          )
+        : null;
+
+    return Container(
+      margin: widget.margin,
+      width: widget.width,
+      height: fieldHeight,
+      child: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        enabled: widget.enabled,
+        readOnly: widget.readOnly,
+        autofocus: widget.autofocus,
+        maxLength: widget.maxLength,
+        textInputAction: widget.textInputAction,
+        keyboardType: widget.keyboardType,
+        maxLines: 1,
+        textAlignVertical: TextAlignVertical.center,
+        style: textStyle,
+        cursorColor: AppColors.primary,
+        onChanged: widget.onChanged,
+        onSubmitted: widget.onSubmitted,
+        decoration: InputDecoration(
+          hintText: widget.hintText,
+          hintStyle: hintStyle,
+          prefixIcon: prefix,
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 0,
+            minHeight: 0,
+          ),
+          suffixIcon: suffix,
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 0,
+            minHeight: 0,
+          ),
+          counterText: '',
+          filled: true,
+          fillColor: fillColor,
+          hoverColor: Colors.transparent,
+          isDense: true,
+          // Left/right padding is handled by the prefix/suffix widgets, so
+          // only keep horizontal padding when there is no icon on that side.
+          contentPadding: widget.padding ??
+              EdgeInsets.symmetric(
+                horizontal: 0,
+                vertical: vPad,
               ),
-            if (widget.trailing != null) ...[
-              SizedBox(width: context.w(6)),
-              widget.trailing!,
-            ],
-          ],
+          border: border,
+          enabledBorder: border,
+          disabledBorder: border,
+          focusedBorder: border,
+          errorBorder: border,
+          focusedErrorBorder: border,
         ),
       ),
     );

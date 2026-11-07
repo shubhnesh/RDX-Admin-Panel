@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +11,6 @@ import 'package:rdx_admin/widgets/reusable_widgets/rdx_dropdown.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
-import '../../core/utils/tax.dart';
 import '../../models/order_model.dart';
 import '../../providers/live_orders_provider.dart';
 import '../../widgets/buttons/rdx_header_action_button.dart';
@@ -29,6 +29,10 @@ class LiveOrdersScreen extends ConsumerStatefulWidget {
 }
 
 class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
+  void _log(String message) {
+    if (kDebugMode) debugPrint('[LiveOrdersScreen] $message');
+  }
+
   /// Live (walk-in / staff POS) or App (customer app). Default: Live.
   _BoardSource _boardSource = _BoardSource.live;
 
@@ -155,7 +159,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     return result;
   }
 
-  void _openPayment(OrderModel order) {
+  Future<void> _openPayment(OrderModel order) async {
+    _log('Payment flow opened from live orders (order: ${order.id}).');
     final items = order.items.map((item) {
       final modifiers = <String>[
         if (item.spiceLevel != null && item.spiceLevel!.trim().isNotEmpty)
@@ -173,7 +178,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       );
     }).toList();
 
-    Navigator.of(context).push(
+    _log('Opening bill settlement screen (order: ${order.id}).');
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => BillSettlementScreen(
           bill: BillSettlementData(
@@ -190,11 +196,16 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             items: items,
             paymentMethod: null,
             cardLastFour: null,
-            subtotal: order.items.fold<double>(
-              0,
-              (sum, item) => sum + (item.price * item.quantity),
-            ),
-            taxPercentage: AppTax.gstPercentage,
+            subtotal: order.itemTotal > 0
+                ? order.itemTotal
+                : order.items.fold<double>(
+                    0,
+                    (sum, item) => sum + (item.price * item.quantity),
+                  ),
+            // Snapshot from the order only — never live settings.
+            taxPercentage: order.gstPercent,
+            lateNightFee: order.lateNightFee,
+            longDistanceFee: order.longDistanceFee,
             guestName: order.customerName.trim().isNotEmpty
                 ? order.customerName
                 : 'Walk-in Customer',
@@ -204,9 +215,36 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             invoiceReference: order.id,
             receiptDateTime: DateTime.now(),
           ),
+          onClose: () => Navigator.of(context).pop(),
         ),
       ),
     );
+    if (mounted) {
+      await ref.read(liveOrdersProvider).load();
+    }
+  }
+
+  Future<void> _advanceOrder(OrderModel order) async {
+    _log(
+      'Status action handling started (order: ${order.id}, '
+      '${order.status.name} -> ${order.status.nextStatus?.name ?? 'unchanged'}).',
+    );
+    try {
+      await ref.read(liveOrdersProvider).advanceStatus(order);
+      _log('Status action handling completed (order: ${order.id}).');
+    } catch (error) {
+      _log(
+        'Status action handling failed '
+        '(order: ${order.id}, ${error.runtimeType}): $error',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not update order status. $error'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   // BUILD
@@ -352,7 +390,17 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               pagePad.right,
               pagePad.bottom,
             ),
-            child: _buildSingleSectionGrid(sections.first),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < _kColumnsBreakpoint) {
+                  return _buildRowSection(
+                    sections.first,
+                    sectionWidth: constraints.maxWidth,
+                  );
+                }
+                return _buildSingleSectionList(sections.first);
+              },
+            ),
           ),
         );
       }
@@ -373,14 +421,17 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 pagePad.right,
                 pagePad.bottom,
               ),
-              child: _buildRowsBoard(sections),
+              child: _buildRowsBoard(
+                sections,
+                maxWidth:
+                    constraints.crossAxisExtent - pagePad.left - pagePad.right,
+              ),
             ),
           );
         }
 
-        // Large screen → horizontal kanban that fills remaining height
-        return SliverFillRemaining(
-          hasScrollBody: true,
+        // Keep the board viewport finite so each status list scrolls locally.
+        return SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               pagePad.left,
@@ -393,7 +444,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 return _buildColumnsBoard(
                   sections,
                   maxWidth: c.maxWidth,
-                  maxHeight: c.maxHeight,
+                  maxHeight: context.h(600),
                 );
               },
             ),
@@ -509,7 +560,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     final boardHeight = compactEmptyFinalBoard
         ? context.h(220)
         : maxHeight.isFinite && maxHeight > 0
-            ? maxHeight
+            ? maxHeight.clamp(0.0, context.h(600)).toDouble()
             : context.h(520);
 
     final colors = AppColors.of(context);
@@ -595,91 +646,53 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  Widget _buildOrdersContent(LiveOrdersProvider provider) {
-    final sections = _buildVisibleSectionsData(provider);
-
-    if (_selectedStatus != 'All') {
-      if (sections.isEmpty) {
-        return const SizedBox.shrink();
-      }
-      if (sections.length == 1) {
-        return _buildSingleSectionGrid(sections.first);
-      }
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < _kColumnsBreakpoint;
-
-        // Small screens → vertical stack of states,
-        // each state has horizontal scrolling cards.
-        if (isNarrow) {
-          return _buildRowsBoard(sections);
-        }
-
-        // Large screens → horizontal kanban columns,
-        // each column scrolls vertically.
-        return _buildColumnsBoard(
-          sections,
-          maxWidth: constraints.maxWidth,
-          maxHeight: constraints.maxHeight,
-        );
-      },
-    );
-  }
-
-  Widget _buildSingleSectionGrid(_SectionData data) {
+  Widget _buildSingleSectionList(_SectionData data) {
     final isEmpty = data.orders.isEmpty;
-    final gap = context.w(16);
+    final listController = _columnScrollControllers.putIfAbsent(
+      0,
+      ScrollController.new,
+    );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cardWidth =
-            (constraints.maxWidth - gap * (_kVisibleColumns - 1)) /
-                _kVisibleColumns;
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.only(
-            top: context.h(4),
-            bottom: context.h(24),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _sectionHeader(data),
-              SizedBox(height: context.h(12)),
-              if (isEmpty)
-                SizedBox(
-                  width: cardWidth,
-                  child: _buildEmptySection(
-                    emptyIcon: data.emptyIcon,
-                    emptyText: data.emptyText,
-                  ),
-                )
-              else
-                Wrap(
-                  spacing: gap,
-                  runSpacing: context.h(12),
-                  children: [
-                    for (final order in data.orders)
-                      SizedBox(
-                        width: cardWidth,
-                        child: LiveOrderCard(
-                          order: order,
-                          actionText: data.actionTextFor(order),
-                          onAdvance: data.onAdvance,
-                          secondaryActionText:
-                              data.secondaryActionTextFor(order),
-                          onSecondaryAction: data.secondaryOnAdvanceFor(order),
-                          onTap: () => _openOrderDetail(order),
-                        ),
+    return SizedBox(
+      height: context.h(600),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeader(data),
+          SizedBox(height: context.h(12)),
+          if (isEmpty)
+            _buildEmptySection(
+              emptyIcon: data.emptyIcon,
+              emptyText: data.emptyText,
+            )
+          else
+            Expanded(
+              child: Scrollbar(
+                controller: listController,
+                child: ListView.builder(
+                  controller: listController,
+                  primary: false,
+                  padding: EdgeInsets.only(bottom: context.h(4)),
+                  itemCount: data.orders.length,
+                  itemBuilder: (context, index) {
+                    final order = data.orders[index];
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: context.h(12)),
+                      child: LiveOrderCard(
+                        order: order,
+                        actionText: data.actionTextFor(order),
+                        onAdvance: data.onAdvance,
+                        secondaryActionText: data.secondaryActionTextFor(order),
+                        onSecondaryAction: data.secondaryOnAdvanceFor(order),
+                        onTap: () => _openOrderDetail(order),
                       ),
-                  ],
+                    );
+                  },
                 ),
-            ],
-          ),
-        );
-      },
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -768,10 +781,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     );
   }
 
-  Widget _buildRowsBoard(List<_SectionData> sections) {
-    // Same width the columns use on desktop
-    final sectionWidth = context.w(280).clamp(220.0, 320.0);
-
+  Widget _buildRowsBoard(
+    List<_SectionData> sections, {
+    required double maxWidth,
+  }) {
+    final sectionWidth = maxWidth;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -913,7 +927,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             color: const Color(0xFF5AC8FA),
             orders: provider.liveWalkIn,
             actionText: 'Start Preparing',
-            onAdvance: provider.advanceStatus,
+            onAdvance: _advanceOrder,
             showPayNow: true,
             onPayNow: _openPayment,
             emptyIcon: Icons.star_outline_rounded,
@@ -929,7 +943,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             color: const Color(0xFFE9A719),
             orders: provider.preparingWalkIn,
             actionText: 'Mark Ready',
-            onAdvance: provider.advanceStatus,
+            onAdvance: _advanceOrder,
             showPayNow: true,
             onPayNow: _openPayment,
             emptyIcon: Icons.access_time_rounded,
@@ -945,7 +959,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             color: const Color(0xFF20B47A),
             orders: provider.readyWalkIn,
             actionText: null,
-            onAdvance: provider.advanceStatus,
+            onAdvance: _advanceOrder,
             usePerOrderAction: true,
             showPayNow: true,
             onPayNow: _openPayment,
@@ -1011,7 +1025,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             color: const Color(0xFF7C5CFC),
             orders: provider.liveApp,
             actionText: 'Start Preparing',
-            onAdvance: provider.advanceStatus,
+            onAdvance: _advanceOrder,
             showPayNow: true,
             onPayNow: _openPayment,
             emptyIcon: Icons.phone_android_outlined,
@@ -1027,7 +1041,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             color: const Color(0xFFE9A719),
             orders: provider.preparingApp,
             actionText: 'Mark Ready',
-            onAdvance: provider.advanceStatus,
+            onAdvance: _advanceOrder,
             showPayNow: true,
             onPayNow: _openPayment,
             emptyIcon: Icons.access_time_rounded,
@@ -1043,7 +1057,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             color: const Color(0xFF20B47A),
             orders: provider.readyApp,
             actionText: null,
-            onAdvance: provider.advanceStatus,
+            onAdvance: _advanceOrder,
             usePerOrderAction: true,
             showPayNow: true,
             onPayNow: _openPayment,

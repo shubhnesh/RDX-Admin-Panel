@@ -37,21 +37,21 @@ class DashboardKpiCards extends StatelessWidget {
         value: Formatters.currency(stats.netSales, symbol: '₹'),
         changePercent: stats.salesChangePercent,
         sparkline: stats.salesSparkline,
-        accent: AppColors.primary,
+        accent: DashboardCardStyle.salesAccent,
       ),
       _KpiCard(
         label: 'Orders delivered',
         value: '${stats.ordersDelivered}',
         changePercent: stats.ordersChangePercent,
         sparkline: stats.ordersSparkline,
-        accent: const Color(0xFF22C55E),
+        accent: DashboardCardStyle.ordersAccent,
       ),
       _KpiCard(
         label: 'Average order value',
         value: Formatters.currency(stats.averageOrderValue, symbol: '₹'),
         changePercent: stats.aovChangePercent,
         sparkline: stats.aovSparkline,
-        accent: const Color(0xFFF59E0B),
+        accent: DashboardCardStyle.averageOrderValueAccent,
       ),
     ];
 
@@ -68,7 +68,7 @@ class DashboardKpiCards extends StatelessWidget {
   Widget _cardShell(BuildContext context, {required Widget child}) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(context.w(16)),
+      padding: EdgeInsets.all(context.w(20)),
       decoration: DashboardCardStyle.decoration(context),
       child: child,
     );
@@ -94,14 +94,13 @@ class _KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final up = changePercent >= 0;
-    final changeColor = up ? const Color(0xFF22C55E) : AppColors.danger;
     final hasSpark = sparkline.any((v) => v > 0);
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-        context.w(16),
+        context.w(20),
         context.h(16),
-        context.w(16),
+        context.w(20),
         context.h(14),
       ),
       decoration: DashboardCardStyle.decoration(context),
@@ -114,8 +113,8 @@ class _KpiCard extends StatelessWidget {
               Container(
                 width: context.w(8),
                 height: context.h(8),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF334155),
+                decoration: BoxDecoration(
+                  color: accent,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -138,7 +137,7 @@ class _KpiCard extends StatelessWidget {
                   vertical: context.h(2),
                 ),
                 decoration: BoxDecoration(
-                  color: changeColor.withValues(alpha: 0.12),
+                  color: accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -149,13 +148,13 @@ class _KpiCard extends StatelessWidget {
                           ? Icons.trending_up_rounded
                           : Icons.trending_down_rounded,
                       size: context.h(13),
-                      color: changeColor,
+                      color: accent,
                     ),
                     SizedBox(width: context.w(2)),
                     Text(
                       '${up ? '+' : ''}${changePercent.toStringAsFixed(0)}%',
                       style: AppTextStyles.caption(context).copyWith(
-                        color: changeColor,
+                        color: accent,
                         fontWeight: FontWeight.w700,
                         fontSize: context.h(11),
                       ),
@@ -206,7 +205,7 @@ class _KpiCard extends StatelessWidget {
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: const Color(0xFF334155).withValues(alpha: 0.06),
+                        color: accent.withValues(alpha: 0.08),
                       ),
                     ),
                   ],

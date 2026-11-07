@@ -53,10 +53,12 @@ class DashboardHourlyChart extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: context.h(6)),
-          Text('Orders by time of day',
-              style: AppTextStyles.bodySecondary(context)),
-          SizedBox(height: context.h(16)),
+          if (hasData) ...[
+            SizedBox(height: context.h(6)),
+            Text('Orders by time of day',
+                style: DashboardCardStyle.description(context)),
+          ],
+          SizedBox(height: context.h(hasData ? 16 : 8)),
           SizedBox(
             height: context.h(160),
             child: !hasData

@@ -14,6 +14,7 @@ class RdxNoticeDialog extends StatelessWidget {
   final String? cancelButtonLabel;
   final String? confirmButtonLabel;
   final Color? confirmButtonColor;
+  final bool useTextButtonActions;
 
   const RdxNoticeDialog({
     super.key,
@@ -23,6 +24,7 @@ class RdxNoticeDialog extends StatelessWidget {
     this.cancelButtonLabel,
     this.confirmButtonLabel,
     this.confirmButtonColor,
+    this.useTextButtonActions = false,
   });
 
   /// Shows a notice dialog and completes when the user dismisses it.
@@ -50,6 +52,7 @@ class RdxNoticeDialog extends StatelessWidget {
     String cancelButtonLabel = 'Cancel',
     String confirmButtonLabel = 'Confirm',
     Color? confirmButtonColor,
+    bool useTextButtonActions = false,
   }) {
     return showDialog<bool>(
       context: context,
@@ -59,6 +62,7 @@ class RdxNoticeDialog extends StatelessWidget {
         cancelButtonLabel: cancelButtonLabel,
         confirmButtonLabel: confirmButtonLabel,
         confirmButtonColor: confirmButtonColor,
+        useTextButtonActions: useTextButtonActions,
       ),
     );
   }
@@ -86,19 +90,40 @@ class RdxNoticeDialog extends StatelessWidget {
       ),
       actions: [
         if (confirmButtonLabel != null) ...[
-          RdxActionButton.discard(
-            height: 36,
-            label: cancelButtonLabel ?? 'Cancel',
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-          RdxActionButton(
-            height: 36,
-            label: confirmButtonLabel!,
-            onPressed: () => Navigator.of(context).pop(true),
-            backgroundColor: confirmButtonColor ?? AppColors.primary,
-            textColor: Colors.white,
-            iconColor: Colors.white,
-          ),
+          if (useTextButtonActions) ...[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                cancelButtonLabel ?? 'Cancel',
+                style: AppTextStyles.label(context).copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(
+                confirmButtonLabel!,
+                style: AppTextStyles.label(context).copyWith(
+                  color: confirmButtonColor ?? AppColors.primary,
+                ),
+              ),
+            ),
+          ] else ...[
+            RdxActionButton.discard(
+              height: 36,
+              label: cancelButtonLabel ?? 'Cancel',
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            RdxActionButton(
+              height: 36,
+              label: confirmButtonLabel!,
+              onPressed: () => Navigator.of(context).pop(true),
+              backgroundColor: confirmButtonColor ?? AppColors.primary,
+              textColor: Colors.white,
+              iconColor: Colors.white,
+            ),
+          ],
         ] else
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

@@ -17,24 +17,28 @@ class DashboardFunnel extends StatelessWidget {
     final colors = AppColors.of(context);
     final total = stats.funnelTotal;
 
-    if (total == 0) {
-      return _shell(
-        context,
-        colors,
-        child: const DashboardEmpty(
-          icon: Icons.filter_alt_outlined,
-          title: 'No order data available',
-          subtitle: 'Order stages will appear after orders are recorded.',
-        ),
-      );
-    }
-
     final stages = [
-      _Stage('Pending', stats.funnelPending, const Color(0xFFF59E0B)),
-      _Stage('Preparing', stats.funnelPreparing, const Color(0xFF3B82F6)),
-      _Stage('Ready', stats.funnelReady, const Color(0xFF8B5CF6)),
-      _Stage('Delivered', stats.funnelDelivered, const Color(0xFF22C55E)),
-      _Stage('Cancelled', stats.funnelCancelled, AppColors.danger),
+      _Stage('Pending', stats.funnelPending, stats.funnelPendingPercent,
+          stats.funnelFractions['pending'] ?? 0,
+          const Color(0xFFFDE68A)),
+      _Stage('Preparing', stats.funnelPreparing, stats.funnelPreparingPercent,
+          stats.funnelFractions['preparing'] ?? 0,
+          const Color(0xFFD97706)),
+      _Stage('Ready', stats.funnelReady, stats.funnelReadyPercent,
+          stats.funnelFractions['ready'] ?? 0,
+          const Color(0xFF86EFAC)),
+      _Stage('Delivered', stats.funnelDelivered, stats.funnelDeliveredPercent,
+          stats.funnelFractions['delivered'] ?? 0,
+          const Color(0xFF16A34A)),
+      _Stage('Cancelled', stats.funnelCancelled, stats.funnelCancelledPercent,
+          stats.funnelFractions['cancelled'] ?? 0,
+          AppColors.danger),
+    ];
+    final conversions = [
+      stats.preparingFromPendingPercent,
+      stats.readyFromPreparingPercent,
+      stats.deliveredFromReadyPercent,
+      stats.cancelledFromDeliveredPercent,
     ];
 
     return _shell(
@@ -43,20 +47,33 @@ class DashboardFunnel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _header(context, colors, total),
-          SizedBox(height: context.h(18)),
-          for (var i = 0; i < stages.length; i++) ...[
-            if (i > 0) ...[
-              _conversionChip(
-                context,
-                colors,
-                from: stages[i - 1].count,
-                to: stages[i].count,
+          if (total > 0) _header(context, colors, total),
+          if (total == 0)
+            SizedBox(
+              height: context.h(300),
+              child: const Center(
+                child: DashboardEmpty(
+                  icon: Icons.filter_alt_outlined,
+                  title: 'No order data available',
+                  subtitle:
+                      'Order stages will appear after orders are recorded.',
+                ),
               ),
-              SizedBox(height: context.h(6)),
+            )
+          else ...[
+            SizedBox(height: context.h(18)),
+            for (var i = 0; i < stages.length; i++) ...[
+              if (i > 0) ...[
+                _conversionChip(
+                  context,
+                  colors,
+                  ratePercent: conversions[i - 1],
+                ),
+                SizedBox(height: context.h(6)),
+              ],
+              _stageBar(context, stages[i]),
+              if (i < stages.length - 1) SizedBox(height: context.h(4)),
             ],
-            _stageBar(context, colors, stages[i], total),
-            if (i < stages.length - 1) SizedBox(height: context.h(4)),
           ],
         ],
       ),
@@ -69,9 +86,9 @@ class DashboardFunnel extends StatelessWidget {
       width: double.infinity,
       constraints: BoxConstraints(minHeight: context.h(380)),
       padding: EdgeInsets.fromLTRB(
-        context.w(18),
+        context.w(22),
         context.h(16),
-        context.w(18),
+        context.w(22),
         context.h(18),
       ),
       decoration: DashboardCardStyle.decoration(context),
@@ -89,25 +106,8 @@ class DashboardFunnel extends StatelessWidget {
               Text('Order funnel', style: DashboardCardStyle.title(context)),
               SizedBox(height: context.h(3)),
               Text('$total total orders during this period',
-                  style: AppTextStyles.bodySecondary(context)),
+                  style: DashboardCardStyle.description(context)),
             ],
-          ),
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: context.w(10),
-            vertical: context.h(4),
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            stats.periodLabel,
-            style: AppTextStyles.label(context).copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w700,
-            ),
           ),
         ),
       ],
@@ -117,38 +117,26 @@ class DashboardFunnel extends StatelessWidget {
   Widget _conversionChip(
     BuildContext context,
     AppColorScheme colors, {
-    required int from,
-    required int to,
+    required double ratePercent,
   }) {
-    final rate = from == 0 ? 0.0 : (to / from) * 100;
-    return Padding(
-      padding: EdgeInsets.only(left: context.w(8)),
-      child: Row(
-        children: [
-          Icon(Icons.south_rounded,
-              size: context.h(12), color: colors.textMuted),
-          SizedBox(width: context.w(4)),
-          Text(
-            '${rate.toStringAsFixed(0)}% of prior-stage count',
-            style: AppTextStyles.caption(context).copyWith(
-              color: colors.textMuted,
-              fontWeight: FontWeight.w600,
-            ),
+    return Row(
+      children: [
+        Icon(Icons.south_rounded, size: context.h(12), color: colors.textMuted),
+        SizedBox(width: context.w(4)),
+        Text(
+          '${ratePercent.toStringAsFixed(0)}% of prior-stage count',
+          style: AppTextStyles.caption(context).copyWith(
+            color: colors.textMuted,
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _stageBar(
-    BuildContext context,
-    AppColorScheme colors,
-    _Stage stage,
-    int total,
-  ) {
-    final pct = total == 0 ? 0.0 : stage.count / total;
+  Widget _stageBar(BuildContext context, _Stage stage) {
     // Visual funnel: later stages slightly narrower base
-    final widthFactor = pct.clamp(0.0, 1.0);
+    final widthFactor = stage.fraction.clamp(0.0, 1.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,25 +150,23 @@ class DashboardFunnel extends StatelessWidget {
                     .copyWith(fontWeight: FontWeight.w600),
               ),
             ),
-            Text(
-              '${stage.count}',
-              style: AppTextStyles.body(context)
-                  .copyWith(fontWeight: FontWeight.w800),
+            SizedBox(
+              width: context.w(36),
+              child: Text(
+                '${stage.count}',
+                textAlign: TextAlign.right,
+                style: AppTextStyles.body(context)
+                    .copyWith(fontWeight: FontWeight.w800),
+              ),
             ),
             SizedBox(width: context.w(10)),
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: context.w(8),
-                vertical: context.h(2),
-              ),
-              decoration: BoxDecoration(
-                color: stage.color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
+            SizedBox(
+              width: context.w(40),
               child: Text(
-                '${(pct * 100).toStringAsFixed(0)}%',
+                '${stage.percent.toStringAsFixed(0)}%',
+                textAlign: TextAlign.right,
                 style: AppTextStyles.caption(context).copyWith(
-                  color: stage.color,
+                  color: const Color(0xFF16A34A),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -212,6 +198,14 @@ class DashboardFunnel extends StatelessWidget {
 class _Stage {
   final String label;
   final int count;
+  final double percent;
+  final double fraction;
   final Color color;
-  const _Stage(this.label, this.count, this.color);
+  const _Stage(
+    this.label,
+    this.count,
+    this.percent,
+    this.fraction,
+    this.color,
+  );
 }

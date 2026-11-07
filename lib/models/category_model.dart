@@ -52,13 +52,26 @@ class CategoryModel {
   ) {
     final data = doc.data() ?? <String, dynamic>{};
 
+    final rawSubs = data['subcategories'];
+    final List<SubcategoryModel> subs = [];
+    if (rawSubs is List) {
+      for (final raw in rawSubs) {
+        if (raw is Map) {
+          try {
+            subs.add(
+              SubcategoryModel.fromMap(Map<String, dynamic>.from(raw)),
+            );
+          } catch (_) {
+            // skip malformed subcategory entries
+          }
+        }
+      }
+    }
+
     return CategoryModel(
       id: doc.id,
       name: data['name'] as String? ?? '',
-      subcategories: (data['subcategories'] as List<dynamic>? ?? [])
-          .map((raw) =>
-              SubcategoryModel.fromMap(Map<String, dynamic>.from(raw as Map)))
-          .toList(),
+      subcategories: subs,
     );
   }
 

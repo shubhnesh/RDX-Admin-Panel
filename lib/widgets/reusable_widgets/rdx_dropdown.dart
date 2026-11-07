@@ -338,6 +338,7 @@ class RdxDropdown<T> extends StatefulWidget {
   final bool enabled;
   final bool isDense;
   final double? width;
+  final double? height;
   final double maxMenuHeight;
   final EdgeInsetsGeometry? margin;
 
@@ -359,6 +360,7 @@ class RdxDropdown<T> extends StatefulWidget {
     this.enabled = true,
     this.isDense = false,
     this.width,
+    this.height,
     this.maxMenuHeight = 240,
     this.margin,
     this.searchable = false, // default: normal dropdown
@@ -508,11 +510,12 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 140),
             width: widget.width ?? double.infinity,
-            height: () {
-              final fs = context.h(widget.isDense ? 12 : 14);
-              final vp = context.h(widget.isDense ? 10 : 13);
-              return (fs * 1.2) + (vp * 2) + 2;
-            }(),
+            height: widget.height ??
+                () {
+                  final fs = context.h(widget.isDense ? 12 : 14);
+                  final vp = context.h(widget.isDense ? 10 : 13);
+                  return (fs * 1.2) + (vp * 2) + 2;
+                }(),
             padding: EdgeInsets.symmetric(
               horizontal: context.w(widget.isDense ? 11 : 12),
               vertical: 0,
@@ -694,7 +697,7 @@ class _DropdownMenuPanelState<T> extends State<_DropdownMenuPanel<T>> {
                 controller: widget.searchController,
                 focusNode: widget.searchFocus,
                 hintText: widget.searchHint,
-                height: context.h(40),
+                height: RdxSearchBar.standardHeight(context),
                 onChanged: (_) {
                   // Listener already handles filtering via _onSearchChanged
                 },

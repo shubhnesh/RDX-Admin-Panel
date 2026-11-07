@@ -19,23 +19,29 @@ class DashboardMealtimeBreakdown extends StatelessWidget {
 
     final items = [
       _Meal('Breakfast', '7:00–11:00', stats.breakfastCount,
-          const Color(0xFFF59E0B)),
-      _Meal('Lunch', '11:00–16:00', stats.lunchCount, const Color(0xFF22C55E)),
-      _Meal('Evening', '16:00–19:00', stats.eveningCount,
-          const Color(0xFF3B82F6)),
+          stats.breakfastPercent,
+          stats.mealtimeFractions['breakfast'] ?? 0,
+          const Color(0xFFFDE68A)),
+      _Meal('Lunch', '11:00–16:00', stats.lunchCount, stats.lunchPercent,
+          stats.mealtimeFractions['lunch'] ?? 0, const Color(0xFFD97706)),
+      _Meal('Evening', '16:00–19:00', stats.eveningCount, stats.eveningPercent,
+          stats.mealtimeFractions['evening'] ?? 0, AppColors.primary),
       _Meal(
-          'Dinner', '19:00–23:00', stats.dinnerCount, const Color(0xFF8B5CF6)),
+          'Dinner', '19:00–23:00', stats.dinnerCount, stats.dinnerPercent,
+          stats.mealtimeFractions['dinner'] ?? 0, const Color(0xFF93C5FD)),
       _Meal('Late night', '23:00–7:00', stats.lateNightCount,
-          const Color(0xFFEC4899)),
+          stats.lateNightPercent,
+          stats.mealtimeFractions['late_night'] ?? 0,
+          const Color(0xFF1D4ED8)),
     ];
 
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(minHeight: context.h(400)),
       padding: EdgeInsets.fromLTRB(
-        context.w(18),
+        context.w(22),
         context.h(16),
-        context.w(18),
+        context.w(22),
         context.h(16),
       ),
       decoration: DashboardCardStyle.decoration(context),
@@ -48,32 +54,15 @@ class DashboardMealtimeBreakdown extends StatelessWidget {
                 child: Text('Orders by mealtime',
                     style: DashboardCardStyle.title(context)),
               ),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.w(10),
-                  vertical: context.h(4),
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  stats.periodLabel,
-                  style: AppTextStyles.label(context).copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
             ],
           ),
-          SizedBox(height: context.h(4)),
-          Text(
-            total == 0
-                ? 'No orders were recorded during this period'
-                : '$total orders across all mealtimes',
-            style: AppTextStyles.bodySecondary(context),
-          ),
+          if (total > 0) ...[
+            SizedBox(height: context.h(4)),
+            Text(
+              '$total orders across all mealtimes',
+              style: DashboardCardStyle.description(context),
+            ),
+          ],
           if (total == 0)
             SizedBox(
               height: context.h(300),
@@ -90,7 +79,7 @@ class DashboardMealtimeBreakdown extends StatelessWidget {
             SizedBox(height: context.h(16)),
             for (var i = 0; i < items.length; i++) ...[
               if (i > 0) SizedBox(height: context.h(12)),
-              _row(context, colors, items[i], total),
+              _row(context, colors, items[i]),
             ],
           ],
         ],
@@ -98,23 +87,12 @@ class DashboardMealtimeBreakdown extends StatelessWidget {
     );
   }
 
-  Widget _row(
-      BuildContext context, AppColorScheme colors, _Meal item, int total) {
-    final pct = total == 0 ? 0.0 : item.count / total;
+  Widget _row(BuildContext context, AppColorScheme colors, _Meal item) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Container(
-              width: context.w(10),
-              height: context.h(10),
-              decoration: BoxDecoration(
-                color: item.color,
-                shape: BoxShape.circle,
-              ),
-            ),
-            SizedBox(width: context.w(8)),
             Expanded(
               child: Text(
                 item.label,
@@ -131,10 +109,10 @@ class DashboardMealtimeBreakdown extends StatelessWidget {
             SizedBox(
               width: context.w(40),
               child: Text(
-                '${(pct * 100).toStringAsFixed(0)}%',
+                '${item.percent.toStringAsFixed(0)}%',
                 textAlign: TextAlign.right,
                 style: AppTextStyles.caption(context).copyWith(
-                  color: colors.textSecondary,
+                  color: const Color(0xFF16A34A),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -142,13 +120,10 @@ class DashboardMealtimeBreakdown extends StatelessWidget {
           ],
         ),
         SizedBox(height: context.h(2)),
-        Padding(
-          padding: EdgeInsets.only(left: context.w(18)),
-          child: Text(
-            item.time,
-            style: AppTextStyles.caption(context)
-                .copyWith(color: colors.textMuted),
-          ),
+        Text(
+          item.time,
+          style: AppTextStyles.caption(context)
+              .copyWith(color: colors.textMuted),
         ),
         SizedBox(height: context.h(7)),
         ClipRRect(
@@ -160,7 +135,7 @@ class DashboardMealtimeBreakdown extends StatelessWidget {
                 color: colors.border.withValues(alpha: 0.35),
               ),
               FractionallySizedBox(
-                widthFactor: pct.clamp(0.0, 1.0),
+                widthFactor: item.fraction.clamp(0.0, 1.0),
                 child: Container(
                   height: context.h(6),
                   color: item.color,
@@ -178,6 +153,15 @@ class _Meal {
   final String label;
   final String time;
   final int count;
+  final double percent;
+  final double fraction;
   final Color color;
-  const _Meal(this.label, this.time, this.count, this.color);
+  const _Meal(
+    this.label,
+    this.time,
+    this.count,
+    this.percent,
+    this.fraction,
+    this.color,
+  );
 }

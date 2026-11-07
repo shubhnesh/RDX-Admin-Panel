@@ -24,9 +24,9 @@ class DashboardSalesChart extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        context.w(16),
+        context.w(20),
         context.h(16),
-        context.w(16),
+        context.w(20),
         context.h(14),
       ),
       decoration: DashboardCardStyle.decoration(context),
@@ -39,15 +39,17 @@ class DashboardSalesChart extends StatelessWidget {
                 child: Text('Sales and orders',
                     style: DashboardCardStyle.title(context)),
               ),
-              _legend(context, AppColors.primary, 'Net sales'),
+              _legend(context, DashboardCardStyle.salesAccent, 'Net sales'),
               SizedBox(width: context.w(12)),
-              _legend(context, const Color(0xFF22C55E), 'Orders'),
+              _legend(context, DashboardCardStyle.ordersAccent, 'Orders'),
             ],
           ),
-          SizedBox(height: context.h(3)),
-          Text('Daily sales and relative order volume over the last 7 days',
-              style: AppTextStyles.bodySecondary(context)),
-          SizedBox(height: context.h(14)),
+          if (hasData) ...[
+            SizedBox(height: context.h(3)),
+            Text('Daily sales and relative order volume over the last 7 days',
+                style: DashboardCardStyle.description(context)),
+          ],
+          SizedBox(height: context.h(hasData ? 14 : 8)),
           SizedBox(
             height: context.h(190),
             child: !hasData
@@ -156,8 +158,8 @@ class DashboardSalesChart extends StatelessWidget {
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                     colors: [
-                      AppColors.primary.withValues(alpha: 0.55),
-                      AppColors.primary,
+                      DashboardCardStyle.salesAccent.withValues(alpha: 0.55),
+                      DashboardCardStyle.salesAccent,
                     ],
                   ),
                 ),
@@ -167,10 +169,13 @@ class DashboardSalesChart extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(2),
                   ),
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
-                    colors: [Color(0x5522C55E), Color(0xFF22C55E)],
+                    colors: [
+                      DashboardCardStyle.ordersAccent.withValues(alpha: 0.35),
+                      DashboardCardStyle.ordersAccent,
+                    ],
                   ),
                 ),
               ],

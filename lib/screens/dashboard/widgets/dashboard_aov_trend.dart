@@ -26,10 +26,11 @@ class DashboardAovTrend extends StatelessWidget {
 
     return Container(
       width: double.infinity,
+      constraints: BoxConstraints(minHeight: context.h(400)),
       padding: EdgeInsets.fromLTRB(
-        context.w(16),
+        context.w(20),
         context.h(14),
-        context.w(16),
+        context.w(20),
         context.h(14),
       ),
       decoration: DashboardCardStyle.decoration(context),
@@ -42,101 +43,111 @@ class DashboardAovTrend extends StatelessWidget {
                 child: Text('Average order value',
                     style: DashboardCardStyle.title(context)),
               ),
-              Text(
-                Formatters.currency(current, symbol: '₹'),
-                style: AppTextStyles.heading(context).copyWith(
-                  color: const Color(0xFFF59E0B),
-                  fontWeight: FontWeight.w800,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    Formatters.currency(current, symbol: '₹'),
+                    style: AppTextStyles.heading(context).copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          SizedBox(height: context.h(2)),
-          Text('Daily average order value over the last 7 days',
-              style: AppTextStyles.bodySecondary(context)),
-          SizedBox(height: context.h(12)),
-          SizedBox(
-            height: context.h(140),
-            child: !hasData
-                ? const Center(
-                    child: DashboardEmpty(
-                      icon: Icons.trending_up_rounded,
-                      title: 'No order value data available',
-                      subtitle:
-                          'Daily averages will appear after orders are recorded.',
-                    ),
-                  )
-                : LineChart(
-                    LineChartData(
-                      maxY: maxY,
-                      minY: 0,
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        getDrawingHorizontalLine: (v) => FlLine(
-                          color: colors.border.withValues(alpha: 0.4),
-                          strokeWidth: 1,
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      titlesData: FlTitlesData(
-                        topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 22,
-                            getTitlesWidget: (value, meta) {
-                              final i = value.toInt();
-                              if (i < 0 || i >= points.length) {
-                                return const SizedBox.shrink();
-                              }
-                              const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  days[points[i].date.weekday - 1],
-                                  style: AppTextStyles.caption(context)
-                                      .copyWith(color: colors.textMuted),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: [
-                            for (var i = 0; i < points.length; i++)
-                              FlSpot(i.toDouble(), points[i].value),
-                          ],
-                          isCurved: false,
-                          color: const Color(0xFF334155),
-                          barWidth: 2,
-                          isStrokeCapRound: true,
-                          dotData: FlDotData(
-                            show: true,
-                            getDotPainter: (s, p, b, i) => FlDotCirclePainter(
-                              radius: 2.5,
-                              color: const Color(0xFF334155),
-                              strokeWidth: 1,
-                              strokeColor: Colors.white,
-                            ),
-                          ),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color:
-                                const Color(0xFF334155).withValues(alpha: 0.08),
-                          ),
-                        ),
-                      ],
+          if (hasData) ...[
+            SizedBox(height: context.h(2)),
+            Text('Daily average order value over the last 7 days',
+                style: DashboardCardStyle.description(context)),
+          ],
+          SizedBox(height: context.h(hasData ? 12 : 8)),
+          if (!hasData)
+            SizedBox(
+              height: context.h(300),
+              child: const Center(
+                child: DashboardEmpty(
+                  icon: Icons.trending_up_rounded,
+                  title: 'No order value data available',
+                  subtitle:
+                      'Daily averages will appear after orders are recorded.',
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: context.h(140),
+              child: LineChart(
+                LineChartData(
+                  maxY: maxY,
+                  minY: 0,
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (v) => FlLine(
+                      color: colors.border.withValues(alpha: 0.4),
+                      strokeWidth: 1,
                     ),
                   ),
-          ),
+                  borderData: FlBorderData(show: false),
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 22,
+                        getTitlesWidget: (value, meta) {
+                          final i = value.toInt();
+                          if (i < 0 || i >= points.length) {
+                            return const SizedBox.shrink();
+                          }
+                          const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              days[points[i].date.weekday - 1],
+                              style: AppTextStyles.caption(context)
+                                  .copyWith(color: colors.textMuted),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: [
+                        for (var i = 0; i < points.length; i++)
+                          FlSpot(i.toDouble(), points[i].value),
+                      ],
+                      isCurved: false,
+                      color: const Color(0xFF334155),
+                      barWidth: 2,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (s, p, b, i) => FlDotCirclePainter(
+                          radius: 2.5,
+                          color: DashboardCardStyle.averageOrderValueAccent,
+                          strokeWidth: 1,
+                          strokeColor: Colors.white,
+                        ),
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0xFF334155).withValues(alpha: 0.08),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

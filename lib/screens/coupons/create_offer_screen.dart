@@ -12,6 +12,7 @@ import '../../models/category_model.dart';
 import '../../models/coupon_model.dart';
 import '../../models/menu_item_model.dart';
 import '../../models/offer_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/offer_provider.dart';
 import '../../services/category_service.dart';
 import '../../services/menu_service.dart';
@@ -170,6 +171,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
   @override
   void initState() {
     super.initState();
+    if (!ref.read(authProvider).permissions.canEditCoupons) return;
 
     final existing = widget.existing;
     if (existing != null) {
@@ -369,6 +371,11 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!ref.watch(authProvider).permissions.canEditCoupons) {
+      return const Scaffold(
+        body: Center(child: Text('Coupons and offers are admin-only.')),
+      );
+    }
     final colors = AppColors.of(context);
     final narrow = MediaQuery.sizeOf(context).width < 900;
     final parsedDiscount = double.tryParse(discountValueController.text.trim());

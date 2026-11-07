@@ -26,40 +26,6 @@ const String _kCreateCategoryValue = '__create_category__';
 /// Selecting it opens [CreateUnitDialog].
 const String _kCreateUnitValue = '__create_unit__';
 
-/// Rejects any edit that would make the number greater than [maxValue].
-/// If [maxValue] is null, all numeric input is allowed.
-class _MaxValueInputFormatter extends TextInputFormatter {
-  final double? maxValue;
-
-  _MaxValueInputFormatter(this.maxValue);
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.isEmpty) return newValue;
-
-    // Allow intermediate typing like "." or "0."
-    if (newValue.text == '.' || newValue.text.endsWith('.')) {
-      return newValue;
-    }
-
-    final parsed = double.tryParse(newValue.text);
-    if (parsed == null) {
-      // Invalid number → keep old value
-      return oldValue;
-    }
-
-    if (maxValue != null && parsed > maxValue!) {
-      // Would exceed limit → reject the keystroke
-      return oldValue;
-    }
-
-    return newValue;
-  }
-}
-
 class AddMaterialScreen extends ConsumerStatefulWidget {
   final InventoryItemModel? existing;
 
@@ -74,12 +40,13 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _qtyCtrl;
   late final TextEditingController _minCtrl;
-  late final TextEditingController _maxCtrl;
+  late final TextEditingController _portionSizeCtrl;
   late final TextEditingController _costCtrl;
 
   /// Category and unit store **ids** (Firestore document ids).
   String? _category;
   String? _unit;
+  String? _portionUnit;
   bool _saving = false;
 
   final _categoryService = InventoryCategoryService();
@@ -113,16 +80,17 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
         TextEditingController(text: e != null ? e.quantity.toString() : '');
     _minCtrl =
         TextEditingController(text: e != null ? e.minRequired.toString() : '');
-    _maxCtrl =
-        TextEditingController(text: e != null ? e.maxCapacity.toString() : '');
-    _costCtrl =
-        TextEditingController(text: e != null ? e.unitCost.toString() : '');
+    _portionSizeCtrl =
+        TextEditingController(text: e?.portionSize.toString() ?? '');
+    _portionSizeCtrl.addListener(_onPortionSizeChanged);
+    _costCtrl = TextEditingController(text: e?.unitCost.toString() ?? '');
 
     // existing.category / existing.unit may be stored as display names.
     // After lists load we map name → id if needed.
     if (e != null) {
       _category = e.category;
       _unit = e.unit;
+      _portionUnit = e.portionUnit;
     }
 
     _loadCategories();
@@ -144,6 +112,15 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           );
           if (byName.isNotEmpty) {
             _category = byName.first.id;
+          }
+        }
+        if (_portionUnit != null &&
+            !_units.any((unit) => unit.id == _portionUnit)) {
+          final byName = _units.where(
+            (unit) => unit.name.toLowerCase() == _portionUnit!.toLowerCase(),
+          );
+          if (byName.isNotEmpty) {
+            _portionUnit = byName.first.id;
           }
         }
       });
@@ -192,7 +169,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     });
   }
 
-  Future<void> _openCreateUnitDialog() async {
+  Future<void> _openCreateUnitDialog({bool forPortion = false}) async {
     final created = await CategoryEntryDialog.show<UnitModel>(
       context,
       title: 'Create Unit of Measurement',
@@ -204,7 +181,11 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     if (created == null || !mounted) return;
     setState(() {
       _units = _sortedByName([..._units, created], (u) => u.name);
-      _unit = created.id;
+      if (forPortion) {
+        _portionUnit = created.id;
+      } else {
+        _unit = created.id;
+      }
     });
   }
 
@@ -243,25 +224,25 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     return match.isEmpty ? _unit! : match.first.name;
   }
 
+  String get _portionUnitDisplayName {
+    if (_portionUnit == null) return '';
+    final match = _units.where((u) => u.id == _portionUnit);
+    return match.isEmpty ? _portionUnit! : match.first.name;
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
     _qtyCtrl.dispose();
     _minCtrl.dispose();
-    _maxCtrl.dispose();
+    _portionSizeCtrl.removeListener(_onPortionSizeChanged);
+    _portionSizeCtrl.dispose();
     _costCtrl.dispose();
     super.dispose();
   }
 
-  double get _previewQty => double.tryParse(_qtyCtrl.text) ?? 0;
-  double get _previewMax => double.tryParse(_maxCtrl.text) ?? 0;
-  double get _previewMin => double.tryParse(_minCtrl.text) ?? 0;
-
-  StockStatus get _previewStatus {
-    if (_previewQty <= 0) return StockStatus.outOfStock;
-    if (_previewQty < _previewMin * 0.25) return StockStatus.critical;
-    if (_previewQty < _previewMin) return StockStatus.lowStock;
-    return StockStatus.inStock;
+  void _onPortionSizeChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _showNotice(String message) async {
@@ -273,7 +254,6 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     final name = _nameCtrl.text.trim();
     final qtyText = _qtyCtrl.text.trim();
     final minText = _minCtrl.text.trim();
-    final maxText = _maxCtrl.text.trim();
     final costText = _costCtrl.text.trim();
 
     if (!isEdit && name.isEmpty) {
@@ -288,107 +268,73 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
       await _showNotice('Please select a unit of measurement.');
       return;
     }
-    if (costText.isEmpty || double.tryParse(costText) == null) {
-      await _showNotice('Please enter a valid unit cost.');
+    final portionSizeText = _portionSizeCtrl.text.trim();
+    final portionSize =
+        portionSizeText.isEmpty ? 0.0 : double.tryParse(portionSizeText);
+    if (portionSize == null || portionSize < 0) {
+      await _showNotice('Please enter a valid portion size.');
       return;
     }
-    if (maxText.isEmpty || double.tryParse(maxText) == null) {
-      await _showNotice('Please enter maximum storage capacity.');
+    if (portionSize > 0 && _portionUnit == null) {
+      await _showNotice('Please select the portion unit of measurement.');
       return;
     }
-    final maxVal = double.parse(maxText);
-    if (maxVal <= 0) {
-      await _showNotice('Maximum storage capacity must be greater than 0.');
-      return;
-    }
-
     // Initial stock is required when creating; on edit quantity is locked.
+    double quantity = widget.existing?.quantity ?? 0;
     if (!isEdit) {
-      if (qtyText.isEmpty || double.tryParse(qtyText) == null) {
+      final initialQuantity = double.tryParse(qtyText);
+      if (qtyText.isEmpty || initialQuantity == null) {
         await _showNotice('Please enter initial stock quantity.');
         return;
       }
-      final qty = double.parse(qtyText);
-      if (qty < 0) {
-        await _showNotice('Initial stock quantity cannot be negative.');
-        return;
-      }
-      if (qty > maxVal) {
-        await _showNotice(
-            'Initial stock cannot exceed maximum storage capacity.');
-        return;
-      }
+      quantity = initialQuantity;
     }
 
-    if (minText.isEmpty || double.tryParse(minText) == null) {
-      await _showNotice('Please enter minimum stock alert value.');
-      return;
-    }
-    final minVal = double.parse(minText);
-    if (minVal < 0) {
-      await _showNotice('Minimum stock alert value cannot be negative.');
-      return;
-    }
-    if (minVal > maxVal) {
+    final enteredCost = double.tryParse(costText);
+    if (costText.isEmpty || enteredCost == null || enteredCost < 0) {
       await _showNotice(
-          'Minimum stock cannot exceed maximum storage capacity.');
-      return;
-    }
-    final qtyForMin = isEdit
-        ? (widget.existing?.quantity ?? 0)
-        : (double.tryParse(qtyText) ?? 0);
-    if (minVal > qtyForMin && qtyForMin > 0) {
-      await _showNotice(
-        'Minimum stock cannot exceed initial/current stock quantity.',
+        isEdit
+            ? 'Please enter a valid unit cost for future restocks.'
+            : 'Please enter a valid total cost for the initial stock.',
       );
+      return;
+    }
+    if (!isEdit && quantity == 0 && enteredCost > 0) {
+      await _showNotice(
+        'Initial stock cost must be zero when the initial quantity is zero.',
+      );
+      return;
+    }
+    final initialTotalCost = isEdit ? widget.existing!.totalCost : enteredCost;
+    final unitCost = isEdit
+        ? enteredCost
+        : quantity > 0
+            ? initialTotalCost / quantity
+            : 0.0;
+
+    final minimum = double.tryParse(minText);
+    if (minText.isEmpty || minimum == null) {
+      await _showNotice('Please enter minimum stock alert value.');
       return;
     }
 
     setState(() => _saving = true);
-
-    // A single timestamp for this save. It's threaded through to
-    // InventoryProvider.saveItem → InventoryService.saveItem so that,
-    // for a brand-new material, created_at and updated_at are written
-    // with the exact same moment — the "added" time and the "updated"
-    // time from this run of the add-material flow are identical.
-    final now = DateTime.now();
-
-    // Creating a brand-new material: totalCost is computed fresh by
-    // InventoryService as quantity * unitCost (its initial cost basis).
-    // createdAt/updatedAt are both set to `now`.
-    //
-    // Editing an existing material: pass its *existing* totalCost and
-    // createdAt through unchanged. InventoryService.saveItem keeps
-    // totalCost as-is for edits, so tweaking the unit cost, name,
-    // category, min/max, etc. here never silently re-prices stock that
-    // was already bought — only updatedAt advances to `now`. Quantity/
-    // cost changes from restocking or usage go through the ADDED/USED
-    // fields in the inventory table (InventoryProvider.addStock /
-    // useStock), not through this form.
-    //
-    // In edit mode, name, category, and quantity (initial stock) are
-    // locked in the UI and always resubmitted unchanged from the
-    // originally-loaded `existing` values, never from user-edited state.
     final item = InventoryItemModel(
       id: widget.existing?.id ?? '',
       name: isEdit ? widget.existing!.name : _nameCtrl.text.trim(),
       category: isEdit ? widget.existing!.category : _categoryDisplayName,
-      quantity: isEdit
-          ? widget.existing!.quantity
-          : (double.tryParse(_qtyCtrl.text) ?? 0),
-      minRequired: double.tryParse(_minCtrl.text) ?? 0,
-      maxCapacity: double.tryParse(_maxCtrl.text) ?? 0,
+      quantity: quantity,
+      minRequired: minimum,
+      maxCapacity: widget.existing?.maxCapacity ?? 0,
       unit: _unitDisplayName,
-      unitCost: double.tryParse(_costCtrl.text) ?? 0,
-      totalCost: isEdit ? widget.existing!.totalCost : 0,
-      createdAt: isEdit ? widget.existing!.createdAt : now,
-      updatedAt: now,
-      lastAddedAt: isEdit ? widget.existing!.lastAddedAt : null,
-      lastUsedAt: isEdit ? widget.existing!.lastUsedAt : null,
+      portionSize: portionSize,
+      portionUnit: portionSize > 0 ? _portionUnitDisplayName : null,
+      unitCost: unitCost,
+      totalCost: initialTotalCost,
     );
 
     try {
-      await ref.read(inventoryProvider).saveItem(item, timestamp: now);
+      await ref.read(inventoryProvider).saveItem(item);
       if (mounted) {
         Navigator.of(context).pop();
         // ScaffoldMessenger.of(context).showSnackBar(
@@ -397,9 +343,9 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
         //   ),
         // );
       }
-    } catch (e) {
+    } catch (error) {
       if (mounted) {
-        await _showNotice('Failed to save material.');
+        await _showNotice('Failed to save material: $error');
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -546,70 +492,33 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
             ),
           ],
           SizedBox(height: context.h(16)),
-          LayoutBuilder(builder: (context, c) {
-            final stack = c.maxWidth < 400;
-            final cat = RdxDropdown<String>(
-              label: 'Category *',
-              value: _category != null &&
-                      (_categories.any((x) => x.id == _category) ||
-                          _category == _kCreateCategoryValue)
-                  ? _category
-                  : null,
-              items: [
-                _kCreateCategoryValue,
-                ..._categories.map((c) => c.id),
-              ],
-              labelBuilder: _categoryLabel,
-              searchable: true,
-              enabled: !isEdit,
-              hint: _categoriesLoading
-                  ? 'Loading categories...'
-                  : 'Select category',
-              onChanged: isEdit
-                  ? null
-                  : (v) {
-                      if (v == _kCreateCategoryValue) {
-                        _openCreateCategoryDialog();
-                        return;
-                      }
-                      if (v != null) setState(() => _category = v);
-                    },
-            );
-            final unit = RdxDropdown<String>(
-              label: 'Unit of Measurement *',
-              value: _unit != null &&
-                      (_units.any((x) => x.id == _unit) ||
-                          _unit == _kCreateUnitValue)
-                  ? _unit
-                  : null,
-              items: [
-                _kCreateUnitValue,
-                ..._units.map((u) => u.id),
-              ],
-              labelBuilder: _unitLabel,
-              searchable: true,
-              hint: _unitsLoading ? 'Loading units...' : 'Select unit',
-              onChanged: (v) {
-                if (v == _kCreateUnitValue) {
-                  _openCreateUnitDialog();
-                  return;
-                }
-                if (v != null) setState(() => _unit = v);
-              },
-            );
-            if (stack) {
-              return Column(children: [
-                cat,
-                SizedBox(height: context.h(12)),
-                unit,
-              ]);
-            }
-            return Row(children: [
-              Expanded(child: cat),
-              SizedBox(width: context.w(12)),
-              Expanded(child: unit),
-            ]);
-          }),
+          RdxDropdown<String>(
+            label: 'Category *',
+            value: _category != null &&
+                    (_categories.any((x) => x.id == _category) ||
+                        _category == _kCreateCategoryValue)
+                ? _category
+                : null,
+            items: [
+              _kCreateCategoryValue,
+              ..._categories.map((c) => c.id),
+            ],
+            labelBuilder: _categoryLabel,
+            searchable: true,
+            enabled: !isEdit,
+            hint: _categoriesLoading
+                ? 'Loading categories...'
+                : 'Select category',
+            onChanged: isEdit
+                ? null
+                : (v) {
+                    if (v == _kCreateCategoryValue) {
+                      _openCreateCategoryDialog();
+                      return;
+                    }
+                    if (v != null) setState(() => _category = v);
+                  },
+          ),
           if (isEdit) ...[
             SizedBox(height: context.h(6)),
             Text(
@@ -621,9 +530,13 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           SizedBox(height: context.h(16)),
           RdxTextField(
             controller: _costCtrl,
-            maxLength: 4,
-            label: 'Unit Cost (₹) *',
-            hint: 'Enter cost per unit',
+            maxLength: 10,
+            label: isEdit
+                ? 'Unit Cost for Future Restocks (₹) *'
+                : 'Total Cost (₹) *',
+            hint: isEdit
+                ? 'Enter cost per unit'
+                : 'Enter total amount paid for initial stock',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
@@ -632,8 +545,8 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           if (isEdit) ...[
             SizedBox(height: context.h(6)),
             Text(
-              'Changing this only sets the price for future restocks — it '
-              'won\'t change the cost already recorded for stock on hand.',
+              'This sets the per-unit cost for future restocks and does not '
+              'change the cost already recorded for stock on hand.',
               style: AppTextStyles.bodyTertiary(context)
                   .copyWith(color: colors.textMuted),
             ),
@@ -644,93 +557,100 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
   }
 
   Widget _stockTrackingSection(BuildContext context, AppColorScheme colors) {
-    final maxHasValue = _maxCtrl.text.trim().isNotEmpty &&
-        double.tryParse(_maxCtrl.text.trim()) != null;
-    final maxVal = double.tryParse(_maxCtrl.text);
-    final qtyVal = double.tryParse(_qtyCtrl.text);
-
     return _SectionCard(
       title: 'Stock Tracking & Thresholds',
       icon: Icons.bar_chart_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Max Capacity first — always editable.
-          RdxTextField(
-            controller: _maxCtrl,
-            maxLength: 5,
-            label: 'Maximum Storage Capacity *',
-            hint: 'Enter maximum storage capacity',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-            ],
-            onChanged: (_) {
-              // When max is cleared, clear dependent min field
-              // (quantity is locked in edit mode, so leave it alone then).
-              if (_maxCtrl.text.trim().isEmpty) {
-                if (!isEdit) _qtyCtrl.clear();
-                _minCtrl.clear();
-              }
-              setState(() {});
-            },
-          ),
-          SizedBox(height: context.h(16)),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final quantity = RdxTextField(
+                controller: _qtyCtrl,
+                maxLength: 5,
+                label: isEdit ? 'Current Stock Quantity' : 'Initial Stock *',
+                hint: 'Enter quantity',
+                enabled: !isEdit,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                ],
+              );
+              final portionSize = RdxTextField(
+                controller: _portionSizeCtrl,
+                maxLength: 6,
+                label:
+                    'Portions per ${_unitDisplayName.isEmpty ? 'unit' : _unitDisplayName}',
+                hint: 'Optional',
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                ],
+              );
+              final portionUnit = _portionUnitDropdown();
 
-          // 2. Initial / Current Stock — locked once created; only
-          //    editable while adding a brand-new material, and even then
-          //    disabled until max is set, with keystrokes that would
-          //    exceed max rejected.
-          RdxTextField(
-            controller: _qtyCtrl,
-            maxLength: 5,
-            label:
-                isEdit ? 'Current Stock Quantity' : 'Initial Stock Quantity *',
-            hint: 'Enter current stock quantity',
-            enabled: !isEdit && maxHasValue,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-              _MaxValueInputFormatter(maxVal),
-            ],
-            onChanged: (!isEdit && maxHasValue)
-                ? (_) {
-                    // If qty drops below current min, clear min.
-                    final q = double.tryParse(_qtyCtrl.text);
-                    final m = double.tryParse(_minCtrl.text);
-                    if (q != null && m != null && m > q) {
-                      _minCtrl.clear();
-                    }
-                    setState(() {});
-                  }
-                : null,
+              if (constraints.maxWidth < 620) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: quantity),
+                        SizedBox(width: context.w(12)),
+                        Expanded(child: _unitDropdown()),
+                      ],
+                    ),
+                    SizedBox(height: context.h(12)),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: portionSize),
+                        SizedBox(width: context.w(12)),
+                        Expanded(child: portionUnit),
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: quantity),
+                  SizedBox(width: context.w(10)),
+                  Expanded(child: _unitDropdown()),
+                  SizedBox(width: context.w(10)),
+                  Expanded(child: portionSize),
+                  SizedBox(width: context.w(10)),
+                  Expanded(child: portionUnit),
+                ],
+              );
+            },
           ),
           if (isEdit) ...[
             SizedBox(height: context.h(6)),
             Text(
-              'Stock quantity is locked here — use the ADDED / USED fields '
-              'in the inventory table to restock or record usage, so the '
-              'cost basis stays accurate.',
+              'Stock quantity is locked here. Update stock from the inventory '
+              'table to keep stock records accurate.',
               style: AppTextStyles.bodyTertiary(context)
                   .copyWith(color: colors.textMuted),
             ),
           ],
           SizedBox(height: context.h(16)),
 
-          // 3. Minimum Required — always editable once max is set;
-          //    keystrokes that would exceed current stock are rejected.
+          // Minimum Required
           RdxTextField(
             controller: _minCtrl,
             maxLength: 3,
             label: 'Minimum Stock Alert Value *',
             hint: 'Enter minimum stock value',
-            enabled: maxHasValue,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-              _MaxValueInputFormatter(qtyVal),
             ],
-            onChanged: maxHasValue ? (_) => setState(() {}) : null,
           ),
           SizedBox(height: context.h(6)),
           Text(
@@ -740,7 +660,6 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           ),
           SizedBox(height: context.h(20)),
 
-          // Live preview
           Container(
             padding: EdgeInsets.all(context.h(14)),
             decoration: BoxDecoration(
@@ -753,44 +672,22 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      'Live Stock Preview',
-                      style: AppTextStyles.bodySecondary(context).copyWith(
-                        color: colors.textMuted,
-                        letterSpacing: 0.5,
+                    Expanded(
+                      child: Text(
+                        'Stock status preview',
+                        style: AppTextStyles.bodySecondary(context).copyWith(
+                          color: colors.textMuted,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                  ],
-                ),
-                SizedBox(height: context.h(10)),
-                Row(
-                  children: [
-                    Text(
-                      'Initial Stock: ${_previewMax > 0 ? ((_previewQty / _previewMax) * 100).toStringAsFixed(0) : 0}%',
-                      style: AppTextStyles.body(context)
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '$_previewQty / $_previewMax $_unitDisplayName',
-                      style: AppTextStyles.body(context)
-                          .copyWith(color: colors.textMuted),
                     ),
                   ],
                 ),
                 SizedBox(height: context.h(8)),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: _previewMax > 0
-                        ? (_previewQty / _previewMax).clamp(0.0, 1.0)
-                        : 0,
-                    minHeight: 8,
-                    backgroundColor: colors.border,
-                    valueColor:
-                        AlwaysStoppedAnimation(_statusColor(_previewStatus)),
-                  ),
+                Text(
+                  'Stock percentage and status update after saving.',
+                  style: AppTextStyles.bodyTertiary(context)
+                      .copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
@@ -815,7 +712,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
                 SizedBox(width: context.w(8)),
                 Expanded(
                   child: Text(
-                    'Status badges (In Stock / Low Stock / Critical) are calculated automatically based on your minimum required level.',
+                    'Stock status is based on the current quantity and minimum stock level.',
                     style: AppTextStyles.bodyTertiary(context)
                         .copyWith(color: colors.primary),
                   ),
@@ -828,16 +725,59 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
     );
   }
 
-  Color _statusColor(StockStatus s) {
-    switch (s) {
-      case StockStatus.inStock:
-        return AppColors.success;
-      case StockStatus.lowStock:
-        return AppColors.warning;
-      case StockStatus.critical:
-      case StockStatus.outOfStock:
-        return AppColors.danger;
-    }
+  Widget _unitDropdown() {
+    return RdxDropdown<String>(
+      label: 'Unit of Measurement *',
+      value: _unit != null &&
+              (_units.any((x) => x.id == _unit) || _unit == _kCreateUnitValue)
+          ? _unit
+          : null,
+      items: [
+        _kCreateUnitValue,
+        ..._units.map((unit) => unit.id),
+      ],
+      labelBuilder: _unitLabel,
+      searchable: true,
+      hint: _unitsLoading ? 'Loading units...' : 'Select unit',
+      onChanged: (value) {
+        if (value == _kCreateUnitValue) {
+          _openCreateUnitDialog();
+          return;
+        }
+        if (value != null) setState(() => _unit = value);
+      },
+    );
+  }
+
+  Widget _portionUnitDropdown() {
+    final enabled = (double.tryParse(_portionSizeCtrl.text.trim()) ?? 0) > 0;
+    return RdxDropdown<String>(
+      label: 'Portion Unit${enabled ? ' *' : ''}',
+      value: _portionUnit != null &&
+              (_units.any((unit) => unit.id == _portionUnit) ||
+                  _portionUnit == _kCreateUnitValue)
+          ? _portionUnit
+          : null,
+      items: [
+        _kCreateUnitValue,
+        ..._units.map((unit) => unit.id),
+      ],
+      labelBuilder: _unitLabel,
+      searchable: true,
+      enabled: enabled,
+      hint: enabled
+          ? (_unitsLoading ? 'Loading units...' : 'Select unit')
+          : 'Enter a portion size',
+      onChanged: !enabled
+          ? null
+          : (value) {
+              if (value == _kCreateUnitValue) {
+                _openCreateUnitDialog(forPortion: true);
+                return;
+              }
+              if (value != null) setState(() => _portionUnit = value);
+            },
+    );
   }
 }
 

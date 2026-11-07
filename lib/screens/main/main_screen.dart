@@ -11,18 +11,21 @@ import '../dashboard/dashboard_screen.dart';
 import '../menu/menu_screen.dart';
 import '../coupons/coupons_screen.dart';
 import '../inventory/inventory_screen.dart';
+import '../rewards/rewards_management_screen.dart';
 import '../settings/settings_screen.dart';
+import '../settings/user_management_screen.dart';
 import '../support/support_screen.dart';
 
 /// Persistent app shell: collapsible sidebar + IndexedStack content.
-class MainScreen extends StatefulWidget {
+/// Nav items and default route depend on [AuthProvider.permissions].
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends ConsumerState<MainScreen> {
   String _currentRoute = '/dashboard';
   bool _sidebarExpanded = true;
   final GlobalKey<NavigatorState> _contentNavigatorKey =
@@ -30,40 +33,8 @@ class _MainScreenState extends State<MainScreen> {
   final ValueNotifier<String> _currentRouteNotifier =
       ValueNotifier<String>('/dashboard');
 
-  static const _bottomNavItems = [
-    SidebarItem(
-      label: 'Dashboard',
-      icon: Icons.dashboard_outlined,
-      route: '/dashboard',
-    ),
-    SidebarItem(
-      label: 'Orders',
-      icon: Icons.receipt_long_outlined,
-      route: '/live-orders',
-    ),
-    SidebarItem(
-      label: 'Menu',
-      icon: Icons.restaurant_menu_outlined,
-      route: '/menu',
-    ),
-    SidebarItem(
-      label: 'Coupons',
-      icon: Icons.local_offer_outlined,
-      route: '/coupons',
-    ),
-    SidebarItem(
-      label: 'Inventory',
-      icon: Icons.inventory_2_outlined,
-      route: '/inventory',
-    ),
-    SidebarItem(
-      label: 'Settings',
-      icon: Icons.settings_outlined,
-      route: '/settings',
-    ),
-  ];
-
   late final Map<String, Widget> _screens;
+  bool _didApplyHomeRoute = false;
 
   @override
   void initState() {
@@ -73,9 +44,13 @@ class _MainScreenState extends State<MainScreen> {
       '/live-orders': LiveOrdersScreen(),
       '/menu': const MenuScreen(),
       '/coupons': const CouponsScreen(),
-      // '/notifications': const NotificationsScreen(),
       '/inventory': const InventoryScreen(),
+      '/rewards': RewardsManagementScreen(onBack: () => _navigate('/settings')),
+      '/user-management':
+          UserManagementScreen(onBack: () => _navigate('/settings')),
       '/settings': SettingsScreen(
+        onRewards: () => _navigate('/rewards'),
+        onUserManagement: () => _navigate('/user-management'),
         onSupport: () => _navigate('/support'),
         onLogout: _logout,
       ),
@@ -83,8 +58,92 @@ class _MainScreenState extends State<MainScreen> {
     };
   }
 
+  List<SidebarItem> _navItemsForRole() {
+    final perms = ref.read(authProvider).permissions;
+    final items = <SidebarItem>[];
+
+    if (perms.canViewDashboard) {
+      items.add(const SidebarItem(
+        label: 'Dashboard',
+        icon: Icons.dashboard_outlined,
+        route: '/dashboard',
+      ));
+    }
+    if (perms.canViewOrders) {
+      items.add(const SidebarItem(
+        label: 'Orders',
+        icon: Icons.receipt_long_outlined,
+        route: '/live-orders',
+      ));
+    }
+    if (perms.canViewMenu) {
+      items.add(const SidebarItem(
+        label: 'Menu',
+        icon: Icons.restaurant_menu_outlined,
+        route: '/menu',
+      ));
+    }
+    if (perms.canViewCoupons) {
+      items.add(const SidebarItem(
+        label: 'Coupons',
+        icon: Icons.local_offer_outlined,
+        route: '/coupons',
+      ));
+    }
+    if (perms.canViewInventory) {
+      items.add(const SidebarItem(
+        label: 'Inventory',
+        icon: Icons.inventory_2_outlined,
+        route: '/inventory',
+      ));
+    }
+    if (perms.canViewSettings) {
+      items.add(const SidebarItem(
+        label: 'Settings',
+        icon: Icons.settings_outlined,
+        route: '/settings',
+      ));
+    }
+    return items;
+  }
+
+  void _ensureHomeRoute() {
+    if (_didApplyHomeRoute) return;
+    final perms = ref.read(authProvider).permissions;
+    final home = perms.homeRoute;
+    if (_screens.containsKey(home)) {
+      _didApplyHomeRoute = true;
+      _currentRoute = home;
+      _currentRouteNotifier.value = home;
+    }
+  }
+
   void _navigate(String route) {
-    _contentNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+    final perms = ref.read(authProvider).permissions;
+    if (!perms.allowedRoutes.contains(route) &&
+        route != '/support' &&
+        route != '/rewards' &&
+        route != '/user-management') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('You do not have access to this section.')),
+      );
+      return;
+    }
+    if (route == '/rewards' && !perms.canViewRewards) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rewards are admin-only.')),
+      );
+      return;
+    }
+    if (route == '/user-management' && !perms.canManageUsers) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User management is admin-only.')),
+      );
+      return;
+    }
+
+    _contentNavigatorKey.currentState?.popUntil((r) => r.isFirst);
     _currentRouteNotifier.value = route;
     setState(() => _currentRoute = route);
   }
@@ -99,11 +158,12 @@ class _MainScreenState extends State<MainScreen> {
       cancelButtonLabel: 'Cancel',
       confirmButtonLabel: 'Log out',
       confirmButtonColor: const Color(0xFFE05151),
+      useTextButtonActions: true,
     );
     if (confirmed != true || !mounted) return;
 
     try {
-      await ProviderScope.containerOf(context).read(authProvider).signOut();
+      await ref.read(authProvider).signOut();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,8 +208,14 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = ref.watch(authProvider);
     final colors = AppColors.of(context);
     final useBottomNav = Responsive.useBottomNav(context);
+    final navItems = _navItemsForRole();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _ensureHomeRoute();
+    });
 
     if (useBottomNav) {
       return Scaffold(
@@ -159,23 +225,20 @@ class _MainScreenState extends State<MainScreen> {
           child: _content(),
         ),
         bottomNavigationBar: _MainBottomNav(
-          currentIndex: _bottomNavIndex(),
-          items: _bottomNavItems,
-          onTap: (index) => _navigate(_bottomNavItems[index].route),
+          currentIndex: _bottomNavIndex(navItems),
+          items: navItems,
+          onTap: (index) => _navigate(navItems[index].route),
         ),
       );
     }
 
     final sideNav = MainSideNav(
+      items: navItems.where((item) => item.route != '/settings').toList(),
       currentRoute: _currentRoute,
       onNavigate: _navigate,
       expanded: _sidebarExpanded,
       onToggleExpand: _toggleSidebar,
-      onAddOrder: () {
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   const SnackBar(content: Text('Add Order coming soon')),
-        // );
-      },
+      onAddOrder: auth.permissions.canCreateOrders ? () {} : null,
     );
 
     return Scaffold(
@@ -189,10 +252,14 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  int _bottomNavIndex() {
-    if (_currentRoute == '/support') return _bottomNavItems.length - 1;
-    final index =
-        _bottomNavItems.indexWhere((item) => item.route == _currentRoute);
+  int _bottomNavIndex(List<SidebarItem> items) {
+    if (_currentRoute == '/support' ||
+        _currentRoute == '/rewards' ||
+        _currentRoute == '/user-management') {
+      final settingsIdx = items.indexWhere((item) => item.route == '/settings');
+      return settingsIdx >= 0 ? settingsIdx : 0;
+    }
+    final index = items.indexWhere((item) => item.route == _currentRoute);
     return index >= 0 ? index : 0;
   }
 }
@@ -294,6 +361,7 @@ class _MainBottomNavTile extends StatelessWidget {
     if (icon == Icons.restaurant_menu_outlined) return Icons.restaurant_menu;
     if (icon == Icons.local_offer_outlined) return Icons.local_offer;
     if (icon == Icons.inventory_2_outlined) return Icons.inventory_2;
+    if (icon == Icons.stars_outlined) return Icons.stars;
     if (icon == Icons.settings_outlined) return Icons.settings;
     return icon;
   }

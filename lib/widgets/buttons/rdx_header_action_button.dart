@@ -17,8 +17,11 @@ class RdxHeaderActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = context.w(160).clamp(120.0, 160.0);
-    final height = context.h(40).clamp(34.0, 40.0);
+    final isMobile = Responsive.isMobile(context);
+    final width = isMobile
+        ? context.w(104).clamp(100.0, 104.0)
+        : context.w(130).clamp(112.0, 130.0);
+    final height = context.h(isMobile ? 30 : 36).clamp(28.0, 36.0);
 
     return Tooltip(
       message: label,
@@ -30,6 +33,7 @@ class RdxHeaderActionButton extends StatelessWidget {
           leadingIcon: icon,
           onPressed: onPressed,
           height: height,
+          compact: true,
         ),
       ),
     );

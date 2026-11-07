@@ -92,11 +92,13 @@ class BillItemData {
 class BillSettlementScreen extends ConsumerStatefulWidget {
   final BillSettlementData bill;
   final VoidCallback? onClose;
+  final ValueChanged<OrderModel>? onSettled;
 
   const BillSettlementScreen({
     super.key,
     required this.bill,
     this.onClose,
+    this.onSettled,
   });
 
   @override
@@ -153,10 +155,11 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
 
     try {
       // Secure path — marks paid + records payment_method server-side.
-      await ref.read(orderServiceProvider).settleOrder(
+      final settledOrder = await ref.read(orderServiceProvider).settleOrder(
             orderId: widget.bill.orderNumber,
             paymentMethod: method,
           );
+      widget.onSettled?.call(settledOrder);
 
       if (!mounted) return;
       _close();

@@ -9,8 +9,10 @@ class LiveOrdersProvider extends ChangeNotifier {
   LiveOrdersProvider(this._service);
 
   List<OrderModel> _orders = [];
+  final Map<String, _CachedOrderList> _orderLists = {};
   bool isLoading = false;
   String? errorMessage;
+  bool _hasLoaded = false;
 
   void _log(String message) {
     if (kDebugMode) debugPrint('[LiveOrdersProvider] $message');
@@ -73,18 +75,79 @@ class LiveOrdersProvider extends ChangeNotifier {
   List<OrderModel> get cancelledApp =>
       cancelled.where((o) => o.orderSource == OrderSource.app).toList();
 
+  List<OrderModel> ordersFor({
+    required List<OrderStatus> statuses,
+    required OrderSource source,
+    PaymentStatus? paymentStatus,
+  }) {
+    final statusNames = statuses.map((status) => status.name).toList()..sort();
+    final key =
+        '${source.name}:${statusNames.join(",")}:${paymentStatus?.name ?? "*"}';
+    return _orderLists
+        .putIfAbsent(
+          key,
+          () => _CachedOrderList(
+            statuses: statuses.toSet(),
+            source: source,
+            paymentStatus: paymentStatus,
+            orders: List.unmodifiable(
+              _orders.where(
+                (order) =>
+                    statuses.contains(order.status) &&
+                    order.orderSource == source &&
+                    (paymentStatus == null ||
+                        order.paymentStatus == paymentStatus),
+              ),
+            ),
+          ),
+        )
+        .orders;
+  }
+
+  ({
+    int totalOrders,
+    int liveCount,
+    int appCount,
+    int pendingPaymentCount,
+  }) get overviewStats {
+    final liveCount = liveWalkIn.length;
+    final appCount = appOrdersActive.length;
+    final completedPaidCount = delivered
+        .where((order) => order.paymentStatus == PaymentStatus.paid)
+        .length;
+    final pendingPaymentCount = [
+      ...ready,
+      ...delivered,
+    ].where((order) => order.paymentStatus != PaymentStatus.paid).length;
+
+    return (
+      totalOrders: liveCount +
+          preparingWalkIn.length +
+          readyWalkIn.length +
+          appCount +
+          completedPaidCount,
+      liveCount: liveCount,
+      appCount: appCount,
+      pendingPaymentCount: pendingPaymentCount,
+    );
+  }
+
   Future<void> load() async {
     _log('Order list refresh started.');
-    isLoading = true;
+    if (!_hasLoaded) {
+      isLoading = true;
+      notifyListeners();
+    }
     errorMessage = null;
-    notifyListeners();
     try {
       _orders = await _service.fetchLiveOrders();
+      _orderLists.clear();
       _log('Order list refresh completed (${_orders.length} orders).');
     } catch (error) {
       _log('Order list refresh failed (${error.runtimeType}): $error');
       errorMessage = 'Failed to load live orders.';
     }
+    _hasLoaded = true;
     isLoading = false;
     notifyListeners();
   }
@@ -96,7 +159,7 @@ class LiveOrdersProvider extends ChangeNotifier {
       orderId: order.id,
       newStatus: OrderStatus.cancelled,
     );
-    await load();
+    applyOrderUpdate(order.copyWith(status: OrderStatus.cancelled));
   }
 
   Future<void> advanceStatus(OrderModel order) async {
@@ -105,7 +168,8 @@ class LiveOrdersProvider extends ChangeNotifier {
       throw StateError('Order ${order.id} has no next status.');
     }
     if (next == OrderStatus.delivered && !order.isPaid) {
-      throw StateError('Payment must be completed before delivering this order.');
+      throw StateError(
+          'Payment must be completed before delivering this order.');
     }
     _log(
       'Status advance requested (order: ${order.id}, '
@@ -114,7 +178,7 @@ class LiveOrdersProvider extends ChangeNotifier {
     try {
       await _service.updateOrderStatus(orderId: order.id, newStatus: next);
       _log('Status update accepted by service (order: ${order.id}).');
-      await load();
+      applyOrderUpdate(order.copyWith(status: next));
     } catch (error) {
       _log(
         'Status advance failed (order: ${order.id}, '
@@ -124,6 +188,38 @@ class LiveOrdersProvider extends ChangeNotifier {
       rethrow;
     }
   }
+
+  void applyOrderUpdate(OrderModel updatedOrder) {
+    final index = _orders.indexWhere((order) => order.id == updatedOrder.id);
+    if (index == -1) return;
+
+    final previousOrder = _orders[index];
+    _orders = [..._orders]..[index] = updatedOrder;
+    _orderLists.removeWhere(
+      (_, cached) =>
+          cached.matches(previousOrder) || cached.matches(updatedOrder),
+    );
+    notifyListeners();
+  }
+}
+
+class _CachedOrderList {
+  final Set<OrderStatus> statuses;
+  final OrderSource source;
+  final PaymentStatus? paymentStatus;
+  final List<OrderModel> orders;
+
+  const _CachedOrderList({
+    required this.statuses,
+    required this.source,
+    required this.paymentStatus,
+    required this.orders,
+  });
+
+  bool matches(OrderModel order) =>
+      statuses.contains(order.status) &&
+      source == order.orderSource &&
+      (paymentStatus == null || paymentStatus == order.paymentStatus);
 }
 
 /// Riverpod binding for [LiveOrdersProvider].

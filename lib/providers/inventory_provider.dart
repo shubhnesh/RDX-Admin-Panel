@@ -55,17 +55,25 @@ extension StatsPeriodLabel on StatsPeriod {
 }
 
 class InventoryProvider extends ChangeNotifier {
-  InventoryProvider(this._service);
+  InventoryProvider(
+    this._service, {
+    Duration refreshInterval = const Duration(seconds: 10),
+  }) : _refreshInterval = refreshInterval;
 
   final InventoryService _service;
-  Timer? _searchDebounce;
+  final Duration _refreshInterval;
+  Timer? _refreshTimer;
   int _requestId = 0;
+  int _activeFetches = 0;
+  bool _hasLoadedData = false;
+  bool _disposed = false;
 
   List<InventoryItemModel> items = [];
   List<InventoryItemModel> filteredItems = [];
   List<String> categories = [];
   bool isLoading = false;
   String? errorMessage;
+  String? refreshError;
 
   String searchQuery = '';
   String selectedCategory = 'All';
@@ -82,13 +90,46 @@ class InventoryProvider extends ChangeNotifier {
     if (kDebugMode) debugPrint('[InventoryProvider] $message');
   }
 
-  Future<void> load() => _loadFromCloud();
+  Future<void> load() async {
+    _startAutoRefresh();
+    await _loadFromCloud();
+  }
 
-  Future<void> _loadFromCloud() async {
-    final requestId = ++_requestId;
-    isLoading = true;
-    errorMessage = null;
+  void _startAutoRefresh() {
+    if (_disposed || _refreshTimer != null) return;
+    _refreshTimer = Timer.periodic(_refreshInterval, (_) {
+      if (_activeFetches == 0) {
+        unawaited(_loadFromCloud(silent: true));
+      }
+    });
+  }
+
+  Future<void> retryAutoRefresh() async {
+    refreshError = null;
     notifyListeners();
+    await _loadFromCloud(silent: _hasLoadedData);
+  }
+
+  Future<void> _loadFromCloud({bool silent = false}) async {
+    if (_disposed) return;
+    final requestId = ++_requestId;
+    _activeFetches++;
+    isLoading = !silent && !_hasLoadedData;
+    final previousItems = items;
+    final previousFilteredItems = filteredItems;
+    final previousCategories = categories;
+    final previousExpenditure = periodExpenditure;
+    final previousTotalItems = totalItems;
+    final previousAddedCount = periodAddedItemCount;
+    final previousUsedCount = periodUsedItemCount;
+    final previousRestockCount = needsRestockCount;
+    final previousError = errorMessage;
+    final previousRefreshError = refreshError;
+    var shouldNotify = !silent;
+    if (!silent) {
+      errorMessage = null;
+      notifyListeners();
+    }
     _log(
       'Inventory request started '
       '(period: ${periodFilter.cloudKey}, category: $selectedCategory, '
@@ -102,16 +143,20 @@ class InventoryProvider extends ChangeNotifier {
         category: selectedCategory,
         stockLevel: stockLevelFilter,
       );
-      if (requestId != _requestId) return;
+      if (_disposed || requestId != _requestId) return;
 
-      final rawItems = response['items'];
-      final rawFilteredItems = response['filtered_items'];
+      final nextItems = _parseItems(response['items']);
+      final nextItemsById = {
+        for (final item in _preserveUnchangedItems(nextItems, items))
+          item.id: item,
+      };
+      items = nextItemsById.values.toList(growable: false)
+        ..sort((a, b) => a.name.compareTo(b.name));
+      filteredItems = _filterItems(items);
       final rawCategories = response['categories'];
       final stats = Map<String, dynamic>.from(
         response['stats'] as Map? ?? const {},
       );
-      items = _parseItems(rawItems);
-      filteredItems = _parseItems(rawFilteredItems);
       categories = rawCategories is List
           ? rawCategories.map((value) => value.toString()).toList()
           : const [];
@@ -121,18 +166,36 @@ class InventoryProvider extends ChangeNotifier {
       periodUsedItemCount = _integer(stats['used_item_count']);
       needsRestockCount = _integer(stats['needs_restock_count']);
       errorMessage = null;
+      refreshError = null;
+      _hasLoadedData = true;
+      shouldNotify = shouldNotify ||
+          !_sameItemReferences(previousItems, items) ||
+          !_sameItemReferences(previousFilteredItems, filteredItems) ||
+          !_sameStrings(previousCategories, categories) ||
+          previousExpenditure != periodExpenditure ||
+          previousTotalItems != totalItems ||
+          previousAddedCount != periodAddedItemCount ||
+          previousUsedCount != periodUsedItemCount ||
+          previousRestockCount != needsRestockCount ||
+          previousError != null ||
+          previousRefreshError != null;
       _log(
         'Inventory response applied '
         '(items: ${items.length}, filtered: ${filteredItems.length}).',
       );
     } catch (error, stackTrace) {
-      if (requestId != _requestId) return;
+      if (_disposed || requestId != _requestId) return;
       errorMessage = 'Failed to load inventory: $error';
+      if (_hasLoadedData) {
+        refreshError = 'Automatic inventory refresh failed: $error';
+      }
+      shouldNotify = true;
       _log('Inventory request failed: $error\n$stackTrace');
     } finally {
+      _activeFetches--;
       if (requestId == _requestId) {
         isLoading = false;
-        notifyListeners();
+        if (!_disposed && shouldNotify) notifyListeners();
       }
     }
   }
@@ -145,6 +208,98 @@ class InventoryProvider extends ChangeNotifier {
               Map<String, dynamic>.from(item),
             ))
         .toList();
+  }
+
+  List<InventoryItemModel> _preserveUnchangedItems(
+    List<InventoryItemModel> nextItems,
+    List<InventoryItemModel> currentItems,
+  ) {
+    final currentById = {for (final item in currentItems) item.id: item};
+    return nextItems.map((item) {
+      final current = currentById[item.id];
+      return current != null && _sameItem(current, item) ? current : item;
+    }).toList(growable: false);
+  }
+
+  bool _sameItem(InventoryItemModel a, InventoryItemModel b) {
+    return a.id == b.id &&
+        a.name == b.name &&
+        a.category == b.category &&
+        a.quantity == b.quantity &&
+        a.minRequired == b.minRequired &&
+        a.maxCapacity == b.maxCapacity &&
+        a.unit == b.unit &&
+        a.portionSize == b.portionSize &&
+        a.portionUnit == b.portionUnit &&
+        a.unitCost == b.unitCost &&
+        a.totalCost == b.totalCost &&
+        a.createdAt == b.createdAt &&
+        a.updatedAt == b.updatedAt &&
+        a.lastAddedAt == b.lastAddedAt &&
+        a.lastUsedAt == b.lastUsedAt &&
+        a.initialStockAt == b.initialStockAt &&
+        a.initialStockQty == b.initialStockQty &&
+        a.lastAddedQty == b.lastAddedQty &&
+        a.lastAddedCost == b.lastAddedCost &&
+        a.lastAddedStockBefore == b.lastAddedStockBefore &&
+        a.lastUsedQty == b.lastUsedQty &&
+        a.lastUsedStockBefore == b.lastUsedStockBefore &&
+        a.totalAdded == b.totalAdded &&
+        a.totalUsed == b.totalUsed &&
+        a.notes == b.notes &&
+        a.status == b.status &&
+        a.stockPercent == b.stockPercent &&
+        a.stockFillFraction == b.stockFillFraction &&
+        a.addedInPeriod == b.addedInPeriod &&
+        a.usedInPeriod == b.usedInPeriod &&
+        a.recentAction == b.recentAction;
+  }
+
+  bool _sameItemReferences(
+    List<InventoryItemModel> a,
+    List<InventoryItemModel> b,
+  ) {
+    if (a.length != b.length) return false;
+    for (var index = 0; index < a.length; index++) {
+      if (!identical(a[index], b[index])) return false;
+    }
+    return true;
+  }
+
+  bool _sameStrings(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var index = 0; index < a.length; index++) {
+      if (a[index] != b[index]) return false;
+    }
+    return true;
+  }
+
+  List<InventoryItemModel> _filterItems(
+    List<InventoryItemModel> source,
+  ) {
+    final normalizedQuery = searchQuery.trim().toLowerCase();
+    return source.where((item) {
+      if (selectedCategory != 'All' && item.category != selectedCategory) {
+        return false;
+      }
+      if (normalizedQuery.isNotEmpty &&
+          !item.name.toLowerCase().contains(normalizedQuery) &&
+          !item.category.toLowerCase().contains(normalizedQuery)) {
+        return false;
+      }
+      switch (stockLevelFilter) {
+        case 'Low Stock':
+          return item.status == StockStatus.lowStock;
+        case 'Critical':
+          return item.status == StockStatus.critical;
+        case 'Added':
+          return item.addedInPeriod;
+        case 'Used':
+          return item.usedInPeriod;
+        default:
+          return true;
+      }
+    }).toList(growable: false);
   }
 
   double _number(dynamic value) {
@@ -160,18 +315,17 @@ class InventoryProvider extends ChangeNotifier {
   }
 
   void setSearch(String query) {
+    if (searchQuery == query) return;
     searchQuery = query;
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 250),
-      () => unawaited(_loadFromCloud()),
-    );
+    filteredItems = _filterItems(items);
+    notifyListeners();
   }
 
   void setCategory(String category) {
     if (selectedCategory == category) return;
     selectedCategory = category;
-    unawaited(_loadFromCloud());
+    filteredItems = _filterItems(items);
+    notifyListeners();
   }
 
   void setStockLevelFilter(String level, {StatsPeriod? period}) {
@@ -180,8 +334,13 @@ class InventoryProvider extends ChangeNotifier {
       return;
     }
     stockLevelFilter = level;
+    final periodChanged = period != null && periodFilter != period;
     if (period != null) periodFilter = period;
-    unawaited(_loadFromCloud());
+    filteredItems = _filterItems(items);
+    notifyListeners();
+    if (periodChanged) {
+      unawaited(_loadFromCloud(silent: _hasLoadedData));
+    }
   }
 
   void setPeriodFilter(StatsPeriod period) {
@@ -200,12 +359,12 @@ class InventoryProvider extends ChangeNotifier {
       quantity,
       purchaseCost: purchaseCost,
     );
-    await load();
+    await _loadFromCloud(silent: true);
   }
 
   Future<void> useStock(String id, double quantity) async {
     await _service.useStock(id, quantity);
-    await load();
+    await _loadFromCloud(silent: true);
   }
 
   Future<InventoryStockHistoryPage> fetchStockHistory(
@@ -256,24 +415,26 @@ class InventoryProvider extends ChangeNotifier {
       }
     }
 
-    await load();
+    await _loadFromCloud(silent: true);
     return failures;
   }
 
   Future<String> saveItem(InventoryItemModel item) async {
     final id = await _service.saveItem(item);
-    await load();
+    await _loadFromCloud(silent: true);
     return id;
   }
 
   Future<void> deleteItem(String id) async {
     await _service.deleteItem(id);
-    await load();
+    await _loadFromCloud(silent: true);
   }
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
+    _refreshTimer?.cancel();
+    _disposed = true;
+    _requestId++;
     super.dispose();
   }
 }

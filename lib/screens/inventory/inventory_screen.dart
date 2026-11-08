@@ -73,7 +73,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
       );
     }
 
-    if (provider.errorMessage != null) {
+    if (provider.errorMessage != null && provider.items.isEmpty) {
       return Scaffold(
         backgroundColor: colors.background,
         body: SafeArea(
@@ -145,6 +145,39 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 ],
               ),
             ),
+            if (provider.refreshError != null ||
+                (provider.errorMessage != null && provider.items.isNotEmpty))
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  pagePad.left,
+                  context.h(8),
+                  pagePad.right,
+                  0,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: AppColors.warning,
+                      size: context.h(18),
+                    ),
+                    SizedBox(width: context.w(8)),
+                    Expanded(
+                      child: Text(
+                        provider.refreshError ?? provider.errorMessage!,
+                        style: AppTextStyles.bodySecondary(context)
+                            .copyWith(color: colors.textSecondary),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: provider.refreshError != null
+                          ? provider.retryAutoRefresh
+                          : provider.load,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
             SizedBox(
               height: context.h(52),
               child: Padding(

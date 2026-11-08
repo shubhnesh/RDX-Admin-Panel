@@ -262,11 +262,11 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     );
   }
 
-  Future<void> _openCreateOffer(
+  Future<bool?> _openCreateOffer(
     BuildContext context, {
     OfferModel? offer,
   }) async {
-    await Navigator.of(context).push(
+    return Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => CreateOfferScreen(existing: offer),
       ),
@@ -275,16 +275,13 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
 
   Future<void> _createCoupon() async {
     await _openCreateCoupon(context);
-    if (!mounted) return;
-    await ref.read(couponProvider).load();
-    await ref.read(offerProvider).load();
   }
 
   Future<void> _createOffer() async {
-    await _openCreateOffer(context);
-    if (!mounted) return;
-    await ref.read(couponProvider).load();
-    await ref.read(offerProvider).load();
+    final saved = await _openCreateOffer(context);
+    if (saved == true && mounted) {
+      await ref.read(offerProvider).load();
+    }
   }
 
   Future<void> _createPromotion() async {
@@ -293,6 +290,15 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
       return;
     }
     await _createCoupon();
+  }
+
+  void _retryFailedLoads() {
+    if (ref.read(couponProvider).errorMessage != null) {
+      ref.read(couponProvider).load();
+    }
+    if (ref.read(offerProvider).errorMessage != null) {
+      ref.read(offerProvider).load();
+    }
   }
 
   Widget _buildPromotionGrid(
@@ -448,10 +454,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
               SizedBox(height: context.h(12)),
               RdxActionButton(
                 label: 'Retry',
-                onPressed: () {
-                  ref.read(couponProvider).load();
-                  ref.read(offerProvider).load();
-                },
+                onPressed: _retryFailedLoads,
                 isPrimary: true,
               ),
             ],
@@ -465,11 +468,32 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
         icon: Icons.local_offer_outlined,
       );
     } else {
-      listBody = _buildPromotionGrid(
-        context,
-        colors,
-        filteredCoupons,
-        filteredOffers,
+      listBody = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (loadErrors.isNotEmpty) ...[
+            Text(
+              loadErrors,
+              style: AppTextStyles.body(context)
+                  .copyWith(color: colors.textSecondary),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: RdxActionButton(
+                label: 'Retry',
+                onPressed: _retryFailedLoads,
+                isPrimary: true,
+              ),
+            ),
+            SizedBox(height: context.h(12)),
+          ],
+          _buildPromotionGrid(
+            context,
+            colors,
+            filteredCoupons,
+            filteredOffers,
+          ),
+        ],
       );
     }
 
@@ -514,13 +538,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                         SizedBox(width: context.w(12)),
                         RdxHeaderActionButton(
                           label: 'Create',
-                          onPressed: () async {
-                            await _openCreateCoupon(context);
-                            if (context.mounted) {
-                              ref.read(couponProvider).load();
-                              ref.read(offerProvider).load();
-                            }
-                          },
+                          onPressed: _createCoupon,
                         ),
                       ],
                     ),

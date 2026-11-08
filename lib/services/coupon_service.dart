@@ -2,14 +2,26 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/coupon_model.dart';
 
 class CouponService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  CollectionReference get _col => _db.collection('coupons');
+  CouponService({FirebaseFirestore? firestore})
+      : _db = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _db;
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _db.collection('coupons');
 
   Future<List<CouponModel>> fetchCoupons() async {
     final snap = await _col.get();
     final coupons = snap.docs.map(CouponModel.fromFirestore).toList()
       ..sort((a, b) => b.startDate.compareTo(a.startDate));
     return coupons;
+  }
+
+  Stream<List<CouponModel>> streamCoupons() {
+    return _col.snapshots().map((snapshot) {
+      final coupons = snapshot.docs.map(CouponModel.fromFirestore).toList()
+        ..sort((a, b) => b.startDate.compareTo(a.startDate));
+      return coupons;
+    });
   }
 
   Future<void> createCoupon(CouponModel coupon) async {

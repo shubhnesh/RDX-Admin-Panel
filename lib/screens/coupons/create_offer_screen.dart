@@ -336,7 +336,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
         if (widget.onCreated != null) {
           widget.onCreated!.call();
         } else {
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(true);
         }
       } else {
         await _showNotice(

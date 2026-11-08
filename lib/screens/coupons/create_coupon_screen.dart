@@ -359,7 +359,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
       setState(() => isLoading = false);
 
       if (success) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
       } else {
         await _showNotice(
           isEdit ? 'Failed to update coupon.' : 'Failed to create coupon.',

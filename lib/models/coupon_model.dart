@@ -64,20 +64,20 @@ class CouponModel {
         DateTime.now().add(const Duration(days: 30));
 
     return CouponModel(
-      id: json['id'] ?? '',
-      code: (json['code'] as String?)?.toUpperCase() ?? '',
-      description: json['description'] ?? '',
-      discountType: json['discount_type'] == 'flat'
+      id: _stringValue(json['id']),
+      code: _stringValue(json['code']).toUpperCase(),
+      description: _stringValue(json['description']),
+      discountType: _stringValue(json['discount_type']).toLowerCase() == 'flat'
           ? DiscountType.flat
           : DiscountType.percentage,
-      discountValue: (json['discount_value'] as num?)?.toDouble() ?? 0,
-      minOrderValue: (json['min_order_value'] as num?)?.toDouble(),
+      discountValue: _doubleOrNull(json['discount_value']) ?? 0,
+      minOrderValue: _doubleOrNull(json['min_order_value']),
       usageLimit: _intOrNull(json['usage_limit']),
-      usageCount: json['usage_count'] as int? ?? 0,
+      usageCount: _intOrNull(json['usage_count']) ?? 0,
       startDate: startDate,
       endDate: endDate,
-      status: _statusFromString(json['status']) ??
-          deriveStatus(startDate, endDate),
+      status:
+          _statusFromString(json['status']) ?? deriveStatus(startDate, endDate),
       applicableCategories: _strings(json['applicable_categories']),
       applicableSubCategories: _strings(json['applicable_sub_categories']),
       imageUrl: _nullableString(json['image_url']),
@@ -145,15 +145,25 @@ class CouponModel {
     return null;
   }
 
+  static String _stringValue(dynamic value) => value is String ? value : '';
+
+  static double? _doubleOrNull(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
   static int? _intOrNull(dynamic value) {
     if (value is int) return value;
     if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
     return null;
   }
 
   static DateTime? _parseTimestamp(dynamic value) {
     if (value == null) return null;
     if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
     if (value is String) return DateTime.tryParse(value);
     return null;
   }

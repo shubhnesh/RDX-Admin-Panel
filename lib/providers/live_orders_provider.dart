@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,7 +11,9 @@ class LiveOrdersProvider extends ChangeNotifier {
   LiveOrdersProvider(this._service);
 
   List<OrderModel> _orders = [];
+  final Map<String, OrderModel> _ordersById = {};
   final Map<String, _CachedOrderList> _orderLists = {};
+  StreamSubscription<List<OrderModel>>? _ordersSubscription;
   bool isLoading = false;
   String? errorMessage;
   bool _hasLoaded = false;
@@ -75,7 +79,9 @@ class LiveOrdersProvider extends ChangeNotifier {
   List<OrderModel> get cancelledApp =>
       cancelled.where((o) => o.orderSource == OrderSource.app).toList();
 
-  List<OrderModel> ordersFor({
+  OrderModel? orderById(String id) => _ordersById[id];
+
+  List<String> orderIdsFor({
     required List<OrderStatus> statuses,
     required OrderSource source,
     PaymentStatus? paymentStatus,
@@ -90,18 +96,20 @@ class LiveOrdersProvider extends ChangeNotifier {
             statuses: statuses.toSet(),
             source: source,
             paymentStatus: paymentStatus,
-            orders: List.unmodifiable(
-              _orders.where(
-                (order) =>
-                    statuses.contains(order.status) &&
-                    order.orderSource == source &&
-                    (paymentStatus == null ||
-                        order.paymentStatus == paymentStatus),
-              ),
+            orderIds: List.unmodifiable(
+              _orders
+                  .where(
+                    (order) =>
+                        statuses.contains(order.status) &&
+                        order.orderSource == source &&
+                        (paymentStatus == null ||
+                            order.paymentStatus == paymentStatus),
+                  )
+                  .map((order) => order.id),
             ),
           ),
         )
-        .orders;
+        .orderIds;
   }
 
   ({
@@ -132,24 +140,134 @@ class LiveOrdersProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> load() async {
-    _log('Order list refresh started.');
-    if (!_hasLoaded) {
-      isLoading = true;
-      notifyListeners();
-    }
+  Future<void> load() {
+    if (_ordersSubscription != null) return Future<void>.value();
+
+    _log('Live order subscription started.');
+    isLoading = !_hasLoaded;
     errorMessage = null;
-    try {
-      _orders = await _service.fetchLiveOrders();
-      _orderLists.clear();
-      _log('Order list refresh completed (${_orders.length} orders).');
-    } catch (error) {
-      _log('Order list refresh failed (${error.runtimeType}): $error');
-      errorMessage = 'Failed to load live orders.';
+    notifyListeners();
+
+    late final StreamSubscription<List<OrderModel>> subscription;
+    subscription = _service.watchLiveOrders().listen(
+      _applySnapshot,
+      onError: (Object error, StackTrace stackTrace) {
+        _log('Live order subscription failed (${error.runtimeType}): $error');
+        if (identical(_ordersSubscription, subscription)) {
+          _ordersSubscription = null;
+        }
+        errorMessage = 'Live order updates are unavailable.';
+        isLoading = false;
+        notifyListeners();
+      },
+      onDone: () {
+        if (identical(_ordersSubscription, subscription)) {
+          _ordersSubscription = null;
+          errorMessage = 'Live order updates have stopped.';
+          isLoading = false;
+          notifyListeners();
+        }
+      },
+    );
+    _ordersSubscription = subscription;
+    return Future<void>.value();
+  }
+
+  void _applySnapshot(List<OrderModel> snapshot) {
+    final snapshotById = {for (final order in snapshot) order.id: order};
+    final previousOrders = <OrderModel>[];
+    final addedOrders = <OrderModel>[];
+    final nextOrders = <OrderModel>[];
+
+    for (final order in snapshot) {
+      final previousOrder = _ordersById[order.id];
+      if (previousOrder == null) {
+        addedOrders.add(order);
+        nextOrders.add(order);
+      } else if (_sameOrder(previousOrder, order)) {
+        nextOrders.add(previousOrder);
+      } else {
+        previousOrders.add(previousOrder);
+        nextOrders.add(order);
+      }
     }
+
+    for (final order in _orders) {
+      if (!snapshotById.containsKey(order.id)) {
+        previousOrders.add(order);
+      }
+    }
+
+    if (_hasLoaded && addedOrders.isEmpty && previousOrders.isEmpty) return;
+
+    _orders = nextOrders;
+    _ordersById
+      ..clear()
+      ..addEntries(_orders.map((order) => MapEntry(order.id, order)));
     _hasLoaded = true;
     isLoading = false;
+    errorMessage = null;
+
+    if (previousOrders.isEmpty && addedOrders.isEmpty) {
+      _orderLists.clear();
+    } else {
+      for (final previousOrder in previousOrders) {
+        _invalidateOrderListMembership(
+          previousOrder,
+          snapshotById[previousOrder.id],
+        );
+      }
+      for (final addedOrder in addedOrders) {
+        _invalidateOrderListMembership(null, addedOrder);
+      }
+    }
+
+    _log('Live order snapshot applied (${_orders.length} orders).');
     notifyListeners();
+  }
+
+  bool _sameOrder(OrderModel first, OrderModel second) {
+    if (first.id != second.id ||
+        first.customerName != second.customerName ||
+        first.customerPhone != second.customerPhone ||
+        first.deliveryAddress != second.deliveryAddress ||
+        first.status != second.status ||
+        first.total != second.total ||
+        first.itemTotal != second.itemTotal ||
+        first.taxes != second.taxes ||
+        first.gstPercent != second.gstPercent ||
+        first.deliveryFee != second.deliveryFee ||
+        first.lateNightFee != second.lateNightFee ||
+        first.longDistanceFee != second.longDistanceFee ||
+        first.couponDiscount != second.couponDiscount ||
+        first.rewardDiscount != second.rewardDiscount ||
+        first.createdAt != second.createdAt ||
+        first.deliveryLat != second.deliveryLat ||
+        first.deliveryLng != second.deliveryLng ||
+        first.customerId != second.customerId ||
+        first.notes != second.notes ||
+        first.orderType != second.orderType ||
+        first.tableNumber != second.tableNumber ||
+        first.paymentMethod != second.paymentMethod ||
+        first.paymentStatus != second.paymentStatus ||
+        first.orderSource != second.orderSource ||
+        first.items.length != second.items.length) {
+      return false;
+    }
+
+    for (var index = 0; index < first.items.length; index++) {
+      final firstItem = first.items[index];
+      final secondItem = second.items[index];
+      if (firstItem.name != secondItem.name ||
+          firstItem.quantity != secondItem.quantity ||
+          firstItem.price != secondItem.price ||
+          firstItem.spiceLevel != secondItem.spiceLevel ||
+          firstItem.notes != secondItem.notes ||
+          !listEquals(firstItem.addOns, secondItem.addOns)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// Marks the order as cancelled. Order is kept (not deleted) for history.
@@ -195,11 +313,32 @@ class LiveOrdersProvider extends ChangeNotifier {
 
     final previousOrder = _orders[index];
     _orders = [..._orders]..[index] = updatedOrder;
-    _orderLists.removeWhere(
-      (_, cached) =>
-          cached.matches(previousOrder) || cached.matches(updatedOrder),
-    );
+    _ordersById[updatedOrder.id] = updatedOrder;
+    _invalidateOrderListMembership(previousOrder, updatedOrder);
     notifyListeners();
+  }
+
+  void _invalidateOrderListMembership(
+    OrderModel? previousOrder,
+    OrderModel? updatedOrder,
+  ) {
+    _orderLists.removeWhere((_, cached) {
+      final matchedBefore =
+          previousOrder != null && cached.matches(previousOrder);
+      final matchesNow = updatedOrder != null && cached.matches(updatedOrder);
+      return matchedBefore != matchesNow ||
+          (matchedBefore &&
+              matchesNow &&
+              previousOrder.createdAt != updatedOrder.createdAt);
+    });
+  }
+
+  @override
+  void dispose() {
+    final subscription = _ordersSubscription;
+    _ordersSubscription = null;
+    if (subscription != null) unawaited(subscription.cancel());
+    super.dispose();
   }
 }
 
@@ -207,13 +346,13 @@ class _CachedOrderList {
   final Set<OrderStatus> statuses;
   final OrderSource source;
   final PaymentStatus? paymentStatus;
-  final List<OrderModel> orders;
+  final List<String> orderIds;
 
   const _CachedOrderList({
     required this.statuses,
     required this.source,
     required this.paymentStatus,
-    required this.orders,
+    required this.orderIds,
   });
 
   bool matches(OrderModel order) =>

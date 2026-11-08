@@ -195,9 +195,8 @@ class OrderService {
       return snap.docs.map(OrderModel.fromFirestore).toList();
     } on FirebaseException catch (e) {
       if (e.code == 'failed-precondition') {
-        final snap = await _ordersCol
-            .where('status', whereIn: boardStatuses)
-            .get();
+        final snap =
+            await _ordersCol.where('status', whereIn: boardStatuses).get();
         final list = snap.docs.map(OrderModel.fromFirestore).toList();
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         if (source != null) {
@@ -211,24 +210,11 @@ class OrderService {
 
   /// Real-time stream of live orders.
   Stream<List<OrderModel>> watchLiveOrders({OrderSource? source}) {
-    Query<Map<String, dynamic>> query = _ordersCol.where(
-      'status',
-      whereIn: [
-        'pending',
-        'preparing',
-        'ready',
-        'delivered',
-        'served',
-        'cancelled',
-      ],
-    );
-
-    if (source != null) {
-      query = query.where('order_source', isEqualTo: source.name);
-    }
-
-    return query.snapshots().map((snap) {
-      final list = snap.docs.map(OrderModel.fromFirestore).toList();
+    return _ordersCol.snapshots().map((snap) {
+      final list = snap.docs
+          .map(OrderModel.fromFirestore)
+          .where((order) => source == null || order.orderSource == source)
+          .toList();
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list;
     });
@@ -247,6 +233,16 @@ class OrderService {
     final doc = await _ordersCol.doc(id).get();
     if (!doc.exists) return null;
     return OrderModel.fromFirestore(doc);
+  }
+
+  /// Watches one order so its detail screen reflects backend changes directly.
+  Stream<OrderModel?> watchOrderById(String id) {
+    final orderId = id.trim();
+    if (orderId.isEmpty) return Stream<OrderModel?>.value(null);
+
+    return _ordersCol.doc(orderId).snapshots().map(
+          (doc) => doc.exists ? OrderModel.fromFirestore(doc) : null,
+        );
   }
 
   // ---------------------------------------------------------------------------

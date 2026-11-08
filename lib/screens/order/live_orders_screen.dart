@@ -227,6 +227,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     final colors = AppColors.of(context);
     final isLoading =
         ref.watch(liveOrdersProvider.select((provider) => provider.isLoading));
+    final loadError = ref.watch(
+      liveOrdersProvider.select((provider) => provider.errorMessage),
+    );
 
     final pagePad = context.defaultScreenPadding();
 
@@ -341,6 +344,48 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 ),
               ),
             ),
+
+            if (loadError != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    pagePad.left,
+                    context.h(8),
+                    pagePad.right,
+                    0,
+                  ),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.w(12),
+                      vertical: context.h(8),
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(context.h(8)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.cloud_off_outlined,
+                          size: context.h(18),
+                          color: AppColors.warning,
+                        ),
+                        SizedBox(width: context.w(8)),
+                        Expanded(
+                          child: Text(
+                            loadError,
+                            style: AppTextStyles.bodySecondary(context),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => ref.read(liveOrdersProvider).load(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
             // ── Board ──────────────────────────────────────────────────────
             if (isLoading)
@@ -526,7 +571,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     final compactEmptyFinalBoard = isFinalFilter &&
         sections.every(
           (section) => provider
-              .ordersFor(
+              .orderIdsFor(
                 statuses: section.statuses,
                 source: section.source,
                 paymentStatus: section.paymentStatus,
@@ -624,20 +669,41 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
   Widget _watchSectionOrders(
     _SectionData data,
-    Widget Function(List<OrderModel> orders) builder,
+    Widget Function(List<String> orderIds) builder,
   ) {
     return Consumer(
       builder: (context, ref, _) {
-        final orders = ref.watch(
+        final orderIds = ref.watch(
           liveOrdersProvider.select(
-            (provider) => provider.ordersFor(
+            (provider) => provider.orderIdsFor(
               statuses: data.statuses,
               source: data.source,
               paymentStatus: data.paymentStatus,
             ),
           ),
         );
-        return builder(orders);
+        return builder(orderIds);
+      },
+    );
+  }
+
+  Widget _buildOrderCard(_SectionData data, String orderId) {
+    return Consumer(
+      key: ValueKey(orderId),
+      builder: (context, ref, _) {
+        final order = ref.watch(
+          liveOrdersProvider.select((provider) => provider.orderById(orderId)),
+        );
+        if (order == null) return const SizedBox.shrink();
+
+        return LiveOrderCard(
+          order: order,
+          actionText: data.actionTextFor(order),
+          onAdvance: data.onAdvance,
+          secondaryActionText: data.secondaryActionTextFor(order),
+          onSecondaryAction: data.secondaryOnAdvanceFor(order),
+          onTap: () => _openOrderDetail(order),
+        );
       },
     );
   }
@@ -645,15 +711,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   Widget _buildSingleSectionList(_SectionData data) {
     return _watchSectionOrders(
       data,
-      (orders) => _buildSingleSectionListContent(data, orders),
+      (orderIds) => _buildSingleSectionListContent(data, orderIds),
     );
   }
 
   Widget _buildSingleSectionListContent(
     _SectionData data,
-    List<OrderModel> orders,
+    List<String> orderIds,
   ) {
-    final isEmpty = orders.isEmpty;
+    final isEmpty = orderIds.isEmpty;
     final listController = _columnScrollControllers.putIfAbsent(
       0,
       ScrollController.new,
@@ -664,7 +730,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeader(data, orders.length),
+          _sectionHeader(data, orderIds.length),
           SizedBox(height: context.h(12)),
           if (isEmpty)
             _buildEmptySection(
@@ -679,19 +745,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   controller: listController,
                   primary: false,
                   padding: EdgeInsets.only(bottom: context.h(4)),
-                  itemCount: orders.length,
+                  itemCount: orderIds.length,
                   itemBuilder: (context, index) {
-                    final order = orders[index];
                     return Padding(
                       padding: EdgeInsets.only(bottom: context.h(12)),
-                      child: LiveOrderCard(
-                        order: order,
-                        actionText: data.actionTextFor(order),
-                        onAdvance: data.onAdvance,
-                        secondaryActionText: data.secondaryActionTextFor(order),
-                        onSecondaryAction: data.secondaryOnAdvanceFor(order),
-                        onTap: () => _openOrderDetail(order),
-                      ),
+                      child: _buildOrderCard(data, orderIds[index]),
                     );
                   },
                 ),
@@ -708,9 +766,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   }) {
     return _watchSectionOrders(
       data,
-      (orders) => _buildColumnSectionContent(
+      (orderIds) => _buildColumnSectionContent(
         data,
-        orders,
+        orderIds,
         columnIndex: columnIndex,
       ),
     );
@@ -718,10 +776,10 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
   Widget _buildColumnSectionContent(
     _SectionData data,
-    List<OrderModel> orders, {
+    List<String> orderIds, {
     required int columnIndex,
   }) {
-    final isEmpty = orders.isEmpty;
+    final isEmpty = orderIds.isEmpty;
     final colors = AppColors.of(context);
     final listController = _columnScrollControllers.putIfAbsent(
       columnIndex,
@@ -732,7 +790,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(data, orders.length),
+        _sectionHeader(data, orderIds.length),
         SizedBox(height: context.h(12)),
         if (isEmpty)
           _buildEmptySection(
@@ -776,21 +834,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                     controller: listController,
                     primary: false,
                     padding: EdgeInsets.only(bottom: context.h(4)),
-                    itemCount: orders.length,
+                    itemCount: orderIds.length,
                     itemBuilder: (context, index) {
-                      final order = orders[index];
-
                       return Padding(
                         padding: EdgeInsets.only(bottom: context.h(12)),
-                        child: LiveOrderCard(
-                          order: order,
-                          actionText: data.actionTextFor(order),
-                          onAdvance: data.onAdvance,
-                          secondaryActionText:
-                              data.secondaryActionTextFor(order),
-                          onSecondaryAction: data.secondaryOnAdvanceFor(order),
-                          onTap: () => _openOrderDetail(order),
-                        ),
+                        child: _buildOrderCard(data, orderIds[index]),
                       );
                     },
                   ),
@@ -824,9 +872,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   }) {
     return _watchSectionOrders(
       data,
-      (orders) => _buildRowSectionContent(
+      (orderIds) => _buildRowSectionContent(
         data,
-        orders,
+        orderIds,
         sectionWidth: sectionWidth,
       ),
     );
@@ -834,16 +882,16 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
   Widget _buildRowSectionContent(
     _SectionData data,
-    List<OrderModel> orders, {
+    List<String> orderIds, {
     required double sectionWidth,
   }) {
-    final isEmpty = orders.isEmpty;
+    final isEmpty = orderIds.isEmpty;
     return SizedBox(
       width: sectionWidth, // ← fixed, does not expand with screen width
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeader(data, orders.length),
+          _sectionHeader(data, orderIds.length),
           SizedBox(height: context.h(12)),
           if (isEmpty)
             SizedBox(
@@ -860,23 +908,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (int index = 0; index < orders.length; index++)
+                    for (int index = 0; index < orderIds.length; index++)
                       Padding(
                         padding: EdgeInsets.only(
-                          right: index == orders.length - 1 ? 0 : context.w(12),
+                          right:
+                              index == orderIds.length - 1 ? 0 : context.w(12),
                         ),
                         child: SizedBox(
                           width: sectionWidth,
-                          child: LiveOrderCard(
-                            order: orders[index],
-                            actionText: data.actionTextFor(orders[index]),
-                            onAdvance: data.onAdvance,
-                            secondaryActionText:
-                                data.secondaryActionTextFor(orders[index]),
-                            onSecondaryAction:
-                                data.secondaryOnAdvanceFor(orders[index]),
-                            onTap: () => _openOrderDetail(orders[index]),
-                          ),
+                          child: _buildOrderCard(data, orderIds[index]),
                         ),
                       ),
                   ],

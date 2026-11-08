@@ -15,9 +15,9 @@ import '../../widgets/reusable_widgets/loading_indicator.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 
 final orderDetailProvider =
-    FutureProvider.family<OrderModel?, String>((ref, orderId) async {
-  if (orderId.trim().isEmpty) return null;
-  return OrderService().fetchOrderById(orderId);
+    StreamProvider.family<OrderModel?, String>((ref, orderId) {
+  if (orderId.trim().isEmpty) return Stream<OrderModel?>.value(null);
+  return OrderService().watchOrderById(orderId);
 });
 
 class OrderDetailsScreen extends ConsumerWidget {
@@ -511,7 +511,8 @@ class _RightOrderSummary extends ConsumerWidget {
                 ),
                 if (order.deliveryFee > 0) ...[
                   SizedBox(height: context.h(6)),
-                  _amountRow(context, colors, 'Delivery fee', order.deliveryFee),
+                  _amountRow(
+                      context, colors, 'Delivery fee', order.deliveryFee),
                 ],
                 if (order.lateNightFee > 0) ...[
                   SizedBox(height: context.h(6)),

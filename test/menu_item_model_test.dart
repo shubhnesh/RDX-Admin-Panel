@@ -3,8 +3,7 @@ import 'package:rdx_admin/models/menu_item_model.dart';
 
 void main() {
   group('MenuItemModel size pricing', () {
-    test('derives the displayed price from sizes instead of stale item price',
-        () {
+    test('derives displayed price from sizes instead of stale item price', () {
       final item = MenuItemModel.fromJson({
         'id': 'iced-tea',
         'name': 'Iced Tea',
@@ -20,6 +19,21 @@ void main() {
       expect(item.toFirestore().containsKey('price'), isFalse);
     });
 
+    test('reflects changed size prices even when stored price is stale', () {
+      final item = MenuItemModel.fromJson({
+        'id': 'iced-tea',
+        'name': 'Iced Tea',
+        'description': '',
+        'price': 70,
+        'sizes': [
+          {'name': 'Small', 'price': 85},
+          {'name': 'Large', 'price': 105},
+        ],
+      });
+
+      expect(item.price, 85);
+    });
+
     test('keeps the standalone price for an item without sizes', () {
       final item = MenuItemModel(
         id: '',
@@ -31,5 +45,18 @@ void main() {
       expect(item.toFirestore()['price'], 45);
       expect(item.toFirestore()['sizes'], isEmpty);
     });
+  });
+
+  test('reads and preserves live app visibility from Firestore data', () {
+    final hiddenItem = MenuItemModel.fromJson({
+      'id': 'hidden-item',
+      'name': 'Hidden Item',
+      'description': '',
+      'show_on_mobile_app': false,
+    });
+
+    expect(hiddenItem.showOnMobileApp, isFalse);
+    expect(hiddenItem.copyWith().showOnMobileApp, isFalse);
+    expect(hiddenItem.toFirestore()['show_on_mobile_app'], isFalse);
   });
 }

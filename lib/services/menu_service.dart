@@ -69,6 +69,9 @@ class MenuService {
     final data = item.toFirestore();
 
     data['updated_at'] = FieldValue.serverTimestamp();
+    if (item.sizes.isNotEmpty) {
+      data['price'] = FieldValue.delete();
+    }
 
     await _col.doc(item.id).update(data);
   }

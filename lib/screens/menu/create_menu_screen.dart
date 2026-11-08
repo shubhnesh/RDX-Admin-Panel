@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
@@ -83,8 +85,8 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
   final Set<String> _tags = {};
   final List<String> _ingredients = [];
   bool _available = true;
+  bool _showOnMobileApp = true;
   bool _loading = false;
-  String? _error;
 
   final _categoryService = CategoryService();
   List<CategoryModel> _categories = [];
@@ -113,6 +115,10 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
   final _tagService = TagService();
   List<TagModel> _customTags = [];
   bool _customTagsLoading = true;
+  StreamSubscription<List<CategoryModel>>? _categoriesSubscription;
+  StreamSubscription<List<RegionalityModel>>? _regionalitiesSubscription;
+  StreamSubscription<List<PreparationModel>>? _preparationsSubscription;
+  StreamSubscription<List<TagModel>>? _customTagsSubscription;
 
   static const _tagOptions = [
     'Featured',
@@ -143,34 +149,58 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     return list;
   }
 
-  Future<void> _loadCategories() async {
-    setState(() => _categoriesLoading = true);
-    try {
-      final categories = await _categoryService.fetchCategories();
-      if (!mounted) return;
-      setState(() {
-        _categories = _sortedByName(categories, (c) => c.name);
-        _categoriesLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _categoriesLoading = false);
-    }
+  void _loadCategories() {
+    _categoriesSubscription = _categoryService.streamCategories().listen(
+      (categories) {
+        if (!mounted) return;
+        setState(() {
+          _categories = _sortedByName(categories, (c) => c.name);
+          _categoriesLoading = false;
+          if (_primaryCategory != null &&
+              !_categories.any((category) => category.id == _primaryCategory)) {
+            _primaryCategory = null;
+            _subcategory = null;
+          } else if (_subcategory != null &&
+              !_categories
+                  .where((category) => category.id == _primaryCategory)
+                  .any((category) => category.subcategories
+                      .any((subcategory) => subcategory.id == _subcategory))) {
+            _subcategory = null;
+          }
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint(
+            'CreateMenuScreen category stream failed: $error\n$stackTrace');
+        if (!mounted) return;
+        setState(() => _categoriesLoading = false);
+      },
+    );
   }
 
-  Future<void> _loadRegionalities() async {
-    setState(() => _regionalitiesLoading = true);
-    try {
-      final regionalities = await _regionalityService.fetchRegionalities();
-      if (!mounted) return;
-      setState(() {
-        _regionalities = _sortedByName(regionalities, (r) => r.name);
-        _regionalitiesLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _regionalitiesLoading = false);
-    }
+  void _loadRegionalities() {
+    _regionalitiesSubscription =
+        _regionalityService.streamRegionalities().listen(
+      (regionalities) {
+        if (!mounted) return;
+        setState(() {
+          _regionalities = _sortedByName(regionalities, (r) => r.name);
+          _regionalitiesLoading = false;
+          if (_regionality != null &&
+              _regionality != _kPendingRegionalityId &&
+              !_regionalities.any((item) => item.id == _regionality)) {
+            _regionality = null;
+          }
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint(
+          'CreateMenuScreen regionality stream failed: $error\n$stackTrace',
+        );
+        if (!mounted) return;
+        setState(() => _regionalitiesLoading = false);
+      },
+    );
   }
 
   Future<void> _openCreateCategoryDialog() async {
@@ -346,34 +376,49 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
 
 //Fetching options is done in parallel, so they can fail independently.
 
-  Future<void> _loadPreparations() async {
-    setState(() => _preparationsLoading = true);
-    try {
-      final preparations = await _preparationService.fetchPreparations();
-      if (!mounted) return;
-      setState(() {
-        _preparations = _sortedByName(preparations, (p) => p.name);
-        _preparationsLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _preparationsLoading = false);
-    }
+  void _loadPreparations() {
+    _preparationsSubscription = _preparationService.streamPreparations().listen(
+      (preparations) {
+        if (!mounted) return;
+        setState(() {
+          _preparations = _sortedByName(preparations, (p) => p.name);
+          _preparationsLoading = false;
+          if (_preparation != null &&
+              _preparation != _kPendingPreparationId &&
+              !_preparations.any((item) => item.id == _preparation)) {
+            _preparation = null;
+          }
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint(
+          'CreateMenuScreen preparation stream failed: $error\n$stackTrace',
+        );
+        if (!mounted) return;
+        setState(() => _preparationsLoading = false);
+      },
+    );
   }
 
-  Future<void> _loadCustomTags() async {
-    setState(() => _customTagsLoading = true);
-    try {
-      final tags = await _tagService.fetchTags();
-      if (!mounted) return;
-      setState(() {
-        _customTags = _sortedByName(tags, (t) => t.name);
-        _customTagsLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _customTagsLoading = false);
-    }
+  void _loadCustomTags() {
+    _customTagsSubscription = _tagService.streamTags().listen(
+      (tags) {
+        if (!mounted) return;
+        setState(() {
+          _customTags = _sortedByName(tags, (t) => t.name);
+          _customTagsLoading = false;
+          final availableTags = _customTags.map((tag) => tag.name).toSet();
+          _tags.removeWhere(
+            (tag) => !_tagOptions.contains(tag) && !availableTags.contains(tag),
+          );
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('CreateMenuScreen tag stream failed: $error\n$stackTrace');
+        if (!mounted) return;
+        setState(() => _customTagsLoading = false);
+      },
+    );
   }
 
   List<MenuItemSize> get _currentSizes {
@@ -432,6 +477,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       description: _description.text.trim(),
       imageUrl: _image.text.trim(),
       available: _available,
+      showOnMobileApp: _showOnMobileApp,
       featuredItem: _tags.contains('Featured'),
       sortOrder: int.tryParse(_sortOrder.text) ?? 0,
       dietaryType: _dietaryType ?? DietaryType.veg,
@@ -490,6 +536,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
         ..clear()
         ..addAll(item.ingredients);
       _available = item.available;
+      _showOnMobileApp = item.showOnMobileApp;
 
       // Size-based pricing
       for (final c in _sizeNameControllers) {
@@ -588,7 +635,6 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
 
     setState(() {
       _loading = true;
-      _error = null;
     });
 
     // A regionality typed via the dialog is only held locally until now —
@@ -658,6 +704,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       description: _description.text.trim(),
       imageUrl: _image.text.trim(),
       available: _available,
+      showOnMobileApp: _showOnMobileApp,
       featuredItem: _tags.contains('Featured'),
       sortOrder: int.tryParse(_sortOrder.text) ?? 0,
       dietaryType: _dietaryType!,
@@ -693,6 +740,18 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
 
   @override
   void dispose() {
+    if (_categoriesSubscription != null) {
+      unawaited(_categoriesSubscription!.cancel());
+    }
+    if (_regionalitiesSubscription != null) {
+      unawaited(_regionalitiesSubscription!.cancel());
+    }
+    if (_preparationsSubscription != null) {
+      unawaited(_preparationsSubscription!.cancel());
+    }
+    if (_customTagsSubscription != null) {
+      unawaited(_customTagsSubscription!.cancel());
+    }
     _name.dispose();
     _description.dispose();
     _image.dispose();

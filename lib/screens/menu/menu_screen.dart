@@ -36,8 +36,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted ||
-          !ref.read(authProvider).permissions.canViewMenu) return;
+      if (!mounted || !ref.read(authProvider).permissions.canViewMenu) return;
       ref.read(menuProvider).load();
     });
   }
@@ -99,29 +98,34 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
     _categoryOverlay = OverlayEntry(
       builder: (_) {
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _closeCategoryPicker,
-                child: const SizedBox.expand(),
-              ),
-            ),
-            Positioned(
-              left: left,
-              top: top,
-              width: panelWidth,
-              child: Material(
-                color: Colors.transparent,
-                child: _categoryPickerPanel(
-                  AppColors.of(context),
-                  provider,
-                  panelHeight: panelHeight,
+        return Consumer(
+          builder: (context, ref, _) {
+            final currentProvider = ref.watch(menuProvider);
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _closeCategoryPicker,
+                    child: const SizedBox.expand(),
+                  ),
                 ),
-              ),
-            ),
-          ],
+                Positioned(
+                  left: left,
+                  top: top,
+                  width: panelWidth,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: _categoryPickerPanel(
+                      AppColors.of(context),
+                      currentProvider,
+                      panelHeight: panelHeight,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -259,9 +263,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final unavailableItems = totalItems - availableItems;
 
     Widget bodyContent;
-    final showGrid = !provider.isLoading &&
-        provider.errorMessage == null &&
-        provider.filteredItems.isNotEmpty;
+    final showGrid = !provider.isLoading && provider.filteredItems.isNotEmpty;
 
     if (provider.isLoading) {
       bodyContent = const LoadingIndicator();
@@ -386,6 +388,34 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                 child: _buildFiltersRow(provider, colors),
               ),
             ),
+
+            if (provider.errorMessage != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    pagePad.left,
+                    context.h(8),
+                    pagePad.right,
+                    0,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          provider.errorMessage!,
+                          style: AppTextStyles.bodySecondary(context).copyWith(
+                            color: AppColors.danger,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: provider.load,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
             if (showGrid)
               _buildGrid(context, provider, colors, pagePad)

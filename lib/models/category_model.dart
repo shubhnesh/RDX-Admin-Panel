@@ -12,8 +12,8 @@ class SubcategoryModel {
 
   factory SubcategoryModel.fromMap(Map<String, dynamic> map) {
     return SubcategoryModel(
-      id: map['id'] as String? ?? '',
-      name: map['name'] as String? ?? '',
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
     );
   }
 
@@ -23,8 +23,7 @@ class SubcategoryModel {
       };
 
   @override
-  bool operator ==(Object other) =>
-      other is SubcategoryModel && other.id == id;
+  bool operator ==(Object other) => other is SubcategoryModel && other.id == id;
 
   @override
   int get hashCode => id.hashCode;
@@ -70,7 +69,7 @@ class CategoryModel {
 
     return CategoryModel(
       id: doc.id,
-      name: data['name'] as String? ?? '',
+      name: data['name']?.toString() ?? '',
       subcategories: subs,
     );
   }

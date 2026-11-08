@@ -178,29 +178,34 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
 
     _categoryOverlay = OverlayEntry(
       builder: (_) {
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _closeCategoryPicker,
-                child: const SizedBox.expand(),
-              ),
-            ),
-            Positioned(
-              left: left,
-              top: top,
-              width: panelWidth,
-              child: Material(
-                color: Colors.transparent,
-                child: _categoryPickerPanel(
-                  AppColors.of(context),
-                  provider,
-                  panelHeight: panelHeight,
+        return Consumer(
+          builder: (context, ref, _) {
+            final currentProvider = ref.watch(menuProvider);
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _closeCategoryPicker,
+                    child: const SizedBox.expand(),
+                  ),
                 ),
-              ),
-            ),
-          ],
+                Positioned(
+                  left: left,
+                  top: top,
+                  width: panelWidth,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: _categoryPickerPanel(
+                      AppColors.of(context),
+                      currentProvider,
+                      panelHeight: panelHeight,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );

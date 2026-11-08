@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
@@ -49,11 +51,17 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   _CategorySection _section = _CategorySection.category;
   bool _loading = true;
   String? _error;
+  final Map<String, String> _streamErrors = {};
 
   List<CategoryModel> _categories = [];
   List<PreparationModel> _preparations = [];
   List<RegionalityModel> _regionalities = [];
   List<TagModel> _tags = [];
+  int _loadGeneration = 0;
+  StreamSubscription<List<CategoryModel>>? _categoriesSubscription;
+  StreamSubscription<List<PreparationModel>>? _preparationsSubscription;
+  StreamSubscription<List<RegionalityModel>>? _regionalitiesSubscription;
+  StreamSubscription<List<TagModel>>? _tagsSubscription;
 
   @override
   void initState() {
@@ -62,42 +70,173 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   }
 
   Future<void> _loadAll() async {
+    final generation = ++_loadGeneration;
+    final subscriptions = [
+      _categoriesSubscription,
+      _preparationsSubscription,
+      _regionalitiesSubscription,
+      _tagsSubscription,
+    ];
+    _categoriesSubscription = null;
+    _preparationsSubscription = null;
+    _regionalitiesSubscription = null;
+    _tagsSubscription = null;
+
     setState(() {
       _loading = true;
       _error = null;
+      _streamErrors.clear();
     });
-    try {
-      final results = await Future.wait([
-        _categoryService.fetchCategories(),
-        _preparationService.fetchPreparations(),
-        _regionalityService.fetchRegionalities(),
-        _tagService.fetchTags(),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        _categories = _sortedByName(
-          results[0] as List<CategoryModel>,
-          (c) => c.name,
-        );
-        _preparations = _sortedByName(
-          results[1] as List<PreparationModel>,
-          (p) => p.name,
-        );
-        _regionalities = _sortedByName(
-          results[2] as List<RegionalityModel>,
-          (r) => r.name,
-        );
-        _tags = _sortedByName(results[3] as List<TagModel>, (t) => t.name);
-        _loading = false;
-      });
-    } catch (e, st) {
-      debugPrint('MenuManageCategoryScreen._loadAll failed: $e\n$st');
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Failed to load. ${e.toString()}';
-      });
+    for (final subscription in subscriptions) {
+      if (subscription != null) await subscription.cancel();
     }
+    if (!mounted || generation != _loadGeneration) return;
+
+    late final StreamSubscription<List<CategoryModel>> categoriesSubscription;
+    categoriesSubscription = _categoryService.streamCategories().listen(
+      (categories) {
+        if (!mounted ||
+            !identical(_categoriesSubscription, categoriesSubscription)) {
+          return;
+        }
+        setState(() {
+          _categories = _sortedByName(categories, (category) => category.name);
+          _streamErrors.remove('categories');
+          _refreshStreamError();
+          _loading = false;
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        _handleStreamError(
+          categoriesSubscription,
+          _categoriesSubscription,
+          'categories',
+          error,
+          stackTrace,
+        );
+      },
+    );
+    _categoriesSubscription = categoriesSubscription;
+
+    late final StreamSubscription<List<PreparationModel>>
+        preparationsSubscription;
+    preparationsSubscription = _preparationService.streamPreparations().listen(
+      (preparations) {
+        if (!mounted ||
+            !identical(_preparationsSubscription, preparationsSubscription)) {
+          return;
+        }
+        setState(() {
+          _preparations =
+              _sortedByName(preparations, (preparation) => preparation.name);
+          _streamErrors.remove('preparation styles');
+          _refreshStreamError();
+          _loading = false;
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        _handleStreamError(
+          preparationsSubscription,
+          _preparationsSubscription,
+          'preparation styles',
+          error,
+          stackTrace,
+        );
+      },
+    );
+    _preparationsSubscription = preparationsSubscription;
+
+    late final StreamSubscription<List<RegionalityModel>>
+        regionalitiesSubscription;
+    regionalitiesSubscription =
+        _regionalityService.streamRegionalities().listen(
+      (regionalities) {
+        if (!mounted ||
+            !identical(_regionalitiesSubscription, regionalitiesSubscription)) {
+          return;
+        }
+        setState(() {
+          _regionalities =
+              _sortedByName(regionalities, (regionality) => regionality.name);
+          _streamErrors.remove('regionalities');
+          _refreshStreamError();
+          _loading = false;
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        _handleStreamError(
+          regionalitiesSubscription,
+          _regionalitiesSubscription,
+          'regionalities',
+          error,
+          stackTrace,
+        );
+      },
+    );
+    _regionalitiesSubscription = regionalitiesSubscription;
+
+    late final StreamSubscription<List<TagModel>> tagsSubscription;
+    tagsSubscription = _tagService.streamTags().listen(
+      (tags) {
+        if (!mounted || !identical(_tagsSubscription, tagsSubscription)) {
+          return;
+        }
+        setState(() {
+          _tags = _sortedByName(tags, (tag) => tag.name);
+          _streamErrors.remove('tags');
+          _refreshStreamError();
+          _loading = false;
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        _handleStreamError(
+          tagsSubscription,
+          _tagsSubscription,
+          'tags',
+          error,
+          stackTrace,
+        );
+      },
+    );
+    _tagsSubscription = tagsSubscription;
+  }
+
+  void _handleStreamError(
+    StreamSubscription<dynamic> subscription,
+    StreamSubscription<dynamic>? activeSubscription,
+    String collectionName,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    debugPrint(
+      'MenuManageCategoryScreen $collectionName stream failed: '
+      '$error\n$stackTrace',
+    );
+    if (!mounted || !identical(activeSubscription, subscription)) return;
+    setState(() {
+      _loading = false;
+      _streamErrors[collectionName] =
+          'Failed to receive live $collectionName updates.';
+      _refreshStreamError();
+    });
+  }
+
+  void _refreshStreamError() {
+    _error = _streamErrors.values.isEmpty ? null : _streamErrors.values.first;
+  }
+
+  @override
+  void dispose() {
+    final subscriptions = [
+      _categoriesSubscription,
+      _preparationsSubscription,
+      _regionalitiesSubscription,
+      _tagsSubscription,
+    ];
+    for (final subscription in subscriptions) {
+      if (subscription != null) unawaited(subscription.cancel());
+    }
+    super.dispose();
   }
 
   // ─── Category actions ─────────────────────────────────────────────

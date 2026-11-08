@@ -14,7 +14,7 @@ class MenuItemSize {
 
   factory MenuItemSize.fromJson(Map<String, dynamic> json) => MenuItemSize(
         name: json['name']?.toString() ?? '',
-        price: (json['price'] as num?)?.toDouble() ?? 0,
+        price: MenuItemModel._parseDouble(json['price']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -37,6 +37,7 @@ class MenuItemModel {
   final String description;
   final String image;
   final bool isAvailable;
+  final bool showOnMobileApp;
   final bool isFeatured;
   final int sortOrder;
   final DietaryType dietaryType;
@@ -85,6 +86,7 @@ class MenuItemModel {
     bool? showOnMobileApp,
   })  : image = image ?? imageUrl ?? '',
         isAvailable = isAvailable ?? available ?? true,
+        showOnMobileApp = showOnMobileApp ?? true,
         isFeatured = isFeatured ?? featuredItem ?? false,
         dietaryType = dietaryType ??
             (isVeg == true ? DietaryType.veg : DietaryType.nonVeg),
@@ -95,16 +97,15 @@ class MenuItemModel {
 
   String get imageUrl => image;
   bool get available => isAvailable;
-  bool get showOnMobileApp => true;
   bool get featuredItem => isFeatured;
   bool get isVeg => dietaryType == DietaryType.veg;
   bool get hasSizes => sizes.isNotEmpty;
 
   MenuItemModel copyWith({
     bool? available,
-    bool? showOnMobileApp,
     bool? featuredItem,
     bool? isAvailable,
+    bool? showOnMobileApp,
     bool? isFeatured,
     List<String>? ingredients,
     List<MenuItemSize>? sizes,
@@ -116,6 +117,7 @@ class MenuItemModel {
         description: description,
         image: image,
         isAvailable: isAvailable ?? available ?? this.isAvailable,
+        showOnMobileApp: showOnMobileApp ?? this.showOnMobileApp,
         isFeatured: isFeatured ?? featuredItem ?? this.isFeatured,
         sortOrder: sortOrder,
         dietaryType: dietaryType,
@@ -144,14 +146,27 @@ class MenuItemModel {
   }
 
   factory MenuItemModel.fromJson(Map<String, dynamic> json) {
+    final sizes = _sizes(json['sizes']);
+    final price = sizes.isEmpty
+        ? _parseDouble(json['price'])
+        : sizes.map((size) => size.price).reduce(
+              (lowest, current) => current < lowest ? current : lowest,
+            );
+
     return MenuItemModel(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       image: json['image']?.toString() ?? json['image_url']?.toString() ?? '',
-      isAvailable: json['is_available'] != false && json['available'] != false,
-      isFeatured: json['is_featured'] == true || json['featured_item'] == true,
-      sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
+      isAvailable:
+          _parseBool(json['is_available'] ?? json['available']) ?? true,
+      showOnMobileApp: _parseBool(
+            json['show_on_mobile_app'] ?? json['showOnMobileApp'],
+          ) ??
+          true,
+      isFeatured: _parseBool(json['is_featured']) == true ||
+          _parseBool(json['featured_item']) == true,
+      sortOrder: _parseInt(json['sort_order']),
       dietaryType: _enumValue(DietaryType.values, json['dietary_type']) ??
           (json['is_veg'] == true ? DietaryType.veg : DietaryType.nonVeg),
       preparationId: json['preparation_id']?.toString() ?? '',
@@ -162,8 +177,8 @@ class MenuItemModel {
       subCategory: json['sub_category']?.toString() ?? '',
       regionalityId: json['regionality_id']?.toString() ?? '',
       regionality: json['regionality']?.toString() ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? 0,
-      sizes: _sizes(json['sizes']),
+      price: price,
+      sizes: sizes,
       tags: _strings(json['tags']),
       ingredients: _strings(json['ingredients']),
       createdAt: _timestamp(json['created_at']),
@@ -176,6 +191,7 @@ class MenuItemModel {
         'description': description,
         'image': image,
         'is_available': isAvailable,
+        'show_on_mobile_app': showOnMobileApp,
         'is_featured': isFeatured,
         'sort_order': sortOrder,
         'dietary_type': dietaryType.name,
@@ -187,7 +203,7 @@ class MenuItemModel {
         'sub_category': subCategory,
         'regionality_id': regionalityId,
         'regionality': regionality,
-        'price': price,
+        if (sizes.isEmpty) 'price': price,
         'sizes': sizes.map((s) => s.toJson()).toList(),
         'tags': tags,
         'ingredients': ingredients,
@@ -198,6 +214,30 @@ class MenuItemModel {
   static T? _enumValue<T extends Enum>(List<T> values, dynamic value) {
     for (final item in values) {
       if (item.name == value) return item;
+    }
+    return null;
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString().trim() ?? '') ?? 0;
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString().trim() ?? '') ?? 0;
+  }
+
+  static bool? _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is String) {
+      switch (value.trim().toLowerCase()) {
+        case 'true':
+          return true;
+        case 'false':
+          return false;
+      }
     }
     return null;
   }

@@ -12,6 +12,7 @@
 
 const admin = require("firebase-admin");
 const config = require("./config");
+const { readStoredRewardConfiguration } = require("./configuration");
 
 const db = admin.firestore();
 
@@ -28,10 +29,89 @@ function randomInt(min, max) {
 /**
  * Compute points from order total using server config only.
  */
-function computeEarnPoints(orderTotal) {
-  if (!config.enabled) return 0;
+function pointsForSubtotal(total, earning) {
+  if (total <= 0) return 0;
+  const rate = earning.mode === "fixedRate"
+    ? Number(earning.pointsPerRupee) || 0
+    : (Number(earning.percentageBps) || 0) / 10000;
+  return rate > 0 ? Math.max(1, Math.floor(total * rate)) : 0;
+}
 
-  const total = Number(orderTotal) || 0;
+function computeEarnPoints(orderTotal, storedConfiguration) {
+  const order = typeof orderTotal === "object" && orderTotal
+    ? orderTotal
+    : null;
+  const itemSubtotal = order
+    ? Number(order.item_total ?? order.total) || 0
+    : Number(orderTotal) || 0;
+  const total = order
+    ? Math.max(0, itemSubtotal - (Number(order.coupon_discount) || 0))
+    : itemSubtotal;
+  if (storedConfiguration) {
+    if (storedConfiguration.enabled !== true) return 0;
+    const earning = storedConfiguration.earning || {};
+    const minimumOrderValue = Number(earning.minimumOrderValuePaise) || 0;
+    if (total * 100 < minimumOrderValue) return 0;
+
+    const itemRules = Array.isArray(earning.itemRules)
+      ? earning.itemRules
+      : [];
+    if (!order || itemRules.length === 0 || !Array.isArray(order.items)) {
+      return pointsForSubtotal(total, earning);
+    }
+
+    const lines = order.items
+      .map((item) => ({
+        menuItemId: String(item.product_id || item.menu_item_id || ""),
+        subtotal: Math.max(0, Number(item.price) || 0) *
+          Math.max(0, Number(item.quantity) || 0),
+        rewardSubtotal: item.reward_eligible_subtotal,
+      }))
+      .filter((item) => item.menuItemId && item.subtotal > 0);
+    const linesSubtotal = lines.reduce((sum, item) => sum + item.subtotal, 0);
+    if (linesSubtotal <= 0) return pointsForSubtotal(total, earning);
+
+    const hasRewardSubtotals = lines.every(
+      (item) =>
+        typeof item.rewardSubtotal === "number" &&
+        Number.isFinite(item.rewardSubtotal) &&
+        item.rewardSubtotal >= 0
+    );
+    const discount = Math.min(
+      linesSubtotal,
+      Math.max(0, Number(order.coupon_discount) || 0)
+    );
+    // Older orders get a proportional fallback; newer orders store server allocations.
+    const discountRatio = hasRewardSubtotals ? 0 : discount / linesSubtotal;
+    const rulesByItem = new Map(
+      itemRules.map((rule) => [String(rule.menuItemId), rule])
+    );
+    const overriddenSubtotals = new Map();
+    let defaultSubtotal = 0;
+    for (const line of lines) {
+      const netSubtotal = hasRewardSubtotals
+        ? line.rewardSubtotal
+        : line.subtotal * (1 - discountRatio);
+      const rule = rulesByItem.get(line.menuItemId);
+      if (!rule) {
+        defaultSubtotal += netSubtotal;
+      } else {
+        overriddenSubtotals.set(
+          line.menuItemId,
+          (overriddenSubtotals.get(line.menuItemId) || 0) + netSubtotal
+        );
+      }
+    }
+
+    let points = pointsForSubtotal(defaultSubtotal, earning);
+    for (const [menuItemId, subtotal] of overriddenSubtotals) {
+      const rule = rulesByItem.get(menuItemId);
+      points += pointsForSubtotal(subtotal, rule);
+    }
+    return points;
+  }
+
+  if (!config.enabled) return 0;
   const { minOrderTotal, highThreshold, fixedHighPoints, bands } = config.earn;
 
   if (total < minOrderTotal) return 0;
@@ -58,7 +138,10 @@ function computeEarnPoints(orderTotal) {
  * @returns {Promise<{ awarded: boolean, points: number, reason?: string }>}
  */
 async function awardPointsForDeliveredOrder(orderId, orderData, awardedBy = "system") {
-  if (!config.enabled) {
+  const storedConfiguration = await readStoredRewardConfiguration();
+  if (storedConfiguration
+      ? storedConfiguration.enabled !== true
+      : !config.enabled) {
     return { awarded: false, points: 0, reason: "rewards_disabled" };
   }
 
@@ -67,8 +150,11 @@ async function awardPointsForDeliveredOrder(orderId, orderData, awardedBy = "sys
   }
 
   const status = (orderData.status || "").toString().toLowerCase();
-  if (status !== "delivered") {
-    return { awarded: false, points: 0, reason: "not_delivered" };
+  if (
+    status !== "delivered" ||
+    (orderData.payment_status || "").toString().toLowerCase() !== "paid"
+  ) {
+    return { awarded: false, points: 0, reason: "order_not_eligible" };
   }
 
   // Only customer app orders earn (optional: allow staff-created too)
@@ -80,8 +166,37 @@ async function awardPointsForDeliveredOrder(orderId, orderData, awardedBy = "sys
   }
 
   // Prefer already-computed server total
-  const orderTotal = Number(orderData.total ?? orderData.item_total ?? 0) || 0;
-  const points = computeEarnPoints(orderTotal);
+  const orderTotal = Number(orderData.item_total ?? orderData.total ?? 0) || 0;
+  const itemRules = storedConfiguration?.earning?.itemRules || [];
+  if (itemRules.length > 0) {
+    const items = orderData.items;
+    const hasOrderLines = Array.isArray(items) &&
+      items.length > 0 &&
+      items.every((item) =>
+        Boolean(item.product_id || item.menu_item_id) &&
+        Number.isFinite(Number(item.price)) &&
+        Number.isFinite(Number(item.quantity)) &&
+        Number(item.quantity) > 0
+      );
+    const hasDiscountAllocations = hasOrderLines &&
+      items.every((item) =>
+        typeof item.reward_eligible_subtotal === "number" &&
+        Number.isFinite(item.reward_eligible_subtotal) &&
+        item.reward_eligible_subtotal >= 0
+      );
+    if (
+      !hasOrderLines ||
+      ((Number(orderData.coupon_discount) || 0) > 0 &&
+        !hasDiscountAllocations)
+    ) {
+      return {
+        awarded: false,
+        points: 0,
+        reason: "item_allocation_unavailable",
+      };
+    }
+  }
+  const points = computeEarnPoints(orderData, storedConfiguration);
   if (points <= 0) {
     return { awarded: false, points: 0, reason: "below_threshold" };
   }

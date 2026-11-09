@@ -13,7 +13,7 @@
 const functions = require("firebase-functions");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
-const { requireRestaurantUser } = require("../auth/roles");
+const { requireAuth, requireRestaurantUser } = require("../auth/roles");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -765,6 +765,41 @@ exports.getDashboardStats = functions
         error_code: error.code || null,
         error_type: error.name || "Error",
         error_message: error.message || String(error),
+      });
+      throw error;
+    }
+  });
+
+// APP: CUSTOMER APP — exposes only ranked menu item names, not dashboard data.
+exports.getTopSellingProducts = functions
+  .region("us-central1")
+  .https.onCall(async (_data, context) => {
+    const uid = requireAuth(context);
+    const startedAt = Date.now();
+
+    try {
+      const windows = resolveWindows("last_7_days");
+      const orders = await fetchOrdersInRange(
+        windows.periodStart,
+        windows.periodEnd
+      );
+      const items = topSelling(orders, 5).map((item) => item.name);
+
+      logger.info("Top-selling products request completed", {
+        uid,
+        period: "last_7_days",
+        order_count: orders.length,
+        item_count: items.length,
+        duration_ms: Date.now() - startedAt,
+      });
+
+      return { items };
+    } catch (error) {
+      logger.error("Top-selling products request failed", {
+        uid,
+        duration_ms: Date.now() - startedAt,
+        error_code: error.code || null,
+        error_type: error.name || "Error",
       });
       throw error;
     }

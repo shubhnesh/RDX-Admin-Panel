@@ -13,7 +13,17 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
 
     return _recordPage(
       title: 'Reward transactions',
-      subtitle: 'Append-only point ledger records.',
+      subtitle:
+          'Read-only ledger; records are created automatically by reward activity.',
+      headerAction: provider.canConfigure
+          ? OutlinedButton.icon(
+              onPressed: provider.isMutating || provider.isLoading
+                  ? null
+                  : () => _reconcileOrderRewards(provider),
+              icon: const Icon(Icons.sync),
+              label: const Text('Sync delivered order'),
+            )
+          : null,
       searchHint: 'Search user, order, referral or description',
       onSearch: (value) => _updateState(() => _transactionSearch = value),
       searchController: _transactionSearchController,
@@ -39,7 +49,8 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
         search: _transactionSearch,
       ),
       emptyTitle: 'No transactions found',
-      emptyMessage: 'Reward ledger entries will appear here.',
+      emptyMessage:
+          'A qualifying paid and delivered order, checkout redemption, or referral bonus creates these records automatically. They are not entered manually.',
       hasItems: filtered.isNotEmpty,
       table: _transactionTable(filtered),
       onNextPage: provider.hasMoreTransactions
@@ -62,7 +73,7 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
     }).toList();
     return _recordPage(
       title: 'Redemptions',
-      subtitle: 'Reward claims and point usage.',
+      subtitle: 'Read-only history of points spent at customer checkout.',
       searchHint: 'Search customer, reward or order',
       onSearch: (value) => _updateState(() => _redemptionSearch = value),
       searchController: _redemptionSearchController,
@@ -87,7 +98,8 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
         search: _redemptionSearch,
       ),
       emptyTitle: 'No redemptions found',
-      emptyMessage: 'Redemption records will appear here.',
+      emptyMessage:
+          'A record appears when a customer spends points at checkout. Redemption history is not entered manually.',
       hasItems: filtered.isNotEmpty,
       table: _redemptionTable(filtered),
       onNextPage: provider.hasMoreRedemptions
@@ -111,7 +123,7 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
     }).toList();
     return _recordPage(
       title: 'Referral management',
-      subtitle: 'Attributions and qualifying-order status.',
+      subtitle: 'Read-only history of customer referral attributions.',
       searchHint: 'Search customer, code or qualifying order',
       onSearch: (value) => _updateState(() => _referralSearch = value),
       searchController: _referralSearchController,
@@ -136,7 +148,8 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
         search: _referralSearch,
       ),
       emptyTitle: 'No referral records found',
-      emptyMessage: 'Referral attributions will appear here.',
+      emptyMessage:
+          'A record appears after a customer applies another customer’s referral code. The bonus is issued after the qualifying order is paid and delivered.',
       hasItems: filtered.isNotEmpty,
       table: _referralTable(filtered),
       onNextPage: provider.hasMoreReferrals
@@ -152,6 +165,7 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
   Widget _recordPage({
     required String title,
     required String subtitle,
+    Widget? headerAction,
     required String searchHint,
     required TextEditingController searchController,
     required ValueChanged<String> onSearch,
@@ -170,7 +184,19 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
   }) =>
       _pageList(
         children: [
-          _sectionTitle(title, subtitle),
+          if (headerAction == null)
+            _sectionTitle(title, subtitle)
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _sectionTitle(title, subtitle),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: headerAction,
+                ),
+              ],
+            ),
           Wrap(
             spacing: context.w(12),
             runSpacing: context.h(10),
@@ -239,6 +265,74 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
             ),
         ],
       );
+
+  Future<void> _reconcileOrderRewards(
+    RewardsAdminProvider provider,
+  ) async {
+    final controller = TextEditingController();
+    final orderId = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sync a delivered order'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Order ID',
+            hintText: 'Enter the customer order ID',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Sync'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (orderId == null || orderId.isEmpty || !mounted) return;
+
+    try {
+      final result = await ref
+          .read(rewardsAdminServiceProvider)
+          .reconcileOrderRewards(orderId);
+      await provider.load();
+      await provider.loadTransactions(
+        type: _transactionType,
+        search: _transactionSearch,
+      );
+      if (!mounted) return;
+      if (result.pointsEarned > 0) {
+        _showMessage(
+          result.reason == 'already_awarded'
+              ? 'This order was already credited with ${result.pointsEarned} points.'
+              : 'Order synced. ${result.pointsEarned} points were credited.',
+        );
+      } else {
+        final message = switch (result.reason) {
+          'order_not_eligible' =>
+            'No points credited. The order must be both paid and delivered.',
+          'no_customer' =>
+            'No points credited. This order is not linked to a customer account.',
+          'rewards_disabled' =>
+            'No points credited. Enable the rewards program in Configuration.',
+          'below_threshold' =>
+            'No points credited. Check the minimum order and earning rate in Configuration.',
+          'item_allocation_unavailable' =>
+            'No points credited. This older order lacks the server-calculated item discount details needed for your item-specific rules.',
+          _ => 'No points were credited for this order.',
+        };
+        _showMessage(message);
+      }
+    } catch (error) {
+      if (mounted) _showMessage('Unable to sync order rewards: $error');
+    }
+  }
 
   Widget _transactionTable(List<RewardTransaction> items) => SizedBox(
         height: context.h(390),

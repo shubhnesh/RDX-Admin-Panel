@@ -3,13 +3,29 @@
     "module": "commonjs",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
-    "allowJs": true,
     "outDir": "lib",
-    "rootDir": "src",
     "sourceMap": true,
     "strict": true,
-    "target": "es2020"
+    "target": "es2020",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": false,
+    "resolveJsonModule": true
   },
-  "compileOnSave": true,
-  "include": ["src/**/*.js"]
+  "compileOnSave": false,
+  "include": [
+    "index.js",
+    "orders/**/*.js",
+    "auth/**/*.js",
+    "rewards/**/*.js",
+    "dashboard/**/*.js",
+    "inventory/**/*.js",
+    "settings/**/*.js",
+    "tax_and_fees/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "lib"
+  ]
 }

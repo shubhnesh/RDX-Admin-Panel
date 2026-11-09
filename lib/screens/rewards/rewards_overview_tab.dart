@@ -46,6 +46,40 @@ class RewardsOverviewTab extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: Responsive.pagePadding(context, bottom: 28),
         children: [
+          Card(
+            child: Padding(
+              padding: EdgeInsets.all(context.w(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('How to use rewards',
+                      style: AppTextStyles.section(context)),
+                  SizedBox(height: context.h(8)),
+                  Text(
+                    '1. Set and save earning and redemption rules in Configuration. '
+                    'Use the global earning rate for every item, then add an '
+                    'override for selected menu items if needed. Set referral '
+                    'rewards in Referral settings.\n'
+                    '2. Add food items and their point cost in Redemption catalog. '
+                    'A catalog item does not grant points when it is ordered.\n'
+                    '3. Customers earn points on eligible customer orders only '
+                    'after payment is marked paid and the order is marked delivered. '
+                    'The configured rate and minimum order value determine the points. '
+                    'Eligible item discounts are calculated from server-validated order lines.\n'
+                    '4. Transactions, redemptions, and referrals are automatic '
+                    'history records, not records to create manually. Transactions '
+                    'appear after an earn, checkout redemption, or referral bonus. '
+                    'Referral records appear after a customer applies a referral code.\n'
+                    '5. Refresh the customer app wallet after delivery to see the '
+                    'updated balance. Referral customers must apply a code before '
+                    'meeting the configured qualification conditions.',
+                    style: AppTextStyles.caption(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: context.h(16)),
           _MetricGrid(
             items: [
               _Metric(

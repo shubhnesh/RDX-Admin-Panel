@@ -99,6 +99,13 @@ class RewardsAdminProvider extends ChangeNotifier {
     });
   }
 
+  Future<void> loadMenuItems() async {
+    await _runLoad('menu items', () async {
+      menuItems = await _menuService.fetchMenuItems();
+      _log('Loaded ${menuItems.length} menu items for earning rules.');
+    });
+  }
+
   Future<void> loadTransactions({
     String? type,
     String? search,

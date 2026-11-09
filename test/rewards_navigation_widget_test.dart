@@ -13,6 +13,13 @@ void main() {
           body: Row(
             children: [
               MainSideNav(
+                items: const [
+                  SidebarItem(
+                    label: 'Rewards',
+                    icon: Icons.card_giftcard,
+                    route: '/rewards',
+                  ),
+                ],
                 currentRoute: '/dashboard',
                 onNavigate: (route) => navigatedRoute = route,
                 expanded: true,

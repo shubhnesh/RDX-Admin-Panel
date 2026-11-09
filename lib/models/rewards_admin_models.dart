@@ -10,6 +10,53 @@ enum RewardTransactionType {
   adjustment,
 }
 
+class RewardItemEarningRule {
+  const RewardItemEarningRule({
+    required this.menuItemId,
+    required this.mode,
+    required this.percentageBps,
+    required this.pointsPerRupee,
+  });
+
+  final String menuItemId;
+  final RewardEarningMode mode;
+  final int percentageBps;
+  final int pointsPerRupee;
+
+  factory RewardItemEarningRule.fromMap(Map<String, dynamic> data) {
+    final mode = _requiredString(data, 'mode');
+    return RewardItemEarningRule(
+      menuItemId: _requiredString(data, 'menuItemId'),
+      mode: switch (mode) {
+        'percentage' => RewardEarningMode.percentage,
+        'fixedRate' => RewardEarningMode.fixedRate,
+        _ => throw FormatException('Unknown item earning mode: $mode'),
+      },
+      percentageBps: _requiredInt(data, 'percentageBps'),
+      pointsPerRupee: _requiredInt(data, 'pointsPerRupee'),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'menuItemId': menuItemId,
+        'mode': mode.name,
+        'percentageBps': percentageBps,
+        'pointsPerRupee': pointsPerRupee,
+      };
+
+  RewardItemEarningRule copyWith({
+    RewardEarningMode? mode,
+    int? percentageBps,
+    int? pointsPerRupee,
+  }) =>
+      RewardItemEarningRule(
+        menuItemId: menuItemId,
+        mode: mode ?? this.mode,
+        percentageBps: percentageBps ?? this.percentageBps,
+        pointsPerRupee: pointsPerRupee ?? this.pointsPerRupee,
+      );
+}
+
 class RewardConfiguration {
   const RewardConfiguration({
     required this.version,
@@ -19,6 +66,7 @@ class RewardConfiguration {
     required this.pointsPerRupee,
     required this.eligibleSubtotalBasis,
     required this.minimumOrderValuePaise,
+    required this.itemEarningRules,
     required this.redemptionPointsPerRupee,
     required this.minimumRedemptionPoints,
     required this.maximumRedemptionPercentage,
@@ -40,6 +88,7 @@ class RewardConfiguration {
   final int pointsPerRupee;
   final String eligibleSubtotalBasis;
   final int minimumOrderValuePaise;
+  final List<RewardItemEarningRule> itemEarningRules;
   final int redemptionPointsPerRupee;
   final int minimumRedemptionPoints;
   final int maximumRedemptionPercentage;
@@ -58,6 +107,7 @@ class RewardConfiguration {
     final earning = _requiredMap(config, 'earning');
     final redemption = _requiredMap(config, 'redemption');
     final referrals = _requiredMap(config, 'referrals');
+    final itemRules = _parseItemEarningRules(earning['itemRules']);
     final mode = _requiredString(earning, 'mode');
 
     return RewardConfiguration(
@@ -72,6 +122,7 @@ class RewardConfiguration {
       pointsPerRupee: _requiredInt(earning, 'pointsPerRupee'),
       eligibleSubtotalBasis: _requiredString(earning, 'eligibleSubtotalBasis'),
       minimumOrderValuePaise: _requiredInt(earning, 'minimumOrderValuePaise'),
+      itemEarningRules: itemRules,
       redemptionPointsPerRupee: _requiredInt(redemption, 'pointsPerRupee'),
       minimumRedemptionPoints: _requiredInt(redemption, 'minimumPoints'),
       maximumRedemptionPercentage:
@@ -99,6 +150,7 @@ class RewardConfiguration {
           'pointsPerRupee': pointsPerRupee,
           'eligibleSubtotalBasis': eligibleSubtotalBasis,
           'minimumOrderValuePaise': minimumOrderValuePaise,
+          'itemRules': itemEarningRules.map((rule) => rule.toMap()).toList(),
         },
         'redemption': {
           'pointsPerRupee': redemptionPointsPerRupee,
@@ -117,6 +169,20 @@ class RewardConfiguration {
           'qualificationConditions': referralQualificationConditions,
         },
       };
+}
+
+List<RewardItemEarningRule> _parseItemEarningRules(Object? value) {
+  if (value == null) return [];
+  if (value is! List) {
+    throw const FormatException('Response field "itemRules" must be a list.');
+  }
+  return value
+      .map(
+        (rule) => RewardItemEarningRule.fromMap(
+          _asMap(rule, 'itemRules[]'),
+        ),
+      )
+      .toList();
 }
 
 class FoodReward {

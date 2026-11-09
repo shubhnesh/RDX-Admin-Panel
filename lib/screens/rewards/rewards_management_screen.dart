@@ -62,6 +62,7 @@ class _RewardsManagementScreenState
   final _redemptionSearchController = TextEditingController();
 
   RewardEarningMode _earningMode = RewardEarningMode.percentage;
+  List<RewardItemEarningRule> _earningItemRules = [];
   bool _rewardsEnabled = false;
   bool _referralsEnabled = false;
   bool _configurationLoaded = false;
@@ -146,6 +147,7 @@ class _RewardsManagementScreenState
     _configurationDirty = false;
     _rewardsEnabled = config.enabled;
     _earningMode = config.earningMode;
+    _earningItemRules = List.of(config.itemEarningRules);
     _earningRateController.text = config.percentageBps.toString();
     _fixedRateController.text = config.pointsPerRupee.toString();
     _eligibleBasisController.text = config.eligibleSubtotalBasis;
@@ -196,6 +198,8 @@ class _RewardsManagementScreenState
     switch (index) {
       case 2:
         await provider.loadCatalog();
+      case 1:
+        if (provider.menuItems.isEmpty) await provider.loadMenuItems();
       case 4:
         await provider.loadTransactions(type: _transactionType);
       case 5:
@@ -419,9 +423,8 @@ class _RewardsManagementScreenState
                   label: 'Eligible subtotal basis',
                   controller: _eligibleBasisController,
                   enabled: !readOnly && !provider.isMutating,
-                  validator: _requiredText,
-                  helper:
-                      'Use the exact basis value accepted by the rewards backend.',
+                  validator: _eligibleSubtotalBasis,
+                  helper: 'Order item subtotal after discounts, before tax.',
                 ),
                 SizedBox(height: context.h(12)),
                 DropdownButtonFormField<RewardEarningMode>(
@@ -473,6 +476,11 @@ class _RewardsManagementScreenState
               ],
             ),
           ),
+          _sectionTitle(
+            'Per-item earning overrides',
+            'Menu items without an override use the global earning rule above.',
+          ),
+          _earningItemRulesPanel(provider, readOnly: readOnly),
           _sectionTitle(
               'Redemption rules', 'Limits are enforced by the backend'),
           _panel(
@@ -551,7 +559,7 @@ class _RewardsManagementScreenState
           icon: Icons.info_outline,
           title: 'How referral rewards work',
           message:
-              'A referral is attributed once. Rewards are issued only after the new customer completes a qualifying order that is both delivered and paid. The backend prevents self-referrals and duplicate bonuses.',
+              'A referral is attributed once. Rewards are issued when the new customer’s first qualifying order meets the selected paid/delivered conditions. The backend prevents self-referrals and duplicate bonuses.',
         ),
         if (!provider.canConfigure)
           _informationCard(
@@ -626,9 +634,9 @@ class _RewardsManagementScreenState
                       controller: _qualificationController,
                       enabled: provider.canConfigure && !provider.isMutating,
                       maxLines: 4,
-                      validator: _requiredText,
+                      validator: _referralConditions,
                       helper:
-                          'Conditions are passed to the backend without client-side interpretation.',
+                          'Use paid and/or delivered, one per line. All listed conditions must be met.',
                     ),
                   ],
                 ),
@@ -664,6 +672,196 @@ class _RewardsManagementScreenState
         ),
       ],
     );
+  }
+
+  Widget _earningItemRulesPanel(
+    RewardsAdminProvider provider, {
+    required bool readOnly,
+  }) {
+    if (provider.menuItems.isEmpty) {
+      return _panel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'No menu items are available for item-specific rules.',
+            ),
+            SizedBox(height: context.h(8)),
+            OutlinedButton.icon(
+              onPressed: readOnly || provider.isLoading
+                  ? null
+                  : provider.loadMenuItems,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Load menu items'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final visibleIds = provider.menuItems.map((item) => item.id).toSet();
+    final missingRules = _earningItemRules
+        .where((rule) => !visibleIds.contains(rule.menuItemId))
+        .toList();
+
+    return _panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final item in provider.menuItems) ...[
+            _itemEarningRule(item, readOnly: readOnly, provider: provider),
+            const Divider(height: 1),
+          ],
+          for (final rule in missingRules)
+            ListTile(
+              title: Text('Unavailable menu item (${rule.menuItemId})'),
+              subtitle: const Text(
+                'This saved override is retained until you remove it.',
+              ),
+              trailing: readOnly
+                  ? null
+                  : IconButton(
+                      tooltip: 'Remove item override',
+                      onPressed: () => setState(() {
+                        _earningItemRules.removeWhere(
+                          (itemRule) => itemRule.menuItemId == rule.menuItemId,
+                        );
+                        _configurationDirty = true;
+                      }),
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _itemEarningRule(
+    MenuItemModel item, {
+    required bool readOnly,
+    required RewardsAdminProvider provider,
+  }) {
+    RewardItemEarningRule? rule;
+    for (final candidate in _earningItemRules) {
+      if (candidate.menuItemId == item.id) {
+        rule = candidate;
+        break;
+      }
+    }
+    final currentRule = rule;
+    final editable = !readOnly && !provider.isMutating;
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: context.h(8)),
+      child: Column(
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(item.name),
+            subtitle: Text(
+              currentRule == null
+                  ? 'Uses the global earning rule'
+                  : 'Uses an item-specific earning override',
+            ),
+            value: currentRule != null,
+            onChanged: editable
+                ? (enabled) => setState(() {
+                      if (enabled) {
+                        _earningItemRules.add(
+                          RewardItemEarningRule(
+                            menuItemId: item.id,
+                            mode: _earningMode,
+                            percentageBps:
+                                int.tryParse(_earningRateController.text) ?? 0,
+                            pointsPerRupee:
+                                int.tryParse(_fixedRateController.text) ?? 0,
+                          ),
+                        );
+                      } else {
+                        _earningItemRules.removeWhere(
+                          (candidate) => candidate.menuItemId == item.id,
+                        );
+                      }
+                      _configurationDirty = true;
+                    })
+                : null,
+          ),
+          if (currentRule != null) ...[
+            DropdownButtonFormField<RewardEarningMode>(
+              key: ValueKey('item-mode-${item.id}-${currentRule.mode.name}'),
+              value: currentRule.mode,
+              decoration: const InputDecoration(labelText: 'Item earning mode'),
+              items: const [
+                DropdownMenuItem(
+                  value: RewardEarningMode.percentage,
+                  child: Text('Percentage of item subtotal'),
+                ),
+                DropdownMenuItem(
+                  value: RewardEarningMode.fixedRate,
+                  child: Text('Fixed points per rupee'),
+                ),
+              ],
+              onChanged: editable
+                  ? (mode) {
+                      if (mode == null) return;
+                      setState(() {
+                        _replaceItemRule(
+                          currentRule.copyWith(mode: mode),
+                        );
+                        _configurationDirty = true;
+                      });
+                    }
+                  : null,
+            ),
+            SizedBox(height: context.h(10)),
+            TextFormField(
+              key: ValueKey(
+                'item-rate-${item.id}-${currentRule.mode.name}',
+              ),
+              initialValue: currentRule.mode == RewardEarningMode.percentage
+                  ? currentRule.percentageBps.toString()
+                  : currentRule.pointsPerRupee.toString(),
+              enabled: editable,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: currentRule.mode == RewardEarningMode.percentage
+                    ? 'Percentage rate (basis points)'
+                    : 'Points per rupee',
+                helperText: currentRule.mode == RewardEarningMode.percentage
+                    ? '100 basis points equals 1%.'
+                    : null,
+                border: const OutlineInputBorder(),
+              ),
+              validator: (value) => _integer(
+                value,
+                min: 0,
+                max: currentRule.mode == RewardEarningMode.percentage
+                    ? 10000
+                    : null,
+              ),
+              onChanged: (value) {
+                final rate = int.tryParse(value.trim());
+                if (rate == null) return;
+                _replaceItemRule(
+                  currentRule.mode == RewardEarningMode.percentage
+                      ? currentRule.copyWith(percentageBps: rate)
+                      : currentRule.copyWith(pointsPerRupee: rate),
+                );
+                if (!_configurationDirty) {
+                  setState(() => _configurationDirty = true);
+                }
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _replaceItemRule(RewardItemEarningRule updated) {
+    final index = _earningItemRules.indexWhere(
+      (rule) => rule.menuItemId == updated.menuItemId,
+    );
+    if (index >= 0) _earningItemRules[index] = updated;
   }
 
   Future<void> _saveConfiguration(
@@ -717,6 +915,7 @@ class _RewardsManagementScreenState
       pointsPerRupee: int.parse(_fixedRateController.text.trim()),
       eligibleSubtotalBasis: _eligibleBasisController.text.trim(),
       minimumOrderValuePaise: int.parse(_minimumOrderController.text.trim()),
+      itemEarningRules: List.of(_earningItemRules),
       redemptionPointsPerRupee: int.parse(_conversionController.text.trim()),
       minimumRedemptionPoints: int.parse(_minimumRedeemController.text.trim()),
       maximumRedemptionPercentage:
@@ -773,6 +972,8 @@ class _RewardsManagementScreenState
         await provider.load();
         if (provider.canRead) await provider.loadTransactions();
       case 1:
+        await provider.load();
+        await provider.loadMenuItems();
       case 3:
         await provider.load();
       case 2:
@@ -888,15 +1089,33 @@ class _RewardsManagementScreenState
         ),
       );
 
-  String? _requiredText(String? value) =>
-      value == null || value.trim().isEmpty ? 'This field is required.' : null;
+  String? _eligibleSubtotalBasis(String? value) =>
+      value?.trim() == 'afterDiscountBeforeTax'
+          ? null
+          : 'Use afterDiscountBeforeTax.';
+
+  String? _referralConditions(String? value) {
+    final conditions = (value ?? '')
+        .split('\n')
+        .map((condition) => condition.trim())
+        .where((condition) => condition.isNotEmpty)
+        .toList();
+    if (conditions.isEmpty ||
+        conditions.any(
+          (condition) => condition != 'paid' && condition != 'delivered',
+        )) {
+      return 'Use paid and/or delivered, one per line.';
+    }
+    return null;
+  }
 
   String? _integer(String? value, {required int min, int? max}) {
     final parsed = int.tryParse(value?.trim() ?? '');
     if (parsed == null) return 'Enter a whole number.';
     if (parsed < min) return 'Enter a value of at least $min.';
-    if (max != null && parsed > max)
+    if (max != null && parsed > max) {
       return 'Enter a value no greater than $max.';
+    }
     return null;
   }
 

@@ -8,6 +8,16 @@ import 'package:flutter/foundation.dart';
 
 import '../models/rewards_admin_models.dart';
 
+class RewardReconciliationResult {
+  const RewardReconciliationResult({
+    required this.pointsEarned,
+    required this.reason,
+  });
+
+  final int pointsEarned;
+  final String reason;
+}
+
 class RewardsAdminService {
   RewardsAdminService({
     FirebaseAuth? auth,
@@ -67,7 +77,11 @@ class RewardsAdminService {
     _log('Refreshing claims for permission check.');
     try {
       final token = await user.getIdTokenResult(true);
-      final allowed = token.claims?[claim] == true;
+      final claims = token.claims;
+      final hasRewardAdminRole =
+          (claim == 'rewardsReadAdmin' || claim == 'rewardsConfigAdmin') &&
+              claims?['role'] == 'admin';
+      final allowed = claims?[claim] == true || hasRewardAdminRole;
       _log('Permission claim lookup completed (granted: $allowed).');
       return allowed;
     } on FirebaseAuthException catch (error) {
@@ -180,6 +194,29 @@ class RewardsAdminService {
       parse: (_) {},
     );
   }
+
+  Future<RewardReconciliationResult> reconcileOrderRewards(
+    String orderId,
+  ) =>
+      _call(
+        'reconcileOrderRewards',
+        requiredClaim: 'rewardsConfigAdmin',
+        data: {'orderId': orderId.trim()},
+        parse: (result) {
+          final response = _asMap(result, 'reconciliation');
+          final points = response['reward_points_earned'];
+          final reason = response['reason'];
+          if (points is! int || reason is! String) {
+            throw const FormatException(
+              'Reconciliation response has an unsupported format.',
+            );
+          }
+          return RewardReconciliationResult(
+            pointsEarned: points,
+            reason: reason,
+          );
+        },
+      );
 
   Future<RewardAnalytics> fetchAnalytics({
     required DateTime from,

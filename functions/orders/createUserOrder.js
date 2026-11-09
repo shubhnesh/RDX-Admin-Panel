@@ -25,6 +25,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const rewardConfig = require("../rewards/config");
+const { readStoredRewardConfiguration } = require("../rewards/configuration");
 const { generateOrderId } = require("./orderId");
 
 // Admin is initialized in the main index entrypoint.
@@ -94,6 +95,35 @@ function toDate(value) {
   return isNaN(parsed) ? null : new Date(parsed);
 }
 
+function allocateRewardSubtotals(
+  orderItems,
+  couponDiscount,
+  discountEligibleProductIds = null
+) {
+  const discountEligibleSubtotal = orderItems.reduce(
+    (sum, item) =>
+      discountEligibleProductIds == null ||
+          discountEligibleProductIds.has(item.product_id)
+        ? sum + item.price * item.quantity
+        : sum,
+    0
+  );
+  return orderItems.map((item) => {
+    const lineSubtotal = item.price * item.quantity;
+    const discountEligible =
+      discountEligibleProductIds == null ||
+      discountEligibleProductIds.has(item.product_id);
+    const allocatedDiscount =
+      discountEligible && discountEligibleSubtotal > 0
+        ? couponDiscount * lineSubtotal / discountEligibleSubtotal
+        : 0;
+    return {
+      ...item,
+      reward_eligible_subtotal: Math.max(0, lineSubtotal - allocatedDiscount),
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Main callable
 // ---------------------------------------------------------------------------
@@ -111,6 +141,31 @@ exports.createUserOrder = functions
     }
 
     const uid = context.auth.uid;
+    const storedRewardConfiguration =
+      await readStoredRewardConfiguration();
+    const activeRewardConfig = storedRewardConfiguration
+      ? {
+          enabled: storedRewardConfiguration.enabled === true,
+          redeem: {
+            pointsToRupee:
+              1 /
+              Math.max(
+                1,
+                Number(
+                  storedRewardConfiguration.redemption?.pointsPerRupee
+                ) || 1
+              ),
+            minPoints:
+              Number(
+                storedRewardConfiguration.redemption?.minimumPoints
+              ) || 1,
+            maxOrderPercent:
+              Number(
+                storedRewardConfiguration.redemption?.maximumOrderPercentage
+              ) || 0,
+          },
+        }
+      : rewardConfig;
     const {
       items = [],
       coupon_code = null,
@@ -289,6 +344,7 @@ exports.createUserOrder = functions
     let appliedOfferId = null;
     let couponRef = null;
     let offerRef = null;
+    let discountEligibleProductIds = null;
 
     const now = new Date();
 
@@ -406,8 +462,7 @@ exports.createUserOrder = functions
         .toString()
         .trim();
 
-      const eligibleSubtotal = orderItems
-        .filter((item) => {
+      const eligibleItems = orderItems.filter((item) => {
           if (
             categoryScopes.length > 0 &&
             !categoryScopes.some((scope) => {
@@ -430,8 +485,14 @@ exports.createUserOrder = functions
             return false;
           }
           return true;
-        })
-        .reduce((sum, item) => sum + item.price * item.quantity, 0);
+        });
+      discountEligibleProductIds = new Set(
+        eligibleItems.map((item) => item.product_id)
+      );
+      const eligibleSubtotal = eligibleItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      );
 
       if (
         (categoryScopes.length > 0 ||
@@ -541,7 +602,7 @@ exports.createUserOrder = functions
       }
 
       // Eligible subtotal (item / subcategory scoped)
-      let eligibleSubtotal = itemTotal;
+      let eligibleItems = orderItems;
 
       const applicableItemId = (
         offer.applicable_item_id ||
@@ -559,19 +620,24 @@ exports.createUserOrder = functions
         .trim();
 
       if (applicableItemId) {
-        eligibleSubtotal = orderItems
-          .filter((item) => (item.product_id || "") === applicableItemId)
-          .reduce((sum, item) => sum + item.price * item.quantity, 0);
+        eligibleItems = orderItems.filter(
+          (item) => (item.product_id || "") === applicableItemId
+        );
       } else if (applicableSubCategoryId) {
         const scope = applicableSubCategoryId.toLowerCase();
-        eligibleSubtotal = orderItems
-          .filter((item) => {
+        eligibleItems = orderItems.filter((item) => {
             const id = (item.sub_category_id || "").toString().trim();
             const name = (item.sub_category || "").toString().trim().toLowerCase();
             return id === applicableSubCategoryId || name === scope;
-          })
-          .reduce((sum, item) => sum + item.price * item.quantity, 0);
+          });
       }
+      discountEligibleProductIds = new Set(
+        eligibleItems.map((item) => item.product_id)
+      );
+      const eligibleSubtotal = eligibleItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      );
 
       if (
         (applicableItemId || applicableSubCategoryId) &&
@@ -641,6 +707,11 @@ exports.createUserOrder = functions
     let rewardDiscount = 0;
 
     const afterCoupon = Math.max(itemTotal - couponDiscount, 0);
+    const orderItemsWithRewardSubtotals = allocateRewardSubtotals(
+      orderItems,
+      couponDiscount,
+      discountEligibleProductIds
+    );
 
     // 6. Atomic write: order + coupon/offer usage + wallet debit
     let orderRef;
@@ -660,7 +731,7 @@ exports.createUserOrder = functions
       order_source: "app",
       payment_method: (payment_method || "").toString().toLowerCase() || null,
       payment_status: "unpaid",
-      items: orderItems,
+      items: orderItemsWithRewardSubtotals,
       item_total: itemTotal,
       coupon_discount: couponDiscount,
       coupon_code: appliedCouponCode,
@@ -682,23 +753,28 @@ exports.createUserOrder = functions
       }
 
       // --- Reward points redemption (server wallet only) ---
-      if (requestedRewardPoints > 0 && rewardConfig.enabled) {
+      if (requestedRewardPoints > 0 && activeRewardConfig.enabled) {
         const walletSnap = await transaction.get(walletRef);
         const wallet = walletSnap.exists ? walletSnap.data() || {} : {};
         const balance = Math.max(0, Number(wallet.balance) || 0);
 
         const maxByPercent = Math.floor(
-          (afterCoupon * (Number(rewardConfig.redeem.maxOrderPercent) || 0)) /
-            100
+          (afterCoupon *
+            (Number(activeRewardConfig.redeem.maxOrderPercent) || 0)) /
+            100 /
+            (Number(activeRewardConfig.redeem.pointsToRupee) || 1)
         );
         const maxByBalance = balance;
-        const minPts = Number(rewardConfig.redeem.minPoints) || 1;
+        const minPts = Number(activeRewardConfig.redeem.minPoints) || 1;
 
         let allowed = Math.min(
           requestedRewardPoints,
           maxByBalance,
           maxByPercent,
-          Math.floor(afterCoupon) // cannot discount more than remaining subtotal
+          Math.floor(
+            afterCoupon /
+              (Number(activeRewardConfig.redeem.pointsToRupee) || 1)
+          ) // cannot discount more than remaining subtotal
         );
 
         if (allowed > 0 && allowed < minPts) {
@@ -706,7 +782,8 @@ exports.createUserOrder = functions
         }
 
         rewardPointsUsed = Math.max(0, allowed);
-        const rate = Number(rewardConfig.redeem.pointsToRupee) || 1;
+        const rate =
+          Number(activeRewardConfig.redeem.pointsToRupee) || 1;
         rewardDiscount = rewardPointsUsed * rate;
 
         if (rewardPointsUsed > 0) {
@@ -738,6 +815,7 @@ exports.createUserOrder = functions
             balance_after: newBalance,
             created_at: admin.firestore.FieldValue.serverTimestamp(),
           });
+
         }
       }
 
@@ -788,6 +866,7 @@ exports.createUserOrder = functions
         transaction.update(couponRef, {
           usage_count: usageCount + 1,
         });
+
       }
 
       // Same for offer
@@ -886,3 +965,5 @@ exports.createUserOrder = functions
       created_at: new Date().toISOString(),
     };
   });
+
+exports._private = { allocateRewardSubtotals };

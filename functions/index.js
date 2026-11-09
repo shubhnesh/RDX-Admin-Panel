@@ -11,12 +11,22 @@ if (!admin.apps.length) {
 }
 
 const { createUserOrder } = require("./orders/createUserOrder");
+const { getCartOfferProgress } = require("./orders/getCartOfferProgress");
 const { createStaffOrder } = require("./orders/createStaffOrder");
 const { validateCoupon } = require("./orders/validateCoupon");
 const { getRewardWallet } = require("./rewards/getWallet");
+const { processOrderRewards } = require("./rewards/orderEvents");
+const rewardAdmin = require("./rewards/admin");
+const {
+  getReferralOverview,
+  applyReferralCode,
+} = require("./referrals/referrals");
 const { settleOrder } = require("./orders/settleOrder");
 const { updateOrderStatus } = require("./orders/updateOrderStatus");
-const { getDashboardStats } = require("./dashboard/getDashboardStats");
+const {
+  getDashboardStats,
+  getTopSellingProducts,
+} = require("./dashboard/getDashboardStats");
 const {
   bootstrapAdmin,
   listManagedUsers,
@@ -32,10 +42,25 @@ const {
 } = require("./settings/manageRestaurantSettings");
 
 exports.createUserOrder = createUserOrder;
+exports.getCartOfferProgress = getCartOfferProgress;
 exports.createStaffOrder = createStaffOrder;
 exports.validateCoupon = validateCoupon;
 exports.getRewardWallet = getRewardWallet;
+exports.processOrderRewards = processOrderRewards;
+exports.getRewardConfiguration = rewardAdmin.getRewardConfiguration;
+exports.updateRewardConfiguration = rewardAdmin.updateRewardConfiguration;
+exports.createFoodReward = rewardAdmin.createFoodReward;
+exports.updateFoodReward = rewardAdmin.updateFoodReward;
+exports.disableReward = rewardAdmin.disableReward;
+exports.reconcileOrderRewards = rewardAdmin.reconcileOrderRewards;
+exports.fetchRewardAnalytics = rewardAdmin.fetchRewardAnalytics;
+exports.fetchRewardTransactions = rewardAdmin.fetchRewardTransactions;
+exports.fetchReferralRecords = rewardAdmin.fetchReferralRecords;
+exports.fetchRedemptionRecords = rewardAdmin.fetchRedemptionRecords;
+exports.getReferralOverview = getReferralOverview;
+exports.applyReferralCode = applyReferralCode;
 exports.getDashboardStats = getDashboardStats;
+exports.getTopSellingProducts = getTopSellingProducts;
 exports.settleOrder = settleOrder;
 exports.updateOrderStatus = updateOrderStatus;
 exports.bootstrapAdmin = bootstrapAdmin;

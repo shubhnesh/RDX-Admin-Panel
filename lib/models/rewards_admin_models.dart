@@ -282,7 +282,8 @@ class RewardReferralRecord {
     required this.status,
     required this.createdAt,
     this.qualifyingOrderId,
-    this.pointsAwarded = 0,
+    this.referrerPointsAwarded = 0,
+    this.referredPointsAwarded = 0,
   });
 
   final String id;
@@ -292,7 +293,8 @@ class RewardReferralRecord {
   final String status;
   final DateTime createdAt;
   final String? qualifyingOrderId;
-  final int pointsAwarded;
+  final int referrerPointsAwarded;
+  final int referredPointsAwarded;
 
   factory RewardReferralRecord.fromMap(Map<String, dynamic> data) =>
       RewardReferralRecord(
@@ -303,7 +305,10 @@ class RewardReferralRecord {
         status: _requiredString(data, 'status'),
         createdAt: _requiredDate(data, 'createdAt'),
         qualifyingOrderId: _optionalString(data, 'qualifyingOrderId'),
-        pointsAwarded: _optionalInt(data, 'pointsAwarded') ?? 0,
+        referrerPointsAwarded:
+            _optionalInt(data, 'referrerPointsAwarded') ?? 0,
+        referredPointsAwarded:
+            _optionalInt(data, 'referredPointsAwarded') ?? 0,
       );
 }
 

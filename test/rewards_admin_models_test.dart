@@ -110,4 +110,22 @@ void main() {
     expect(referral.referralCode, isEmpty);
     expect(referral.status, 'skipped');
   });
+
+  test('parses referral points separately for each participant', () {
+    final referral = RewardReferralRecord.fromMap({
+      'referralId': 'user_2',
+      'referrerId': 'user_1',
+      'referredUserId': 'user_2',
+      'referralCode': 'ABC123',
+      'status': 'rewarded',
+      'createdAt': '2026-10-30T12:00:00Z',
+      'qualifyingOrderId': 'order_1',
+      'referrerPointsAwarded': 10,
+      'referredPointsAwarded': 5,
+    });
+
+    expect(referral.status, 'rewarded');
+    expect(referral.referrerPointsAwarded, 10);
+    expect(referral.referredPointsAwarded, 5);
+  });
 }

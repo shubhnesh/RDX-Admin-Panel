@@ -138,12 +138,28 @@ test("referral and redemption records match the Flutter model fields", () => {
     created_at: new Date("2026-11-01T00:00:00.000Z"),
   }));
 
-  assert.equal(referral.status, "qualified");
-  assert.equal(referral.pointsAwarded, 15);
+  assert.equal(referral.status, "rewarded");
+  assert.equal(referral.referrerPointsAwarded, 10);
+  assert.equal(referral.referredPointsAwarded, 5);
   assert.equal(referral.qualifyingOrderId, "order-2");
   assert.equal(redemption.status, "completed");
   assert.equal(redemption.pointsUsed, 4);
   assert.equal(redemption.rewardName, "Order discount");
+});
+
+test("pending referrals retain their configured reward amounts", () => {
+  const referral = mapReferral(document("user-2", {
+    referrer_uid: "user-1",
+    referred_uid: "user-2",
+    status: "pending",
+    reward_status: "pending",
+    referrer_reward_points: 50,
+    referred_reward_points: 50,
+  }));
+
+  assert.equal(referral.status, "pending");
+  assert.equal(referral.referrerPointsAwarded, 50);
+  assert.equal(referral.referredPointsAwarded, 50);
 });
 
 test("page limits are clamped to supported bounds", () => {

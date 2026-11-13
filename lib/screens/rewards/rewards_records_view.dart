@@ -1928,9 +1928,8 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
       filter: _referralStatus,
       filterOptions: const {
         'pending': 'Pending',
-        'qualified': 'Qualified',
-        'reversed': 'Reversed',
-        'rejected': 'Rejected',
+        'rewarded': 'Rewarded',
+        'skipped': 'Skipped',
       },
       onFilter: (value) {
         _updateState(() => _referralStatus = value);
@@ -2240,8 +2239,8 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
         height: context.h(390),
         child: RdxTable(
           columns: const [
-            RdxTableColumn(title: 'Referrer', minWidth: 160),
-            RdxTableColumn(title: 'Referred customer', minWidth: 180),
+            RdxTableColumn(title: 'Referred By', minWidth: 160),
+            RdxTableColumn(title: 'Referred To', minWidth: 180),
             RdxTableColumn(title: 'Code', minWidth: 130),
             RdxTableColumn(title: 'Status', minWidth: 120),
             RdxTableColumn(title: 'Qualifying order', minWidth: 160),
@@ -2256,7 +2255,10 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
                 _cell(item.referralCode),
                 _cell(item.status),
                 _cell(item.qualifyingOrderId ?? '—'),
-                _cell(_number(item.pointsAwarded)),
+                _cell(
+                  '${_number(item.referrerPointsAwarded)}+'
+                  '${_number(item.referredPointsAwarded)}',
+                ),
                 _cell(_date(item.createdAt)),
               ],
           ],

@@ -307,18 +307,12 @@ function mapReferral(snapshot) {
     referrerId: String(data.referrer_uid || ""),
     referredUserId: String(data.referred_uid || snapshot.id),
     referralCode: String(data.code || ""),
-    status:
-      data.status === "rewarded" || data.reward_status === "rewarded"
-        ? "qualified"
-        : String(data.status || data.reward_status || "pending"),
+    status: String(data.status || data.reward_status || "pending"),
     createdAt: dateToIso(data.created_at),
     qualifyingOrderId:
       data.order_id == null ? null : String(data.order_id),
-    pointsAwarded:
-      data.reward_status === "rewarded" || data.status === "rewarded"
-        ? (Number(data.referrer_reward_points) || 0) +
-          (Number(data.referred_reward_points) || 0)
-        : 0,
+    referrerPointsAwarded: Number(data.referrer_reward_points) || 0,
+    referredPointsAwarded: Number(data.referred_reward_points) || 0,
   };
 }
 

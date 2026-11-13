@@ -24,14 +24,7 @@ service cloud.firestore {
       allow read: if isRestaurantUser() ||
           (isSignedIn() && resource.data.customer_id == request.auth.uid);
       allow create: if isAdmin();
-      allow update: if isAdmin() ||
-          (isSignedIn() &&
-              resource.data.customer_id == request.auth.uid &&
-              request.resource.data.customer_id == request.auth.uid &&
-              resource.data.status in ['pending', 'preparing', 'ready'] &&
-              request.resource.data.status == 'cancelled' &&
-              request.resource.data.diff(resource.data).affectedKeys()
-                  .hasOnly(['status', 'updated_at', 'cancellation_reason']));
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -96,6 +89,10 @@ service cloud.firestore {
       allow read: if isRestaurantUser();
       allow write: if false;
     }
+    match /settings/fees {
+      // Signed-in customers need fee settings for the checkout estimate.
+      allow read: if isSignedIn();
+    }
     match /table_config/{configId} {
       allow read: if isRestaurantUser();
       allow write: if isAdmin();
@@ -110,9 +107,40 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
-      match /{document=**} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() &&
+          request.auth.uid == userId &&
+          request.resource.data.keys().hasOnly([
+            'full_name',
+            'email',
+            'phone',
+            'theme_mode',
+            'created_at',
+            'updated_at'
+          ]);
+      allow update: if isSignedIn() &&
+          request.auth.uid == userId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'full_name',
+            'email',
+            'phone',
+            'theme_mode',
+            'updated_at'
+          ]);
+      allow delete: if false;
+      match /cart/{itemId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      match /addresses/{addressId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow write: if false;
+      }
+      match /{document=**} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow write: if isSignedIn() &&
+            request.auth.uid == userId &&
+            document.size() > 0 &&
+            document.split('/')[0] != 'addresses';
       }
     }
 

@@ -34,8 +34,8 @@ const DEFAULT_CONFIG = {
   pointsValidityDays: null,
   referrals: {
     enabled: true,
-    referrerRewardPoints: 10,
-    newUserRewardPoints: 10,
+    referrerRewardPoints: 50,
+    newUserRewardPoints: 50,
     qualifyingOrderMinimumValuePaise: 0,
     maximumRewardsPerCampaign: null,
     validFrom: null,
@@ -273,11 +273,12 @@ function mapLedger(snapshot) {
     earn: "earned",
     redeem: "redeemed",
     referral: "referral_bonus",
+    refund: "refunded",
+    earn_reversal: "reversed",
   }[rawType] || rawType;
-  const signedPoints =
-    type === "redeemed"
-      ? -Math.abs(Number(data.points) || 0)
-      : Number(data.points) || 0;
+  const signedPoints = ["redeemed", "reversed"].includes(type)
+    ? -Math.abs(Number(data.points) || 0)
+    : Math.abs(Number(data.points) || 0);
   return {
     transactionId: snapshot.id,
     userId: String(data.user_id || ""),
@@ -292,6 +293,8 @@ function mapLedger(snapshot) {
         earned: "Points earned from a qualifying order",
         redeemed: "Points redeemed at checkout",
         referral_bonus: "Referral bonus",
+        refunded: "Points refunded for a cancelled order",
+        reversed: "Points reversed for a cancelled order",
       }[type] || ""),
     status: data.status == null ? null : String(data.status),
   };
@@ -529,10 +532,10 @@ exports.reconcileOrderRewards = adminCallable(async (data, context) => {
 exports.fetchRewardAnalytics = adminCallable(async () => {
   const ledger = db.collection("reward_ledger");
   const wallets = db.collection("reward_wallets");
-  const [issued, redeemed, referralRewards, liability, activeCampaigns,
+  const [issued, redeemed, refunded, referralRewards, liability, activeCampaigns,
     usersWithBalances, successfulReferrals] = await Promise.all([
     ledger
-      .where("type", "in", ["earn", "referral"])
+      .where("type", "in", ["earn", "referral", "earn_reversal"])
       .aggregate({
         points: admin.firestore.AggregateField.sum("points"),
       })
@@ -545,12 +548,19 @@ exports.fetchRewardAnalytics = adminCallable(async () => {
       })
       .get(),
     ledger
+      .where("type", "==", "refund")
+      .aggregate({
+        points: admin.firestore.AggregateField.sum("points"),
+      })
+      .get(),
+    ledger
       .where("type", "==", "referral")
       .aggregate({
         points: admin.firestore.AggregateField.sum("points"),
       })
       .get(),
     wallets
+      .where("balance", ">", 0)
       .aggregate({
         balance: admin.firestore.AggregateField.sum("balance"),
       })
@@ -566,10 +576,14 @@ exports.fetchRewardAnalytics = adminCallable(async () => {
       .get(),
   ]);
   const redeemedData = redeemed.data();
+  const refundedPoints = Math.abs(refunded.data().points || 0);
 
   return {
-    totalPointsIssued: issued.data().points || 0,
-    totalPointsRedeemed: Math.abs(redeemedData.points || 0),
+    totalPointsIssued: Math.max(0, issued.data().points || 0),
+    totalPointsRedeemed: Math.max(
+      0,
+      Math.abs(redeemedData.points || 0) - refundedPoints
+    ),
     outstandingPointsLiability: liability.data().balance || 0,
     activeRewardCampaigns: activeCampaigns.data().count,
     usersWithBalances: usersWithBalances.data().count,

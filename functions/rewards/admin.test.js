@@ -27,6 +27,8 @@ function document(id, data) {
 
 test("default reward configuration matches the callable response contract", () => {
   assert.deepEqual(normalizeConfiguration(DEFAULT_CONFIG), DEFAULT_CONFIG);
+  assert.equal(DEFAULT_CONFIG.referrals.referrerRewardPoints, 50);
+  assert.equal(DEFAULT_CONFIG.referrals.newUserRewardPoints, 50);
 });
 
 test("configuration validation rejects invalid rates and date ranges", () => {
@@ -91,12 +93,30 @@ test("ledger records use the client transaction types and signed redemption poin
     points: 5,
     created_at: new Date("2026-11-01T00:00:00.000Z"),
   }));
+  const refunded = mapLedger(document("refund_order", {
+    type: "refund",
+    user_id: "user-1",
+    order_id: "order-1",
+    points: 5,
+    created_at: new Date("2026-11-01T00:00:00.000Z"),
+  }));
+  const reversed = mapLedger(document("earn_reversal_order", {
+    type: "earn_reversal",
+    user_id: "user-1",
+    order_id: "order-1",
+    points: -15,
+    created_at: new Date("2026-11-01T00:00:00.000Z"),
+  }));
 
   assert.equal(earned.type, "earned");
   assert.equal(earned.points, 15);
   assert.equal(redeemed.type, "redeemed");
   assert.equal(redeemed.points, -5);
   assert.equal(redeemed.orderId, "order-1");
+  assert.equal(refunded.type, "refunded");
+  assert.equal(refunded.points, 5);
+  assert.equal(reversed.type, "reversed");
+  assert.equal(reversed.points, -15);
 });
 
 test("referral and redemption records match the Flutter model fields", () => {

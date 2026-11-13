@@ -1,18 +1,24 @@
 /**
- * Award reward coins when an order is marked delivered.
+ * Award legacy reward coins for delivered orders created before placement-time
+ * earning was introduced.
  *
  * SECURITY / FAIR USE:
- * - Only runs from trusted code (updateOrderStatus CF or Admin SDK).
+ * - Only runs from trusted code (updateOrderStatus CF, settleOrder, or
+ *   processOrderRewards Firestore trigger).
  * - Idempotent: ledger doc id = earn_{orderId} → never double-award.
- * - Points computed only from server order.total (never client input).
+ * - Points computed only from server order totals (never client input).
+ * - Only order_source === "app" orders earn points.
+ * - Re-reads the order status transactionally and requires delivered + paid.
  * - Wallet + ledger updated in one transaction.
+ * - Fixed random bands (see config.js):
+ *     total < 500  → 1–4 points
+ *     total ≥ 500  → 5–9 points
  */
 
 "use strict";
 
 const admin = require("firebase-admin");
 const config = require("./config");
-const { readStoredRewardConfiguration } = require("./configuration");
 
 const db = admin.firestore();
 
@@ -27,189 +33,189 @@ function randomInt(min, max) {
 }
 
 /**
- * Compute points from order total using server config only.
+ * Discounted item subtotal used for earning (coupon already applied).
+ * Never trusts client-supplied totals.
  */
-function pointsForSubtotal(total, earning) {
-  if (total <= 0) return 0;
-  const rate = earning.mode === "fixedRate"
-    ? Number(earning.pointsPerRupee) || 0
-    : (Number(earning.percentageBps) || 0) / 10000;
-  return rate > 0 ? Math.max(1, Math.floor(total * rate)) : 0;
+function eligibleOrderTotal(order) {
+  if (!order || typeof order !== "object") return 0;
+  const itemTotal = Number(order.item_total ?? order.total) || 0;
+  const couponDiscount = Math.max(0, Number(order.coupon_discount) || 0);
+  return Math.max(0, itemTotal - couponDiscount);
 }
 
-function computeEarnPoints(orderTotal, storedConfiguration) {
-  const order = typeof orderTotal === "object" && orderTotal
-    ? orderTotal
-    : null;
-  const itemSubtotal = order
-    ? Number(order.item_total ?? order.total) || 0
-    : Number(orderTotal) || 0;
-  const total = order
-    ? Math.max(0, itemSubtotal - (Number(order.coupon_discount) || 0))
-    : itemSubtotal;
-  if (storedConfiguration) {
-    if (storedConfiguration.enabled !== true) return 0;
-    const earning = storedConfiguration.earning || {};
-    const minimumOrderValue = Number(earning.minimumOrderValuePaise) || 0;
-    if (total * 100 < minimumOrderValue) return 0;
+/**
+ * Calculate points from configured earning rules when supplied; legacy
+ * delivered orders retain the original fixed-band policy.
+ */
+function computeEarnPoints(orderOrTotal, earningConfiguration) {
+  const configured = earningConfiguration &&
+    typeof earningConfiguration === "object";
+  if (configured && earningConfiguration.enabled === false) return 0;
+  if (!configured && !config.enabled) return 0;
+  if (
+    typeof orderOrTotal === "object" &&
+    orderOrTotal &&
+    Number(orderOrTotal.reward_points_used) > 0
+  ) {
+    return 0;
+  }
 
-    const itemRules = Array.isArray(earning.itemRules)
-      ? earning.itemRules
-      : [];
-    if (!order || itemRules.length === 0 || !Array.isArray(order.items)) {
-      return pointsForSubtotal(total, earning);
+  const total =
+    typeof orderOrTotal === "object" && orderOrTotal
+      ? eligibleOrderTotal(orderOrTotal)
+      : Math.max(0, Number(orderOrTotal) || 0);
+
+  if (configured) {
+    const earning = earningConfiguration.earning || {};
+    const minimumOrderValuePaise =
+      Math.max(0, Number(earning.minimumOrderValuePaise) || 0);
+    if (total * 100 < minimumOrderValuePaise) return 0;
+
+    const percentageBps = Math.max(0, Number(earning.percentageBps) || 0);
+    const pointsPerRupee = Math.max(
+      0,
+      Number(earning.pointsPerRupee ?? 1) || 0
+    );
+    const itemRules = new Map(
+      (Array.isArray(earning.itemRules) ? earning.itemRules : [])
+        .map((rule) => [String(rule.menuItemId || ""), rule])
+        .filter(([id]) => id)
+    );
+    const order = typeof orderOrTotal === "object" && orderOrTotal
+      ? orderOrTotal
+      : null;
+    const items = Array.isArray(order?.items) ? order.items : [];
+    if (items.length === 0) {
+      return Math.max(
+        0,
+        Math.round(
+          calculateConfiguredItemPoints(
+            total,
+            earning.mode,
+            percentageBps,
+            pointsPerRupee
+          )
+        )
+      );
     }
 
-    const lines = order.items
-      .map((item) => ({
-        menuItemId: String(item.product_id || item.menu_item_id || ""),
-        subtotal: Math.max(0, Number(item.price) || 0) *
+    const itemTotal = items.reduce(
+      (sum, item) =>
+        sum + Math.max(0, Number(item.price) || 0) *
           Math.max(0, Number(item.quantity) || 0),
-        rewardSubtotal: item.reward_eligible_subtotal,
-      }))
-      .filter((item) => item.menuItemId && item.subtotal > 0);
-    const linesSubtotal = lines.reduce((sum, item) => sum + item.subtotal, 0);
-    if (linesSubtotal <= 0) return pointsForSubtotal(total, earning);
-
-    const hasRewardSubtotals = lines.every(
-      (item) =>
-        typeof item.rewardSubtotal === "number" &&
-        Number.isFinite(item.rewardSubtotal) &&
-        item.rewardSubtotal >= 0
+      0
     );
-    const discount = Math.min(
-      linesSubtotal,
-      Math.max(0, Number(order.coupon_discount) || 0)
-    );
-    // Older orders get a proportional fallback; newer orders store server allocations.
-    const discountRatio = hasRewardSubtotals ? 0 : discount / linesSubtotal;
-    const rulesByItem = new Map(
-      itemRules.map((rule) => [String(rule.menuItemId), rule])
-    );
-    const overriddenSubtotals = new Map();
-    let defaultSubtotal = 0;
-    for (const line of lines) {
-      const netSubtotal = hasRewardSubtotals
-        ? line.rewardSubtotal
-        : line.subtotal * (1 - discountRatio);
-      const rule = rulesByItem.get(line.menuItemId);
-      if (!rule) {
-        defaultSubtotal += netSubtotal;
-      } else {
-        overriddenSubtotals.set(
-          line.menuItemId,
-          (overriddenSubtotals.get(line.menuItemId) || 0) + netSubtotal
+    const unallocatedDiscount = Math.max(0, itemTotal - total);
+    const rawPoints = items.reduce((sum, item) => {
+      const lineTotal =
+        Math.max(0, Number(item.price) || 0) *
+        Math.max(0, Number(item.quantity) || 0);
+      const eligibleSubtotal = Number.isFinite(
+        Number(item.reward_eligible_subtotal)
+      )
+        ? Math.max(0, Number(item.reward_eligible_subtotal))
+        : Math.max(
+          0,
+          lineTotal -
+            (itemTotal > 0 ? unallocatedDiscount * lineTotal / itemTotal : 0)
         );
-      }
-    }
-
-    let points = pointsForSubtotal(defaultSubtotal, earning);
-    for (const [menuItemId, subtotal] of overriddenSubtotals) {
-      const rule = rulesByItem.get(menuItemId);
-      points += pointsForSubtotal(subtotal, rule);
-    }
-    return points;
+      const rule = itemRules.get(String(item.product_id || ""));
+      return sum + calculateConfiguredItemPoints(
+        eligibleSubtotal,
+        rule?.mode || earning.mode,
+        Number(rule?.percentageBps ?? percentageBps) || 0,
+        Number(rule?.pointsPerRupee ?? pointsPerRupee) || 0
+      );
+    }, 0);
+    return Math.max(0, Math.round(rawPoints));
   }
 
-  if (!config.enabled) return 0;
-  const { minOrderTotal, highThreshold, fixedHighPoints, bands } = config.earn;
-
+  const bands = Array.isArray(config.earn?.bands) ? config.earn.bands : [];
+  const minOrderTotal = Number(config.earn?.minOrderTotal) || 0;
   if (total < minOrderTotal) return 0;
-  if (total >= highThreshold) {
-    return Math.min(10, Math.max(0, Number(fixedHighPoints) || 10));
-  }
 
   for (const band of bands) {
-    if (total >= band.minTotal && total <= band.maxTotal) {
-      const pts = randomInt(band.minPts, band.maxPts);
-      return Math.min(9, Math.max(0, pts)); // keep under 10 for non-high band
-    }
+    const minT = Number(band.minTotal) || 0;
+    const maxT =
+      band.maxTotal == null || band.maxTotal === ""
+        ? null
+        : Number(band.maxTotal);
+    if (total < minT) continue;
+    if (maxT != null && total > maxT) continue;
+
+    const minPts = Math.max(0, Math.floor(Number(band.minPts) || 0));
+    const maxPts = Math.max(minPts, Math.floor(Number(band.maxPts) || minPts));
+    return randomInt(minPts, maxPts);
   }
 
   return 0;
 }
 
+function calculateConfiguredItemPoints(
+  subtotal,
+  mode,
+  percentageBps,
+  pointsPerRupee
+) {
+  if (mode === "fixedRate") return subtotal * pointsPerRupee;
+  return subtotal * percentageBps / 10000 * pointsPerRupee;
+}
+
 /**
- * Award points for a delivered order. Safe to call multiple times.
+ * Award points for a legacy delivered app order. Safe to call multiple times.
  *
  * @param {string} orderId
  * @param {object} orderData - Firestore order document data
  * @param {string} [awardedBy] - staff uid or "system"
- * @returns {Promise<{ awarded: boolean, points: number, reason?: string }>}
+ * @returns {Promise<{ awarded: boolean, points: number, reason?: string, balance?: number }>}
  */
-async function awardPointsForDeliveredOrder(orderId, orderData, awardedBy = "system") {
-  const storedConfiguration = await readStoredRewardConfiguration();
-  if (storedConfiguration
-      ? storedConfiguration.enabled !== true
-      : !config.enabled) {
+async function awardPointsForDeliveredOrder(
+  orderId,
+  orderData,
+  awardedBy = "system"
+) {
+  if (!config.enabled) {
     return { awarded: false, points: 0, reason: "rewards_disabled" };
   }
 
-  if (!orderId || !orderData) {
+  if (!orderId) {
     return { awarded: false, points: 0, reason: "invalid_order" };
-  }
-
-  const status = (orderData.status || "").toString().toLowerCase();
-  if (
-    status !== "delivered" ||
-    (orderData.payment_status || "").toString().toLowerCase() !== "paid"
-  ) {
-    return { awarded: false, points: 0, reason: "order_not_eligible" };
-  }
-
-  // Only customer app orders earn (optional: allow staff-created too)
-  const customerId = (orderData.customer_id || orderData.user_id || "")
-    .toString()
-    .trim();
-  if (!customerId) {
-    return { awarded: false, points: 0, reason: "no_customer" };
-  }
-
-  // Prefer already-computed server total
-  const orderTotal = Number(orderData.item_total ?? orderData.total ?? 0) || 0;
-  const itemRules = storedConfiguration?.earning?.itemRules || [];
-  if (itemRules.length > 0) {
-    const items = orderData.items;
-    const hasOrderLines = Array.isArray(items) &&
-      items.length > 0 &&
-      items.every((item) =>
-        Boolean(item.product_id || item.menu_item_id) &&
-        Number.isFinite(Number(item.price)) &&
-        Number.isFinite(Number(item.quantity)) &&
-        Number(item.quantity) > 0
-      );
-    const hasDiscountAllocations = hasOrderLines &&
-      items.every((item) =>
-        typeof item.reward_eligible_subtotal === "number" &&
-        Number.isFinite(item.reward_eligible_subtotal) &&
-        item.reward_eligible_subtotal >= 0
-      );
-    if (
-      !hasOrderLines ||
-      ((Number(orderData.coupon_discount) || 0) > 0 &&
-        !hasDiscountAllocations)
-    ) {
-      return {
-        awarded: false,
-        points: 0,
-        reason: "item_allocation_unavailable",
-      };
-    }
-  }
-  const points = computeEarnPoints(orderData, storedConfiguration);
-  if (points <= 0) {
-    return { awarded: false, points: 0, reason: "below_threshold" };
   }
 
   const ledgerId = `earn_${orderId}`;
   const ledgerRef = db.collection("reward_ledger").doc(ledgerId);
-  const walletRef = db.collection("reward_wallets").doc(customerId);
+  const orderRef = db.collection("orders").doc(orderId);
 
   const result = await db.runTransaction(async (tx) => {
-    const [ledgerSnap, walletSnap] = await Promise.all([
-      tx.get(ledgerRef),
-      tx.get(walletRef),
-    ]);
+    const orderSnapshot = await tx.get(orderRef);
+    if (!orderSnapshot.exists) {
+      return { awarded: false, points: 0, reason: "invalid_order" };
+    }
+
+    const order = orderSnapshot.data() || {};
+    const status = String(order.status || "").trim().toLowerCase();
+    const paymentStatus = String(order.payment_status || "")
+      .trim()
+      .toLowerCase();
+    if (status !== "delivered" || paymentStatus !== "paid") {
+      return { awarded: false, points: 0, reason: "order_not_eligible" };
+    }
+
+    const source = String(order.order_source || "").trim().toLowerCase();
+    if (source !== "app") {
+      return { awarded: false, points: 0, reason: "not_app_order" };
+    }
+
+    if (Number(order.reward_points_used) > 0) {
+      return { awarded: false, points: 0, reason: "reward_points_used" };
+    }
+
+    const customerId = String(order.customer_id || order.user_id || "").trim();
+    if (!customerId) {
+      return { awarded: false, points: 0, reason: "no_customer" };
+    }
+
+    const ledgerSnap = await tx.get(ledgerRef);
 
     // Idempotency: already awarded for this order
     if (ledgerSnap.exists) {
@@ -218,10 +224,16 @@ async function awardPointsForDeliveredOrder(orderId, orderData, awardedBy = "sys
         awarded: false,
         points: Number(existing.points) || 0,
         reason: "already_awarded",
-        balance: Number((walletSnap.data() || {}).balance) || 0,
       };
     }
 
+    const points = computeEarnPoints(order);
+    if (points <= 0) {
+      return { awarded: false, points: 0, reason: "below_threshold" };
+    }
+
+    const walletRef = db.collection("reward_wallets").doc(customerId);
+    const walletSnap = await tx.get(walletRef);
     const wallet = walletSnap.exists ? walletSnap.data() || {} : {};
     const prevBalance = Number(wallet.balance) || 0;
     const prevEarned = Number(wallet.total_earned) || 0;
@@ -232,9 +244,10 @@ async function awardPointsForDeliveredOrder(orderId, orderData, awardedBy = "sys
       order_id: orderId,
       user_id: customerId,
       points,
-      order_total: orderTotal,
+      order_total: eligibleOrderTotal(order),
       balance_after: newBalance,
       awarded_by: awardedBy,
+      order_source: "app",
       created_at: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -250,8 +263,7 @@ async function awardPointsForDeliveredOrder(orderId, orderData, awardedBy = "sys
       { merge: true }
     );
 
-    // Mark order so clients can show "you earned X points"
-    const orderRef = db.collection("orders").doc(orderId);
+    // Mark order so clients / admin can show "you earned X points"
     tx.update(orderRef, {
       reward_points_earned: points,
       reward_awarded_at: admin.firestore.FieldValue.serverTimestamp(),
@@ -271,4 +283,6 @@ async function awardPointsForDeliveredOrder(orderId, orderData, awardedBy = "sys
 module.exports = {
   awardPointsForDeliveredOrder,
   computeEarnPoints,
+  eligibleOrderTotal,
+  randomInt,
 };

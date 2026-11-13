@@ -22,10 +22,12 @@
 
 "use strict";
 
+const crypto = require("node:crypto");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const rewardConfig = require("../rewards/config");
 const { readStoredRewardConfiguration } = require("../rewards/configuration");
+const { computeEarnPoints } = require("../rewards/earnOnDelivery");
 const { generateOrderId } = require("./orderId");
 
 // Admin is initialized in the main index entrypoint.
@@ -124,6 +126,163 @@ function allocateRewardSubtotals(
   });
 }
 
+function planCartConsumption(cartDocuments, orderItems) {
+  const lineKey = (productId, size) =>
+    `${String(productId || "").trim()}\u0000${String(size || "").trim()}`;
+  const orderedQuantities = new Map();
+  for (const item of orderItems) {
+    const key = lineKey(item.product_id, item.size);
+    const quantity = Math.max(0, Math.floor(Number(item.quantity) || 0));
+    if (key.startsWith("\u0000") || quantity === 0) continue;
+    orderedQuantities.set(key, (orderedQuantities.get(key) || 0) + quantity);
+  }
+
+  const consumption = [];
+  for (const document of cartDocuments) {
+    const cartItem =
+      typeof document.data === "function"
+        ? document.data() || {}
+        : document.data || {};
+    const productId =
+      cartItem.product_id || (cartItem.product && cartItem.product.id);
+    const key = lineKey(
+      productId,
+      cartItem.selected_size || cartItem.size
+    );
+    const orderedQuantity = orderedQuantities.get(key) || 0;
+    if (orderedQuantity === 0) continue;
+
+    const cartQuantity = Math.max(
+      0,
+      Math.floor(Number(cartItem.quantity) || 0)
+    );
+    consumption.push({
+      documentId: document.id,
+      remainingQuantity: Math.max(0, cartQuantity - orderedQuantity),
+    });
+    orderedQuantities.delete(key);
+  }
+
+  return consumption;
+}
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.keys(value)
+      .sort()
+      .reduce((result, key) => {
+        if (value[key] !== undefined) result[key] = canonicalize(value[key]);
+        return result;
+      }, {});
+  }
+  return value;
+}
+
+function createOrderRequestHash(data) {
+  const request = { ...(data || {}) };
+  delete request.idempotency_key;
+  return crypto
+    .createHash("sha256")
+    .update(JSON.stringify(canonicalize(request)))
+    .digest("hex");
+}
+
+function validateIdempotencyKey(value) {
+  if (
+    typeof value !== "string" ||
+    !/^[A-Za-z0-9._:-]{16,128}$/.test(value.trim())
+  ) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "A valid idempotency key is required to place an order."
+    );
+  }
+  return value.trim();
+}
+
+function getIdempotencyKey(value) {
+  if (value === undefined) {
+    return crypto.randomBytes(24).toString("hex");
+  }
+  return validateIdempotencyKey(value);
+}
+
+function orderRequestDocumentId(uid, key) {
+  return crypto
+    .createHash("sha256")
+    .update(`${uid}:${key}`)
+    .digest("hex");
+}
+
+function toOrderResponse(orderId, order) {
+  const createdAt =
+    order.created_at && typeof order.created_at.toDate === "function"
+      ? order.created_at.toDate()
+      : order.created_at instanceof Date
+        ? order.created_at
+        : new Date(order.created_at || Date.now());
+  return {
+    id: orderId,
+    customer_id: order.customer_id,
+    customer_name: order.customer_name || "",
+    customer_phone: order.customer_phone || "",
+    delivery_address: order.delivery_address || "",
+    delivery_sub_address: order.delivery_sub_address || "",
+    status: order.status || "pending",
+    order_type: order.order_type || "delivery",
+    order_source: order.order_source || "app",
+    payment_method: order.payment_method || null,
+    payment_status: order.payment_status || "unpaid",
+    items: Array.isArray(order.items) ? order.items : [],
+    item_total: Number(order.item_total) || 0,
+    coupon_discount: Number(order.coupon_discount) || 0,
+    coupon_code: order.coupon_code || null,
+    offer_id: order.offer_id || null,
+    reward_points_used: Number(order.reward_points_used) || 0,
+    reward_discount: Number(order.reward_discount) || 0,
+    reward_points_earned: Number(order.reward_points_earned) || 0,
+    reward_points_refunded: Number(order.reward_points_refunded) || 0,
+    reward_points_reversed: Number(order.reward_points_reversed) || 0,
+    delivery_fee: Number(order.delivery_fee) || 0,
+    taxes: Number(order.taxes) || 0,
+    gst_percent: Number(order.gst_percent) || 0,
+    late_night_fee: Number(order.late_night_fee) || 0,
+    long_distance_fee: Number(order.long_distance_fee) || 0,
+    total: Number(order.total) || 0,
+    created_at: createdAt.toISOString(),
+  };
+}
+
+async function findExistingOrderForRequest(requestRef, uid, requestHash) {
+  const requestSnapshot = await requestRef.get();
+  if (!requestSnapshot.exists) return null;
+
+  const request = requestSnapshot.data() || {};
+  if (request.user_id !== uid || request.payload_hash !== requestHash) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "This order request key has already been used with different details."
+    );
+  }
+
+  const orderId = String(request.order_id || "");
+  if (!orderId) {
+    throw new functions.https.HttpsError(
+      "internal",
+      "The saved order request is incomplete."
+    );
+  }
+  const orderSnapshot = await db.collection("orders").doc(orderId).get();
+  if (!orderSnapshot.exists || orderSnapshot.get("customer_id") !== uid) {
+    throw new functions.https.HttpsError(
+      "internal",
+      "The saved order could not be found."
+    );
+  }
+  return toOrderResponse(orderId, orderSnapshot.data() || {});
+}
+
 // ---------------------------------------------------------------------------
 // Main callable
 // ---------------------------------------------------------------------------
@@ -141,31 +300,40 @@ exports.createUserOrder = functions
     }
 
     const uid = context.auth.uid;
+    const idempotencyKey = getIdempotencyKey((data || {}).idempotency_key);
+    if (!Object.prototype.hasOwnProperty.call(data || {}, "idempotency_key")) {
+      functions.logger.warn(
+        "createUserOrder called without a client idempotency key.",
+        { uid }
+      );
+    }
+    const requestHash = createOrderRequestHash(data);
+    const idempotencyRef = db
+      .collection("order_idempotency")
+      .doc(orderRequestDocumentId(uid, idempotencyKey));
+    const existingOrder = await findExistingOrderForRequest(
+      idempotencyRef,
+      uid,
+      requestHash
+    );
+    if (existingOrder) return existingOrder;
+
+    // Redemption limits and earning bands use the existing server policy;
+    // the stored reward configuration can disable rewards.
     const storedRewardConfiguration =
       await readStoredRewardConfiguration();
-    const activeRewardConfig = storedRewardConfiguration
-      ? {
-          enabled: storedRewardConfiguration.enabled === true,
-          redeem: {
-            pointsToRupee:
-              1 /
-              Math.max(
-                1,
-                Number(
-                  storedRewardConfiguration.redemption?.pointsPerRupee
-                ) || 1
-              ),
-            minPoints:
-              Number(
-                storedRewardConfiguration.redemption?.minimumPoints
-              ) || 1,
-            maxOrderPercent:
-              Number(
-                storedRewardConfiguration.redemption?.maximumOrderPercentage
-              ) || 0,
-          },
-        }
-      : rewardConfig;
+    const activeRewardConfig = {
+      enabled:
+        storedRewardConfiguration == null
+          ? rewardConfig.enabled !== false
+          : storedRewardConfiguration.enabled === true,
+      redeem: {
+        pointsToRupee: Number(rewardConfig.redeem?.pointsToRupee) || 1,
+        minPoints: Number(rewardConfig.redeem?.minPoints) || 1,
+        maxPointsPerOrder:
+          Number(rewardConfig.redeem?.maxPointsPerOrder) || 100,
+      },
+    };
     const {
       items = [],
       coupon_code = null,
@@ -702,23 +870,24 @@ exports.createUserOrder = functions
       finalDeliveryFee = 0;
     }
 
-    // Reward points discount is finalized inside the transaction after reading wallet.
-    let rewardPointsUsed = 0;
-    let rewardDiscount = 0;
-
     const afterCoupon = Math.max(itemTotal - couponDiscount, 0);
     const orderItemsWithRewardSubtotals = allocateRewardSubtotals(
       orderItems,
       couponDiscount,
       discountEligibleProductIds
     );
+    const potentialRewardPointsEarned = activeRewardConfig.enabled
+      ? computeEarnPoints({
+        item_total: itemTotal,
+        coupon_discount: couponDiscount,
+      })
+      : 0;
 
-    // 6. Atomic write: order + coupon/offer usage + wallet debit
+    // 6. Atomic write: order, cart consumption, reward ledger, wallet,
+    // coupon/offer usage, and request idempotency record.
     let orderRef;
     const walletRef = db.collection("reward_wallets").doc(uid);
-
-    let taxes = 0;
-    let total = 0;
+    const cartCollection = db.collection("users").doc(uid).collection("cart");
 
     const baseOrderFields = {
       customer_id: uid,
@@ -736,6 +905,8 @@ exports.createUserOrder = functions
       coupon_discount: couponDiscount,
       coupon_code: appliedCouponCode,
       offer_id: appliedOfferId,
+      reward_points_refunded: 0,
+      reward_points_reversed: 0,
       delivery_fee: finalDeliveryFee,
       late_night_fee: lateNightFee,
       long_distance_fee: longDistanceFee,
@@ -744,188 +915,268 @@ exports.createUserOrder = functions
       updated_at: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    const commitOrderTransaction = () => db.runTransaction(async (transaction) => {
-      const existingOrder = await transaction.get(orderRef);
-      if (existingOrder.exists) {
-        const collisionError = new Error("Generated order ID already exists.");
-        collisionError.code = "ORDER_ID_COLLISION";
-        throw collisionError;
-      }
-
-      // --- Reward points redemption (server wallet only) ---
-      if (requestedRewardPoints > 0 && activeRewardConfig.enabled) {
-        const walletSnap = await transaction.get(walletRef);
-        const wallet = walletSnap.exists ? walletSnap.data() || {} : {};
-        const balance = Math.max(0, Number(wallet.balance) || 0);
-
-        const maxByPercent = Math.floor(
-          (afterCoupon *
-            (Number(activeRewardConfig.redeem.maxOrderPercent) || 0)) /
-            100 /
-            (Number(activeRewardConfig.redeem.pointsToRupee) || 1)
-        );
-        const maxByBalance = balance;
-        const minPts = Number(activeRewardConfig.redeem.minPoints) || 1;
-
-        let allowed = Math.min(
-          requestedRewardPoints,
-          maxByBalance,
-          maxByPercent,
-          Math.floor(
-            afterCoupon /
-              (Number(activeRewardConfig.redeem.pointsToRupee) || 1)
-          ) // cannot discount more than remaining subtotal
-        );
-
-        if (allowed > 0 && allowed < minPts) {
-          allowed = 0;
+    const commitOrderTransaction = () =>
+      db.runTransaction(async (transaction) => {
+        const requestSnapshot = await transaction.get(idempotencyRef);
+        if (requestSnapshot.exists) {
+          const request = requestSnapshot.data() || {};
+          if (
+            request.user_id !== uid ||
+            request.payload_hash !== requestHash
+          ) {
+            throw new functions.https.HttpsError(
+              "failed-precondition",
+              "This order request key has already been used with different details."
+            );
+          }
+          const savedOrderId = String(request.order_id || "");
+          const savedOrderSnapshot = savedOrderId
+            ? await transaction.get(
+              db.collection("orders").doc(savedOrderId)
+            )
+            : null;
+          if (
+            !savedOrderSnapshot ||
+            !savedOrderSnapshot.exists ||
+            savedOrderSnapshot.get("customer_id") !== uid
+          ) {
+            throw new functions.https.HttpsError(
+              "internal",
+              "The saved order could not be found."
+            );
+          }
+          return {
+            orderId: savedOrderId,
+            response: toOrderResponse(
+              savedOrderId,
+              savedOrderSnapshot.data() || {}
+            ),
+          };
         }
 
-        rewardPointsUsed = Math.max(0, allowed);
-        const rate =
-          Number(activeRewardConfig.redeem.pointsToRupee) || 1;
-        rewardDiscount = rewardPointsUsed * rate;
+        const existingOrder = await transaction.get(orderRef);
+        if (existingOrder.exists) {
+          const collisionError = new Error("Generated order ID already exists.");
+          collisionError.code = "ORDER_ID_COLLISION";
+          throw collisionError;
+        }
 
-        if (rewardPointsUsed > 0) {
-          const newBalance = balance - rewardPointsUsed;
-          const totalRedeemed =
-            (Number(wallet.total_redeemed) || 0) + rewardPointsUsed;
+        const walletSnapshot =
+          activeRewardConfig.enabled &&
+          (requestedRewardPoints > 0 || potentialRewardPointsEarned > 0)
+            ? await transaction.get(walletRef)
+            : null;
+        const couponSnapshot = couponRef
+          ? await transaction.get(couponRef)
+          : null;
+        const offerSnapshot = offerRef
+          ? await transaction.get(offerRef)
+          : null;
+        const cartSnapshot = await transaction.get(cartCollection);
+        const cartConsumption = planCartConsumption(
+          cartSnapshot.docs,
+          orderItems
+        );
 
+        // All reads are complete before the transaction writes begin.
+        if (couponRef) {
+          if (!couponSnapshot.exists) {
+            throw new functions.https.HttpsError(
+              "failed-precondition",
+              "Coupon no longer exists."
+            );
+          }
+          const coupon = couponSnapshot.data() || {};
+          const usageLimit =
+            coupon.usage_limit != null
+              ? Number(coupon.usage_limit)
+              : coupon.usageLimit != null
+                ? Number(coupon.usageLimit)
+                : null;
+          const usageCount =
+            Number(coupon.usage_count ?? coupon.usageCount ?? 0) || 0;
+          if (usageLimit != null && usageLimit > 0 && usageCount >= usageLimit) {
+            throw new functions.https.HttpsError(
+              "failed-precondition",
+              "This coupon has reached its usage limit."
+            );
+          }
+          if ((coupon.status || "active").toString().toLowerCase() !== "active") {
+            throw new functions.https.HttpsError(
+              "failed-precondition",
+              "This coupon is no longer active."
+            );
+          }
+        }
+
+        if (offerRef) {
+          if (!offerSnapshot.exists) {
+            throw new functions.https.HttpsError(
+              "failed-precondition",
+              "Offer no longer exists."
+            );
+          }
+          const offer = offerSnapshot.data() || {};
+          const usageLimit =
+            offer.usage_limit != null
+              ? Number(offer.usage_limit)
+              : offer.usageLimit != null
+                ? Number(offer.usageLimit)
+                : null;
+          const usageCount =
+            Number(offer.usage_count ?? offer.usageCount ?? 0) || 0;
+          if (usageLimit != null && usageLimit > 0 && usageCount >= usageLimit) {
+            throw new functions.https.HttpsError(
+              "failed-precondition",
+              "This offer has reached its usage limit."
+            );
+          }
+          if ((offer.status || "active").toString().toLowerCase() !== "active") {
+            throw new functions.https.HttpsError(
+              "failed-precondition",
+              "This offer is no longer active."
+            );
+          }
+        }
+
+        const wallet = walletSnapshot && walletSnapshot.exists
+          ? walletSnapshot.data() || {}
+          : {};
+        const rawBalance = Number(wallet.balance);
+        const balance = Number.isFinite(rawBalance) ? Math.trunc(rawBalance) : 0;
+        let rewardPointsUsed = 0;
+        let rewardDiscount = 0;
+        if (requestedRewardPoints > 0 && activeRewardConfig.enabled) {
+          const rate =
+            Number(activeRewardConfig.redeem.pointsToRupee) || 1;
+          const minPts = Number(activeRewardConfig.redeem.minPoints) || 1;
+          const maxPerOrder =
+            Number(activeRewardConfig.redeem.maxPointsPerOrder) || 100;
+          const maxBySubtotal = Math.floor(afterCoupon / rate);
+          let allowed = Math.min(
+            requestedRewardPoints,
+            Math.max(0, balance),
+            maxPerOrder,
+            maxBySubtotal
+          );
+          if (allowed > 0 && allowed < minPts) allowed = 0;
+          rewardPointsUsed = Math.max(0, allowed);
+          rewardDiscount = rewardPointsUsed * rate;
+        }
+
+        const rewardPointsEarned = rewardPointsUsed > 0
+          ? 0
+          : potentialRewardPointsEarned;
+        const taxableAmount = Math.max(afterCoupon - rewardDiscount, 0);
+        const taxes = (taxableAmount * gstPercent) / 100;
+        const total =
+          taxableAmount +
+          taxes +
+          finalDeliveryFee +
+          lateNightFee +
+          longDistanceFee;
+        const newBalance =
+          balance - rewardPointsUsed + rewardPointsEarned;
+        const now = admin.firestore.FieldValue.serverTimestamp();
+
+        for (const item of cartConsumption) {
+          const cartItemRef = cartCollection.doc(item.documentId);
+          if (item.remainingQuantity === 0) {
+            transaction.delete(cartItemRef);
+          } else {
+            transaction.update(cartItemRef, {
+              quantity: item.remainingQuantity,
+              updated_at: now,
+            });
+          }
+        }
+
+        if (couponRef) {
+          const coupon = couponSnapshot.data() || {};
+          const usageCount =
+            Number(coupon.usage_count ?? coupon.usageCount ?? 0) || 0;
+          transaction.update(couponRef, { usage_count: usageCount + 1 });
+        }
+        if (offerRef) {
+          const offer = offerSnapshot.data() || {};
+          const usageCount =
+            Number(offer.usage_count ?? offer.usageCount ?? 0) || 0;
+          transaction.update(offerRef, { usage_count: usageCount + 1 });
+        }
+
+        if (rewardPointsUsed > 0 || rewardPointsEarned > 0) {
           transaction.set(
             walletRef,
             {
               user_id: uid,
               balance: newBalance,
-              total_earned: Number(wallet.total_earned) || 0,
-              total_redeemed: totalRedeemed,
-              updated_at: admin.firestore.FieldValue.serverTimestamp(),
+              total_earned:
+                (Number(wallet.total_earned) || 0) + rewardPointsEarned,
+              total_redeemed:
+                (Number(wallet.total_redeemed) || 0) + rewardPointsUsed,
+              updated_at: now,
             },
             { merge: true }
           );
-
-          const ledgerRef = db
-            .collection("reward_ledger")
-            .doc(`redeem_${orderRef.id}`);
-          transaction.set(ledgerRef, {
-            type: "redeem",
-            order_id: orderRef.id,
-            user_id: uid,
-            points: rewardPointsUsed,
-            discount_inr: rewardDiscount,
-            balance_after: newBalance,
-            created_at: admin.firestore.FieldValue.serverTimestamp(),
-          });
-
         }
-      }
 
-      const taxableAmount = Math.max(afterCoupon - rewardDiscount, 0);
-      taxes = (taxableAmount * gstPercent) / 100;
-      total =
-        taxableAmount +
-        taxes +
-        finalDeliveryFee +
-        lateNightFee +
-        longDistanceFee;
-
-      // Re-check coupon usage limit inside the transaction (prevents race)
-      if (couponRef) {
-        const freshCoupon = await transaction.get(couponRef);
-        if (!freshCoupon.exists) {
-          throw new functions.https.HttpsError(
-            "failed-precondition",
-            "Coupon no longer exists."
+        if (rewardPointsUsed > 0) {
+          transaction.create(
+            db.collection("reward_ledger").doc(`redeem_${orderRef.id}`),
+            {
+              type: "redeem",
+              order_id: orderRef.id,
+              user_id: uid,
+              points: rewardPointsUsed,
+              discount_inr: rewardDiscount,
+              balance_after: newBalance,
+              created_at: now,
+            }
           );
         }
-        const cdata = freshCoupon.data() || {};
-        const usageLimit =
-          cdata.usage_limit != null
-            ? Number(cdata.usage_limit)
-            : cdata.usageLimit != null
-              ? Number(cdata.usageLimit)
-              : null;
-        const usageCount =
-          Number(cdata.usage_count ?? cdata.usageCount ?? 0) || 0;
-
-        if (usageLimit != null && usageLimit > 0 && usageCount >= usageLimit) {
-          throw new functions.https.HttpsError(
-            "failed-precondition",
-            "This coupon has reached its usage limit."
+        if (rewardPointsEarned > 0) {
+          transaction.create(
+            db.collection("reward_ledger").doc(`earn_${orderRef.id}`),
+            {
+              type: "earn",
+              order_id: orderRef.id,
+              user_id: uid,
+              points: rewardPointsEarned,
+              order_total: Math.max(itemTotal - couponDiscount, 0),
+              balance_after: newBalance,
+              awarded_by: "order_placement",
+              order_source: "app",
+              created_at: now,
+            }
           );
         }
 
-        // Status + dates re-checked lightly (status is the most important)
-        const status = (cdata.status || "active").toString().toLowerCase();
-        if (status !== "active") {
-          throw new functions.https.HttpsError(
-            "failed-precondition",
-            "This coupon is no longer active."
-          );
-        }
-
-        transaction.update(couponRef, {
-          usage_count: usageCount + 1,
+        transaction.create(orderRef, {
+          ...baseOrderFields,
+          taxes,
+          total,
+          reward_points_used: rewardPointsUsed,
+          reward_discount: rewardDiscount,
+          reward_points_earned: rewardPointsEarned,
+          reward_awarded_at: rewardPointsEarned > 0 ? now : null,
         });
-
-      }
-
-      // Same for offer
-      if (offerRef) {
-        const freshOffer = await transaction.get(offerRef);
-        if (!freshOffer.exists) {
-          throw new functions.https.HttpsError(
-            "failed-precondition",
-            "Offer no longer exists."
-          );
-        }
-        const odata = freshOffer.data() || {};
-        const usageLimit =
-          odata.usage_limit != null
-            ? Number(odata.usage_limit)
-            : odata.usageLimit != null
-              ? Number(odata.usageLimit)
-              : null;
-        const usageCount =
-          Number(odata.usage_count ?? odata.usageCount ?? 0) || 0;
-
-        if (usageLimit != null && usageLimit > 0 && usageCount >= usageLimit) {
-          throw new functions.https.HttpsError(
-            "failed-precondition",
-            "This offer has reached its usage limit."
-          );
-        }
-
-        const status = (odata.status || "active").toString().toLowerCase();
-        if (status !== "active") {
-          throw new functions.https.HttpsError(
-            "failed-precondition",
-            "This offer is no longer active."
-          );
-        }
-
-        transaction.update(offerRef, {
-          usage_count: usageCount + 1,
+        transaction.create(idempotencyRef, {
+          user_id: uid,
+          payload_hash: requestHash,
+          order_id: orderRef.id,
+          created_at: now,
         });
-      }
-
-      transaction.create(orderRef, {
-        ...baseOrderFields,
-        taxes,
-        total,
-        reward_points_used: rewardPointsUsed,
-        reward_discount: rewardDiscount,
+        return { orderId: orderRef.id };
       });
-    });
 
+    let committedOrderId;
     for (let attempt = 0; attempt < 5; attempt++) {
       orderRef = db.collection("orders").doc(generateOrderId());
-      rewardPointsUsed = 0;
-      rewardDiscount = 0;
-      taxes = 0;
-      total = 0;
 
       try {
-        await commitOrderTransaction();
+        const result = await commitOrderTransaction();
+        if (result.response) return result.response;
+        committedOrderId = result.orderId;
         break;
       } catch (error) {
         const isIdCollision =
@@ -936,34 +1187,15 @@ exports.createUserOrder = functions
       }
     }
 
-    // 7. Return clean order (no internal refs)
-    return {
-      id: orderRef.id,
-      customer_id: uid,
-      customer_name: baseOrderFields.customer_name,
-      customer_phone: baseOrderFields.customer_phone,
-      delivery_address: baseOrderFields.delivery_address,
-      delivery_sub_address: baseOrderFields.delivery_sub_address,
-      status: "pending",
-      order_type: "delivery",
-      order_source: "app",
-      payment_method: baseOrderFields.payment_method,
-      payment_status: "unpaid",
-      items: orderItems,
-      item_total: itemTotal,
-      coupon_discount: couponDiscount,
-      coupon_code: appliedCouponCode,
-      offer_id: appliedOfferId,
-      reward_points_used: rewardPointsUsed,
-      reward_discount: rewardDiscount,
-      delivery_fee: finalDeliveryFee,
-      taxes: taxes,
-      gst_percent: gstPercent,
-      late_night_fee: lateNightFee,
-      long_distance_fee: longDistanceFee,
-      total: total,
-      created_at: new Date().toISOString(),
-    };
+    const savedOrder = await db.collection("orders").doc(committedOrderId).get();
+    return toOrderResponse(committedOrderId, savedOrder.data() || {});
   });
 
-exports._private = { allocateRewardSubtotals };
+exports._private = {
+  allocateRewardSubtotals,
+  planCartConsumption,
+  createOrderRequestHash,
+  orderRequestDocumentId,
+  getIdempotencyKey,
+  validateIdempotencyKey,
+};

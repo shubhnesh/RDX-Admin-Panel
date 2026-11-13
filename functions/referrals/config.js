@@ -2,6 +2,6 @@
 
 module.exports = {
   enabled: true,
-  referrerPoints: 10,
-  referredPoints: 10,
+  referrerPoints: 50,
+  referredPoints: 50,
 };

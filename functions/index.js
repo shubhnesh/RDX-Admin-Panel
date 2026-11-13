@@ -11,7 +11,10 @@ if (!admin.apps.length) {
 }
 
 const { createUserOrder } = require("./orders/createUserOrder");
+const { cancelUserOrder } = require("./orders/cancelUserOrder");
 const { getCartOfferProgress } = require("./orders/getCartOfferProgress");
+const { manageUserAddress } = require("./users/manageUserAddress");
+const { filterMenuItems } = require("./menu/filterMenuItems");
 const { createStaffOrder } = require("./orders/createStaffOrder");
 const { validateCoupon } = require("./orders/validateCoupon");
 const { getRewardWallet } = require("./rewards/getWallet");
@@ -20,6 +23,8 @@ const rewardAdmin = require("./rewards/admin");
 const {
   getReferralOverview,
   applyReferralCode,
+  completeReferralOpportunity,
+  initializeReferralOpportunity,
 } = require("./referrals/referrals");
 const { settleOrder } = require("./orders/settleOrder");
 const { updateOrderStatus } = require("./orders/updateOrderStatus");
@@ -42,7 +47,10 @@ const {
 } = require("./settings/manageRestaurantSettings");
 
 exports.createUserOrder = createUserOrder;
+exports.cancelUserOrder = cancelUserOrder;
 exports.getCartOfferProgress = getCartOfferProgress;
+exports.manageUserAddress = manageUserAddress;
+exports.filterMenuItems = filterMenuItems;
 exports.createStaffOrder = createStaffOrder;
 exports.validateCoupon = validateCoupon;
 exports.getRewardWallet = getRewardWallet;
@@ -59,6 +67,8 @@ exports.fetchReferralRecords = rewardAdmin.fetchReferralRecords;
 exports.fetchRedemptionRecords = rewardAdmin.fetchRedemptionRecords;
 exports.getReferralOverview = getReferralOverview;
 exports.applyReferralCode = applyReferralCode;
+exports.completeReferralOpportunity = completeReferralOpportunity;
+exports.initializeReferralOpportunity = initializeReferralOpportunity;
 exports.getDashboardStats = getDashboardStats;
 exports.getTopSellingProducts = getTopSellingProducts;
 exports.settleOrder = settleOrder;

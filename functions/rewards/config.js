@@ -1,12 +1,15 @@
 /**
- * Server-side reward (coins) configuration.
- * Change numbers here or move to Firestore settings/rewards later.
+ * Server-side reward (coins) configuration — fixed policy for the user app.
  *
- * Rules:
- * - Points only awarded when order status becomes "delivered".
- * - Cap is always <= 10 (fixed 10 when order total >= highThreshold).
- * - 1 point = 1 INR discount when redeeming (server-enforced).
- * - Client cannot write wallets or ledger.
+ * Rules (non-negotiable, enforced only in Cloud Functions):
+ * - Points are awarded ONLY for orders with order_source === "app".
+ * - Legacy points are awarded when status becomes "delivered" AND payment_status === "paid".
+ * - Legacy earning bands (based on server order total after coupon, before fees/tax):
+ *     0 – 499.99 ₹  → random integer 1–4
+ *     500 ₹ and up  → random integer 5–9
+ * - 1 point = 1 INR discount when redeeming.
+ * - Max points redeemable per order = 100 (even if wallet balance is higher).
+ * - Clients cannot write wallets or ledger; all generation & deduction is server-side.
  */
 
 "use strict";
@@ -16,39 +19,33 @@ module.exports = {
   enabled: true,
 
   /**
-   * Earning tiers based on order.total (server value at delivery time).
-   * max points overall = 10.
+   * Earning tiers based on discounted item subtotal (server value at delivery).
    */
   earn: {
     /** Below this total → 0 points */
-    minOrderTotal: 50,
-    /** At/above this → always exactly fixedHighPoints */
-    highThreshold: 1000,
-    fixedHighPoints: 10,
+    minOrderTotal: 0,
     /**
-     * Random bands for totals under highThreshold.
-     * Each band: { minTotal, maxTotalInclusive, minPts, maxPts }
-     * maxPts must be < 10 for bands below highThreshold.
+     * Bands: { minTotal, maxTotalInclusive | null, minPts, maxPts }
+     * maxTotal null means no upper bound.
      */
     bands: [
-      { minTotal: 50, maxTotal: 199, minPts: 1, maxPts: 2 },
-      { minTotal: 200, maxTotal: 499, minPts: 2, maxPts: 4 },
-      { minTotal: 500, maxTotal: 999, minPts: 4, maxPts: 7 },
+      { minTotal: 0, maxTotal: 499.99, minPts: 1, maxPts: 4 },
+      { minTotal: 500, maxTotal: null, minPts: 5, maxPts: 9 },
     ],
   },
 
   /**
    * Redemption (checkout).
-   * 1 point = pointsToRupee INR off the item subtotal.
+   * 1 point = pointsToRupee INR off the item subtotal (after coupon).
    */
   redeem: {
     pointsToRupee: 1,
     /** Minimum points user can spend in one order */
     minPoints: 1,
     /**
-     * Max share of item_total that points can cover (0–100).
-     * e.g. 20 → points discount cannot exceed 20% of item total.
+     * Hard cap: user may spend at most this many points on a single order,
+     * regardless of wallet balance or order size.
      */
-    maxOrderPercent: 20,
+    maxPointsPerOrder: 100,
   },
 };

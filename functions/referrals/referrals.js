@@ -1,5 +1,22 @@
 "use strict";
 
+/**
+ * Referrals — server-authoritative, anti-abuse design
+ *
+ * Rules (non-negotiable):
+ * 1. Each Auth uid may apply AT MOST ONE referral code, ever.
+ *    Document path: referrals/{uid} — permanent lock on the referred user.
+ * 2. A first-time user does NOT receive a shareable referral code until they
+ *    complete the one-time "apply referral" opportunity (apply OR skip).
+ * 3. Skipping or applying closes the opportunity forever for that uid.
+ * 4. After the opportunity is closed, the server generates referral_codes/{code}
+ *    bound to referral_codes_by_user/{uid}. Codes are never client-supplied.
+ * 5. All mutations run in Cloud Functions with Admin SDK. Clients cannot write
+ *    referral collections (Firestore rules deny client writes).
+ * 6. Rewards are paid only when a referred user's order meets campaign
+ *    qualification (default: paid + delivered) — same as existing flow.
+ */
+
 const crypto = require("crypto");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
@@ -8,6 +25,7 @@ const { readStoredRewardConfiguration } = require("../rewards/configuration");
 
 const db = admin.firestore();
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const OPPORTUNITY_RECOVERY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 async function getReferralCampaign() {
   const stored = await readStoredRewardConfiguration();
@@ -15,8 +33,8 @@ async function getReferralCampaign() {
     return {
       ...config,
       enabled: config.enabled,
-      referrerPoints: 10,
-      referredPoints: 10,
+      referrerPoints: 50,
+      referredPoints: 50,
       minimumOrderValuePaise: 0,
       maximumRewards: null,
       qualificationConditions: ["paid", "delivered"],
@@ -72,6 +90,73 @@ function createCode() {
   ).join("");
 }
 
+/**
+ * Returns existing shareable code for uid, or null if none yet.
+ * Does NOT create a code — generation only happens after opportunity closes.
+ */
+async function getExistingCode(uid) {
+  const ownerRef = db.collection("referral_codes_by_user").doc(uid);
+  const ownerSnapshot = await ownerRef.get();
+  if (!ownerSnapshot.exists) return null;
+  const code = String(ownerSnapshot.data()?.code || "").trim();
+  return code || null;
+}
+
+async function createReferralOpportunity(uid) {
+  const opportunityRef = db.collection("referral_opportunities").doc(uid);
+  const referralRef = db.collection("referrals").doc(uid);
+  const ownerRef = db.collection("referral_codes_by_user").doc(uid);
+
+  return db.runTransaction(async (transaction) => {
+    const [opportunitySnapshot, referralSnapshot, ownerSnapshot] =
+      await Promise.all([
+        transaction.get(opportunityRef),
+        transaction.get(referralRef),
+        transaction.get(ownerRef),
+      ]);
+
+    if (
+      opportunitySnapshot.exists ||
+      referralSnapshot.exists ||
+      ownerSnapshot.exists
+    ) {
+      return false;
+    }
+
+    transaction.create(opportunityRef, {
+      user_id: uid,
+      status: "open",
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return true;
+  });
+}
+
+async function recoverRecentlyCreatedOpportunity(uid) {
+  const opportunityRef = db.collection("referral_opportunities").doc(uid);
+  const existing = await opportunityRef.get();
+  if (existing.exists) return existing;
+
+  const user = await admin.auth().getUser(uid);
+  const createdAt = Date.parse(user.metadata?.creationTime || "");
+  const age = Date.now() - createdAt;
+  if (
+    !Number.isFinite(createdAt) ||
+    age < 0 ||
+    age > OPPORTUNITY_RECOVERY_WINDOW_MS
+  ) {
+    return existing;
+  }
+
+  await createReferralOpportunity(uid);
+  return opportunityRef.get();
+}
+
+/**
+ * Creates a shareable referral code bound to uid.
+ * Only call after the apply-opportunity is closed (applied or skipped).
+ * Idempotent: if a code already exists, returns it.
+ */
 async function getOrCreateCode(uid) {
   const ownerRef = db.collection("referral_codes_by_user").doc(uid);
   return db.runTransaction(async (transaction) => {
@@ -144,6 +229,42 @@ function toHistoryEntry(snapshot) {
   };
 }
 
+function isReferralOpportunityOpen(opportunitySnapshot) {
+  return (
+    opportunitySnapshot.exists &&
+    String(opportunitySnapshot.data()?.status || "").toLowerCase() === "open"
+  );
+}
+
+function canApplyReferralCode({
+  campaignActive,
+  opportunitySnapshot,
+  referralSnapshot,
+  hasQualifiedOrder,
+  hasOwnCode,
+}) {
+  return (
+    campaignActive &&
+    isReferralOpportunityOpen(opportunitySnapshot) &&
+    !referralSnapshot.exists &&
+    !hasQualifiedOrder &&
+    !hasOwnCode
+  );
+}
+
+function isSkippedReferral(data) {
+  return (
+    data &&
+    (String(data.status || "").toLowerCase() === "skipped" ||
+      data.skipped === true ||
+      !data.referrer_uid)
+  );
+}
+
+// ---------------------------------------------------------------------------
+// getReferralOverview
+// ---------------------------------------------------------------------------
+
 exports.getReferralOverview = functions
   .region("us-central1")
   .https.onCall(async (data, context) => {
@@ -153,9 +274,29 @@ exports.getReferralOverview = functions
       Math.max(Math.floor(Number(data && data.page_size) || 20), 1),
       50
     );
-    const code = await getOrCreateCode(uid);
+
     const appliedRef = db.collection("referrals").doc(uid);
-    const appliedSnapshot = await appliedRef.get();
+    const opportunityRef = db.collection("referral_opportunities").doc(uid);
+    const [appliedSnapshot, initialOpportunitySnapshot] = await Promise.all([
+      appliedRef.get(),
+      opportunityRef.get(),
+    ]);
+    const opportunitySnapshot = initialOpportunitySnapshot.exists
+      ? initialOpportunitySnapshot
+      : await recoverRecentlyCreatedOpportunity(uid);
+    const opportunityIsOpen = isReferralOpportunityOpen(opportunitySnapshot);
+    const applied = appliedSnapshot.exists ? appliedSnapshot.data() : null;
+    const skipped = isSkippedReferral(applied);
+
+    // Generate a share code only after an explicit apply/skip record closes
+    // the opportunity. Accounts without a server-created opportunity are
+    // ineligible to apply and may only retain a code they already had.
+    const opportunityWasClosed =
+      appliedSnapshot.exists ||
+      (opportunitySnapshot.exists && !opportunityIsOpen);
+    const code = opportunityWasClosed
+      ? await getOrCreateCode(uid)
+      : await getExistingCode(uid);
 
     let historyQuery = db
       .collection("referrals")
@@ -181,14 +322,25 @@ exports.getReferralOverview = functions
       hasEligibleDeliveredOrder(uid),
     ]);
     const page = historySnapshot.docs.slice(0, pageSize);
-    const applied = appliedSnapshot.exists ? appliedSnapshot.data() : null;
     const campaignActive = isCampaignActive(campaign);
-    const canApply = campaignActive && !applied && !hasQualifiedOrder;
+    const opportunityOpen =
+      opportunityIsOpen && !appliedSnapshot.exists && !code;
+
+    const canApply = canApplyReferralCode({
+      campaignActive,
+      opportunitySnapshot,
+      referralSnapshot: appliedSnapshot,
+      hasQualifiedOrder,
+      hasOwnCode: Boolean(code),
+    });
+
     let eligibilityReason = null;
     if (!campaignActive) {
       eligibilityReason = "campaign_unavailable";
-    } else if (applied) {
+    } else if (appliedSnapshot.exists && !skipped) {
       eligibilityReason = "already_referred";
+    } else if (skipped || !opportunityOpen) {
+      eligibilityReason = "opportunity_closed";
     } else if (hasQualifiedOrder) {
       eligibilityReason = "account_ineligible";
     }
@@ -207,16 +359,18 @@ exports.getReferralOverview = functions
       app_link: null,
       can_apply: canApply,
       eligibility_reason: eligibilityReason,
-      applied_referral: applied
-        ? {
-            status: String(applied.status || "pending"),
-            code: String(applied.code || ""),
-            created_at: readDate(applied.created_at),
-            qualified_at: readDate(applied.qualified_at),
-            rewarded_at: readDate(applied.rewarded_at),
-            reward_points: Number(applied.referred_reward_points) || 0,
-          }
-        : null,
+      opportunity_open: opportunityOpen,
+      applied_referral:
+        applied && !skipped
+          ? {
+              status: String(applied.status || "pending"),
+              code: String(applied.code || ""),
+              created_at: readDate(applied.created_at),
+              qualified_at: readDate(applied.qualified_at),
+              rewarded_at: readDate(applied.rewarded_at),
+              reward_points: Number(applied.referred_reward_points) || 0,
+            }
+          : null,
       history: page.map(toHistoryEntry),
       next_cursor:
         historySnapshot.docs.length > pageSize
@@ -224,6 +378,10 @@ exports.getReferralOverview = functions
           : null,
     };
   });
+
+// ---------------------------------------------------------------------------
+// applyReferralCode — permanent lock on referrals/{uid}
+// ---------------------------------------------------------------------------
 
 exports.applyReferralCode = functions
   .region("us-central1")
@@ -249,6 +407,8 @@ exports.applyReferralCode = functions
 
     const codeRef = db.collection("referral_codes").doc(code);
     const referralRef = db.collection("referrals").doc(uid);
+    const opportunityRef = db.collection("referral_opportunities").doc(uid);
+    const ownerRef = db.collection("referral_codes_by_user").doc(uid);
     const orderQuery = db
       .collection("orders")
       .where("customer_id", "==", uid)
@@ -256,20 +416,52 @@ exports.applyReferralCode = functions
       .where("payment_status", "==", "paid")
       .limit(1);
 
-    return db.runTransaction(async (transaction) => {
-      const [codeSnapshot, referralSnapshot, ordersSnapshot] =
-        await Promise.all([
-          transaction.get(codeRef),
-          transaction.get(referralRef),
-          transaction.get(orderQuery),
-        ]);
+    const result = await db.runTransaction(async (transaction) => {
+      const [
+        codeSnapshot,
+        referralSnapshot,
+        ordersSnapshot,
+        opportunitySnapshot,
+        ownerSnapshot,
+      ] = await Promise.all([
+        transaction.get(codeRef),
+        transaction.get(referralRef),
+        transaction.get(orderQuery),
+        transaction.get(opportunityRef),
+        transaction.get(ownerRef),
+      ]);
+
+      // Permanent lock: any existing referrals/{uid} blocks apply forever.
       if (referralSnapshot.exists) {
-          return {
-            ok: true,
-            already_applied: true,
-            status: String(referralSnapshot.data()?.status || "pending"),
-          };
+        const existing = referralSnapshot.data() || {};
+        if (isSkippedReferral(existing)) {
+          throw new functions.https.HttpsError(
+            "failed-precondition",
+            "The referral code entry period for this account has expired.",
+            { reason: "attribution_expired" }
+          );
         }
+        return {
+          ok: true,
+          already_applied: true,
+          status: String(existing.status || "pending"),
+        };
+      }
+
+      if (ownerSnapshot.exists) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "This account is not eligible to apply a referral code.",
+          { reason: "account_ineligible" }
+        );
+      }
+      if (!isReferralOpportunityOpen(opportunitySnapshot)) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "The referral code entry period for this account has expired.",
+          { reason: "attribution_expired" }
+        );
+      }
       if (!codeSnapshot.exists) {
         throw new functions.https.HttpsError(
           "not-found",
@@ -294,12 +486,36 @@ exports.applyReferralCode = functions
       }
 
       const referrerUserRef = db.collection("users").doc(referrerUid);
-      const referrerUser = await transaction.get(referrerUserRef);
-      if (!referrerUser.exists) {
+      const referrerOwnerRef = db
+        .collection("referral_codes_by_user")
+        .doc(referrerUid);
+      const reverseRef = db.collection("referrals").doc(referrerUid);
+      const [referrerUser, referrerOwner, reverseSnap] = await Promise.all([
+        transaction.get(referrerUserRef),
+        transaction.get(referrerOwnerRef),
+        transaction.get(reverseRef),
+      ]);
+      if (
+        !referrerUser.exists ||
+        !referrerOwner.exists ||
+        String(referrerOwner.data()?.code || "").toUpperCase() !== code
+      ) {
         throw new functions.https.HttpsError(
           "failed-precondition",
           "This referral code is not available.",
           { reason: "referrer_inactive" }
+        );
+      }
+
+      // Block circular referral: if the referrer was referred by this uid.
+      if (
+        reverseSnap.exists &&
+        String(reverseSnap.data()?.referrer_uid || "") === uid
+      ) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "This referral would create a circular referral relationship.",
+          { reason: "referral_cycle" }
         );
       }
 
@@ -318,9 +534,135 @@ exports.applyReferralCode = functions
         qualified_at: null,
         rewarded_at: null,
       });
+      transaction.update(opportunityRef, {
+        status: "applied",
+        referral_code: code,
+        closed_at: admin.firestore.FieldValue.serverTimestamp(),
+      });
       return { ok: true, already_applied: false, status: "pending" };
     });
+
+    // After a successful apply, generate the user's own shareable code so they
+    // can invite others. This runs outside the apply transaction intentionally.
+    if (result.ok && !result.already_applied) {
+      try {
+        await getOrCreateCode(uid);
+      } catch (error) {
+        functions.logger.warn("Referral code generation after apply failed", {
+          uid,
+          error: error.message || String(error),
+        });
+      }
+    }
+
+    return result;
   });
+
+// ---------------------------------------------------------------------------
+// completeReferralOpportunity — skip / close without applying a code
+// ---------------------------------------------------------------------------
+//
+// Call this when the user taps "Skip" or leaves the one-time apply screen.
+// Writes referrals/{uid} with status "skipped" so the uid can never apply
+// another code, then generates their shareable referral code.
+
+exports.completeReferralOpportunity = functions
+  .region("us-central1")
+  .https.onCall(async (data, context) => {
+    const uid = requireAuth(context);
+    const referralRef = db.collection("referrals").doc(uid);
+    const opportunityRef = db.collection("referral_opportunities").doc(uid);
+
+    const closed = await db.runTransaction(async (transaction) => {
+      const [snapshot, opportunitySnapshot] = await Promise.all([
+        transaction.get(referralRef),
+        transaction.get(opportunityRef),
+      ]);
+      if (snapshot.exists) {
+        return {
+          already_closed: true,
+          status: String(snapshot.data()?.status || "pending"),
+        };
+      }
+
+      // Also block if the account already placed a qualifying order or
+      // already holds a shareable code (legacy).
+      const [ordersSnapshot, ownerSnapshot] = await Promise.all([
+        transaction.get(
+          db
+            .collection("orders")
+            .where("customer_id", "==", uid)
+            .where("status", "==", "delivered")
+            .where("payment_status", "==", "paid")
+            .limit(1)
+        ),
+        transaction.get(db.collection("referral_codes_by_user").doc(uid)),
+      ]);
+
+      // Still allow closing even with prior orders / existing code — the goal
+      // is permanent lock. If they somehow open the screen late, skip still locks.
+      transaction.create(referralRef, {
+        referred_uid: uid,
+        referrer_uid: null,
+        code: null,
+        status: "skipped",
+        reward_status: "skipped",
+        skipped: true,
+        referrer_reward_points: 0,
+        referred_reward_points: 0,
+        created_at: admin.firestore.FieldValue.serverTimestamp(),
+        qualified_at: null,
+        rewarded_at: null,
+        had_qualifying_order: !ordersSnapshot.empty,
+        had_own_code: ownerSnapshot.exists,
+      });
+      transaction.set(
+        opportunityRef,
+        {
+          user_id: uid,
+          status: "skipped",
+          closed_at: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      return { already_closed: false, status: "skipped" };
+    });
+
+    // Generate shareable code after opportunity is closed.
+    let referralCode = null;
+    try {
+      referralCode = await getOrCreateCode(uid);
+    } catch (error) {
+      functions.logger.warn("Referral code generation after skip failed", {
+        uid,
+        error: error.message || String(error),
+      });
+    }
+
+    return {
+      ok: true,
+      already_closed: closed.already_closed,
+      status: closed.status,
+      referral_code: referralCode,
+    };
+  });
+
+exports.initializeReferralOpportunity = functions
+  .region("us-central1")
+  .auth.user()
+  .onCreate(async (user) => {
+    const uid = String(user?.uid || "").trim();
+    if (!uid) {
+      functions.logger.error("Auth user creation event has no uid");
+      return null;
+    }
+    await createReferralOpportunity(uid);
+    return null;
+  });
+
+// ---------------------------------------------------------------------------
+// awardReferralForDeliveredOrder (unchanged reward path)
+// ---------------------------------------------------------------------------
 
 async function awardReferralForDeliveredOrder(orderId, order) {
   const referredUid = String(order?.customer_id || order?.user_id || "").trim();
@@ -357,14 +699,18 @@ async function awardReferralForDeliveredOrder(orderId, order) {
       return { awarded: false, reason: "no_referral" };
     }
     const referral = referralSnapshot.data() || {};
+    if (isSkippedReferral(referral)) {
+      return { awarded: false, reason: "skipped_referral" };
+    }
     if (referral.reward_status === "rewarded") {
       return { awarded: false, reason: "already_rewarded" };
     }
 
-    const conditions = Array.isArray(referral.qualification_conditions) &&
-        referral.qualification_conditions.length > 0
-      ? referral.qualification_conditions
-      : campaign.qualificationConditions;
+    const conditions =
+      Array.isArray(referral.qualification_conditions) &&
+      referral.qualification_conditions.length > 0
+        ? referral.qualification_conditions
+        : campaign.qualificationConditions;
     if (!meetsQualificationConditions(order, conditions)) {
       return { awarded: false, reason: "order_not_eligible" };
     }
@@ -376,10 +722,10 @@ async function awardReferralForDeliveredOrder(orderId, order) {
       0,
       rawSubtotal - Math.max(0, Number(order.coupon_discount) || 0)
     );
-    const minimumOrderValuePaise = referral
-      .qualifying_order_minimum_value_paise == null
-      ? campaign.minimumOrderValuePaise || 0
-      : Number(referral.qualifying_order_minimum_value_paise);
+    const minimumOrderValuePaise =
+      referral.qualifying_order_minimum_value_paise == null
+        ? campaign.minimumOrderValuePaise || 0
+        : Number(referral.qualifying_order_minimum_value_paise);
     if (orderSubtotal * 100 < minimumOrderValuePaise) {
       return { awarded: false, reason: "below_threshold" };
     }
@@ -435,18 +781,18 @@ async function awardReferralForDeliveredOrder(orderId, order) {
     const now = admin.firestore.FieldValue.serverTimestamp();
     const referrerWallet = referrerWalletSnapshot.data() || {};
     const referredWallet = referredWalletSnapshot.data() || {};
-    const referrerBalance = (Number(referrerWallet.balance) || 0) +
-      referrerPoints;
-    const referredBalance = (Number(referredWallet.balance) || 0) +
-      referredPoints;
+    const referrerBalance =
+      (Number(referrerWallet.balance) || 0) + referrerPoints;
+    const referredBalance =
+      (Number(referredWallet.balance) || 0) + referredPoints;
 
     transaction.set(
       referrerWalletRef,
       {
         user_id: referrerUid,
         balance: referrerBalance,
-        total_earned: (Number(referrerWallet.total_earned) || 0) +
-          referrerPoints,
+        total_earned:
+          (Number(referrerWallet.total_earned) || 0) + referrerPoints,
         total_redeemed: Number(referrerWallet.total_redeemed) || 0,
         updated_at: now,
       },
@@ -457,8 +803,8 @@ async function awardReferralForDeliveredOrder(orderId, order) {
       {
         user_id: referredUid,
         balance: referredBalance,
-        total_earned: (Number(referredWallet.total_earned) || 0) +
-          referredPoints,
+        total_earned:
+          (Number(referredWallet.total_earned) || 0) + referredPoints,
         total_redeemed: Number(referredWallet.total_redeemed) || 0,
         updated_at: now,
       },
@@ -501,4 +847,9 @@ async function awardReferralForDeliveredOrder(orderId, order) {
 }
 
 exports.awardReferralForDeliveredOrder = awardReferralForDeliveredOrder;
-exports._private = { meetsQualificationConditions };
+exports._private = {
+  canApplyReferralCode,
+  isReferralOpportunityOpen,
+  meetsQualificationConditions,
+  isSkippedReferral,
+};

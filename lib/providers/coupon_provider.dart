@@ -59,7 +59,7 @@ class CouponProvider extends ChangeNotifier {
     final hadError = errorMessage != null;
     final hadSnapshot = _hasReceivedSnapshot;
     final oldById = {for (final coupon in _coupons) coupon.id: coupon};
-    final updatedCoupons = coupons.map((coupon) {
+    final List<CouponModel> updatedCoupons = coupons.map<CouponModel>((coupon) {
       final previous = oldById[coupon.id];
       return previous != null && _sameCoupon(previous, coupon)
           ? previous

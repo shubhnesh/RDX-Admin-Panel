@@ -468,7 +468,7 @@ class _CreateCouponScreenState extends ConsumerState<CreateCouponScreen> {
                             ),
                             SizedBox(height: context.h(10)),
                             Align(
-                              alignment: Alignment.centerLeft,
+                              alignment: Alignment.center,
                               child: SizedBox(
                                 width: previewCardWidth,
                                 child: preview,

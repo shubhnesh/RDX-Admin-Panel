@@ -3,9 +3,6 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const {
-  awardReferralForDeliveredOrder,
-} = require("../referrals/referrals");
-const {
   awardPointsForDeliveredOrder,
 } = require("../rewards/earnOnDelivery");
 const { applyOrderCancellation } = require("./orderCancellation");
@@ -110,7 +107,6 @@ exports.updateOrderStatus = functions
         uid
       );
       rewardPointsAwarded = rewardResult.points;
-      await awardReferralForDeliveredOrder(orderId, transition.order);
     }
 
     functions.logger.info("updateOrderStatus SUCCESS", { orderId, newStatus });

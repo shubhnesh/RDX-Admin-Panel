@@ -130,7 +130,8 @@ class MenuProvider extends ChangeNotifier {
   void _applyItemsSnapshot(List<MenuItemModel> snapshot) {
     final previousError = _itemsError;
     final previousById = {for (final item in _items) item.id: item};
-    final updatedItems = snapshot.map((item) {
+    final List<MenuItemModel> updatedItems =
+        snapshot.map<MenuItemModel>((item) {
       final previous = previousById[item.id];
       return previous != null && _sameMenuItem(previous, item)
           ? previous
@@ -157,7 +158,8 @@ class MenuProvider extends ChangeNotifier {
   void _applyCategoriesSnapshot(List<CategoryModel> snapshot) {
     final previousError = _categoriesError;
     final previousById = {for (final item in _categoryList) item.id: item};
-    final updatedCategories = snapshot.map((category) {
+    final List<CategoryModel> updatedCategories =
+        snapshot.map<CategoryModel>((category) {
       final previous = previousById[category.id];
       return previous != null && _sameCategory(previous, category)
           ? previous
@@ -225,6 +227,12 @@ class MenuProvider extends ChangeNotifier {
         first.subCategory != second.subCategory ||
         first.regionalityId != second.regionalityId ||
         first.regionality != second.regionality ||
+        first.servedWithCategoryId != second.servedWithCategoryId ||
+        first.servedWithCategory != second.servedWithCategory ||
+        first.servedWithSubcategoryId != second.servedWithSubcategoryId ||
+        first.servedWithSubcategory != second.servedWithSubcategory ||
+        first.servedWithItemId != second.servedWithItemId ||
+        first.servedWithItem != second.servedWithItem ||
         first.price != second.price ||
         first.createdAt != second.createdAt ||
         first.updatedAt != second.updatedAt ||

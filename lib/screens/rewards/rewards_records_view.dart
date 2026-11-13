@@ -149,14 +149,6 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
     final userValue = data.userValue;
     final statusValue = data.statusValue;
 
-    // Pagination (client-side over the loaded records).
-    final totalPages =
-        filtered.isEmpty ? 1 : (filtered.length / f.pageSize).ceil();
-    final currentPage = f.page.clamp(0, totalPages - 1);
-    final pageStart = currentPage * f.pageSize;
-    final pageItems =
-        filtered.skip(pageStart).take(f.pageSize).toList(growable: false);
-
     final hasActiveFilters = _transactionType != null ||
         userValue != 'all' ||
         statusValue != 'all' ||
@@ -168,135 +160,97 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _transactionSummary(provider),
-          SizedBox(height: context.h(12)),
+          // No leftover gap when the summary cards are not available, so the
+          // filter row starts at the same top edge as the sections panel.
+          if (provider.analytics != null) ...[
+            _transactionSummary(provider),
+            SizedBox(height: context.h(12)),
+          ],
 
-          // Transaction filters.
-          Container(
-            padding: EdgeInsets.all(context.w(15)),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: colors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _transactionTypeChip(
-                        label: 'All',
-                        icon: Icons.apps_rounded,
-                        selected: _transactionType == null,
-                        onSelected: () =>
-                            _selectTransactionType(provider, null),
+          // Chips, search and dropdowns share one row (scrolls when narrow).
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final searchHeight = RdxSearchBar.standardHeight(context);
+              final dropdownWidth = context.w(170).clamp(150.0, 200.0);
+
+              // No `label` is passed: RdxDropdown only skips its label row
+              // (and the 6px gap under it) when `label` is null. An empty
+              // string '' still reserves that space. Every control is given
+              // the same height so the row lines up with the sections panel.
+              final row = Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: dropdownWidth,
+                    child: RdxDropdown<String>(
+                      value: _transactionType ?? 'all',
+                      items: ['all', ..._txTypeOptions.keys],
+                      labelBuilder: (v) =>
+                          v == 'all' ? 'All Types' : (_txTypeOptions[v] ?? v),
+                      hint: 'All Types',
+                      height: searchHeight,
+                      onChanged: (value) => _selectTransactionType(
+                        provider,
+                        value == null || value == 'all' ? null : value,
                       ),
-                      for (final entry in _txTypeOptions.entries)
-                        Padding(
-                          padding: EdgeInsets.only(left: context.w(8)),
-                          child: _transactionTypeChip(
-                            label: entry.value,
-                            icon: _txTypeStyle(entry.key).icon,
-                            selected: _transactionType == entry.key,
-                            onSelected: () =>
-                                _selectTransactionType(provider, entry.key),
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
-                ),
-                SizedBox(height: context.h(13)),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = constraints.maxWidth < 900;
-                    final searchWidth = compact
-                        ? constraints.maxWidth
-                        : constraints.maxWidth * 0.34;
-                    final dropdownWidth = compact
-                        ? (constraints.maxWidth - context.w(10)) / 2
-                        : 170.0;
-
-                    return Wrap(
-                      spacing: context.w(10),
-                      runSpacing: context.h(10),
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: searchWidth,
-                          child: _transactionSearchField(provider),
-                        ),
-                        SizedBox(
-                          width: dropdownWidth,
-                          child: _transactionDropdown(
-                            value: userValue,
-                            icon: Icons.person_outline_rounded,
-                            items: [
-                              const DropdownMenuItem<String>(
-                                value: 'all',
-                                child: Text('All Users'),
-                              ),
-                              ...users.map(
-                                (user) => DropdownMenuItem<String>(
-                                  value: user,
-                                  child: Text(
-                                    _shortId(user),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) => _updateState(() {
-                              f.user = value ?? 'all';
-                              f.page = 0;
-                            }),
-                          ),
-                        ),
-                        SizedBox(
-                          width: dropdownWidth,
-                          child: _transactionDropdown(
-                            value: statusValue,
-                            icon: Icons.filter_alt_outlined,
-                            items: [
-                              const DropdownMenuItem<String>(
-                                value: 'all',
-                                child: Text('All Status'),
-                              ),
-                              ...statuses.map(
-                                (status) => DropdownMenuItem<String>(
-                                  value: status,
-                                  child: Text(
-                                    status,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            onChanged: (value) => _updateState(() {
-                              f.status = value ?? 'all';
-                              f.page = 0;
-                            }),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                if (hasActiveFilters) ...[
-                  SizedBox(height: context.h(12)),
-                  _activeFilterRow(
-                    provider,
-                    userValue: userValue,
-                    statusValue: statusValue,
+                  SizedBox(width: context.w(10)),
+                  Expanded(
+                    child: RdxSearchBar(
+                      controller: _transactionSearchController,
+                      hintText: 'Search transactions',
+                      height: searchHeight,
+                      onChanged: (value) => _updateState(() {
+                        _transactionSearch = value;
+                        f.page = 0;
+                      }),
+                    ),
+                  ),
+                  SizedBox(width: context.w(10)),
+                  SizedBox(
+                    width: dropdownWidth,
+                    child: RdxDropdown<String>(
+                      value: userValue,
+                      items: ['all', ...users],
+                      labelBuilder: (v) =>
+                          v == 'all' ? 'All Users' : _shortId(v),
+                      hint: 'All Users',
+                      searchable: true,
+                      height: searchHeight,
+                      onChanged: (value) => _updateState(() {
+                        f.user = value ?? 'all';
+                        f.page = 0;
+                      }),
+                    ),
+                  ),
+                  SizedBox(width: context.w(10)),
+                  SizedBox(
+                    width: dropdownWidth,
+                    child: RdxDropdown<String>(
+                      value: statusValue,
+                      items: ['all', ...statuses],
+                      labelBuilder: (v) => v == 'all' ? 'All Status' : v,
+                      hint: 'All Status',
+                      height: searchHeight,
+                      onChanged: (value) => _updateState(() {
+                        f.status = value ?? 'all';
+                        f.page = 0;
+                      }),
+                    ),
                   ),
                 ],
-              ],
-            ),
-          ),
+              );
 
+              final minWidth = context.w(800).clamp(760.0, 950.0);
+              return constraints.maxWidth >= minWidth
+                  ? row
+                  : SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(width: minWidth, child: row),
+                    );
+            },
+          ),
           if (provider.errorMessage != null) ...[
             SizedBox(height: context.h(10)),
             _inlineError(provider.errorMessage!),
@@ -344,20 +298,18 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
             _transactionViewSummary(filtered),
             SizedBox(height: context.h(8)),
 
-            // The table receives all remaining height in the screen.
+            // The table gets all remaining height, down to the bottom of the
+            // screen. Every loaded record is in this one table and it scrolls
+            // inside itself.
             Expanded(
-              child: _transactionTable(pageItems),
+              child: _transactionTable(filtered),
             ),
 
-            SizedBox(height: context.h(8)),
-            _transactionFooter(
-              provider,
-              total: filtered.length,
-              pageStart: pageStart,
-              pageCount: pageItems.length,
-              currentPage: currentPage,
-              totalPages: totalPages,
-            ),
+            // Only shown when the server still has older records to fetch.
+            if (provider.hasMoreTransactions) ...[
+              SizedBox(height: context.h(8)),
+              _transactionLoadMore(provider),
+            ],
           ],
         ],
       ),
@@ -636,110 +588,6 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
     );
   }
 
-  Widget _activeFilterRow(
-    RewardsAdminProvider provider, {
-    required String userValue,
-    required String statusValue,
-  }) {
-    final f = _txf;
-    final colors = AppColors.of(context);
-    final query = _transactionSearch.trim();
-
-    Widget chip(String label, VoidCallback onRemove) => InputChip(
-          label: Text(label),
-          onDeleted: onRemove,
-          deleteIcon: const Icon(Icons.close_rounded, size: 15),
-          backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
-          labelStyle: AppTextStyles.caption(context).copyWith(
-            color: AppColors.primaryDark,
-            fontWeight: FontWeight.w600,
-          ),
-          visualDensity: VisualDensity.compact,
-        );
-
-    return Wrap(
-      spacing: context.w(8),
-      runSpacing: context.h(6),
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Text(
-          'Active filters:',
-          style: AppTextStyles.caption(context).copyWith(
-            color: colors.textMuted,
-          ),
-        ),
-        if (query.isNotEmpty)
-          chip('Search: "$query"', () {
-            _transactionSearchController.clear();
-            _updateState(() {
-              _transactionSearch = '';
-              f.page = 0;
-            });
-            provider.loadTransactions(type: _transactionType, search: '');
-          }),
-        if (_transactionType != null)
-          chip(
-            'Type: ${_txTypeOptions[_transactionType] ?? _transactionType}',
-            () => _selectTransactionType(provider, null),
-          ),
-        if (userValue != 'all')
-          chip('User: ${_shortId(userValue)}', () {
-            _updateState(() {
-              f.user = 'all';
-              f.page = 0;
-            });
-          }),
-        if (statusValue != 'all')
-          chip('Status: $statusValue', () {
-            _updateState(() {
-              f.status = 'all';
-              f.page = 0;
-            });
-          }),
-        if (f.range != _TxRange.all)
-          chip('Date: ${_txRangeLabel(f.range, f.customRange)}', () {
-            _updateState(() {
-              f.range = _TxRange.all;
-              f.customRange = null;
-              f.page = 0;
-            });
-          }),
-        TextButton.icon(
-          onPressed: () => _clearTransactionFilters(provider),
-          icon: const Icon(Icons.filter_alt_off_rounded, size: 16),
-          label: const Text('Clear all'),
-        ),
-      ],
-    );
-  }
-
-  Widget _transactionTypeChip({
-    required String label,
-    required IconData icon,
-    required bool selected,
-    required VoidCallback onSelected,
-  }) {
-    final colors = AppColors.of(context);
-    return ChoiceChip(
-      avatar: Icon(
-        icon,
-        size: context.h(15),
-        color: selected ? AppColors.primaryDark : colors.textMuted,
-      ),
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onSelected(),
-      showCheckmark: false,
-      selectedColor: AppColors.primary.withValues(alpha: 0.1),
-      backgroundColor: colors.surface,
-      side: BorderSide(color: selected ? AppColors.primary : colors.border),
-      labelStyle: AppTextStyles.caption(context).copyWith(
-        color: selected ? AppColors.primaryDark : colors.textSecondary,
-        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-      ),
-    );
-  }
 
   // -------------------------------------------------------------------------
   // Summary cards
@@ -868,7 +716,9 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
     );
   }
 
-  /// Small strip describing the records currently in view (after filters).
+  /// Strip describing the records currently in view (after filters).
+  /// Four equal cells that span the full row width, styled like the metric
+  /// cards above (tinted icon circle, bold value, muted label).
   Widget _transactionViewSummary(List<RewardTransaction> filtered) {
     final colors = AppColors.of(context);
     var credits = 0;
@@ -881,67 +731,133 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
       }
     }
     final net = credits + debits;
+    const positive = Color(0xFF138A4A);
 
-    Widget stat(String label, String value, Color color) => Row(
-          mainAxisSize: MainAxisSize.min,
+    Widget cell({
+      required IconData icon,
+      required Color accent,
+      required String value,
+      required String label,
+    }) =>
+        Row(
           children: [
             Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            SizedBox(width: context.w(6)),
-            Text(
-              '$label ',
-              style: AppTextStyles.caption(context).copyWith(
-                color: colors.textSecondary,
+              width: context.w(34),
+              height: context.w(34),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
               ),
+              child: Icon(icon, color: accent, size: context.h(18)),
             ),
-            Text(
-              value,
-              style: AppTextStyles.caption(context).copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w700,
+            SizedBox(width: context.w(10)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.section(context).copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption(context).copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         );
 
+    final cells = <Widget>[
+      cell(
+        icon: Icons.receipt_long_rounded,
+        accent: AppColors.primary,
+        value: _number(filtered.length),
+        label: 'Records in view',
+      ),
+      cell(
+        icon: Icons.trending_up_rounded,
+        accent: positive,
+        value: '+${_number(credits)}',
+        label: 'Points credited',
+      ),
+      cell(
+        icon: Icons.trending_down_rounded,
+        accent: AppColors.danger,
+        value: _number(debits),
+        label: 'Points debited',
+      ),
+      cell(
+        icon: Icons.account_balance_wallet_rounded,
+        accent: net < 0 ? AppColors.danger : positive,
+        value: net > 0 ? '+${_number(net)}' : _number(net),
+        label: 'Net points',
+      ),
+    ];
+
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.symmetric(
         horizontal: context.w(14),
         vertical: context.h(10),
       ),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(context.h(12)),
         border: Border.all(color: colors.border),
       ),
-      child: Wrap(
-        spacing: context.w(20),
-        runSpacing: context.h(6),
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Text(
-            'In current view',
-            style: AppTextStyles.caption(context).copyWith(
-              color: colors.textMuted,
-              fontWeight: FontWeight.w600,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Narrow: 2 x 2 grid. Wide: one row, equal cells with dividers.
+          if (constraints.maxWidth < 620) {
+            return Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: cells[0]),
+                    SizedBox(width: context.w(12)),
+                    Expanded(child: cells[1]),
+                  ],
+                ),
+                SizedBox(height: context.h(10)),
+                Row(
+                  children: [
+                    Expanded(child: cells[2]),
+                    SizedBox(width: context.w(12)),
+                    Expanded(child: cells[3]),
+                  ],
+                ),
+              ],
+            );
+          }
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < cells.length; i++) ...[
+                  if (i > 0)
+                    VerticalDivider(
+                      width: context.w(24),
+                      thickness: 1,
+                      color: colors.divider,
+                    ),
+                  Expanded(child: cells[i]),
+                ],
+              ],
             ),
-          ),
-          stat('Records', _number(filtered.length), AppColors.primary),
-          stat(
-            'Credited',
-            '+${_number(credits)}',
-            const Color(0xFF138A4A),
-          ),
-          stat('Debited', _number(debits), AppColors.danger),
-          stat(
-            'Net',
-            net > 0 ? '+${_number(net)}' : _number(net),
-            net < 0 ? AppColors.danger : const Color(0xFF138A4A),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -950,185 +866,106 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
   // Table
   // -------------------------------------------------------------------------
 
-  // (title, width, sortKey)
-  static const List<(String, double, String?)> _txColumns = [
-    ('Date & time', 150, 'date'),
-    ('User', 215, null),
-    ('Type', 150, null),
-    ('Points', 110, 'points'),
-    ('Order ID', 190, null),
-    ('Details', 250, null),
-    ('Status', 130, null),
-    ('Actions', 64, null),
+  // Same RdxTable as the Inventory screen: (title, minWidth, flex, sortKey).
+  static const List<(String, double, double, String?)> _txColumns = [
+    ('DATE & TIME', 150, 1, 'date'),
+    ('USER', 160, 1.2, null),
+    ('TYPE', 150, 1, null),
+    ('POINTS', 110, 0.8, 'points'),
+    ('ORDER ID', 170, 1.2, null),
+    ('DETAILS', 220, 1.6, null),
+    ('STATUS', 130, 1, null),
+    ('ACTIONS', 90, 0.6, null),
   ];
 
   Widget _transactionTable(List<RewardTransaction> items) {
-    final colors = AppColors.of(context);
-    final totalMin = _txColumns.fold<double>(0, (sum, c) => sum + c.$2);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: colors.border),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width =
-              constraints.maxWidth > totalMin ? constraints.maxWidth : totalMin;
-          final scale = width / totalMin;
-          final widths = [for (final c in _txColumns) c.$2 * scale];
-
-          return Scrollbar(
-            thumbVisibility: width > constraints.maxWidth,
-            notificationPredicate: (notification) =>
-                notification.metrics.axis == Axis.horizontal,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: width,
-                height: constraints.maxHeight,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // The header remains fixed while transaction rows scroll.
-                    _transactionHeaderRow(widths),
-                    Expanded(
-                      child: Scrollbar(
-                        thumbVisibility: items.length > 1,
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.vertical,
-                          child: Column(
-                            children: [
-                              for (var i = 0; i < items.length; i++)
-                                _transactionRow(
-                                  items[i],
-                                  widths,
-                                  isLast: i == items.length - 1,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+    return RdxTable(
+      showFooter: false,
+      columns: [
+        for (final c in _txColumns)
+          RdxTableColumn(
+            title: c.$1,
+            minWidth: c.$2,
+            flex: c.$3,
+            header: c.$4 == null ? null : _sortableHeader(c.$1, c.$4!),
+          ),
+      ],
+      rows: items
+          .map(
+            (item) => <Widget>[
+              _plainCell(_date(item.createdAt)),
+              _copyCell(item.userId, _shortId(item.userId), 'User ID copied'),
+              _transactionTypeBadge(item.type),
+              _pointsCell(item.points),
+              item.orderId == null || item.orderId!.isEmpty
+                  ? _plainCell('—')
+                  : _copyCell(item.orderId!, item.orderId!, 'Order ID copied'),
+              _transactionDetails(item),
+              _transactionStatus(item.status),
+              _transactionActions(item),
+            ],
+          )
+          .toList(),
+      onRowTap: (index) => _showTransactionDetails(items[index]),
     );
   }
 
-  Widget _transactionHeaderRow(List<double> widths) {
+  Widget _plainCell(String text) => Text(
+        text,
+        style: AppTextStyles.bodySecondary(context),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+
+  Widget _copyCell(String fullValue, String label, String toast) => Tooltip(
+        message: '$fullValue\n(tap to copy)',
+        child: InkWell(
+          onTap: () => _copyText(fullValue, toast),
+          child: _plainCell(label),
+        ),
+      );
+
+  /// Sortable header placed inside RdxTableColumn.header.
+  Widget _sortableHeader(String title, String key) {
     final colors = AppColors.of(context);
     final f = _txf;
-
-    return Container(
-      color: colors.surfaceVariant,
-      padding: EdgeInsets.symmetric(vertical: context.h(12)),
+    final active = f.sortField == key;
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: () => _updateState(() {
+        if (active) {
+          f.ascending = !f.ascending;
+        } else {
+          f.sortField = key;
+          f.ascending = false;
+        }
+        f.page = 0;
+      }),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (var i = 0; i < _txColumns.length; i++)
-            SizedBox(
-              width: widths[i],
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: context.w(12)),
-                child: _txColumns[i].$3 == null
-                    ? Text(
-                        _txColumns[i].$1,
-                        style: _headerTextStyle(),
-                      )
-                    : InkWell(
-                        borderRadius: BorderRadius.circular(6),
-                        onTap: () => _updateState(() {
-                          final key = _txColumns[i].$3!;
-                          if (f.sortField == key) {
-                            f.ascending = !f.ascending;
-                          } else {
-                            f.sortField = key;
-                            f.ascending = false;
-                          }
-                          f.page = 0;
-                        }),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                _txColumns[i].$1,
-                                overflow: TextOverflow.ellipsis,
-                                style: _headerTextStyle(),
-                              ),
-                            ),
-                            SizedBox(width: context.w(3)),
-                            Icon(
-                              f.sortField == _txColumns[i].$3
-                                  ? (f.ascending
-                                      ? Icons.arrow_upward_rounded
-                                      : Icons.arrow_downward_rounded)
-                                  : Icons.unfold_more_rounded,
-                              size: context.h(14),
-                              color: f.sortField == _txColumns[i].$3
-                                  ? AppColors.primary
-                                  : colors.textMuted,
-                            ),
-                          ],
-                        ),
-                      ),
+          Flexible(
+            child: Text(
+              title,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.label(context).copyWith(
+                color: colors.textMuted,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
               ),
             ),
+          ),
+          SizedBox(width: context.w(3)),
+          Icon(
+            active
+                ? (f.ascending
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded)
+                : Icons.unfold_more_rounded,
+            size: context.h(14),
+            color: active ? AppColors.primary : colors.textMuted,
+          ),
         ],
-      ),
-    );
-  }
-
-  TextStyle _headerTextStyle() {
-    final colors = AppColors.of(context);
-    return AppTextStyles.caption(context).copyWith(
-      color: colors.textSecondary,
-      fontWeight: FontWeight.w700,
-    );
-  }
-
-  Widget _transactionRow(
-    RewardTransaction item,
-    List<double> widths, {
-    required bool isLast,
-  }) {
-    final colors = AppColors.of(context);
-
-    Widget cell(int index, Widget child) => SizedBox(
-          width: widths[index],
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: context.w(12)),
-            child: Align(alignment: Alignment.centerLeft, child: child),
-          ),
-        );
-
-    return InkWell(
-      onTap: () => _showTransactionDetails(item),
-      child: Container(
-        constraints: BoxConstraints(minHeight: context.h(68)),
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(color: colors.border.withValues(alpha: 0.7)),
-          ),
-        ),
-        child: Row(
-          children: [
-            cell(0, _transactionDateCell(item.createdAt)),
-            cell(1, _transactionUserCell(item.userId)),
-            cell(2, _transactionTypeBadge(item.type)),
-            cell(3, _pointsCell(item.points)),
-            cell(4, _transactionOrderCell(item.orderId)),
-            cell(5, _transactionDetails(item)),
-            cell(6, _transactionStatus(item.status)),
-            cell(7, _transactionActions(item)),
-          ],
-        ),
       ),
     );
   }
@@ -1494,158 +1331,24 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
   }
 
   // -------------------------------------------------------------------------
-  // Footer / pagination
+  // Load more (server-side paging only)
   // -------------------------------------------------------------------------
 
-  Widget _transactionFooter(
-    RewardsAdminProvider provider, {
-    required int total,
-    required int pageStart,
-    required int pageCount,
-    required int currentPage,
-    required int totalPages,
-  }) {
-    final colors = AppColors.of(context);
-    final f = _txf;
-
-    final info = Text(
-      'Showing ${_number(pageStart + 1)}–${_number(pageStart + pageCount)} '
-      'of ${_number(total)} loaded transaction${total == 1 ? '' : 's'}',
-      style: AppTextStyles.caption(context),
+  Widget _transactionLoadMore(RewardsAdminProvider provider) {
+    return Align(
+      alignment: Alignment.center,
+      child: OutlinedButton.icon(
+        onPressed: provider.isLoading
+            ? null
+            : () => provider.loadTransactions(
+                  type: _transactionType,
+                  search: _transactionSearch,
+                  nextPage: true,
+                ),
+        icon: const Icon(Icons.expand_more_rounded, size: 18),
+        label: Text(provider.isLoading ? 'Loading...' : 'Load more records'),
+      ),
     );
-
-    Widget pageButton(int? page) {
-      if (page == null) {
-        return Padding(
-          padding: EdgeInsets.symmetric(horizontal: context.w(4)),
-          child: Text('…', style: AppTextStyles.caption(context)),
-        );
-      }
-      final selected = page == currentPage;
-      return Padding(
-        padding: EdgeInsets.symmetric(horizontal: context.w(2)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: selected ? null : () => _updateState(() => f.page = page),
-          child: Container(
-            width: context.w(32),
-            height: context.w(32),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected ? AppColors.primary : colors.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: selected ? AppColors.primary : colors.border,
-              ),
-            ),
-            child: Text(
-              '${page + 1}',
-              style: AppTextStyles.caption(context).copyWith(
-                color: selected ? Colors.white : colors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    Widget arrow(IconData icon, bool enabled, VoidCallback onTap) => IconButton(
-          visualDensity: VisualDensity.compact,
-          onPressed: enabled ? onTap : null,
-          icon: Icon(icon, size: context.h(19)),
-        );
-
-    final pager = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        arrow(
-          Icons.chevron_left_rounded,
-          currentPage > 0,
-          () => _updateState(() => f.page = currentPage - 1),
-        ),
-        for (final page in _pageNumbers(currentPage, totalPages))
-          pageButton(page),
-        arrow(
-          Icons.chevron_right_rounded,
-          currentPage < totalPages - 1,
-          () => _updateState(() => f.page = currentPage + 1),
-        ),
-      ],
-    );
-
-    final rowsPerPage = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text('Rows', style: AppTextStyles.caption(context)),
-        SizedBox(width: context.w(8)),
-        DropdownButton<int>(
-          value: f.pageSize,
-          underline: const SizedBox.shrink(),
-          isDense: true,
-          style: AppTextStyles.caption(context).copyWith(
-            color: colors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
-          items: const [10, 15, 25, 50, 100]
-              .map((n) => DropdownMenuItem(value: n, child: Text('$n')))
-              .toList(),
-          onChanged: (value) => _updateState(() {
-            f.pageSize = value ?? 10;
-            f.page = 0;
-          }),
-        ),
-      ],
-    );
-
-    final loadMore = provider.hasMoreTransactions
-        ? OutlinedButton.icon(
-            onPressed: provider.isLoading
-                ? null
-                : () => provider.loadTransactions(
-                      type: _transactionType,
-                      search: _transactionSearch,
-                      nextPage: true,
-                    ),
-            icon: const Icon(Icons.expand_more_rounded, size: 18),
-            label:
-                Text(provider.isLoading ? 'Loading...' : 'Load more records'),
-          )
-        : null;
-
-    return Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: context.w(16),
-      runSpacing: context.h(10),
-      children: [
-        info,
-        Wrap(
-          spacing: context.w(14),
-          runSpacing: context.h(8),
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            rowsPerPage,
-            if (totalPages > 1) pager,
-            if (loadMore != null) loadMore,
-          ],
-        ),
-      ],
-    );
-  }
-
-  List<int?> _pageNumbers(int current, int total) {
-    if (total <= 7) return List<int?>.generate(total, (i) => i);
-    final pages = <int?>[0];
-    final start = (current - 1).clamp(1, total - 2);
-    final end = (current + 1).clamp(1, total - 2);
-    if (start > 1) pages.add(null);
-    for (var i = start; i <= end; i++) {
-      pages.add(i);
-    }
-    if (end < total - 2) pages.add(null);
-    pages.add(total - 1);
-    return pages;
   }
 
   // -------------------------------------------------------------------------
@@ -1971,87 +1674,96 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
     required VoidCallback? onNextPage,
     bool compactTitle = false,
     String? error,
-  }) =>
-      _pageList(
-        children: [
-          if (headerAction == null)
-            compactTitle
-                ? _compactRecordTitle(title, subtitle)
-                : _sectionTitle(title, subtitle)
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+  }) {
+    // No section heading — matches Transactions (title lives in the app header).
+    final filtersAndBody = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (headerAction != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: headerAction,
+          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final searchHeight = RdxSearchBar.standardHeight(context);
+            final dropdownWidth = context.w(170).clamp(150.0, 200.0);
+            final filterKeys = filterOptions.keys.toList();
+
+            final row = Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _sectionTitle(title, subtitle),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: headerAction,
+                Expanded(
+                  child: RdxSearchBar(
+                    controller: searchController,
+                    hintText: searchHint,
+                    height: searchHeight,
+                    onChanged: onSearch,
+                    onSubmitted: (_) => onSearchSubmit(),
+                  ),
+                ),
+                SizedBox(width: context.w(10)),
+                SizedBox(
+                  width: dropdownWidth,
+                  child: RdxDropdown<String>(
+                    value: filter ?? 'all',
+                    items: ['all', ...filterKeys],
+                    labelBuilder: (v) => v == 'all'
+                        ? 'All Status'
+                        : (filterOptions[v] ?? v),
+                    hint: 'All Status',
+                    height: searchHeight,
+                    onChanged: (value) {
+                      if (value == null || value == 'all') {
+                        onFilter(null);
+                      } else {
+                        onFilter(value);
+                      }
+                    },
+                  ),
                 ),
               ],
-            ),
-          Wrap(
-            spacing: context.w(12),
-            runSpacing: context.h(10),
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              SizedBox(
-                width: Responsive.isMobile(context)
-                    ? MediaQuery.sizeOf(context).width -
-                        2 * Responsive.pageHorizontal(context)
-                    : context.w(380),
-                child: RdxSearchBar(
-                  controller: searchController,
-                  hintText: searchHint,
-                  height: RdxSearchBar.standardHeight(context),
-                  onChanged: onSearch,
-                  onSubmitted: (_) => onSearchSubmit(),
-                ),
-              ),
-              SizedBox(
-                width: context.w(190),
-                child: DropdownButtonFormField<String?>(
-                  value: filter,
-                  decoration: const InputDecoration(
-                    labelText: 'Filter',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    const DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text('All'),
-                    ),
-                    ...filterOptions.entries.map(
-                      (entry) => DropdownMenuItem<String?>(
-                        value: entry.key,
-                        child: Text(entry.value),
-                      ),
-                    ),
-                  ],
-                  onChanged: onFilter,
-                ),
-              ),
-            ],
-          ),
-          if (error != null) _inlineError(error),
-          SizedBox(height: context.h(12)),
-          if (loading && !hasItems)
-            const LoadingIndicator()
-          else if (!hasItems)
-            EmptyState(message: '$emptyTitle. $emptyMessage')
-          else
-            table,
-          if (onNextPage != null)
-            Align(
-              alignment: Alignment.center,
-              child: OutlinedButton.icon(
-                onPressed: loading ? null : onNextPage,
-                icon: const Icon(Icons.expand_more),
-                label: Text(loading ? 'Loading...' : 'Load more'),
-              ),
-            ),
+            );
+
+            final minWidth = context.w(520).clamp(480.0, 700.0);
+            return constraints.maxWidth >= minWidth
+                ? row
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(width: minWidth, child: row),
+                  );
+          },
+        ),
+        if (error != null) ...[
+          SizedBox(height: context.h(10)),
+          _inlineError(error),
         ],
-      );
+        // Same gap as Transactions between filter row and content.
+        SizedBox(height: context.h(10)),
+        if (loading && !hasItems)
+          const LoadingIndicator()
+        else if (!hasItems)
+          EmptyState(message: '$emptyTitle. $emptyMessage')
+        else
+          table,
+        if (onNextPage != null) ...[
+          SizedBox(height: context.h(8)),
+          Align(
+            alignment: Alignment.center,
+            child: OutlinedButton.icon(
+              onPressed: loading ? null : onNextPage,
+              icon: const Icon(Icons.expand_more),
+              label: Text(loading ? 'Loading...' : 'Load more'),
+            ),
+          ),
+        ],
+      ],
+    );
+
+    return _pageList(
+      children: [filtersAndBody],
+    );
+  }
 
   Widget _compactRecordTitle(String title, String subtitle) {
     final colors = AppColors.of(context);
@@ -2154,122 +1866,102 @@ extension _RewardsRecordsView on _RewardsManagementScreenState {
   }
 
   // -------------------------------------------------------------------------
-  // Redemption / referral tables (unchanged)
+  // Redemption / referral tables (same RdxTable design as Transactions)
   // -------------------------------------------------------------------------
 
+  // (title, minWidth, flex)
+  static const List<(String, double, double)> _redemptionColumns = [
+    ('CUSTOMER', 160, 1.2),
+    ('REWARD', 180, 1.3),
+    ('POINTS USED', 120, 0.9),
+    ('ORDER ID', 160, 1.2),
+    ('DATE & TIME', 150, 1),
+    ('STATUS', 130, 1),
+  ];
+
   Widget _redemptionTable(List<RewardRedemptionRecord> items) {
-    final colors = AppColors.of(context);
-    Widget header(String title) => Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.label(context).copyWith(
-            color: colors.textMuted,
-            fontSize: context.sp(11),
-            fontWeight: FontWeight.w700,
-          ),
-        );
-
     return SizedBox(
-      height: context.h(390),
+      height: context.h(420),
       child: RdxTable(
+        showFooter: false,
         columns: [
-          RdxTableColumn(
-            title: 'Customer',
-            minWidth: 170,
-            header: header('Customer'),
-          ),
-          RdxTableColumn(
-            title: 'Reward',
-            minWidth: 180,
-            header: header('Reward'),
-          ),
-          RdxTableColumn(
-            title: 'Points used',
-            minWidth: 110,
-            header: header('Points used'),
-          ),
-          RdxTableColumn(
-            title: 'Order',
-            minWidth: 160,
-            header: header('Order'),
-          ),
-          RdxTableColumn(
-            title: 'Date',
-            minWidth: 155,
-            header: header('Date'),
-          ),
-          RdxTableColumn(
-            title: 'Status',
-            minWidth: 120,
-            header: header('Status'),
-          ),
+          for (final c in _redemptionColumns)
+            RdxTableColumn(
+              title: c.$1,
+              minWidth: c.$2,
+              flex: c.$3,
+            ),
         ],
-        rows: [
-          for (final item in items)
-            [
-              _redemptionCell(item.userId),
-              _redemptionCell(item.rewardName),
-              _redemptionCell(_number(item.pointsUsed)),
-              _redemptionCell(item.orderId ?? '—'),
-              _redemptionCell(_date(item.createdAt)),
-              _redemptionCell(item.status),
-            ],
-        ],
-      ),
-    );
-  }
-
-  Widget _redemptionCell(String text) {
-    final colors = AppColors.of(context);
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: context.h(8)),
-      child: Text(
-        text,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: AppTextStyles.caption(context).copyWith(
-          color: colors.textSecondary,
-          fontSize: context.sp(10),
-        ),
-      ),
-    );
-  }
-
-  Widget _referralTable(List<RewardReferralRecord> items) => SizedBox(
-        height: context.h(390),
-        child: RdxTable(
-          columns: const [
-            RdxTableColumn(title: 'Referrer', minWidth: 160),
-            RdxTableColumn(title: 'Referred customer', minWidth: 180),
-            RdxTableColumn(title: 'Code', minWidth: 130),
-            RdxTableColumn(title: 'Status', minWidth: 120),
-            RdxTableColumn(title: 'Qualifying order', minWidth: 160),
-            RdxTableColumn(title: 'Points awarded', minWidth: 130),
-            RdxTableColumn(title: 'Referral date', minWidth: 155),
-          ],
-          rows: [
-            for (final item in items)
-              [
-                _cell(item.referrerId),
-                _cell(item.referredUserId),
-                _cell(item.referralCode),
-                _cell(item.status),
-                _cell(item.qualifyingOrderId ?? '—'),
-                _cell(_number(item.pointsAwarded)),
-                _cell(_date(item.createdAt)),
+        rows: items
+            .map(
+              (item) => <Widget>[
+                _copyCell(item.userId, _shortId(item.userId), 'User ID copied'),
+                _plainCell(item.rewardName),
+                _pointsCell(-item.pointsUsed.abs()), // shown as debit style
+                item.orderId == null || item.orderId!.isEmpty
+                    ? _plainCell('—')
+                    : _copyCell(item.orderId!, item.orderId!, 'Order ID copied'),
+                _plainCell(_date(item.createdAt)),
+                _transactionStatus(item.status),
               ],
-          ],
-        ),
-      );
+            )
+            .toList(),
+      ),
+    );
+  }
 
-  Widget _cell(String text) => Padding(
-        padding: EdgeInsets.symmetric(vertical: context.h(8)),
-        child: Text(
-          text,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.caption(context),
-        ),
-      );
+  // (title, minWidth, flex)
+  static const List<(String, double, double)> _referralColumns = [
+    ('REFERRER', 160, 1.2),
+    ('REFERRED CUSTOMER', 180, 1.3),
+    ('CODE', 130, 1),
+    ('STATUS', 120, 0.9),
+    ('QUALIFYING ORDER', 160, 1.2),
+    ('POINTS AWARDED', 130, 1),
+    ('REFERRAL DATE', 150, 1),
+  ];
+
+  Widget _referralTable(List<RewardReferralRecord> items) {
+    return SizedBox(
+      height: context.h(420),
+      child: RdxTable(
+        showFooter: false,
+        columns: [
+          for (final c in _referralColumns)
+            RdxTableColumn(
+              title: c.$1,
+              minWidth: c.$2,
+              flex: c.$3,
+            ),
+        ],
+        rows: items
+            .map(
+              (item) => <Widget>[
+                _copyCell(
+                  item.referrerId,
+                  _shortId(item.referrerId),
+                  'Referrer ID copied',
+                ),
+                _copyCell(
+                  item.referredUserId,
+                  _shortId(item.referredUserId),
+                  'Referred user ID copied',
+                ),
+                _copyCell(item.referralCode, item.referralCode, 'Referral code copied'),
+                _transactionStatus(item.status),
+                item.qualifyingOrderId == null || item.qualifyingOrderId!.isEmpty
+                    ? _plainCell('—')
+                    : _copyCell(
+                        item.qualifyingOrderId!,
+                        item.qualifyingOrderId!,
+                        'Order ID copied',
+                      ),
+                _pointsCell(item.pointsAwarded),
+                _plainCell(_date(item.createdAt)),
+              ],
+            )
+            .toList(),
+      ),
+    );
+  }
 }

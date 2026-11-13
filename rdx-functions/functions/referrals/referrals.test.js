@@ -10,6 +10,7 @@ if (!admin.apps.length) {
 
 const {
   canApplyReferralCode,
+  canAwardReferral,
   isReferralOpportunityOpen,
   meetsQualificationConditions,
 } = require("./referrals")._private;
@@ -105,4 +106,26 @@ test("referral eligibility rejects repeat, qualified, and code-owning users", ()
     false
   );
   assert.equal(canApplyReferralCode({ ...base, hasQualifiedOrder: true }), false);
+});
+
+test("referral reward is claimable after signup without order qualification", () => {
+  assert.equal(
+    canAwardReferral({
+      referrer_uid: "referrer",
+      reward_status: "pending",
+      qualification_conditions: ["paid", "delivered"],
+    }),
+    true
+  );
+  assert.equal(
+    canAwardReferral({ status: "skipped", reward_status: "skipped" }),
+    false
+  );
+  assert.equal(
+    canAwardReferral({
+      referrer_uid: "referrer",
+      reward_status: "rewarded",
+    }),
+    false
+  );
 });

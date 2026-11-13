@@ -24,6 +24,9 @@ const {
   getReferralOverview,
   applyReferralCode,
   completeReferralOpportunity,
+  awardReferralOnHomeScreen,
+  acknowledgeReferralRewardDialog,
+  claimReferrerReferralRewardDialog,
   initializeReferralOpportunity,
 } = require("./referrals/referrals");
 const { settleOrder } = require("./orders/settleOrder");
@@ -68,6 +71,10 @@ exports.fetchRedemptionRecords = rewardAdmin.fetchRedemptionRecords;
 exports.getReferralOverview = getReferralOverview;
 exports.applyReferralCode = applyReferralCode;
 exports.completeReferralOpportunity = completeReferralOpportunity;
+exports.awardReferralOnHomeScreen = awardReferralOnHomeScreen;
+exports.acknowledgeReferralRewardDialog = acknowledgeReferralRewardDialog;
+exports.claimReferrerReferralRewardDialog =
+  claimReferrerReferralRewardDialog;
 exports.initializeReferralOpportunity = initializeReferralOpportunity;
 exports.getDashboardStats = getDashboardStats;
 exports.getTopSellingProducts = getTopSellingProducts;

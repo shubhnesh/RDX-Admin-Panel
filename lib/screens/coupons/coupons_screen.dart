@@ -358,9 +358,12 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
           );
         }
 
+        // Center cards in each row so a single Add tile (or last
+        // incomplete row) sits in the middle on narrow screens.
         return Wrap(
           spacing: spacing,
           runSpacing: spacing,
+          alignment: WrapAlignment.center,
           children: cards,
         );
       },

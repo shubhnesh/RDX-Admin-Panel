@@ -2,9 +2,6 @@
 
 const functions = require("firebase-functions");
 const {
-  awardReferralForDeliveredOrder,
-} = require("../referrals/referrals");
-const {
   awardPointsForDeliveredOrder,
 } = require("./earnOnDelivery");
 
@@ -29,6 +26,5 @@ exports.processOrderRewards = functions
     if (status === "delivered" && paymentStatus === "paid") {
       await awardPointsForDeliveredOrder(context.params.orderId, order);
     }
-    await awardReferralForDeliveredOrder(context.params.orderId, order);
     return null;
   });

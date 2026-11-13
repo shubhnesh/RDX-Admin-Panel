@@ -7,10 +7,9 @@ import 'package:rdx_admin/widgets/reusable_widgets/rdx_text_field.dart';
 
 /// Shared entry dialog for Category / Preparation / Regionality / Tag.
 ///
-/// When [enableSubItems] is true (or when any of the subcategory-related
-/// params are provided), the dialog shows a single subcategory text field
-/// plus an Add button. Subcategories are collected one-by-one into a chip
-/// list with no hard upper limit — the user can add as many as they need.
+/// When subcategory-related params are provided, the dialog shows a single
+/// subcategory text field plus a circular + button. Subcategories are
+/// collected into a chip list with no hard upper limit.
 ///
 /// When subcategory params are omitted the dialog is a simple name form
 /// (used for preparation, regionality, and tags).
@@ -96,7 +95,6 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
   final TextEditingController _subItemController = TextEditingController();
   late final List<String> _subItems;
   bool _saving = false;
-  String? _error;
 
   /// True when this dialog is being used for categories (sub-items UI).
   /// Driven by whether any subcategory-related param was passed so callers
@@ -109,6 +107,14 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
 
   bool get _isEditing =>
       widget.initialName != null && widget.initialName!.trim().isNotEmpty;
+
+  /// Done is enabled only when the name is non-empty. When the subcategory
+  /// UI is shown, at least one subcategory chip is also required.
+  bool get _canSubmit {
+    final nameFilled = _nameController.text.trim().isNotEmpty;
+    if (!_showSubItems) return nameFilled;
+    return nameFilled && _subItems.isNotEmpty;
+  }
 
   @override
   void initState() {
@@ -130,11 +136,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
     final value = _subItemController.text.trim();
     if (value.isEmpty) return;
 
-    // Soft optional cap only if a caller still passes maxSubItems.
     if (widget.maxSubItems != null && _subItems.length >= widget.maxSubItems!) {
-      setState(() {
-        _error = 'You can add at most ${widget.maxSubItems} subcategories.';
-      });
       return;
     }
 
@@ -146,43 +148,29 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
     setState(() {
       _subItems.add(value);
       _subItemController.clear();
-      _error = null;
     });
   }
 
   void _removeSubItem(String name) {
     setState(() {
       _subItems.remove(name);
-      _error = null;
     });
   }
 
   Future<void> _submit() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
-      setState(() => _error = 'Please enter a name.');
-      return;
-    }
+    if (!_canSubmit || _saving) return;
 
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
+    final name = _nameController.text.trim();
+
+    setState(() => _saving = true);
 
     try {
       final result = await widget.onSave(name, List<String>.from(_subItems));
       if (!mounted) return;
       Navigator.of(context).pop(result);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _error = e is StateError || e is ArgumentError
-            ? e
-                .toString()
-                .replaceFirst(RegExp(r'^(StateError|ArgumentError): '), '')
-            : 'Something went wrong. Please try again.';
-      });
+      setState(() => _saving = false);
     }
   }
 
@@ -202,7 +190,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
         vertical: context.h(24),
       ),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: context.w(420)),
+        constraints: BoxConstraints(maxWidth: context.w(560)),
         child: Padding(
           padding: EdgeInsets.fromLTRB(
             context.w(20),
@@ -234,9 +222,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
                 maxLength: widget.nameMaxLength,
                 label: widget.nameLabel,
                 hint: widget.nameHint,
-                onChanged: (_) {
-                  if (_error != null) setState(() => _error = null);
-                },
+                onChanged: (_) => setState(() {}),
               ),
               if (_showSubItems) ...[
                 SizedBox(height: context.h(16)),
@@ -245,18 +231,8 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
                   style: AppTextStyles.bodySecondary(context)
                       .copyWith(color: colors.textMuted),
                 ),
-                SizedBox(height: context.h(4)),
-                Text(
-                  _subItems.isEmpty
-                      ? 'Add one at a time — no limit.'
-                      : '${_subItems.length} subcategor'
-                          '${_subItems.length == 1 ? 'y' : 'ies'} added',
-                  style: AppTextStyles.bodyTertiary(context)
-                      .copyWith(color: colors.textMuted),
-                ),
                 SizedBox(height: context.h(8)),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: RdxTextField(
@@ -264,19 +240,31 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
                         maxLength: 20,
                         hint: widget.subItemHintBuilder != null
                             ? widget.subItemHintBuilder!(_subItems.length)
-                            : 'Add a subcategory and press Add',
+                            : 'Add a subcategory and press +',
+                        onChanged: (_) => setState(() {}),
                         onSubmitted: (_) => _addSubItem(),
                       ),
                     ),
                     SizedBox(width: context.w(8)),
-                    Padding(
-                      padding: EdgeInsets.only(top: context.h(0)),
-                      child: RdxActionButton(
-                        label: 'Add',
-                        onPressed: _addSubItem,
-                        isPrimary: true,
-                        height: context.h(35),
-                        minWidth: context.w(60),
+                    IconButton(
+                      tooltip: 'Add subcategory',
+                      onPressed: _subItemController.text.trim().isEmpty ||
+                              (widget.maxSubItems != null &&
+                                  _subItems.length >= widget.maxSubItems!)
+                          ? null
+                          : _addSubItem,
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFFE0E0E0),
+                        disabledForegroundColor: const Color(0xFF757575),
+                        fixedSize: Size.square(context.w(40).clamp(32.0, 40.0)),
+                        shape: const CircleBorder(),
+                        padding: EdgeInsets.zero,
+                      ),
+                      icon: Icon(
+                        Icons.add,
+                        size: context.h(20).clamp(16.0, 20.0),
                       ),
                     ),
                   ],
@@ -297,14 +285,6 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
                   ),
                 ],
               ],
-              if (_error != null) ...[
-                SizedBox(height: context.h(10)),
-                Text(
-                  _error!,
-                  style: AppTextStyles.bodyTertiary(context)
-                      .copyWith(color: AppColors.danger),
-                ),
-              ],
               SizedBox(height: context.h(18)),
               Row(
                 children: [
@@ -323,11 +303,13 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
                             label: widget.saveButtonLabel!,
                             isPrimary: true,
                             isLoading: _saving,
-                            onPressed: _saving ? null : _submit,
+                            onPressed:
+                                !_canSubmit || _saving ? null : _submit,
                           )
                         : RdxActionButton.save(
                             isLoading: _saving,
-                            onPressed: _submit,
+                            onPressed:
+                                !_canSubmit || _saving ? null : _submit,
                           ),
                   ),
                 ],

@@ -448,7 +448,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                         ),
                         SizedBox(height: context.h(10)),
                         Align(
-                          alignment: Alignment.centerLeft,
+                          alignment: Alignment.center,
                           child: SizedBox(
                             width: previewCardWidth,
                             child: preview,

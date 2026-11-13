@@ -46,14 +46,32 @@ class RewardsOverviewTab extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: Responsive.pagePadding(context, bottom: 28),
         children: [
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(context.w(16)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('How to use rewards',
-                      style: AppTextStyles.section(context)),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(context.w(16)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF1EA),
+              borderRadius: BorderRadius.circular(context.h(8)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.18),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline,
+                        size: context.h(18), color: AppColors.primary),
+                    SizedBox(width: context.w(8)),
+                    Text(
+                      'How to use rewards',
+                      style: AppTextStyles.section(context).copyWith(
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                  ],
+                ),
                   SizedBox(height: context.h(8)),
                   Text(
                     '1. Set and save earning and redemption rules in Configuration. '
@@ -73,11 +91,12 @@ class RewardsOverviewTab extends StatelessWidget {
                     '5. Refresh the customer app wallet after delivery to see the '
                     'updated balance. Referral customers must apply a code before '
                     'meeting the configured qualification conditions.',
-                    style: AppTextStyles.caption(context),
+                    style: AppTextStyles.caption(context).copyWith(
+                      color: AppColors.of(context).primary,
+                    ),
                   ),
                 ],
               ),
-            ),
           ),
           SizedBox(height: context.h(16)),
           _MetricGrid(
@@ -205,47 +224,51 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(context.w(14)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(item.icon, color: AppColors.primary, size: 20),
-                SizedBox(width: context.w(7)),
-                Expanded(
-                  child: Text(
-                    item.label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption(context).copyWith(
-                      color: colors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
+    return Container(
+      padding: EdgeInsets.all(context.w(14)),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(context.h(8)),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(item.icon, color: AppColors.primary, size: 20),
+              SizedBox(width: context.w(7)),
+              Expanded(
+                child: Text(
+                  item.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption(context).copyWith(
+                    color: colors.textSecondary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
-            ),
-            const Spacer(),
-            Text(
-              item.value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.heading(context).copyWith(
-                fontSize: context.sp(23),
               ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            item.value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.heading(context).copyWith(
+              fontSize: context.sp(23),
+              color: colors.textPrimary,
             ),
-            Text(
-              item.hint,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.caption(context)
-                  .copyWith(color: colors.textMuted),
-            ),
-          ],
-        ),
+          ),
+          Text(
+            item.hint,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.caption(context)
+                .copyWith(color: colors.textMuted),
+          ),
+        ],
       ),
     );
   }

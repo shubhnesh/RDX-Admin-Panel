@@ -7,13 +7,18 @@ extension _RewardsCatalogView on _RewardsManagementScreenState {
     }
     return _pageList(
       children: [
-        _sectionTitle(
-          'Food redemption catalog',
-          'Rewards reference existing menu items.',
-        ),
         if (provider.foodRewards.isEmpty)
-          const EmptyState(
-            message: 'Add a food reward linked to an existing menu item.',
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(context.h(20)),
+            decoration: BoxDecoration(
+              color: AppColors.of(context).surface,
+              borderRadius: BorderRadius.circular(context.h(8)),
+              border: Border.all(color: AppColors.of(context).border),
+            ),
+            child: const EmptyState(
+              message: 'Add a food reward linked to an existing menu item.',
+            ),
           )
         else
           ...provider.foodRewards.map((reward) => _foodRewardCard(
@@ -30,59 +35,145 @@ extension _RewardsCatalogView on _RewardsManagementScreenState {
         onPressed: provider.isMutating || provider.isLoading
             ? null
             : () => _editFoodReward(provider),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded, size: 18),
         label: const Text('Add reward'),
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(
+            horizontal: context.w(14),
+            vertical: context.h(10),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(context.h(8)),
+          ),
+        ),
       );
 
   Widget _foodRewardCard(RewardsAdminProvider provider, FoodReward reward) {
     final colors = AppColors.of(context);
-    return Card(
+    return Container(
       margin: EdgeInsets.only(bottom: context.h(10)),
-      child: Padding(
-        padding: EdgeInsets.all(context.w(16)),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-              child: const Icon(Icons.restaurant, color: AppColors.primary),
+      padding: EdgeInsets.all(context.w(14)),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(context.h(8)),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: context.w(44),
+            height: context.w(44),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(context.h(10)),
             ),
-            SizedBox(width: context.w(12)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(reward.name, style: AppTextStyles.section(context)),
-                  SizedBox(height: context.h(4)),
-                  Text(
-                    '${_number(reward.pointsCost)} points · ${reward.available ? 'Available' : 'Disabled'}'
-                    '${reward.stockLimit == null ? '' : ' · ${reward.stockLimit} stock'}'
-                    ' · ${reward.usageCount} used',
-                    style: AppTextStyles.caption(context).copyWith(
-                      color: colors.textSecondary,
+            child: Icon(
+              Icons.restaurant_menu_rounded,
+              color: AppColors.primary,
+              size: context.h(22),
+            ),
+          ),
+          SizedBox(width: context.w(12)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  reward.name,
+                  style: AppTextStyles.section(context)
+                      .copyWith(color: colors.textPrimary),
+                ),
+                SizedBox(height: context.h(6)),
+                Wrap(
+                  spacing: context.w(6),
+                  runSpacing: context.h(4),
+                  children: [
+                    _metaChip(
+                      context,
+                      colors,
+                      '${_number(reward.pointsCost)} pts',
+                      AppColors.primary,
                     ),
-                  ),
-                ],
+                    _metaChip(
+                      context,
+                      colors,
+                      reward.available ? 'Available' : 'Disabled',
+                      reward.available
+                          ? const Color(0xFF16A05A)
+                          : AppColors.danger,
+                    ),
+                    if (reward.stockLimit != null)
+                      _metaChip(
+                        context,
+                        colors,
+                        '${reward.stockLimit} stock',
+                        colors.textMuted,
+                      ),
+                    _metaChip(
+                      context,
+                      colors,
+                      '${reward.usageCount} used',
+                      colors.textMuted,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (provider.canConfigure) ...[
+            IconButton(
+              tooltip: 'Edit reward',
+              onPressed: provider.isMutating
+                  ? null
+                  : () => _editFoodReward(provider, reward: reward),
+              icon: Icon(
+                Icons.edit_outlined,
+                size: context.h(20),
+                color: colors.textSecondary,
               ),
             ),
-            if (provider.canConfigure) ...[
+            if (reward.available)
               IconButton(
-                tooltip: 'Edit reward',
+                tooltip: 'Disable reward',
                 onPressed: provider.isMutating
                     ? null
-                    : () => _editFoodReward(provider, reward: reward),
-                icon: const Icon(Icons.edit_outlined),
-              ),
-              if (reward.available)
-                IconButton(
-                  tooltip: 'Disable reward',
-                  onPressed: provider.isMutating
-                      ? null
-                      : () => _disableFoodReward(provider, reward),
-                  icon:
-                      const Icon(Icons.block_outlined, color: AppColors.danger),
+                    : () => _disableFoodReward(provider, reward),
+                icon: Icon(
+                  Icons.block_outlined,
+                  size: context.h(20),
+                  color: AppColors.danger,
                 ),
-            ],
+              ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _metaChip(
+    BuildContext context,
+    AppColorScheme colors,
+    String label,
+    Color accent,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: context.w(8),
+        vertical: context.h(3),
+      ),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(context.h(6)),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.caption(context).copyWith(
+          color: accent,
+          fontWeight: FontWeight.w600,
+          fontSize: context.sp(10),
         ),
       ),
     );

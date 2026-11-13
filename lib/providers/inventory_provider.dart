@@ -215,7 +215,7 @@ class InventoryProvider extends ChangeNotifier {
     List<InventoryItemModel> currentItems,
   ) {
     final currentById = {for (final item in currentItems) item.id: item};
-    return nextItems.map((item) {
+    return nextItems.map<InventoryItemModel>((item) {
       final current = currentById[item.id];
       return current != null && _sameItem(current, item) ? current : item;
     }).toList(growable: false);

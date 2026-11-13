@@ -49,6 +49,16 @@ class MenuItemModel {
   final String subCategory;
   final String regionalityId;
   final String regionality;
+  /// Optional "served with" target: this item is a side/dip preferred with
+  /// the selected category, subcategory, or specific menu item.
+  /// Empty category id means not used. Subcategory/item may be `__all__`
+  /// to mean every item under the parent selection.
+  final String servedWithCategoryId;
+  final String servedWithCategory;
+  final String servedWithSubcategoryId;
+  final String servedWithSubcategory;
+  final String servedWithItemId;
+  final String servedWithItem;
   final double price;
   final List<MenuItemSize> sizes;
   final List<String> tags;
@@ -73,6 +83,12 @@ class MenuItemModel {
     String? subCategory,
     this.regionalityId = '',
     String? regionality,
+    this.servedWithCategoryId = '',
+    String? servedWithCategory,
+    this.servedWithSubcategoryId = '',
+    String? servedWithSubcategory,
+    this.servedWithItemId = '',
+    String? servedWithItem,
     this.price = 0,
     this.sizes = const [],
     this.tags = const [],
@@ -93,7 +109,10 @@ class MenuItemModel {
         preparation = preparation ?? '',
         category = category ?? '',
         subCategory = subCategory ?? '',
-        regionality = regionality ?? '';
+        regionality = regionality ?? '',
+        servedWithCategory = servedWithCategory ?? '',
+        servedWithSubcategory = servedWithSubcategory ?? '',
+        servedWithItem = servedWithItem ?? '';
 
   String get imageUrl => image;
   bool get available => isAvailable;
@@ -129,6 +148,12 @@ class MenuItemModel {
         subCategory: subCategory,
         regionalityId: regionalityId,
         regionality: regionality,
+        servedWithCategoryId: servedWithCategoryId,
+        servedWithCategory: servedWithCategory,
+        servedWithSubcategoryId: servedWithSubcategoryId,
+        servedWithSubcategory: servedWithSubcategory,
+        servedWithItemId: servedWithItemId,
+        servedWithItem: servedWithItem,
         price: price ?? this.price,
         sizes: sizes ?? this.sizes,
         tags: tags,
@@ -177,6 +202,15 @@ class MenuItemModel {
       subCategory: json['sub_category']?.toString() ?? '',
       regionalityId: json['regionality_id']?.toString() ?? '',
       regionality: json['regionality']?.toString() ?? '',
+      servedWithCategoryId:
+          json['served_with_category_id']?.toString() ?? '',
+      servedWithCategory: json['served_with_category']?.toString() ?? '',
+      servedWithSubcategoryId:
+          json['served_with_subcategory_id']?.toString() ?? '',
+      servedWithSubcategory:
+          json['served_with_subcategory']?.toString() ?? '',
+      servedWithItemId: json['served_with_item_id']?.toString() ?? '',
+      servedWithItem: json['served_with_item']?.toString() ?? '',
       price: price,
       sizes: sizes,
       tags: _strings(json['tags']),
@@ -203,6 +237,12 @@ class MenuItemModel {
         'sub_category': subCategory,
         'regionality_id': regionalityId,
         'regionality': regionality,
+        'served_with_category_id': servedWithCategoryId,
+        'served_with_category': servedWithCategory,
+        'served_with_subcategory_id': servedWithSubcategoryId,
+        'served_with_subcategory': servedWithSubcategory,
+        'served_with_item_id': servedWithItemId,
+        'served_with_item': servedWithItem,
         if (sizes.isEmpty) 'price': price,
         'sizes': sizes.map((s) => s.toJson()).toList(),
         'tags': tags,

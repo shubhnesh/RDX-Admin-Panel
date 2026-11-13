@@ -6,9 +6,6 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { requireRestaurantUser } = require("../auth/roles");
-const {
-  awardReferralForDeliveredOrder,
-} = require("../referrals/referrals");
 
 const db = admin.firestore();
 
@@ -89,6 +86,5 @@ exports.settleOrder = functions
       };
     });
 
-    await awardReferralForDeliveredOrder(order_id.trim(), result);
     return result;
   });

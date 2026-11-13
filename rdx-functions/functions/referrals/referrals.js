@@ -13,8 +13,8 @@
  *    bound to referral_codes_by_user/{uid}. Codes are never client-supplied.
  * 5. All mutations run in Cloud Functions with Admin SDK. Clients cannot write
  *    referral collections (Firestore rules deny client writes).
- * 6. Rewards are paid only when a referred user's order meets campaign
- *    qualification (default: paid + delivered) — same as existing flow.
+ * 6. Referral rewards are paid once the referred user completes onboarding
+ *    and reaches the home screen.
  */
 
 const crypto = require("crypto");
@@ -353,8 +353,8 @@ exports.getReferralOverview = functions
         referred_points: Number(campaign.referredPoints) || 0,
         description:
           `Your friend gets ${Number(campaign.referredPoints) || 0} points and ` +
-          `you earn ${Number(campaign.referrerPoints) || 0} points after their ` +
-          `first eligible order is ${campaign.qualificationConditions.join(" and ")}.`,
+          `you earn ${Number(campaign.referrerPoints) || 0} points when they ` +
+          "finish setup and reach the home screen.",
       },
       app_link: null,
       can_apply: canApply,
@@ -661,19 +661,13 @@ exports.initializeReferralOpportunity = functions
   });
 
 // ---------------------------------------------------------------------------
-// awardReferralForDeliveredOrder (unchanged reward path)
+// awardReferralOnHomeScreen
 // ---------------------------------------------------------------------------
 
-async function awardReferralForDeliveredOrder(orderId, order) {
-  const referredUid = String(order?.customer_id || order?.user_id || "").trim();
-  if (!referredUid || !orderId || !order) {
-    return { awarded: false, reason: "invalid_order" };
-  }
-
+async function awardReferralOnHomeScreen(referredUid) {
+  referredUid = String(referredUid || "").trim();
+  if (!referredUid) return { awarded: false, reason: "invalid_user" };
   const campaign = await getReferralCampaign();
-  if (!isCampaignActive(campaign)) {
-    return { awarded: false, reason: "campaign_or_order_ineligible" };
-  }
 
   let existingRewardedCount = null;
   if (campaign.maximumRewards != null) {
@@ -699,35 +693,19 @@ async function awardReferralForDeliveredOrder(orderId, order) {
       return { awarded: false, reason: "no_referral" };
     }
     const referral = referralSnapshot.data() || {};
-    if (isSkippedReferral(referral)) {
-      return { awarded: false, reason: "skipped_referral" };
-    }
     if (referral.reward_status === "rewarded") {
-      return { awarded: false, reason: "already_rewarded" };
+      return referral.reward_dialog_pending === true
+        ? {
+            awarded: true,
+            referredPoints: Math.max(
+              0,
+              Math.floor(Number(referral.referred_reward_points) || 0)
+            ),
+          }
+        : { awarded: false, reason: "already_rewarded" };
     }
-
-    const conditions =
-      Array.isArray(referral.qualification_conditions) &&
-      referral.qualification_conditions.length > 0
-        ? referral.qualification_conditions
-        : campaign.qualificationConditions;
-    if (!meetsQualificationConditions(order, conditions)) {
-      return { awarded: false, reason: "order_not_eligible" };
-    }
-    const rawSubtotal = Number(order.item_total ?? order.total);
-    if (!Number.isFinite(rawSubtotal)) {
-      return { awarded: false, reason: "below_threshold" };
-    }
-    const orderSubtotal = Math.max(
-      0,
-      rawSubtotal - Math.max(0, Number(order.coupon_discount) || 0)
-    );
-    const minimumOrderValuePaise =
-      referral.qualifying_order_minimum_value_paise == null
-        ? campaign.minimumOrderValuePaise || 0
-        : Number(referral.qualifying_order_minimum_value_paise);
-    if (orderSubtotal * 100 < minimumOrderValuePaise) {
-      return { awarded: false, reason: "below_threshold" };
+    if (!canAwardReferral(referral)) {
+      return { awarded: false, reason: "skipped_referral" };
     }
 
     const referrerUid = String(referral.referrer_uid || "");
@@ -751,6 +729,11 @@ async function awardReferralForDeliveredOrder(orderId, order) {
     const referredLedgerRef = db
       .collection("reward_ledger")
       .doc(`referral_referred_${referredUid}`);
+    const referrerDialogRef = db
+      .collection("referral_reward_dialogs")
+      .doc(referrerUid)
+      .collection("events")
+      .doc(referredUid);
     const [
       referrerWalletSnapshot,
       referredWalletSnapshot,
@@ -813,7 +796,6 @@ async function awardReferralForDeliveredOrder(orderId, order) {
     transaction.create(referrerLedgerRef, {
       type: "referral",
       referral_id: referredUid,
-      order_id: orderId,
       user_id: referrerUid,
       points: referrerPoints,
       balance_after: referrerBalance,
@@ -822,18 +804,24 @@ async function awardReferralForDeliveredOrder(orderId, order) {
     transaction.create(referredLedgerRef, {
       type: "referral",
       referral_id: referredUid,
-      order_id: orderId,
       user_id: referredUid,
       points: referredPoints,
       balance_after: referredBalance,
       created_at: now,
     });
+    if (referrerPoints > 0) {
+      transaction.set(referrerDialogRef, {
+        referral_id: referredUid,
+        points: referrerPoints,
+        pending: true,
+        created_at: now,
+      });
+    }
     transaction.update(referralRef, {
       status: "rewarded",
       reward_status: "rewarded",
-      qualified_at: now,
       rewarded_at: now,
-      order_id: orderId,
+      reward_dialog_pending: referredPoints > 0,
     });
     if (maximumRewards != null) {
       transaction.set(
@@ -846,10 +834,102 @@ async function awardReferralForDeliveredOrder(orderId, order) {
   });
 }
 
-exports.awardReferralForDeliveredOrder = awardReferralForDeliveredOrder;
+function canAwardReferral(referral) {
+  return Boolean(referral) &&
+    !isSkippedReferral(referral) &&
+    String(referral.reward_status || "").toLowerCase() !== "rewarded";
+}
+
+exports.acknowledgeReferralRewardDialog = functions
+  .region("us-central1")
+  .https.onCall(async (data, context) => {
+    const uid = requireAuth(context);
+    if (data && data.role === "referrer") {
+      const referralId = String(data.referral_id || "").trim();
+      if (!referralId) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "A referral id is required."
+        );
+      }
+
+      const dialogRef = db
+        .collection("referral_reward_dialogs")
+        .doc(uid)
+        .collection("events")
+        .doc(referralId);
+      await db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(dialogRef);
+        if (snapshot.exists && snapshot.data()?.pending === true) {
+          transaction.update(dialogRef, {
+            pending: false,
+            acknowledged_at: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      });
+      return { ok: true };
+    }
+
+    const referralRef = db.collection("referrals").doc(uid);
+    await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(referralRef);
+      if (!snapshot.exists) return;
+      const referral = snapshot.data() || {};
+      if (
+        referral.reward_status === "rewarded" &&
+        referral.reward_dialog_pending === true
+      ) {
+        transaction.update(referralRef, {
+          reward_dialog_pending: false,
+          reward_dialog_acknowledged_at:
+            admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+    });
+    return { ok: true };
+  });
+
+exports.claimReferrerReferralRewardDialog = functions
+  .region("us-central1")
+  .https.onCall(async (data, context) => {
+    const uid = requireAuth(context);
+    const pending = await db
+      .collection("referral_reward_dialogs")
+      .doc(uid)
+      .collection("events")
+      .where("pending", "==", true)
+      .limit(1)
+      .get();
+    if (pending.empty) {
+      return { ok: true, awarded: false };
+    }
+
+    const document = pending.docs[0];
+    const notification = document.data() || {};
+    return {
+      ok: true,
+      awarded: true,
+      referral_id: String(notification.referral_id || document.id),
+      points: Math.max(0, Math.floor(Number(notification.points) || 0)),
+    };
+  });
+
+exports.awardReferralOnHomeScreen = functions
+  .region("us-central1")
+  .https.onCall(async (data, context) => {
+    const uid = requireAuth(context);
+    const result = await awardReferralOnHomeScreen(uid);
+    return {
+      ok: true,
+      awarded: result.awarded,
+      referred_points: result.awarded ? result.referredPoints : 0,
+    };
+  });
+
 exports._private = {
   canApplyReferralCode,
   isReferralOpportunityOpen,
   meetsQualificationConditions,
   isSkippedReferral,
+  canAwardReferral,
 };

@@ -52,6 +52,12 @@ const String _kCreatePreparationValue = '__create_preparation__';
 /// same deferred-creation contract as [_kPendingRegionalityId].
 const String _kPendingPreparationId = '__pending_preparation__';
 
+/// Sentinel for "Served With" dropdowns: no selection (optional section).
+const String _kServedWithNone = '__served_none__';
+
+/// Sentinel for "Served With" subcategory/item: every entry under the parent.
+const String _kServedWithAll = '__served_all__';
+
 class CreateMenuScreen extends ConsumerStatefulWidget {
   final String? itemId;
   const CreateMenuScreen({super.key, this.itemId});
@@ -87,6 +93,13 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
   bool _available = true;
   bool _showOnMobileApp = true;
   bool _loading = false;
+
+  /// Optional "Served With" — this item as a side/dip for a target dish.
+  /// Defaults to [_kServedWithNone]. Choosing a category sets sub + item
+  /// to [_kServedWithAll]; choosing a subcategory sets item to All.
+  String _servedWithCategory = _kServedWithNone;
+  String _servedWithSubcategory = _kServedWithNone;
+  String _servedWithItem = _kServedWithNone;
 
   final _categoryService = CategoryService();
   List<CategoryModel> _categories = [];
@@ -137,6 +150,54 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     return _sortedByName(category.first.subcategories, (s) => s.name);
   }
 
+  List<SubcategoryModel> get _servedWithSubcategories {
+    if (_servedWithCategory == _kServedWithNone) return [];
+    final category =
+        _categories.where((item) => item.id == _servedWithCategory).toList();
+    if (category.isEmpty) return [];
+    return _sortedByName(category.first.subcategories, (s) => s.name);
+  }
+
+  /// Menu items eligible as "Served With" targets for the current cascade.
+  ///
+  /// Matches category/subcategory by document id *or* denormalized name so
+  /// older menu items (and items nested under a subcategory) still appear.
+  List<MenuItemModel> _servedWithItemOptions(List<MenuItemModel> allItems) {
+    if (_servedWithCategory == _kServedWithNone) return const [];
+    final selfId = widget.itemId;
+    final categoryName =
+        _servedWithCategoryLabel(_servedWithCategory).trim().toLowerCase();
+    final filterBySub = _servedWithSubcategory != _kServedWithNone &&
+        _servedWithSubcategory != _kServedWithAll;
+    final subcategoryName = filterBySub
+        ? _servedWithSubcategoryLabel(_servedWithSubcategory)
+            .trim()
+            .toLowerCase()
+        : '';
+
+    return _sortedByName(
+      allItems.where((item) {
+        if (selfId != null && item.id == selfId) return false;
+
+        final itemCatId = item.primaryCategoryId.trim();
+        final itemCatName = item.category.trim().toLowerCase();
+        final matchesCategory = itemCatId == _servedWithCategory ||
+            (categoryName.isNotEmpty && itemCatName == categoryName);
+        if (!matchesCategory) return false;
+
+        // Category-level (or All): include every item in the category,
+        // whether or not it has a subcategory.
+        if (!filterBySub) return true;
+
+        final itemSubId = item.subCategoryId.trim();
+        final itemSubName = item.subCategory.trim().toLowerCase();
+        return itemSubId == _servedWithSubcategory ||
+            (subcategoryName.isNotEmpty && itemSubName == subcategoryName);
+      }),
+      (item) => item.name,
+    );
+  }
+
   /// Case-insensitive alphabetical sort for named entities.
   List<T> _sortedByName<T>(
     Iterable<T> items,
@@ -166,6 +227,21 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                   .any((category) => category.subcategories
                       .any((subcategory) => subcategory.id == _subcategory))) {
             _subcategory = null;
+          }
+          // Keep Served With cascade valid if categories change.
+          if (_servedWithCategory != _kServedWithNone &&
+              !_categories.any((c) => c.id == _servedWithCategory)) {
+            _servedWithCategory = _kServedWithNone;
+            _servedWithSubcategory = _kServedWithNone;
+            _servedWithItem = _kServedWithNone;
+          } else if (_servedWithSubcategory != _kServedWithNone &&
+              _servedWithSubcategory != _kServedWithAll &&
+              !_categories
+                  .where((c) => c.id == _servedWithCategory)
+                  .any((c) => c.subcategories
+                      .any((s) => s.id == _servedWithSubcategory))) {
+            _servedWithSubcategory = _kServedWithAll;
+            _servedWithItem = _kServedWithAll;
           }
         });
       },
@@ -209,7 +285,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       title: 'Create Category',
       editTitle: 'Edit Category',
       nameLabel: 'Category Name *',
-      nameHint: 'e.g. Beverages',
+      nameHint: 'Enter Category Name',
       initialSubItems: const [],
       // One text field at a time — user can add as many subcategories as needed.
       subItemsLabel: 'Subcategories (optional)',
@@ -470,6 +546,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
   MenuItemModel get _previewItem {
     final sizes = _hasSizes ? _currentSizes : const <MenuItemSize>[];
     final price = _resolvedPrice;
+    final served = _resolvedServedWith();
 
     return MenuItemModel(
       id: widget.itemId ?? 'preview',
@@ -492,11 +569,57 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       subCategory: _subcategory == null ? '' : _categoryLabel(_subcategory!),
       regionalityId: _regionality ?? '',
       regionality: _regionalityLabel(_regionality),
+      servedWithCategoryId: served.categoryId,
+      servedWithCategory: served.categoryName,
+      servedWithSubcategoryId: served.subcategoryId,
+      servedWithSubcategory: served.subcategoryName,
+      servedWithItemId: served.itemId,
+      servedWithItem: served.itemName,
       tags: _tags
           .where((tag) => tag != 'Featured')
           .map((tag) => tag.toLowerCase().replaceAll(' ', '_'))
           .toList(),
       ingredients: List<String>.from(_ingredients),
+    );
+  }
+
+  /// Resolves the optional Served With cascade into Firestore-ready ids/names.
+  /// Empty category means the section is unused.
+  ({
+    String categoryId,
+    String categoryName,
+    String subcategoryId,
+    String subcategoryName,
+    String itemId,
+    String itemName,
+  }) _resolvedServedWith() {
+    if (_servedWithCategory == _kServedWithNone) {
+      return (
+        categoryId: '',
+        categoryName: '',
+        subcategoryId: '',
+        subcategoryName: '',
+        itemId: '',
+        itemName: '',
+      );
+    }
+
+    final categoryName = _servedWithCategoryLabel(_servedWithCategory);
+    final subcategoryId = _servedWithSubcategory == _kServedWithNone
+        ? ''
+        : _servedWithSubcategory;
+    final subcategoryName = _servedWithSubcategoryLabel(_servedWithSubcategory);
+    final itemId =
+        _servedWithItem == _kServedWithNone ? '' : _servedWithItem;
+    final itemName = _servedWithItemLabel(_servedWithItem);
+
+    return (
+      categoryId: _servedWithCategory,
+      categoryName: categoryName,
+      subcategoryId: subcategoryId,
+      subcategoryName: subcategoryName,
+      itemId: itemId,
+      itemName: itemName,
     );
   }
 
@@ -508,6 +631,8 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     _loadRegionalities();
     _loadPreparations();
     _loadCustomTags();
+    // Needed for the optional "Served With" item dropdown.
+    ref.read(menuProvider).load();
     if (_editing) _load();
   }
 
@@ -537,6 +662,17 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
         ..addAll(item.ingredients);
       _available = item.available;
       _showOnMobileApp = item.showOnMobileApp;
+
+      // Served With (optional side/dip target)
+      _servedWithCategory = item.servedWithCategoryId.isEmpty
+          ? _kServedWithNone
+          : item.servedWithCategoryId;
+      _servedWithSubcategory = item.servedWithSubcategoryId.isEmpty
+          ? _kServedWithNone
+          : item.servedWithSubcategoryId;
+      _servedWithItem = item.servedWithItemId.isEmpty
+          ? _kServedWithNone
+          : item.servedWithItemId;
 
       // Size-based pricing
       for (final c in _sizeNameControllers) {
@@ -698,6 +834,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       }
     }
 
+    final served = _resolvedServedWith();
     final item = MenuItemModel(
       id: widget.itemId ?? '',
       name: _name.text.trim(),
@@ -718,6 +855,12 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       subCategory: _subcategory == null ? '' : _categoryLabel(_subcategory!),
       regionalityId: regionalityId,
       regionality: regionalityName,
+      servedWithCategoryId: served.categoryId,
+      servedWithCategory: served.categoryName,
+      servedWithSubcategoryId: served.subcategoryId,
+      servedWithSubcategory: served.subcategoryName,
+      servedWithItemId: served.itemId,
+      servedWithItem: served.itemName,
       tags: _tags
           .where((tag) => tag != 'Featured')
           .map((tag) => tag.toLowerCase().replaceAll(' ', '_'))
@@ -955,9 +1098,11 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 );
               }
               return Row(children: [
-                Expanded(child: nameField),
+                Expanded(flex: 3, child: nameField),
                 SizedBox(width: context.w(14)),
-                SizedBox(width: context.w(130), child: priceField),
+                // Wider share for price so it scales with the name field
+                // instead of a narrow fixed width.
+                Expanded(flex: 2, child: priceField),
               ]);
             }),
             SizedBox(height: context.h(15)),
@@ -1350,6 +1495,114 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
             ),
           ),
           SizedBox(height: context.h(16)),
+          _panel(
+            context,
+            colors,
+            'Served With',
+            Icons.restaurant_menu_outlined,
+            [
+              Text(
+                'Optional. Mark this item as a side dish or dip preferred with '
+                'a category, subcategory, or specific menu item. Leave as None '
+                'to skip.',
+                style: AppTextStyles.bodyTertiary(context).copyWith(
+                  color: colors.textMuted,
+                ),
+              ),
+              SizedBox(height: context.h(14)),
+              Builder(builder: (context) {
+                final menuItems = ref.watch(menuProvider).items;
+                final itemOptions = _servedWithItemOptions(menuItems);
+
+                final categoryDropdown = _dropdown<String>(
+                  'Category',
+                  _servedWithCategory,
+                  [
+                    _kServedWithNone,
+                    ..._categories.map((c) => c.id),
+                  ],
+                  (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _servedWithCategory = value;
+                      if (value == _kServedWithNone) {
+                        _servedWithSubcategory = _kServedWithNone;
+                        _servedWithItem = _kServedWithNone;
+                      } else {
+                        // Whole category selected → sub + item become All.
+                        _servedWithSubcategory = _kServedWithAll;
+                        _servedWithItem = _kServedWithAll;
+                      }
+                    });
+                  },
+                  _servedWithCategoryLabel,
+                  searchable: true,
+                  hint: _categoriesLoading
+                      ? 'Loading categories...'
+                      : 'None',
+                );
+
+                final subcategoryDropdown = _dropdown<String>(
+                  'Subcategory',
+                  _servedWithSubcategory,
+                  [
+                    _kServedWithNone,
+                    if (_servedWithCategory != _kServedWithNone)
+                      _kServedWithAll,
+                    ..._servedWithSubcategories.map((s) => s.id),
+                  ],
+                  (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _servedWithSubcategory = value;
+                      if (value == _kServedWithNone) {
+                        _servedWithItem = _kServedWithNone;
+                      } else {
+                        // Subcategory (or All) chosen → item becomes All.
+                        _servedWithItem = _kServedWithAll;
+                      }
+                    });
+                  },
+                  _servedWithSubcategoryLabel,
+                  searchable: true,
+                  hint: _servedWithCategory == _kServedWithNone
+                      ? 'Select a category first'
+                      : 'None / All',
+                );
+
+                final itemDropdown = _dropdown<String>(
+                  'Item',
+                  _servedWithItem,
+                  [
+                    _kServedWithNone,
+                    if (_servedWithCategory != _kServedWithNone)
+                      _kServedWithAll,
+                    ...itemOptions.map((i) => i.id),
+                  ],
+                  (value) {
+                    if (value == null) return;
+                    setState(() => _servedWithItem = value);
+                  },
+                  (id) => _servedWithItemLabel(id, itemOptions),
+                  searchable: true,
+                  hint: _servedWithCategory == _kServedWithNone
+                      ? 'Select a category first'
+                      : 'None / All / specific item',
+                );
+
+                return Column(
+                  children: [
+                    categoryDropdown,
+                    SizedBox(height: context.h(14)),
+                    subcategoryDropdown,
+                    SizedBox(height: context.h(14)),
+                    itemDropdown,
+                  ],
+                );
+              }),
+            ],
+          ),
+          SizedBox(height: context.h(16)),
           _panel(context, colors, 'Display Settings',
               Icons.desktop_windows_outlined, [
             Row(children: [
@@ -1555,6 +1808,43 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
 
     final match = _preparations.where((item) => item.id == id).toList();
     return match.isEmpty ? id : match.first.name;
+  }
+
+
+  String _servedWithCategoryLabel(String id) {
+    if (id == _kServedWithNone) return 'None';
+    if (id == _kServedWithAll) return 'All';
+    final match = _categories.where((item) => item.id == id).toList();
+    return match.isEmpty ? id : match.first.name;
+  }
+
+  String _servedWithSubcategoryLabel(String id) {
+    if (id == _kServedWithNone) return 'None';
+    if (id == _kServedWithAll) return 'All';
+    final match =
+        _servedWithSubcategories.where((item) => item.id == id).toList();
+    if (match.isNotEmpty) return match.first.name;
+    for (final category in _categories) {
+      for (final sub in category.subcategories) {
+        if (sub.id == id) return sub.name;
+      }
+    }
+    return id;
+  }
+
+  String _servedWithItemLabel(
+    String id, [
+    List<MenuItemModel>? options,
+  ]) {
+    if (id == _kServedWithNone) return 'None';
+    if (id == _kServedWithAll) return 'All';
+    final list = options ?? ref.read(menuProvider).items;
+    final match = list.where((item) => item.id == id).toList();
+    if (match.isNotEmpty) return match.first.name;
+    // Fall back to full list (options may be filtered by cascade).
+    final all = ref.read(menuProvider).items;
+    final any = all.where((item) => item.id == id).toList();
+    return any.isEmpty ? id : any.first.name;
   }
 
   String _titleCase(String value) => value

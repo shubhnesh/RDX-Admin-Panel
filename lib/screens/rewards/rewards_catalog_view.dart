@@ -7,23 +7,9 @@ extension _RewardsCatalogView on _RewardsManagementScreenState {
     }
     return _pageList(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _sectionTitle(
-                'Food redemption catalog',
-                'Rewards reference existing menu items.',
-              ),
-            ),
-            if (provider.canConfigure)
-              FilledButton.icon(
-                onPressed: provider.isMutating || provider.isLoading
-                    ? null
-                    : () => _editFoodReward(provider),
-                icon: const Icon(Icons.add),
-                label: const Text('Add reward'),
-              ),
-          ],
+        _sectionTitle(
+          'Food redemption catalog',
+          'Rewards reference existing menu items.',
         ),
         if (provider.foodRewards.isEmpty)
           const EmptyState(
@@ -38,6 +24,15 @@ extension _RewardsCatalogView on _RewardsManagementScreenState {
       ],
     );
   }
+
+  Widget _catalogAddRewardButton(RewardsAdminProvider provider) =>
+      FilledButton.icon(
+        onPressed: provider.isMutating || provider.isLoading
+            ? null
+            : () => _editFoodReward(provider),
+        icon: const Icon(Icons.add),
+        label: const Text('Add reward'),
+      );
 
   Widget _foodRewardCard(RewardsAdminProvider provider, FoodReward reward) {
     final colors = AppColors.of(context);

@@ -265,6 +265,16 @@ class _RewardsManagementScreenState
     final colors = AppColors.of(context);
     final config = provider.configuration;
     if (config != null) _initializeConfiguration(config);
+    final transactionData =
+        _sectionIndex == 4 ? _transactionViewData(provider) : null;
+    final headerActions = <Widget>[];
+    if (_sectionIndex == 2 && provider.canConfigure) {
+      headerActions.add(_catalogAddRewardButton(provider));
+    } else if (_sectionIndex == 4 && transactionData != null) {
+      headerActions.add(
+        _transactionHeader(provider, transactionData.filtered),
+      );
+    }
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -275,17 +285,11 @@ class _RewardsManagementScreenState
             subtitle: 'Manage points, redemptions and referrals',
             showBackButton: true,
             onBack: _handleBack,
-            actions: [
-              IconButton(
-                tooltip: 'Refresh',
-                onPressed: provider.isLoading ? null : _refreshCurrent,
-                icon: const Icon(Icons.refresh_rounded),
-              ),
-            ],
+            actions: headerActions,
           ),
           _sectionSelector(context, colors),
           Expanded(
-            child: _body(provider),
+            child: _body(provider, transactionData: transactionData),
           ),
         ],
       ),
@@ -320,7 +324,10 @@ class _RewardsManagementScreenState
         ),
       );
 
-  Widget _body(RewardsAdminProvider provider) {
+  Widget _body(
+    RewardsAdminProvider provider, {
+    _TransactionViewData? transactionData,
+  }) {
     if (provider.isLoading &&
         provider.configuration == null &&
         provider.errorMessage == null) {
@@ -343,7 +350,7 @@ class _RewardsManagementScreenState
       1 => _configuration(provider),
       2 => _catalog(provider),
       3 => _referralSettings(provider),
-      4 => _transactions(provider),
+      4 => _transactions(provider, transactionData!),
       5 => _redemptions(provider),
       _ => _referrals(provider),
     };
@@ -692,7 +699,7 @@ class _RewardsManagementScreenState
               onPressed: readOnly || provider.isLoading
                   ? null
                   : provider.loadMenuItems,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.download_outlined),
               label: const Text('Load menu items'),
             ),
           ],

@@ -63,19 +63,37 @@ class RewardsAdminProvider extends ChangeNotifier {
 
       final now = DateTime.now();
       _log('Loading rewards configuration and analytics.');
-      final results = await Future.wait<Object>([
-        _service.fetchConfiguration(),
-        _service.fetchAnalytics(
-          from: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-          to: now,
-        ),
-      ]);
-      configuration = results[0] as RewardConfiguration;
-      analytics = results[1] as RewardAnalytics;
-      _log('Rewards configuration and analytics loaded.');
-    } catch (error) {
-      errorMessage = _displayError(error);
-      _log('Dashboard data load failed (${error.runtimeType}).');
+      Object? loadError;
+      final configurationLoad = _service.fetchConfiguration().then<void>(
+        (value) {
+          configuration = value;
+          _log('Rewards configuration loaded.');
+        },
+        onError: (Object error) {
+          loadError = error;
+          _log('Rewards configuration load failed (${error.runtimeType}).');
+        },
+      );
+      final analyticsLoad = _service
+          .fetchAnalytics(
+        from: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        to: now,
+      )
+          .then<void>(
+        (value) {
+          analytics = value;
+          _log('Rewards analytics loaded.');
+        },
+        onError: (Object error) {
+          loadError ??= error;
+          _log('Rewards analytics load failed (${error.runtimeType}).');
+        },
+      );
+      await Future.wait<void>([configurationLoad, analyticsLoad]);
+      final error = loadError;
+      if (error != null) {
+        errorMessage = _displayError(error);
+      }
     } finally {
       isLoading = false;
       notifyListeners();

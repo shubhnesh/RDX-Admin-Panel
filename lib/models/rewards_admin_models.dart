@@ -297,9 +297,9 @@ class RewardReferralRecord {
   factory RewardReferralRecord.fromMap(Map<String, dynamic> data) =>
       RewardReferralRecord(
         id: _requiredString(data, 'referralId'),
-        referrerId: _requiredString(data, 'referrerId'),
+        referrerId: _optionalString(data, 'referrerId') ?? '',
         referredUserId: _requiredString(data, 'referredUserId'),
-        referralCode: _requiredString(data, 'referralCode'),
+        referralCode: _optionalString(data, 'referralCode') ?? '',
         status: _requiredString(data, 'status'),
         createdAt: _requiredDate(data, 'createdAt'),
         qualifyingOrderId: _optionalString(data, 'qualifyingOrderId'),

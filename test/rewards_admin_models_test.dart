@@ -92,4 +92,22 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+
+  test('parses skipped referral records without a referrer or referral code',
+      () {
+    final referral = RewardReferralRecord.fromMap({
+      'referralId': 'user_1',
+      'referrerId': null,
+      'referredUserId': 'user_1',
+      'referralCode': null,
+      'status': 'skipped',
+      'createdAt': '2026-10-30T12:00:00Z',
+      'qualifyingOrderId': null,
+      'pointsAwarded': 0,
+    });
+
+    expect(referral.referrerId, isEmpty);
+    expect(referral.referralCode, isEmpty);
+    expect(referral.status, 'skipped');
+  });
 }

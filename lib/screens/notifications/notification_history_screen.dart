@@ -21,7 +21,8 @@ class NotificationHistoryScreen extends ConsumerStatefulWidget {
       _NotificationHistoryScreenState();
 }
 
-class _NotificationHistoryScreenState extends ConsumerState<NotificationHistoryScreen> {
+class _NotificationHistoryScreenState
+    extends ConsumerState<NotificationHistoryScreen> {
   String _statusFilter = 'All Statuses';
 
   @override
@@ -301,7 +302,8 @@ class _NotificationHistoryScreenState extends ConsumerState<NotificationHistoryS
       showFooter: false,
       columns: [
         RdxTableColumn(title: 'STATUS', minWidth: context.w(130), flex: 1),
-        RdxTableColumn(title: 'NOTIFICATION TITLE', minWidth: context.w(300), flex: 4),
+        RdxTableColumn(
+            title: 'NOTIFICATION TITLE', minWidth: context.w(300), flex: 4),
         RdxTableColumn(title: 'DATE / TIME', minWidth: context.w(150), flex: 2),
         RdxTableColumn(title: 'ACTIONS', minWidth: context.w(90), flex: 1),
       ],

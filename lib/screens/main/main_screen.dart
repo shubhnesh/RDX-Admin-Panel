@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:rdx_admin/screens/notifications/notifications_screen.dart';
 import 'package:rdx_admin/screens/order/live_orders_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
@@ -44,6 +45,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       '/live-orders': LiveOrdersScreen(),
       '/menu': const MenuScreen(),
       '/coupons': const CouponsScreen(),
+      '/notifications': const NotificationsScreen(),
       '/inventory': const InventoryScreen(),
       '/rewards': RewardsManagementScreen(onBack: () => _navigate('/settings')),
       '/user-management':
@@ -88,6 +90,13 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         label: 'Coupons',
         icon: Icons.local_offer_outlined,
         route: '/coupons',
+      ));
+    }
+    if (perms.canViewNotifications) {
+      items.add(const SidebarItem(
+        label: 'Notifications',
+        icon: Icons.notifications_outlined,
+        route: '/notifications',
       ));
     }
     if (perms.canViewInventory) {
@@ -233,12 +242,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     }
 
     final sideNav = MainSideNav(
-      items: navItems.where((item) => item.route != '/settings').toList(),
+      items: navItems
+          .where((item) =>
+              item.route != '/settings' && item.route != '/notifications')
+          .toList(),
       currentRoute: _currentRoute,
       onNavigate: _navigate,
       expanded: _sidebarExpanded,
       onToggleExpand: _toggleSidebar,
       onAddOrder: auth.permissions.canCreateOrders ? () {} : null,
+      showNotifications: auth.permissions.canViewNotifications,
     );
 
     return Scaffold(

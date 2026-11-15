@@ -26,6 +26,7 @@ class MainSideNav extends StatelessWidget {
   final VoidCallback onToggleExpand;
   final VoidCallback? onLogout;
   final VoidCallback? onAddOrder;
+  final bool showNotifications;
 
   /// Design-time widths (scaled at runtime via [context.w]).
   static const double expandedWidth = 240;
@@ -43,6 +44,7 @@ class MainSideNav extends StatelessWidget {
     required this.onToggleExpand,
     this.onLogout,
     this.onAddOrder,
+    this.showNotifications = false,
   });
 
   @override
@@ -112,6 +114,14 @@ class MainSideNav extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
+                      if (showNotifications)
+                        _FooterTile(
+                          icon: Icons.notifications_outlined,
+                          label: 'Notifications',
+                          expanded: expanded,
+                          selected: currentRoute == '/notifications',
+                          onTap: () => onNavigate('/notifications'),
+                        ),
                       _FooterTile(
                         icon: Icons.settings_outlined,
                         label: 'Settings',

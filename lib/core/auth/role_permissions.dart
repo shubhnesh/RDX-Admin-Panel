@@ -22,6 +22,7 @@ class RolePermissions {
   bool get canViewInventory => isRestaurantUser;
   bool get canViewSettings => isRestaurantUser;
   bool get canViewRewards => isAdmin;
+  bool get canViewNotifications => isAdmin;
 
   /// User management (list / create / change role / disable) — admin only.
   bool get canManageUsers => isAdmin;
@@ -50,6 +51,7 @@ class RolePermissions {
     if (canViewInventory) routes.add('/inventory');
     if (canViewSettings) routes.add('/settings');
     if (canViewRewards) routes.add('/rewards');
+    if (canViewNotifications) routes.add('/notifications');
     if (canManageUsers) routes.add('/user-management');
     routes.add('/support');
     return routes;

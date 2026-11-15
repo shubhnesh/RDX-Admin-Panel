@@ -48,6 +48,9 @@ const { manageInventory } = require("./inventory/manageInventory");
 const {
   manageRestaurantSettings,
 } = require("./settings/manageRestaurantSettings");
+const pushNotifications = require("./notifications/pushNotifications");
+const businessNotificationEvents =
+  require("./notifications/businessEvents");
 
 exports.createUserOrder = createUserOrder;
 exports.cancelUserOrder = cancelUserOrder;
@@ -89,3 +92,29 @@ exports.disableManagedUser = disableManagedUser;
 exports.updateOrderFees = updateOrderFees;
 exports.manageInventory = manageInventory;
 exports.manageRestaurantSettings = manageRestaurantSettings;
+exports.sendBroadcastNotification =
+  pushNotifications.sendBroadcastNotification;
+exports.processScheduledNotifications =
+  pushNotifications.processScheduledNotifications;
+exports.notifyMenuItemCreated =
+  businessNotificationEvents.notifyMenuItemCreated;
+exports.notifyMenuItemUpdated =
+  businessNotificationEvents.notifyMenuItemUpdated;
+exports.notifyCouponCreated =
+  businessNotificationEvents.notifyCouponCreated;
+exports.notifyCouponUpdated =
+  businessNotificationEvents.notifyCouponUpdated;
+exports.notifyOfferCreated =
+  businessNotificationEvents.notifyOfferCreated;
+exports.notifyOfferUpdated =
+  businessNotificationEvents.notifyOfferUpdated;
+exports.notifyAppOrderCreated =
+  businessNotificationEvents.notifyAppOrderCreated;
+exports.notifyAppOrderStatusChanged =
+  businessNotificationEvents.notifyAppOrderStatusChanged;
+exports.notifySupportRequestCreated =
+  businessNotificationEvents.notifySupportRequestCreated;
+exports.submitSupportRequest =
+  businessNotificationEvents.submitSupportRequest;
+exports.activateScheduledPromotions =
+  businessNotificationEvents.activateScheduledPromotions;

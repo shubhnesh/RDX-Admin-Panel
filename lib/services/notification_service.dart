@@ -1,8 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/notification_model.dart';
 
 class NotificationService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  NotificationService({
+    FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
+  })  : _db = firestore ?? FirebaseFirestore.instance,
+        _functions = functions ??
+            FirebaseFunctions.instanceFor(region: 'us-central1');
+
+  final FirebaseFirestore _db;
+  final FirebaseFunctions _functions;
 
   CollectionReference<Map<String, dynamic>> get _col =>
       _db.collection('notifications');
@@ -19,9 +28,10 @@ class NotificationService {
   Future<void> sendBroadcast(
     NotificationModel notification,
   ) async {
-    await _col.add(
-      notification.toJson(),
-    );
+    await _functions.httpsCallable('sendBroadcastNotification').call({
+      'title': notification.title,
+      'message': notification.message,
+    });
   }
 
   Future<void> scheduleBroadcast(
@@ -33,6 +43,9 @@ class NotificationService {
     data['scheduled_at'] = Timestamp.fromDate(scheduledAt);
     data['scheduled'] = true;
     data['sent_at'] = null;
+    data['delivery_status'] = 'scheduled';
+    data['delivery_attempts'] = 0;
+    data['source'] = 'admin';
 
     await _col.add(data);
   }

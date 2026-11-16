@@ -29,6 +29,7 @@ const rewardConfig = require("../rewards/config");
 const { readStoredRewardConfiguration } = require("../rewards/configuration");
 const { computeEarnPoints } = require("../rewards/earnOnDelivery");
 const { generateOrderId } = require("./orderId");
+const { getExtraScope, isExtraProduct } = require("./extraItems");
 
 // Admin is initialized in the main index entrypoint.
 const db = admin.firestore();
@@ -57,13 +58,27 @@ function isLateNight(now, startStr, endStr) {
 }
 
 function getPriceForSize(product, sizeName) {
-  if (!sizeName || !Array.isArray(product.sizes) || product.sizes.length === 0) {
+  if (!sizeName) {
     return Number(product.price) || 0;
   }
-  const found = product.sizes.find(
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+  const found = sizes.find(
     (s) => s.name && s.name.toString().trim() === sizeName.toString().trim()
   );
-  return found ? Number(found.price) || 0 : Number(product.price) || 0;
+  if (!found) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      `${product.name || "This item"} does not have the selected size.`
+    );
+  }
+  const price = Number(found.price);
+  if (!Number.isFinite(price) || price < 0) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      `${product.name || "This item"} has an invalid configured price.`
+    );
+  }
+  return price;
 }
 
 /**
@@ -127,11 +142,19 @@ function allocateRewardSubtotals(
 }
 
 function planCartConsumption(cartDocuments, orderItems) {
-  const lineKey = (productId, size) =>
-    `${String(productId || "").trim()}\u0000${String(size || "").trim()}`;
+  const lineKey = (productId, size, extraForProductId) =>
+    [
+      String(productId || "").trim(),
+      String(size || "").trim(),
+      String(extraForProductId || "").trim(),
+    ].join("\u0000");
   const orderedQuantities = new Map();
   for (const item of orderItems) {
-    const key = lineKey(item.product_id, item.size);
+    const key = lineKey(
+      item.product_id,
+      item.size,
+      item.extra_for_product_id
+    );
     const quantity = Math.max(0, Math.floor(Number(item.quantity) || 0));
     if (key.startsWith("\u0000") || quantity === 0) continue;
     orderedQuantities.set(key, (orderedQuantities.get(key) || 0) + quantity);
@@ -147,7 +170,8 @@ function planCartConsumption(cartDocuments, orderItems) {
       cartItem.product_id || (cartItem.product && cartItem.product.id);
     const key = lineKey(
       productId,
-      cartItem.selected_size || cartItem.size
+      cartItem.selected_size || cartItem.size,
+      cartItem.extra_for_product_id
     );
     const orderedQuantity = orderedQuantities.get(key) || 0;
     if (orderedQuantity === 0) continue;
@@ -425,6 +449,7 @@ exports.createUserOrder = functions
     let itemTotal = 0;
     const orderItems = [];
     const productCategories = new Map();
+    const productsById = new Map();
 
     for (const line of items) {
       const productId = (line.product_id || line.menu_item_id || "")
@@ -434,10 +459,10 @@ exports.createUserOrder = functions
       const size = line.size || line.selected_size || null;
       const notes = (line.notes || "").toString().trim() || null;
 
-      if (!productId || quantity <= 0) {
+      if (!productId || !Number.isInteger(quantity) || quantity <= 0) {
         throw new functions.https.HttpsError(
           "invalid-argument",
-          "Every item must have a valid product_id and quantity > 0."
+          "Every item must have a valid product_id and positive integer quantity."
         );
       }
 
@@ -450,6 +475,8 @@ exports.createUserOrder = functions
       }
 
       const product = productSnap.data() || {};
+      product.id = productId;
+      productsById.set(productId, product);
       productCategories.set(productId, {
         id: (
           product.primary_category_id ||
@@ -484,9 +511,10 @@ exports.createUserOrder = functions
         size: size || null,
         notes,
         spice_level: line.spice_level || line.spiceLevel || null,
-        add_ons: Array.isArray(line.add_ons || line.addOns)
-          ? line.add_ons || line.addOns
-          : [],
+        add_ons: [],
+        is_extra: false,
+        requested_extra_for_product_id:
+          (line.extra_for_product_id || "").toString().trim() || null,
         // for subcategory-scoped offers
         sub_category_id: (
           product.sub_category_id ||
@@ -504,6 +532,95 @@ exports.createUserOrder = functions
           .toString()
           .trim(),
       });
+    }
+
+    const categoryIds = new Set(
+      [...productCategories.values()].map((category) => category.id).filter(Boolean)
+    );
+    const categorySnapshots = await Promise.all(
+      [...categoryIds].map((categoryId) =>
+        db.collection("menu_categories").doc(categoryId).get()
+      )
+    );
+    const categoriesById = new Map(
+      categorySnapshots
+        .filter((snapshot) => snapshot.exists)
+        .map((snapshot) => [snapshot.id, snapshot.data() || {}])
+    );
+
+    for (const item of orderItems) {
+      const product = productsById.get(item.product_id);
+      const baseProductId = item.requested_extra_for_product_id;
+      if (!baseProductId) {
+        const isMappedExtra = orderItems.some((candidate) => {
+          if (
+            candidate === item ||
+            candidate.requested_extra_for_product_id
+          ) {
+            return false;
+          }
+          const baseProduct = productsById.get(candidate.product_id);
+          if (!baseProduct || isExtraProduct(baseProduct)) return false;
+          const categoryId = (
+            baseProduct.primary_category_id ||
+            baseProduct.primaryCategoryId ||
+            ""
+          )
+            .toString()
+            .trim();
+          return !!getExtraScope({
+            baseProduct,
+            extraProduct: product,
+            category: categoriesById.get(categoryId),
+          });
+        });
+        if (isExtraProduct(product) || isMappedExtra) {
+          throw new functions.https.HttpsError(
+            "failed-precondition",
+            `${product.name || "Extra"} must be added from its ` +
+              "related cart item."
+          );
+        }
+        delete item.requested_extra_for_product_id;
+        continue;
+      }
+
+      const baseProduct = productsById.get(baseProductId);
+      if (
+        !baseProduct ||
+        baseProductId === item.product_id ||
+        isExtraProduct(baseProduct)
+      ) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "An extra must be linked to a regular item in the same order."
+        );
+      }
+      const categoryId = (
+        baseProduct.primary_category_id ||
+        baseProduct.primaryCategoryId ||
+        ""
+      )
+        .toString()
+        .trim();
+      const scope = getExtraScope({
+        baseProduct,
+        extraProduct: product,
+        category: categoriesById.get(categoryId),
+      });
+      if (!scope) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          `${product.name || "This extra"} is not available for ` +
+            `${baseProduct.name || "that item"}.`
+        );
+      }
+
+      item.is_extra = true;
+      item.extra_for_product_id = baseProductId;
+      item.extra_for_product_name = baseProduct.name || "";
+      item.extra_scope = scope;
+      delete item.requested_extra_for_product_id;
     }
 
     // 4. Discount — Coupon OR Offer, never both. Fully server-validated.
@@ -1193,6 +1310,7 @@ exports.createUserOrder = functions
 
 exports._private = {
   allocateRewardSubtotals,
+  getPriceForSize,
   planCartConsumption,
   createOrderRequestHash,
   orderRequestDocumentId,

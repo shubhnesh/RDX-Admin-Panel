@@ -1,6 +1,5 @@
 /**
- * Award legacy reward coins for delivered orders created before placement-time
- * earning was introduced.
+ * Award reward points for delivered + paid app orders.
  *
  * SECURITY / FAIR USE:
  * - Only runs from trusted code (updateOrderStatus CF, settleOrder, or
@@ -10,15 +9,16 @@
  * - Only order_source === "app" orders earn points.
  * - Re-reads the order status transactionally and requires delivered + paid.
  * - Wallet + ledger updated in one transaction.
- * - Fixed random bands (see config.js):
- *     total < 500  → 1–4 points
- *     total ≥ 500  → 5–9 points
+ * - Earning uses admin-configured price bands on discounted item subtotal
+ *   (after coupon, before tax/fees). Up to 5 bands; each band is either a
+ *   fixed point amount or a random range (inclusive).
  */
 
 "use strict";
 
 const admin = require("firebase-admin");
 const config = require("./config");
+const { readStoredRewardConfiguration } = require("./configuration");
 
 const db = admin.firestore();
 
@@ -34,29 +34,112 @@ function randomInt(min, max) {
 
 /**
  * Discounted item subtotal used for earning (coupon already applied).
- * Never trusts client-supplied totals.
+ * Never trusts client-supplied totals. Excludes tax, delivery, and fees.
  */
 function eligibleOrderTotal(order) {
   if (!order || typeof order !== "object") return 0;
   const itemTotal = Number(order.item_total ?? order.total) || 0;
   const couponDiscount = Math.max(0, Number(order.coupon_discount) || 0);
-  return Math.max(0, itemTotal - couponDiscount);
+  const rewardDiscount = Math.max(0, Number(order.reward_discount) || 0);
+  return Math.max(0, itemTotal - couponDiscount - rewardDiscount);
 }
 
 /**
- * Calculate points from configured earning rules when supplied; legacy
- * delivered orders retain the original fixed-band policy.
+ * Normalize bands from stored admin config or legacy static config.
+ * Returns array of { minTotal, maxTotal|null, pointsMode, minPts, maxPts, fixedPts }.
+ */
+function resolveBands(earningConfiguration) {
+  const earning =
+    earningConfiguration && typeof earningConfiguration === "object"
+      ? earningConfiguration.earning || earningConfiguration
+      : null;
+
+  if (earning && Array.isArray(earning.bands) && earning.bands.length > 0) {
+    return earning.bands
+      .map((band) => {
+        if (!band || typeof band !== "object") return null;
+        const minTotal = Math.max(0, Number(band.minTotal) || 0);
+        const maxRaw = band.maxTotal;
+        const maxTotal =
+          maxRaw == null || maxRaw === ""
+            ? null
+            : Math.max(minTotal, Number(maxRaw) || minTotal);
+        const pointsMode =
+          String(band.pointsMode || "").toLowerCase() === "fixed"
+            ? "fixed"
+            : "range";
+        const fixedPts = Math.max(0, Math.floor(Number(band.fixedPts) || 0));
+        const minPts = Math.max(0, Math.floor(Number(band.minPts) || 0));
+        const maxPts = Math.max(
+          minPts,
+          Math.floor(Number(band.maxPts) || minPts)
+        );
+        return {
+          minTotal,
+          maxTotal,
+          pointsMode,
+          minPts,
+          maxPts,
+          fixedPts,
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 5);
+  }
+
+  // Legacy static bands from config.js (earn.bands)
+  const legacy = Array.isArray(config.earn?.bands) ? config.earn.bands : [];
+  return legacy
+    .map((band) => {
+      const minTotal = Math.max(0, Number(band.minTotal) || 0);
+      const maxRaw = band.maxTotal;
+      const maxTotal =
+        maxRaw == null || maxRaw === ""
+          ? null
+          : Math.max(minTotal, Number(maxRaw) || minTotal);
+      const minPts = Math.max(0, Math.floor(Number(band.minPts) || 0));
+      const maxPts = Math.max(minPts, Math.floor(Number(band.maxPts) || minPts));
+      return {
+        minTotal,
+        maxTotal,
+        pointsMode: minPts === maxPts ? "fixed" : "range",
+        minPts,
+        maxPts,
+        fixedPts: minPts,
+      };
+    })
+    .slice(0, 5);
+}
+
+/**
+ * Points for a matching band.
+ */
+function pointsForBand(band) {
+  if (!band) return 0;
+  if (band.pointsMode === "fixed") {
+    return Math.max(0, Math.floor(Number(band.fixedPts) || 0));
+  }
+  const minPts = Math.max(0, Math.floor(Number(band.minPts) || 0));
+  const maxPts = Math.max(minPts, Math.floor(Number(band.maxPts) || minPts));
+  return randomInt(minPts, maxPts);
+}
+
+/**
+ * Calculate points from admin price bands (or legacy static bands).
+ * Order amount = discounted item subtotal (excludes tax / delivery / fees).
  */
 function computeEarnPoints(orderOrTotal, earningConfiguration) {
-  const configured = earningConfiguration &&
-    typeof earningConfiguration === "object";
+  const configured =
+    earningConfiguration && typeof earningConfiguration === "object";
   if (configured && earningConfiguration.enabled === false) return 0;
   if (!configured && !config.enabled) return 0;
+
   if (
     typeof orderOrTotal === "object" &&
     orderOrTotal &&
     Number(orderOrTotal.reward_points_used) > 0
   ) {
+    // Orders that redeemed points do not earn on the same order (existing policy).
     return 0;
   }
 
@@ -67,105 +150,31 @@ function computeEarnPoints(orderOrTotal, earningConfiguration) {
 
   if (configured) {
     const earning = earningConfiguration.earning || {};
-    const minimumOrderValuePaise =
-      Math.max(0, Number(earning.minimumOrderValuePaise) || 0);
-    if (total * 100 < minimumOrderValuePaise) return 0;
-
-    const percentageBps = Math.max(0, Number(earning.percentageBps) || 0);
-    const pointsPerRupee = Math.max(
+    const minimumOrderValuePaise = Math.max(
       0,
-      Number(earning.pointsPerRupee ?? 1) || 0
+      Number(earning.minimumOrderValuePaise) || 0
     );
-    const itemRules = new Map(
-      (Array.isArray(earning.itemRules) ? earning.itemRules : [])
-        .map((rule) => [String(rule.menuItemId || ""), rule])
-        .filter(([id]) => id)
-    );
-    const order = typeof orderOrTotal === "object" && orderOrTotal
-      ? orderOrTotal
-      : null;
-    const items = Array.isArray(order?.items) ? order.items : [];
-    if (items.length === 0) {
-      return Math.max(
-        0,
-        Math.round(
-          calculateConfiguredItemPoints(
-            total,
-            earning.mode,
-            percentageBps,
-            pointsPerRupee
-          )
-        )
-      );
-    }
-
-    const itemTotal = items.reduce(
-      (sum, item) =>
-        sum + Math.max(0, Number(item.price) || 0) *
-          Math.max(0, Number(item.quantity) || 0),
-      0
-    );
-    const unallocatedDiscount = Math.max(0, itemTotal - total);
-    const rawPoints = items.reduce((sum, item) => {
-      const lineTotal =
-        Math.max(0, Number(item.price) || 0) *
-        Math.max(0, Number(item.quantity) || 0);
-      const eligibleSubtotal = Number.isFinite(
-        Number(item.reward_eligible_subtotal)
-      )
-        ? Math.max(0, Number(item.reward_eligible_subtotal))
-        : Math.max(
-          0,
-          lineTotal -
-            (itemTotal > 0 ? unallocatedDiscount * lineTotal / itemTotal : 0)
-        );
-      const rule = itemRules.get(String(item.product_id || ""));
-      return sum + calculateConfiguredItemPoints(
-        eligibleSubtotal,
-        rule?.mode || earning.mode,
-        Number(rule?.percentageBps ?? percentageBps) || 0,
-        Number(rule?.pointsPerRupee ?? pointsPerRupee) || 0
-      );
-    }, 0);
-    return Math.max(0, Math.round(rawPoints));
+    if (total * 100 < minimumOrderValuePaise) return 0;
+  } else {
+    const minOrderTotal = Number(config.earn?.minOrderTotal) || 0;
+    if (total < minOrderTotal) return 0;
   }
 
-  const bands = Array.isArray(config.earn?.bands) ? config.earn.bands : [];
-  const minOrderTotal = Number(config.earn?.minOrderTotal) || 0;
-  if (total < minOrderTotal) return 0;
-
+  const bands = resolveBands(earningConfiguration);
   for (const band of bands) {
-    const minT = Number(band.minTotal) || 0;
-    const maxT =
-      band.maxTotal == null || band.maxTotal === ""
-        ? null
-        : Number(band.maxTotal);
-    if (total < minT) continue;
-    if (maxT != null && total > maxT) continue;
-
-    const minPts = Math.max(0, Math.floor(Number(band.minPts) || 0));
-    const maxPts = Math.max(minPts, Math.floor(Number(band.maxPts) || minPts));
-    return randomInt(minPts, maxPts);
+    if (total < band.minTotal) continue;
+    if (band.maxTotal != null && total > band.maxTotal) continue;
+    return pointsForBand(band);
   }
 
   return 0;
 }
 
-function calculateConfiguredItemPoints(
-  subtotal,
-  mode,
-  percentageBps,
-  pointsPerRupee
-) {
-  if (mode === "fixedRate") return subtotal * pointsPerRupee;
-  return subtotal * percentageBps / 10000 * pointsPerRupee;
-}
-
 /**
- * Award points for a legacy delivered app order. Safe to call multiple times.
+ * Award points for a delivered app order. Safe to call multiple times.
  *
  * @param {string} orderId
- * @param {object} orderData - Firestore order document data
+ * @param {object} orderData - Firestore order document data (unused; re-read in tx)
  * @param {string} [awardedBy] - staff uid or "system"
  * @returns {Promise<{ awarded: boolean, points: number, reason?: string, balance?: number }>}
  */
@@ -174,12 +183,24 @@ async function awardPointsForDeliveredOrder(
   orderData,
   awardedBy = "system"
 ) {
-  if (!config.enabled) {
-    return { awarded: false, points: 0, reason: "rewards_disabled" };
-  }
-
   if (!orderId) {
     return { awarded: false, points: 0, reason: "invalid_order" };
+  }
+
+  let storedConfiguration = null;
+  try {
+    storedConfiguration = await readStoredRewardConfiguration();
+  } catch (_) {
+    storedConfiguration = null;
+  }
+
+  const rewardsEnabled =
+    storedConfiguration == null
+      ? config.enabled !== false
+      : storedConfiguration.enabled === true;
+
+  if (!rewardsEnabled) {
+    return { awarded: false, points: 0, reason: "rewards_disabled" };
   }
 
   const ledgerId = `earn_${orderId}`;
@@ -227,7 +248,7 @@ async function awardPointsForDeliveredOrder(
       };
     }
 
-    const points = computeEarnPoints(order);
+    const points = computeEarnPoints(order, storedConfiguration);
     if (points <= 0) {
       return { awarded: false, points: 0, reason: "below_threshold" };
     }
@@ -285,4 +306,6 @@ module.exports = {
   computeEarnPoints,
   eligibleOrderTotal,
   randomInt,
+  resolveBands,
+  pointsForBand,
 };

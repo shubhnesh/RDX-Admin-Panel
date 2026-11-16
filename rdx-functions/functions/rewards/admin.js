@@ -19,12 +19,27 @@ const MAX_SCAN_BATCHES = 5;
 const DEFAULT_CONFIG = {
   enabled: true,
   earning: {
-    mode: "percentage",
-    percentageBps: 100,
-    pointsPerRupee: 1,
+    mode: "bands",
     eligibleSubtotalBasis: "afterDiscountBeforeTax",
-    minimumOrderValuePaise: 5000,
-    itemRules: [],
+    minimumOrderValuePaise: 0,
+    bands: [
+      {
+        minTotal: 0,
+        maxTotal: 499.99,
+        pointsMode: "range",
+        minPts: 1,
+        maxPts: 4,
+        fixedPts: 0,
+      },
+      {
+        minTotal: 500,
+        maxTotal: null,
+        pointsMode: "range",
+        minPts: 5,
+        maxPts: 9,
+        fixedPts: 0,
+      },
+    ],
   },
   redemption: {
     pointsPerRupee: 1,
@@ -75,48 +90,99 @@ function optionalDate(value, label) {
   return new Date(value).toISOString();
 }
 
-function normalizeItemRules(value) {
+function normalizeBands(value) {
   if (value == null) return [];
-  if (!Array.isArray(value) || value.length > 500) {
+  if (!Array.isArray(value)) {
+    fail("invalid-argument", "config.earning.bands must be a list.");
+  }
+  if (value.length > 5) {
     fail(
       "invalid-argument",
-      "config.earning.itemRules must be a list of at most 500 rules."
+      "config.earning.bands may contain at most 5 price ranges."
     );
   }
-  const seen = new Set();
-  return value.map((rule, index) => {
-    asObject(rule, `config.earning.itemRules[${index}]`);
-    const menuItemId = typeof rule.menuItemId === "string"
-      ? rule.menuItemId.trim()
-      : "";
-    if (!menuItemId || menuItemId.length > 150 || seen.has(menuItemId)) {
+
+  const bands = value.map((band, index) => {
+    asObject(band, `config.earning.bands[${index}]`);
+    const minTotal = Number(band.minTotal);
+    if (!Number.isFinite(minTotal) || minTotal < 0) {
       fail(
         "invalid-argument",
-        `config.earning.itemRules[${index}].menuItemId must be unique and non-empty.`
+        `config.earning.bands[${index}].minTotal must be a number >= 0.`
       );
     }
-    if (!["percentage", "fixedRate"].includes(rule.mode)) {
-      fail(
-        "invalid-argument",
-        `config.earning.itemRules[${index}].mode is not supported.`
-      );
+    let maxTotal = null;
+    if (band.maxTotal != null && band.maxTotal !== "") {
+      const parsedMax = Number(band.maxTotal);
+      if (!Number.isFinite(parsedMax) || parsedMax < minTotal) {
+        fail(
+          "invalid-argument",
+          `config.earning.bands[${index}].maxTotal must be >= minTotal or null.`
+        );
+      }
+      maxTotal = parsedMax;
     }
-    seen.add(menuItemId);
-    return {
-      menuItemId,
-      mode: rule.mode,
-      percentageBps: requiredInteger(
-        rule.percentageBps,
-        `config.earning.itemRules[${index}].percentageBps`,
+    const pointsMode =
+      String(band.pointsMode || "").toLowerCase() === "fixed"
+        ? "fixed"
+        : "range";
+    if (pointsMode === "fixed") {
+      const fixedPts = requiredInteger(
+        Number(band.fixedPts),
+        `config.earning.bands[${index}].fixedPts`,
         0,
-        10000
-      ),
-      pointsPerRupee: requiredInteger(
-        rule.pointsPerRupee,
-        `config.earning.itemRules[${index}].pointsPerRupee`
-      ),
+        1000000
+      );
+      return {
+        minTotal,
+        maxTotal,
+        pointsMode,
+        minPts: fixedPts,
+        maxPts: fixedPts,
+        fixedPts,
+      };
+    }
+    const minPts = requiredInteger(
+      Number(band.minPts),
+      `config.earning.bands[${index}].minPts`,
+      0,
+      1000000
+    );
+    const maxPts = requiredInteger(
+      Number(band.maxPts),
+      `config.earning.bands[${index}].maxPts`,
+      minPts,
+      1000000
+    );
+    return {
+      minTotal,
+      maxTotal,
+      pointsMode,
+      minPts,
+      maxPts,
+      fixedPts: minPts,
     };
   });
+
+  // Ensure non-overlapping ranges (sorted by minTotal).
+  const sorted = [...bands].sort((a, b) => a.minTotal - b.minTotal);
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    if (prev.maxTotal == null) {
+      fail(
+        "invalid-argument",
+        "Only the last price range may be open-ended (no max)."
+      );
+    }
+    if (curr.minTotal <= prev.maxTotal) {
+      fail(
+        "invalid-argument",
+        "Price ranges must not overlap. Adjust min/max totals."
+      );
+    }
+  }
+  return sorted;
 }
 
 function normalizeConfiguration(value) {
@@ -127,10 +193,19 @@ function normalizeConfiguration(value) {
   if (typeof config.enabled !== "boolean") {
     fail("invalid-argument", "config.enabled must be a boolean.");
   }
-  if (!["percentage", "fixedRate"].includes(earning.mode)) {
+  // Earning is always band-based on order price (ex-tax).
+  if (
+    earning.mode != null &&
+    earning.mode !== "bands" &&
+    earning.mode !== "percentage" &&
+    earning.mode !== "fixedRate"
+  ) {
     fail("invalid-argument", "config.earning.mode is not supported.");
   }
-  if (earning.eligibleSubtotalBasis !== "afterDiscountBeforeTax") {
+  if (
+    earning.eligibleSubtotalBasis != null &&
+    earning.eligibleSubtotalBasis !== "afterDiscountBeforeTax"
+  ) {
     fail(
       "invalid-argument",
       "config.earning.eligibleSubtotalBasis must be afterDiscountBeforeTax."
@@ -165,23 +240,13 @@ function normalizeConfiguration(value) {
   return {
     enabled: config.enabled,
     earning: {
-      mode: earning.mode,
-      percentageBps: requiredInteger(
-        earning.percentageBps,
-        "earning.percentageBps",
-        0,
-        10000
-      ),
-      pointsPerRupee: requiredInteger(
-        earning.pointsPerRupee,
-        "earning.pointsPerRupee"
-      ),
-      eligibleSubtotalBasis: earning.eligibleSubtotalBasis,
+      mode: "bands",
+      eligibleSubtotalBasis: "afterDiscountBeforeTax",
       minimumOrderValuePaise: requiredInteger(
-        earning.minimumOrderValuePaise,
+        Number(earning.minimumOrderValuePaise) || 0,
         "earning.minimumOrderValuePaise"
       ),
-      itemRules: normalizeItemRules(earning.itemRules),
+      bands: normalizeBands(earning.bands),
     },
     redemption: {
       pointsPerRupee: requiredInteger(
@@ -624,6 +689,6 @@ exports._private = {
   mapReferral,
   mapRedemption,
   normalizeConfiguration,
-  normalizeItemRules,
+  normalizeBands,
   validPageSize,
 };

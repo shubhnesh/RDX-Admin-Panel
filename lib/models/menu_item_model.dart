@@ -52,7 +52,9 @@ class MenuItemModel {
   /// Optional "served with" target: this item is a side/dip preferred with
   /// the selected category, subcategory, or specific menu item.
   /// Empty category id means not used. Subcategory/item may be `__all__`
-  /// to mean every item under the parent selection.
+  /// to mean every item under the parent selection. When multiple levels are
+  /// selected, consumers should use the most specific target: item, then
+  /// subcategory, then category.
   final String servedWithCategoryId;
   final String servedWithCategory;
   final String servedWithSubcategoryId;

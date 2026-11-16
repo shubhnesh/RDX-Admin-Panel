@@ -198,6 +198,30 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
     );
   }
 
+  String _servedWithFocusMessage(List<MenuItemModel> itemOptions) {
+    if (_servedWithCategory == _kServedWithNone) return '';
+
+    if (_servedWithItem != _kServedWithNone &&
+        _servedWithItem != _kServedWithAll) {
+      final itemName = _servedWithItemLabel(_servedWithItem, itemOptions);
+      return 'Final focus: $itemName (item). Category and subcategory only '
+          'identify its parents.';
+    }
+
+    if (_servedWithSubcategory != _kServedWithNone &&
+        _servedWithSubcategory != _kServedWithAll) {
+      final subcategoryName =
+          _servedWithSubcategoryLabel(_servedWithSubcategory);
+      final categoryName = _servedWithCategoryLabel(_servedWithCategory);
+      return 'Final focus: $subcategoryName (subcategory). Applies to items '
+          'in this subcategory; $categoryName only identifies its parent.';
+    }
+
+    final categoryName = _servedWithCategoryLabel(_servedWithCategory);
+    return 'Final focus: $categoryName (category). Applies to all items in '
+        'this category.';
+  }
+
   /// Case-insensitive alphabetical sort for named entities.
   List<T> _sortedByName<T>(
     Iterable<T> items,
@@ -1597,6 +1621,18 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                     subcategoryDropdown,
                     SizedBox(height: context.h(14)),
                     itemDropdown,
+                    if (_servedWithCategory != _kServedWithNone) ...[
+                      SizedBox(height: context.h(10)),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _servedWithFocusMessage(itemOptions),
+                          style: AppTextStyles.bodyTertiary(context).copyWith(
+                            color: colors.textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 );
               }),

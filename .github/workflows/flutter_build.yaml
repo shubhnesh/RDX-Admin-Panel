@@ -1,0 +1,130 @@
+
+name: Flutter Chrome Build
+
+on:
+  push:
+    branches:
+      - '**'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+# Cancel outdated builds on the same branch
+concurrency:
+  group: flutter-web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Flutter Web
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # 2. Setup Flutter SDK and cache
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.3'
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      # 3. Install dependencies
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # 4. Build optimized release web
+      - name: Build Release Web
+        run: flutter build web --release --no-pub
+
+      # 5. Compress web build
+      - name: Prepare Web Build ZIP
+        run: |
+          cd build
+          zip -qr web-build.zip web
+
+      # 6. Prepare release details
+      - name: Prepare Release Details
+        id: release
+        run: |
+          BRANCH_NAME="${GITHUB_REF_NAME//\//-}"
+
+          echo "tag=web-${BRANCH_NAME}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "name=RDX-WEB-${BRANCH_NAME}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      # 7. Upload Web Build to GitHub Release
+      - name: Upload Web Build to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          name: ${{ steps.release.outputs.name }}
+          files: build/web-build.zip
+          make_latest: false
+          fail_on_unmatched_files: true
+
+      # 8. Telegram success notification
+      - name: Send Web Download Link to Telegram
+        if: success()
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+          COMMIT: ${{ github.sha }}
+          WEB_URL: https://github.com/${{ github.repository }}/releases/download/${{ steps.release.outputs.tag }}/web-build.zip
+        run: |
+          CAPTION="✅ RDX Chrome Web Build Successful
+
+          Branch: ${BRANCH}
+          Build: #${RUN_NUMBER}
+          Commit: ${COMMIT:0:7}
+
+          🌐 Platform: Chrome / Web
+
+          📥 Download Web Build:
+          ${WEB_URL}"
+
+          RESPONSE=$(curl -sS -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=${CAPTION}")
+
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q '"ok":true' || exit 1
+
+      # 9. Telegram failure notification
+      - name: Notify Telegram on Failure
+        if: ${{ failure() }}
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+          COMMIT: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          MESSAGE="❌ RDX Chrome Web Build Failed
+
+          Branch: ${BRANCH}
+          Build: #${RUN_NUMBER}
+          Commit: ${COMMIT:0:7}
+
+          🔍 View Build Logs:
+          ${RUN_URL}"
+
+          RESPONSE=$(curl -sS --retry 3 --retry-delay 2 \
+            -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}")
+
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q '"ok":true' || exit 1

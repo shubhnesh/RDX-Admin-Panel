@@ -166,8 +166,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       message: 'Are you sure you want to log out?',
       cancelButtonLabel: 'Cancel',
       confirmButtonLabel: 'Log out',
-      confirmButtonColor: const Color(0xFFE05151),
-      useTextButtonActions: true,
     );
     if (confirmed != true || !mounted) return;
 

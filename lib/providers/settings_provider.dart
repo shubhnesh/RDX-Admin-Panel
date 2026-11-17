@@ -191,6 +191,13 @@ class SettingsProvider extends ChangeNotifier {
         deliveryFee = (fees['delivery_fee'] as num?)?.toDouble() ?? 0;
         freeDeliveryAbove =
             (fees['free_delivery_above'] as num?)?.toDouble() ?? 0;
+        // Fee-section toggles live on settings/fees (source of truth for orders).
+        if (fees.containsKey('late_night_delivery')) {
+          lateNightDelivery = fees['late_night_delivery'] == true;
+        }
+        if (fees.containsKey('long_distance_delivery')) {
+          longDistanceDelivery = fees['long_distance_delivery'] == true;
+        }
       }
       _log(
         'Settings load completed (restaurant document: ${d != null}, '
@@ -246,24 +253,34 @@ class SettingsProvider extends ChangeNotifier {
     _log('Late-night delivery toggle requested: $value.');
     final previous = lateNightDelivery;
     lateNightDelivery = value;
+    errorMessage = null;
     notifyListeners();
-    await _persistToggle(
-      field: 'late_night_delivery',
-      value: value,
-      rollback: () => lateNightDelivery = previous,
-    );
+    try {
+      await _service.setFeeToggle('late_night_delivery', value);
+      _log('Late-night delivery toggle completed.');
+    } catch (error) {
+      _logFailure('Late-night delivery toggle', error);
+      lateNightDelivery = previous;
+      errorMessage = 'Failed to update late-night delivery.';
+      notifyListeners();
+    }
   }
 
   Future<void> toggleLongDistanceDelivery(bool value) async {
     _log('Long-distance delivery toggle requested: $value.');
     final previous = longDistanceDelivery;
     longDistanceDelivery = value;
+    errorMessage = null;
     notifyListeners();
-    await _persistToggle(
-      field: 'long_distance_delivery',
-      value: value,
-      rollback: () => longDistanceDelivery = previous,
-    );
+    try {
+      await _service.setFeeToggle('long_distance_delivery', value);
+      _log('Long-distance delivery toggle completed.');
+    } catch (error) {
+      _logFailure('Long-distance delivery toggle', error);
+      longDistanceDelivery = previous;
+      errorMessage = 'Failed to update long-distance delivery.';
+      notifyListeners();
+    }
   }
 
   Future<void> toggleOrderFees(bool value) async {
@@ -327,6 +344,8 @@ class SettingsProvider extends ChangeNotifier {
         'long_distance_fee': longDistanceFee,
         'delivery_fee': deliveryFee,
         'free_delivery_above': freeDeliveryAbove,
+        'late_night_delivery': lateNightDelivery,
+        'long_distance_delivery': longDistanceDelivery,
       });
       this.gstPercent = gstPercent;
       this.lateNightFee = lateNightFee;

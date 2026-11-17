@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/providers/live_orders_provider.dart';
 import 'package:rdx_admin/screens/order/bill_settlement_screen.dart';
-
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
@@ -1050,8 +1049,7 @@ class _TerminateAction extends ConsumerWidget {
           'shown under the Cancelled tab. This cannot be undone.',
       cancelButtonLabel: 'Keep order',
       confirmButtonLabel: 'Terminate',
-      confirmButtonColor: const Color(0xFFE05151),
-    );
+);
 
     if (confirmed != true) return;
 

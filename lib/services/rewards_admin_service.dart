@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
-import '../models/rewards_admin_models.dart';
+import '../models/rewards_admin_model.dart';
 
 class RewardReconciliationResult {
   const RewardReconciliationResult({

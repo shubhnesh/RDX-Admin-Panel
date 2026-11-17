@@ -2,19 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 
-import '../buttons/rdx_action_button.dart';
-
 /// Simple notice / validation dialog with a title, message, and OK action.
 ///
 /// Prefer [RdxNoticeDialog.show] so callers don't need to build the widget.
+/// All action buttons use the theme primary (orange) color.
 class RdxNoticeDialog extends StatelessWidget {
   final String title;
   final String message;
   final String buttonLabel;
   final String? cancelButtonLabel;
   final String? confirmButtonLabel;
-  final Color? confirmButtonColor;
-  final bool useTextButtonActions;
 
   const RdxNoticeDialog({
     super.key,
@@ -23,8 +20,6 @@ class RdxNoticeDialog extends StatelessWidget {
     this.buttonLabel = 'OK',
     this.cancelButtonLabel,
     this.confirmButtonLabel,
-    this.confirmButtonColor,
-    this.useTextButtonActions = false,
   });
 
   /// Shows a notice dialog and completes when the user dismisses it.
@@ -51,8 +46,6 @@ class RdxNoticeDialog extends StatelessWidget {
     required String message,
     String cancelButtonLabel = 'Cancel',
     String confirmButtonLabel = 'Confirm',
-    Color? confirmButtonColor,
-    bool useTextButtonActions = false,
   }) {
     return showDialog<bool>(
       context: context,
@@ -61,8 +54,6 @@ class RdxNoticeDialog extends StatelessWidget {
         message: message,
         cancelButtonLabel: cancelButtonLabel,
         confirmButtonLabel: confirmButtonLabel,
-        confirmButtonColor: confirmButtonColor,
-        useTextButtonActions: useTextButtonActions,
       ),
     );
   }
@@ -88,53 +79,44 @@ class RdxNoticeDialog extends StatelessWidget {
           color: colors.textSecondary,
         ),
       ),
+      // One shared style: every TextButton in the actions uses theme orange.
       actions: [
-        if (confirmButtonLabel != null) ...[
-          if (useTextButtonActions) ...[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(
-                cancelButtonLabel ?? 'Cancel',
-                style: AppTextStyles.label(context).copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(
-                confirmButtonLabel!,
-                style: AppTextStyles.label(context).copyWith(
-                  color: confirmButtonColor ?? AppColors.primary,
-                ),
-              ),
-            ),
-          ] else ...[
-            RdxActionButton.discard(
-              height: 36,
-              label: cancelButtonLabel ?? 'Cancel',
-              onPressed: () => Navigator.of(context).pop(false),
-            ),
-            RdxActionButton(
-              height: 36,
-              label: confirmButtonLabel!,
-              onPressed: () => Navigator.of(context).pop(true),
-              backgroundColor: confirmButtonColor ?? AppColors.primary,
-              textColor: Colors.white,
-              iconColor: Colors.white,
-            ),
-          ],
-        ] else
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              buttonLabel,
-              style: AppTextStyles.label(context).copyWith(
-                color: AppColors.primary,
+        Theme(
+          data: Theme.of(context).copyWith(
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                textStyle: AppTextStyles.label(context),
               ),
             ),
           ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: _buildActions(context),
+          ),
+        ),
       ],
     );
+  }
+
+  List<Widget> _buildActions(BuildContext context) {
+    if (confirmButtonLabel != null) {
+      return [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(cancelButtonLabel ?? 'Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(confirmButtonLabel!),
+        ),
+      ];
+    }
+    return [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(buttonLabel),
+      ),
+    ];
   }
 }

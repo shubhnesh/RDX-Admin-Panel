@@ -156,4 +156,16 @@ class SettingsService {
           'enabled': enabled,
         }),
       );
+
+  /// Toggles late-night or long-distance fee application on settings/fees.
+  ///
+  /// [field] must be `late_night_delivery` or `long_distance_delivery`.
+  Future<void> setFeeToggle(String field, bool value) => _logged(
+        'Set fee toggle "$field" to $value',
+        () => _cloudFunctions.httpsCallable('updateOrderFees').call<void>({
+          'action': 'setToggle',
+          'field': field,
+          'value': value,
+        }),
+      );
 }

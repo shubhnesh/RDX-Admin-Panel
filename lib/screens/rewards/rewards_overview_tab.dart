@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
-import 'package:rdx_admin/models/rewards_admin_models.dart';
+import 'package:rdx_admin/models/rewards_admin_model.dart';
 import 'package:rdx_admin/providers/rewards_admin_provider.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/empty_state.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
 
+/// Simple overview: key numbers + short how-to + recent activity.
 class RewardsOverviewTab extends StatelessWidget {
   const RewardsOverviewTab({
     required this.provider,
@@ -65,103 +66,78 @@ class RewardsOverviewTab extends StatelessWidget {
                         size: context.h(18), color: AppColors.primary),
                     SizedBox(width: context.w(8)),
                     Text(
-                      'How to use rewards',
+                      'Quick guide',
                       style: AppTextStyles.section(context).copyWith(
                         color: AppColors.primaryDark,
                       ),
                     ),
                   ],
                 ),
-                  SizedBox(height: context.h(8)),
-                  Text(
-                    '1. Set and save earning and redemption rules in Configuration. '
-                    'Use the global earning rate for every item, then add an '
-                    'override for selected menu items if needed. Set referral '
-                    'rewards in Referral settings.\n'
-                    '2. Add food items and their point cost in Redemption catalog. '
-                    'A catalog item does not grant points when it is ordered.\n'
-                    '3. Customers earn points on eligible customer orders only '
-                    'after payment is marked paid and the order is marked delivered. '
-                    'The configured rate and minimum order value determine the points. '
-                    'Eligible item discounts are calculated from server-validated order lines.\n'
-                    '4. Transactions, redemptions, and referrals are automatic '
-                    'history records, not records to create manually. Transactions '
-                    'appear after an earn, checkout redemption, or referral bonus. '
-                    'Referral records appear after a customer applies a referral code.\n'
-                    '5. Refresh the customer app wallet after delivery to see the '
-                    'updated balance. Referral customers must apply a code before '
-                    'meeting the configured qualification conditions.',
-                    style: AppTextStyles.caption(context).copyWith(
-                      color: AppColors.of(context).primary,
-                    ),
+                SizedBox(height: context.h(8)),
+                Text(
+                  '1. Open Earning rules → set price bands (e.g. ₹0–499 → 1–4 pts, ₹500+ → 5–9 pts). Use fixed or random range.\n'
+                  '2. Open Referral → set points for the sharer and the new customer.\n'
+                  '3. 1 point always equals ₹1 at checkout — nothing to configure for that.\n'
+                  '4. Customers earn points only on app orders that are paid and delivered. Activity shows every earn, redeem, and referral bonus.',
+                  style: AppTextStyles.caption(context).copyWith(
+                    color: AppColors.of(context).primary,
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
           ),
           SizedBox(height: context.h(16)),
           _MetricGrid(
             items: [
               _Metric(
-                label: 'Lifetime points issued',
+                label: 'Points issued',
                 value: _number(stats.totalPointsIssued),
                 icon: Icons.add_circle_outline,
-                hint: 'All-time credited points',
+                hint: 'All-time credited',
               ),
               _Metric(
-                label: 'Lifetime points redeemed',
+                label: 'Points redeemed',
                 value: _number(stats.totalPointsRedeemed),
                 icon: Icons.redeem,
-                hint: 'All-time redeemed points',
+                hint: 'All-time spent',
               ),
               _Metric(
-                label: 'Outstanding points',
+                label: 'Outstanding',
                 value: _number(stats.outstandingPointsLiability),
                 icon: Icons.account_balance_wallet_outlined,
-                hint: 'Current balance liability',
+                hint: 'Current balances',
               ),
               _Metric(
-                label: 'Users with balances',
+                label: 'Users with balance',
                 value: _number(stats.usersWithBalances),
                 icon: Icons.people_outline,
-                hint: 'Customers with a wallet balance',
+                hint: 'Active wallets',
               ),
               _Metric(
-                label: 'Active reward campaigns',
-                value: _number(stats.activeRewardCampaigns),
-                icon: Icons.campaign_outlined,
-                hint: 'Currently available campaigns',
-              ),
-              _Metric(
-                label: 'Referral points issued',
+                label: 'Referral points',
                 value: _number(stats.totalReferralRewardsIssued),
                 icon: Icons.group_add_outlined,
-                hint: 'Lifetime referral bonuses',
+                hint: 'Referral bonuses',
               ),
               _Metric(
                 label: 'Successful referrals',
                 value: _number(stats.successfulReferrals),
                 icon: Icons.verified_outlined,
-                hint: 'Qualified referrals',
-              ),
-              _Metric(
-                label: 'Redemptions',
-                value: _number(stats.totalRedemptions),
-                icon: Icons.card_giftcard_outlined,
-                hint: 'Lifetime completed redemptions',
+                hint: 'Completed invites',
               ),
             ],
           ),
           SizedBox(height: context.h(20)),
-          Text('Recent reward activity', style: AppTextStyles.section(context)),
+          Text('Recent activity', style: AppTextStyles.section(context)),
           SizedBox(height: context.h(4)),
           Text(
-            'Latest ledger entries, newest first',
+            'Latest ledger entries',
             style: AppTextStyles.caption(context),
           ),
           SizedBox(height: context.h(12)),
           if (provider.transactions.isEmpty)
             const EmptyState(
-              message: 'Reward transactions will appear here when available.',
+              message: 'Activity will appear after the first earn or redemption.',
             )
           else
             _RecentTransactions(
@@ -203,12 +179,12 @@ class _MetricGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.count(
-      crossAxisCount: Responsive.statColumns(context, max: 4),
+      crossAxisCount: Responsive.statColumns(context, max: 3),
       crossAxisSpacing: context.w(12),
       mainAxisSpacing: context.h(12),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: Responsive.isMobile(context) ? 1.65 : 2.25,
+      childAspectRatio: Responsive.isMobile(context) ? 1.65 : 2.2,
       children: [
         for (final item in items) _MetricCard(item: item),
       ],
@@ -257,7 +233,7 @@ class _MetricCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.heading(context).copyWith(
-              fontSize: context.sp(23),
+              fontSize: context.sp(22),
               color: colors.textPrimary,
             ),
           ),
@@ -281,25 +257,25 @@ class _RecentTransactions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: context.h(300),
+        height: context.h(280),
         child: RdxTable(
           columns: const [
-            RdxTableColumn(title: 'User', minWidth: 160),
-            RdxTableColumn(title: 'Type', minWidth: 125),
-            RdxTableColumn(title: 'Points', minWidth: 100),
-            RdxTableColumn(title: 'Order', minWidth: 145),
-            RdxTableColumn(title: 'Created', minWidth: 155),
+            RdxTableColumn(title: 'User', minWidth: 140),
+            RdxTableColumn(title: 'Type', minWidth: 110),
+            RdxTableColumn(title: 'Points', minWidth: 90),
+            RdxTableColumn(title: 'When', minWidth: 140),
           ],
           rows: [
             for (final item in items)
               [
-                _cell(context, item.userId),
+                _cell(context, item.userId.length > 14
+                    ? '${item.userId.substring(0, 8)}…'
+                    : item.userId),
                 _cell(context, _typeName(item.type)),
                 _cell(
                   context,
                   item.points > 0 ? '+${item.points}' : '${item.points}',
                 ),
-                _cell(context, item.orderId ?? '—'),
                 _cell(context, _date(item.createdAt)),
               ],
           ],
@@ -311,7 +287,7 @@ Widget _cell(BuildContext context, String value) => Padding(
       padding: EdgeInsets.symmetric(vertical: context.h(8)),
       child: Text(
         value,
-        maxLines: 2,
+        maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: AppTextStyles.caption(context),
       ),
@@ -320,7 +296,7 @@ Widget _cell(BuildContext context, String value) => Padding(
 String _typeName(RewardTransactionType type) => switch (type) {
       RewardTransactionType.earned => 'Earned',
       RewardTransactionType.redeemed => 'Redeemed',
-      RewardTransactionType.referralBonus => 'Referral bonus',
+      RewardTransactionType.referralBonus => 'Referral',
       RewardTransactionType.reversal => 'Reversal',
       RewardTransactionType.adjustment => 'Adjustment',
     };

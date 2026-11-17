@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/screens/order/checkout_screen.dart';
+import 'package:rdx_admin/widgets/dialogs/rdx_notice_dialog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
@@ -56,43 +57,13 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
       return;
     }
 
-    final discard = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        final colors = AppColors.of(ctx);
-        return AlertDialog(
-          backgroundColor: colors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Text(
-            'Discard cart?',
-            style: AppTextStyles.section(ctx).copyWith(
-              color: colors.textPrimary,
-            ),
-          ),
-          content: Text(
-            'You have items in your cart. Do you want to discard them ?',
-            style: AppTextStyles.bodySecondary(ctx).copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-          actions: [
-            RdxActionButton.discard(
-              height: 36,
-              label: 'No',
-              onPressed: () => Navigator.of(ctx).pop(false),
-            ),
-            RdxActionButton(
-              height: 36,
-              label: 'Yes',
-              onPressed: () => Navigator.of(ctx).pop(true),
-            ),
-          ],
-        );
-      },
-    );
+    final discard = await RdxNoticeDialog.showConfirmation(
+      context,
+      title: 'Discard cart?',
+      message: 'You have items in your cart. Do you want to discard them?',
+      cancelButtonLabel: 'No',
+      confirmButtonLabel: 'Yes',
+);
 
     if (discard == true && mounted) {
       ref.read(cartProvider.notifier).clear();

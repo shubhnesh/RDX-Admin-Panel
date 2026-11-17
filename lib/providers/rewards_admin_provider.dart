@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/menu_item_model.dart';
-import '../models/rewards_admin_models.dart';
+import '../models/rewards_admin_model.dart';
 import '../services/menu_service.dart';
 import '../services/rewards_admin_service.dart';
 

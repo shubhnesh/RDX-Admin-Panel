@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum RewardEarningMode { percentage, fixedRate }
-
 enum RewardTransactionType {
   earned,
   redeemed,
@@ -10,63 +8,102 @@ enum RewardTransactionType {
   adjustment,
 }
 
-class RewardItemEarningRule {
-  const RewardItemEarningRule({
-    required this.menuItemId,
-    required this.mode,
-    required this.percentageBps,
-    required this.pointsPerRupee,
+/// How points are awarded for a single order-price band.
+enum RewardBandPointsMode { range, fixed }
+
+/// One order-price range used to decide how many points an order earns.
+///
+/// [minTotal] / [maxTotal] are in rupees on the discounted item subtotal
+/// (after coupon & reward discount, before tax / delivery). [maxTotal] null
+/// means "and above" (open-ended upper bound).
+class RewardPriceBand {
+  const RewardPriceBand({
+    required this.minTotal,
+    this.maxTotal,
+    required this.pointsMode,
+    required this.minPts,
+    required this.maxPts,
+    required this.fixedPts,
   });
 
-  final String menuItemId;
-  final RewardEarningMode mode;
-  final int percentageBps;
-  final int pointsPerRupee;
+  final double minTotal;
+  final double? maxTotal;
+  final RewardBandPointsMode pointsMode;
+  final int minPts;
+  final int maxPts;
+  final int fixedPts;
 
-  factory RewardItemEarningRule.fromMap(Map<String, dynamic> data) {
-    final mode = _requiredString(data, 'mode');
-    return RewardItemEarningRule(
-      menuItemId: _requiredString(data, 'menuItemId'),
-      mode: switch (mode) {
-        'percentage' => RewardEarningMode.percentage,
-        'fixedRate' => RewardEarningMode.fixedRate,
-        _ => throw FormatException('Unknown item earning mode: $mode'),
-      },
-      percentageBps: _requiredInt(data, 'percentageBps'),
-      pointsPerRupee: _requiredInt(data, 'pointsPerRupee'),
+  factory RewardPriceBand.fromMap(Map<String, dynamic> data) {
+    final modeRaw = (data['pointsMode'] ?? 'range').toString().toLowerCase();
+    final mode = modeRaw == 'fixed'
+        ? RewardBandPointsMode.fixed
+        : RewardBandPointsMode.range;
+    final minTotal = _requiredDouble(data, 'minTotal');
+    final maxTotal = _optionalDouble(data, 'maxTotal');
+    final fixedPts = _optionalInt(data, 'fixedPts') ?? 0;
+    final minPts = _optionalInt(data, 'minPts') ?? fixedPts;
+    final maxPts = _optionalInt(data, 'maxPts') ?? minPts;
+    return RewardPriceBand(
+      minTotal: minTotal,
+      maxTotal: maxTotal,
+      pointsMode: mode,
+      minPts: minPts,
+      maxPts: maxPts < minPts ? minPts : maxPts,
+      fixedPts: fixedPts > 0 ? fixedPts : minPts,
     );
   }
 
   Map<String, dynamic> toMap() => {
-        'menuItemId': menuItemId,
-        'mode': mode.name,
-        'percentageBps': percentageBps,
-        'pointsPerRupee': pointsPerRupee,
+        'minTotal': minTotal,
+        'maxTotal': maxTotal,
+        'pointsMode': pointsMode == RewardBandPointsMode.fixed ? 'fixed' : 'range',
+        'minPts': minPts,
+        'maxPts': maxPts,
+        'fixedPts': fixedPts,
       };
 
-  RewardItemEarningRule copyWith({
-    RewardEarningMode? mode,
-    int? percentageBps,
-    int? pointsPerRupee,
+  RewardPriceBand copyWith({
+    double? minTotal,
+    double? maxTotal,
+    bool clearMaxTotal = false,
+    RewardBandPointsMode? pointsMode,
+    int? minPts,
+    int? maxPts,
+    int? fixedPts,
   }) =>
-      RewardItemEarningRule(
-        menuItemId: menuItemId,
-        mode: mode ?? this.mode,
-        percentageBps: percentageBps ?? this.percentageBps,
-        pointsPerRupee: pointsPerRupee ?? this.pointsPerRupee,
+      RewardPriceBand(
+        minTotal: minTotal ?? this.minTotal,
+        maxTotal: clearMaxTotal ? null : (maxTotal ?? this.maxTotal),
+        pointsMode: pointsMode ?? this.pointsMode,
+        minPts: minPts ?? this.minPts,
+        maxPts: maxPts ?? this.maxPts,
+        fixedPts: fixedPts ?? this.fixedPts,
       );
+
+  String get summaryLabel {
+    final rangeLabel = maxTotal == null
+        ? '₹${_fmt(minTotal)}+'
+        : '₹${_fmt(minTotal)} – ₹${_fmt(maxTotal!)}';
+    if (pointsMode == RewardBandPointsMode.fixed) {
+      return '$rangeLabel → $fixedPts pts';
+    }
+    if (minPts == maxPts) return '$rangeLabel → $minPts pts';
+    return '$rangeLabel → $minPts–$maxPts pts';
+  }
+
+  static String _fmt(double v) {
+    if (v == v.roundToDouble()) return v.toStringAsFixed(0);
+    return v.toStringAsFixed(2);
+  }
 }
 
 class RewardConfiguration {
   const RewardConfiguration({
     required this.version,
     required this.enabled,
-    required this.earningMode,
-    required this.percentageBps,
-    required this.pointsPerRupee,
     required this.eligibleSubtotalBasis,
     required this.minimumOrderValuePaise,
-    required this.itemEarningRules,
+    required this.earningBands,
     required this.redemptionPointsPerRupee,
     required this.minimumRedemptionPoints,
     required this.maximumRedemptionPercentage,
@@ -83,12 +120,9 @@ class RewardConfiguration {
 
   final int version;
   final bool enabled;
-  final RewardEarningMode earningMode;
-  final int percentageBps;
-  final int pointsPerRupee;
   final String eligibleSubtotalBasis;
   final int minimumOrderValuePaise;
-  final List<RewardItemEarningRule> itemEarningRules;
+  final List<RewardPriceBand> earningBands;
   final int redemptionPointsPerRupee;
   final int minimumRedemptionPoints;
   final int maximumRedemptionPercentage;
@@ -107,22 +141,17 @@ class RewardConfiguration {
     final earning = _requiredMap(config, 'earning');
     final redemption = _requiredMap(config, 'redemption');
     final referrals = _requiredMap(config, 'referrals');
-    final itemRules = _parseItemEarningRules(earning['itemRules']);
-    final mode = _requiredString(earning, 'mode');
+    final bands = _parseEarningBands(earning['bands']);
 
     return RewardConfiguration(
       version: _requiredInt(response, 'version'),
       enabled: _requiredBool(config, 'enabled'),
-      earningMode: switch (mode) {
-        'percentage' => RewardEarningMode.percentage,
-        'fixedRate' => RewardEarningMode.fixedRate,
-        _ => throw FormatException('Unknown reward earning mode: $mode'),
-      },
-      percentageBps: _requiredInt(earning, 'percentageBps'),
-      pointsPerRupee: _requiredInt(earning, 'pointsPerRupee'),
-      eligibleSubtotalBasis: _requiredString(earning, 'eligibleSubtotalBasis'),
-      minimumOrderValuePaise: _requiredInt(earning, 'minimumOrderValuePaise'),
-      itemEarningRules: itemRules,
+      eligibleSubtotalBasis: earning['eligibleSubtotalBasis'] is String
+          ? (earning['eligibleSubtotalBasis'] as String)
+          : 'afterDiscountBeforeTax',
+      minimumOrderValuePaise:
+          _optionalInt(earning, 'minimumOrderValuePaise') ?? 0,
+      earningBands: bands,
       redemptionPointsPerRupee: _requiredInt(redemption, 'pointsPerRupee'),
       minimumRedemptionPoints: _requiredInt(redemption, 'minimumPoints'),
       maximumRedemptionPercentage:
@@ -145,12 +174,10 @@ class RewardConfiguration {
   Map<String, dynamic> toCallableMap() => {
         'enabled': enabled,
         'earning': {
-          'mode': earningMode.name,
-          'percentageBps': percentageBps,
-          'pointsPerRupee': pointsPerRupee,
+          'mode': 'bands',
           'eligibleSubtotalBasis': eligibleSubtotalBasis,
           'minimumOrderValuePaise': minimumOrderValuePaise,
-          'itemRules': itemEarningRules.map((rule) => rule.toMap()).toList(),
+          'bands': earningBands.map((band) => band.toMap()).toList(),
         },
         'redemption': {
           'pointsPerRupee': redemptionPointsPerRupee,
@@ -171,16 +198,14 @@ class RewardConfiguration {
       };
 }
 
-List<RewardItemEarningRule> _parseItemEarningRules(Object? value) {
-  if (value == null) return [];
+List<RewardPriceBand> _parseEarningBands(Object? value) {
+  if (value == null) return const [];
   if (value is! List) {
-    throw const FormatException('Response field "itemRules" must be a list.');
+    throw const FormatException('Response field "bands" must be a list.');
   }
   return value
       .map(
-        (rule) => RewardItemEarningRule.fromMap(
-          _asMap(rule, 'itemRules[]'),
-        ),
+        (band) => RewardPriceBand.fromMap(_asMap(band, 'bands[]')),
       )
       .toList();
 }
@@ -422,6 +447,27 @@ String? _optionalString(Map<String, dynamic> data, String field) {
   if (value == null) return null;
   if (value is String) return value.trim().isEmpty ? null : value.trim();
   throw FormatException('Response field "$field" must be a string or null.');
+}
+
+double _requiredDouble(Map<String, dynamic> data, String field) {
+  final value = data[field];
+  if (value is num && value.isFinite) return value.toDouble();
+  if (value is String) {
+    final parsed = double.tryParse(value.trim());
+    if (parsed != null && parsed.isFinite) return parsed;
+  }
+  throw FormatException('Response field "$field" must be a number.');
+}
+
+double? _optionalDouble(Map<String, dynamic> data, String field) {
+  final value = data[field];
+  if (value == null) return null;
+  if (value is num && value.isFinite) return value.toDouble();
+  if (value is String) {
+    final parsed = double.tryParse(value.trim());
+    if (parsed != null && parsed.isFinite) return parsed;
+  }
+  throw FormatException('Response field "$field" must be a number or null.');
 }
 
 int _requiredInt(Map<String, dynamic> data, String field) {

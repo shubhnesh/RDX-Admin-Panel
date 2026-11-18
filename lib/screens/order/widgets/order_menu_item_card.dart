@@ -8,6 +8,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/responsive_size.dart';
 import '../../../models/menu_item_model.dart';
 import '../../../providers/cart_provider.dart';
+import 'item_customize_sheet.dart';
 
 // =============================================================================
 // ORDER MENU ITEM CARD
@@ -28,11 +29,8 @@ class OrderMenuItemCard extends ConsumerWidget {
     required this.item,
   });
 
-  void _addItem(WidgetRef ref) {
-    ref.read(cartProvider.notifier).addItem(
-          menuItem: item,
-          quantity: 1,
-        );
+  void _addItem(BuildContext context) {
+    showItemCustomizeSheet(context, item);
   }
 
   @override
@@ -234,7 +232,7 @@ class OrderMenuItemCard extends ConsumerWidget {
                         child: RdxActionButton(
                           label: '+ Add',
                           isPrimary: true,
-                          onPressed: unavailable ? null : () => _addItem(ref),
+                          onPressed: unavailable ? null : () => _addItem(context),
                         ),
                       ),
                     ],

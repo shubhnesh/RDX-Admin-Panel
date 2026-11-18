@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/screens/settings/operating_hours_editor.dart';
 import 'package:rdx_admin/screens/settings/fees_editor.dart';
-import '../../widgets/buttons/rdx_toggle_button.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
@@ -450,36 +449,18 @@ class _OrderFeesSettings extends StatelessWidget {
               colors: colors,
             ),
             _FeeValueTile(
-              title: 'Long distance fee (optional at checkout)',
+              title: 'Late night delivery fee',
+              value: '₹${_formatFeeValue(provider.lateNightFee)}',
+              colors: colors,
+            ),
+            _FeeValueTile(
+              title: 'Long distance fee',
               value: '₹${_formatFeeValue(provider.longDistanceFee)}',
               colors: colors,
             ),
-            if (canEdit)
-              _RuleTile(
-                title:
-                    'Late Night Delivery (₹${_formatFeeValue(provider.lateNightFee)})',
-                value: provider.lateNightDelivery,
-                onChanged: _toggleLateNightDelivery,
-                colors: colors,
-              )
-            else
-              _FeeValueTile(
-                title: 'Late night delivery',
-                value:
-                    '${provider.lateNightDelivery ? 'On' : 'Off'} · ₹${_formatFeeValue(provider.lateNightFee)}',
-                colors: colors,
-              ),
           ],
         ),
       );
-
-  Future<void> _toggleLateNightDelivery(bool value) async {
-    _log('Late-night delivery toggle tapped: $value.');
-    await provider.toggleLateNightDelivery(value);
-    _log(provider.errorMessage == null
-        ? 'Late-night delivery toggle finished.'
-        : 'Late-night delivery toggle failed.');
-  }
 
   Future<void> _editFees(BuildContext context) async {
     _log('Edit order fees action tapped.');
@@ -503,37 +484,6 @@ class _OrderFeesSettings extends StatelessWidget {
   String _formatFeeValue(double value) => value == value.roundToDouble()
       ? value.toInt().toString()
       : value.toStringAsFixed(2);
-}
-
-class _RuleTile extends StatelessWidget {
-  final String title;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  final AppColorScheme colors;
-
-  const _RuleTile({
-    required this.title,
-    required this.value,
-    required this.onChanged,
-    required this.colors,
-  });
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.symmetric(vertical: context.h(8)),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: AppTextStyles.bodySecondary(context)
-                    .copyWith(color: colors.textPrimary),
-              ),
-            ),
-            RdxToggleButton(value: value, onChanged: onChanged),
-          ],
-        ),
-      );
 }
 
 class _FeeValueTile extends StatelessWidget {

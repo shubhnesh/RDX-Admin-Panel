@@ -7,6 +7,7 @@ import '../../../core/utils/responsive_size.dart';
 import '../../../models/menu_item_model.dart';
 import '../../../providers/cart_provider.dart';
 import '../../menu/widgets/menu_item_card.dart';
+import 'item_customize_sheet.dart';
 
 class LiveOrderMenuCard extends ConsumerWidget {
   final MenuItemModel item;
@@ -71,10 +72,7 @@ class LiveOrderMenuCard extends ConsumerWidget {
                     context,
                     key: const ValueKey('add'),
                     enabled: item.available,
-                    onTap: () => ref.read(cartProvider.notifier).addItem(
-                          menuItem: item,
-                          quantity: 1,
-                        ),
+                    onTap: () => showItemCustomizeSheet(context, item),
                   )
                 : _quantityStepper(
                     context,

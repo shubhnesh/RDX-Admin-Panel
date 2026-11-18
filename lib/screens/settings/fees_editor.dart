@@ -165,7 +165,6 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
       );
     }
     final colors = AppColors.of(context);
-    final settings = ref.watch(settingsProvider);
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -237,27 +236,6 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                     icon: Icons.route_outlined,
                     title: 'Long Distance Fee',
                     children: [
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          'Enable long distance fee',
-                          style: AppTextStyles.body(context),
-                        ),
-                        subtitle: Text(
-                          settings.longDistanceDelivery
-                              ? 'Shown on user checkout and charged on delivery orders'
-                              : 'Hidden on user checkout and never charged',
-                          style: AppTextStyles.caption(context),
-                        ),
-                        value: settings.longDistanceDelivery,
-                        activeColor: AppColors.primary,
-                        onChanged: _saving
-                            ? null
-                            : (value) => ref
-                                .read(settingsProvider)
-                                .toggleLongDistanceDelivery(value),
-                      ),
-                      SizedBox(height: context.h(12)),
                       RdxTextField(
                         controller: _longDistanceCtrl,
                         label: 'Long distance fee (₹)',
@@ -277,27 +255,6 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                     icon: Icons.access_time_outlined,
                     title: 'Late Night Delivery',
                     children: [
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          'Enable late night delivery fee',
-                          style: AppTextStyles.body(context),
-                        ),
-                        subtitle: Text(
-                          settings.lateNightDelivery
-                              ? 'Shown on user checkout during the late-night window'
-                              : 'Hidden on user checkout and never charged',
-                          style: AppTextStyles.caption(context),
-                        ),
-                        value: settings.lateNightDelivery,
-                        activeColor: AppColors.primary,
-                        onChanged: _saving
-                            ? null
-                            : (value) => ref
-                                .read(settingsProvider)
-                                .toggleLateNightDelivery(value),
-                      ),
-                      SizedBox(height: context.h(12)),
                       RdxTextField(
                         controller: _lateFeeCtrl,
                         label: 'Late night fee (₹)',

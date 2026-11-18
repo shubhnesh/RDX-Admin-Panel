@@ -12,7 +12,6 @@ import '../../providers/cart_provider.dart';
 import '../../providers/order_providers.dart';
 import '../../providers/settings_provider.dart';
 import '../../widgets/buttons/rdx_action_button.dart';
-import '../../widgets/buttons/rdx_toggle_button.dart';
 import '../../widgets/reusable_widgets/rdx_header.dart';
 import '../../widgets/reusable_widgets/rdx_dropdown.dart';
 import '../../widgets/reusable_widgets/rdx_text_field.dart';
@@ -39,7 +38,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _orderNotes = TextEditingController();
 
   OrderType _orderType = OrderType.dineIn;
-  bool _longDistanceFeeSelected = false;
 
   final _tableConfigService = TableConfigService();
 
@@ -186,8 +184,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         customerPhone: phoneNumber,
         deliveryAddress: deliveryAddress,
         notes: orderNotes,
-        applyLongDistanceFee:
-            _orderType == OrderType.delivery && _longDistanceFeeSelected,
         // paymentMethod left null → order stays unpaid until settleOrder
       );
 
@@ -241,22 +237,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         (sum, b) => sum + b.amount,
       );
 
-      // Fee breakdown for receipt UI only. Amounts from settings/fees
-      // via SettingsProvider (preview). Stored order.total is always from CF.
       final feeSettings = ref.read(settingsProvider);
-      final isLateNightNow = _isWithinLateNightWindow(
-        feeSettings.lateNightStart,
-        feeSettings.lateNightEnd,
-      );
-      final lateNightFee = _orderType == OrderType.delivery &&
-              feeSettings.lateNightDelivery &&
-              isLateNightNow
-          ? feeSettings.lateNightFee
-          : 0.0;
-      final longDistanceFee = _orderType == OrderType.delivery &&
-              _longDistanceFeeSelected
-          ? feeSettings.longDistanceFee
-          : 0.0;
 
       ref.read(cartProvider.notifier).clear();
 
@@ -282,8 +263,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               subtotal: serverSubtotal,
               // GST is always applied — never gated by orderFeesEnabled.
               taxPercentage: feeSettings.gstPercent,
-              lateNightFee: lateNightFee,
-              longDistanceFee: longDistanceFee,
               guestName: guestName,
               phoneNumber: phoneNumber,
               deliveryAddress: deliveryAddress,
@@ -312,29 +291,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     await RdxNoticeDialog.show(context, message: message);
   }
 
-  /// Matches Cloud Function late-night window (supports overnight, e.g. 22:00–06:00).
-  bool _isWithinLateNightWindow(String startStr, String endStr) {
-    int? toMinutes(String value) {
-      final parts = value.trim().split(':');
-      if (parts.length < 2) return null;
-      final h = int.tryParse(parts[0]);
-      final m = int.tryParse(parts[1]);
-      if (h == null || m == null) return null;
-      if (h < 0 || h > 23 || m < 0 || m > 59) return null;
-      return h * 60 + m;
-    }
-
-    final start = toMinutes(startStr);
-    final end = toMinutes(endStr);
-    if (start == null || end == null) return false;
-    final now = DateTime.now();
-    final current = now.hour * 60 + now.minute;
-    if (start > end) {
-      return current >= start || current < end;
-    }
-    return current >= start && current < end;
-  }
-
   // ===========================================================================
   // BUILD
   // ===========================================================================
@@ -348,32 +304,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         cart.fold<int>(0, (count, line) => count + line.quantity);
     final settings = ref.watch(settingsProvider);
     // Preview only — authoritative totals come from createStaffOrder CF.
-    // GST always. Late-night when settings toggle is ON and current time is
-    // inside the late-night window. Long-distance only when staff enables
-    // the optional toggle on this screen (delivery orders).
+    // Late-night / long-distance fees are added later on the bill screen.
     final gstPercent = settings.gstPercent;
     final tax = subtotal * (gstPercent / 100);
-    final isLateNightNow = _isWithinLateNightWindow(
-      settings.lateNightStart,
-      settings.lateNightEnd,
-    );
-    final lateNightFee = _orderType == OrderType.delivery &&
-            settings.lateNightDelivery &&
-            isLateNightNow
-        ? settings.lateNightFee
-        : 0.0;
-    final longDistanceFee = _orderType == OrderType.delivery &&
-            _longDistanceFeeSelected
-        ? settings.longDistanceFee
-        : 0.0;
     final deliveryFeePreview = _orderType == OrderType.delivery
         ? (settings.freeDeliveryAbove > 0 &&
                 subtotal >= settings.freeDeliveryAbove
             ? 0.0
             : settings.deliveryFee)
         : 0.0;
-    final total =
-        subtotal + tax + deliveryFeePreview + lateNightFee + longDistanceFee;
+    final total = subtotal + tax + deliveryFeePreview;
     final placing = ref.watch(placeOrderControllerProvider).isLoading;
     final isNarrow = MediaQuery.sizeOf(context).width < 900;
 
@@ -462,24 +402,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             colors,
             'Delivery fee',
             deliveryFeePreview,
-          ),
-        ],
-        if (lateNightFee > 0) ...[
-          SizedBox(height: context.h(6)),
-          _summaryAmountRow(
-            context,
-            colors,
-            'Late Night Delivery',
-            lateNightFee,
-          ),
-        ],
-        if (longDistanceFee > 0) ...[
-          SizedBox(height: context.h(6)),
-          _summaryAmountRow(
-            context,
-            colors,
-            'Long Distance Fee',
-            longDistanceFee,
           ),
         ],
         SizedBox(height: context.h(10)),
@@ -571,7 +493,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   }
                   if (value != OrderType.delivery) {
                     _deliveryAddress.clear();
-                    _longDistanceFeeSelected = false;
                   }
                 });
               },
@@ -617,59 +538,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 hint: 'Enter delivery address',
                 maxLines: 3,
               ),
-              // Optional fee — staff chooses per order on checkout (not a settings toggle).
-              if (settings.longDistanceFee > 0) ...[
-                SizedBox(height: context.h(14)),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.w(12),
-                    vertical: context.h(12),
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(context.h(8)),
-                    border: Border.all(color: colors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.route_outlined,
-                        size: context.h(18),
-                        color: AppColors.primary,
-                      ),
-                      SizedBox(width: context.w(10)),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Optional: Long distance fee',
-                              style: AppTextStyles.bodySecondary(context)
-                                  .copyWith(
-                                color: colors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(height: context.h(2)),
-                            Text(
-                              'Add ₹${settings.longDistanceFee == settings.longDistanceFee.roundToDouble() ? settings.longDistanceFee.toInt() : settings.longDistanceFee.toStringAsFixed(0)} for long-distance delivery',
-                              style: AppTextStyles.caption(context).copyWith(
-                                color: colors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      RdxToggleButton(
-                        value: _longDistanceFeeSelected,
-                        onChanged: (value) =>
-                            setState(() => _longDistanceFeeSelected = value),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ],
         ),

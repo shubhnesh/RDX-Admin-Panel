@@ -4,14 +4,13 @@ import '../models/order_model.dart';
 import '../services/order_service.dart';
 
 /// Shared [OrderService] instance.
+/// This is the ONLY definition: delete order_service_provider.dart and
+/// order_service_provider_1.dart, and import this file instead.
 final orderServiceProvider = Provider<OrderService>((ref) {
   return OrderService();
 });
 
 /// Live orders as a one-shot fetch (compatible with OrderService.fetchLiveOrders).
-///
-/// If your OrderService later adds `watchLiveOrders()`, you can switch this
-/// to a StreamProvider without changing the screens.
 final liveOrdersStreamProvider = FutureProvider<List<OrderModel>>((ref) async {
   final service = ref.watch(orderServiceProvider);
   return service.fetchLiveOrders();
@@ -26,6 +25,9 @@ class OrderActionsNotifier extends StateNotifier<Set<String>> {
   OrderService get _service => _ref.read(orderServiceProvider);
 
   Future<void> advanceStatus(OrderModel order) async {
+    // Ignore double taps while a request for this order is in flight.
+    if (state.contains(order.id)) return;
+
     final next = _nextStatus(order.status);
     if (next == null) return;
     if (next == OrderStatus.delivered && !order.isPaid) {
@@ -38,7 +40,6 @@ class OrderActionsNotifier extends StateNotifier<Set<String>> {
         orderId: order.id,
         newStatus: next,
       );
-      // Refresh list consumers
       _ref.invalidate(liveOrdersStreamProvider);
     } finally {
       state = {...state}..remove(order.id);
@@ -46,6 +47,8 @@ class OrderActionsNotifier extends StateNotifier<Set<String>> {
   }
 
   Future<void> cancelOrder(OrderModel order) async {
+    if (state.contains(order.id)) return;
+
     state = {...state, order.id};
     try {
       await _service.updateOrderStatus(
@@ -86,7 +89,7 @@ class PlaceOrderController extends StateNotifier<AsyncValue<String?>> {
 
   bool get isLoading => state.isLoading;
 
-  /// Preferred: create a staff order through the secure Cloud Function.
+  /// Create a staff order through the secure Cloud Function.
   /// Returns the new order id on success, null on failure.
   Future<String?> submitStaffOrder({
     required List<Map<String, dynamic>> items,
@@ -100,6 +103,9 @@ class PlaceOrderController extends StateNotifier<AsyncValue<String?>> {
     String? couponCode,
     String? paymentMethod,
   }) async {
+    // Prevent double submit creating duplicate orders.
+    if (state.isLoading) return null;
+
     state = const AsyncLoading();
     try {
       final order = await _service.createStaffOrder(
@@ -116,45 +122,6 @@ class PlaceOrderController extends StateNotifier<AsyncValue<String?>> {
       );
       state = AsyncData(order.id);
       return order.id;
-    } catch (e, st) {
-      state = AsyncError(e, st);
-      return null;
-    }
-  }
-
-  /// Legacy: still available so older call sites compile.
-  /// Prefer [submitStaffOrder] for all new POS flows.
-  @Deprecated('Use submitStaffOrder — direct Firestore writes are blocked')
-  Future<String?> submit(OrderModel order) async {
-    state = const AsyncLoading();
-    try {
-      // Redirect to Cloud Function with best-effort mapping.
-      // OrderItemModel does not store product_id; this path is legacy only
-      // and will fail server validation until callers migrate to
-      // [submitStaffOrder].
-      final items = order.items
-          .map(
-            (item) => {
-              'product_id': '',
-              'quantity': item.quantity,
-              'notes': item.notes,
-              'spice_level': item.spiceLevel,
-              'add_ons': item.addOns,
-            },
-          )
-          .toList();
-
-      final created = await _service.createStaffOrder(
-        items: items,
-        orderType: order.orderType.name,
-        tableNumber: order.tableNumber,
-        customerName: order.customerName,
-        customerPhone: order.customerPhone,
-        deliveryAddress: order.deliveryAddress,
-        notes: order.notes,
-      );
-      state = AsyncData(created.id);
-      return created.id;
     } catch (e, st) {
       state = AsyncError(e, st);
       return null;

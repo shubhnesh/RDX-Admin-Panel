@@ -48,7 +48,9 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
   void _addCustomAddOn() {
     final name = _customNameController.text.trim();
     if (name.isEmpty) return;
-    final price = double.tryParse(_customPriceController.text.trim()) ?? 0;
+    final price = (double.tryParse(_customPriceController.text.trim()) ?? 0)
+        .clamp(0, 10000)
+        .toDouble();
     setState(() {
       _customAddOns.add(CartAddOn(name: name, price: price));
       _customNameController.clear();
@@ -368,4 +370,14 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
       ),
     );
   }
+}
+
+/// Opens [ItemCustomizeSheet] as a bottom sheet.
+Future<void> showItemCustomizeSheet(BuildContext context, MenuItemModel item) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => ItemCustomizeSheet(item: item),
+  );
 }

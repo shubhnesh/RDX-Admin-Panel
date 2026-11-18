@@ -99,10 +99,15 @@ class OrderService {
   }
 
   /// Marks an order as paid (cash / upi / card) via Cloud Function.
+  ///
+  /// Optional per-order fee flags let staff apply late-night / long-distance
+  /// charges at settlement time (amounts come from settings/fees on the server).
   Future<OrderModel> settleOrder({
     required String orderId,
     required String paymentMethod, // cash | upi | card
     String? notes,
+    bool applyLateNightFee = false,
+    bool applyLongDistanceFee = false,
   }) async {
     if (_auth.currentUser == null) {
       throw Exception('You must be signed in to settle an order.');
@@ -118,6 +123,8 @@ class OrderService {
         'order_id': orderId.trim(),
         'payment_method': method,
         if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        'apply_late_night_fee': applyLateNightFee,
+        'apply_long_distance_fee': applyLongDistanceFee,
       });
 
       final data = result.data;

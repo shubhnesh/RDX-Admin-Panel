@@ -5,8 +5,10 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/order_model.dart';
 import 'package:rdx_admin/providers/order_providers.dart';
+import 'package:rdx_admin/providers/settings_provider.dart';
 import 'package:rdx_admin/widgets/dialogs/rdx_notice_dialog.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
+import 'package:rdx_admin/widgets/buttons/rdx_toggle_button.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 
 // =============================================================================
@@ -64,6 +66,37 @@ class BillSettlementData {
     required this.receiptDateTime,
   });
 
+  BillSettlementData withFees({
+    required double lateNightFee,
+    required double longDistanceFee,
+  }) {
+    return BillSettlementData(
+      orderNumber: orderNumber,
+      restaurantName: restaurantName,
+      orderType: orderType,
+      tableNumber: tableNumber,
+      billingMode: billingMode,
+      cashier: cashier,
+      server: server,
+      kitchenName: kitchenName,
+      sequence: sequence,
+      covers: covers,
+      items: items,
+      paymentMethod: paymentMethod,
+      cardLastFour: cardLastFour,
+      subtotal: subtotal,
+      taxPercentage: taxPercentage,
+      lateNightFee: lateNightFee,
+      longDistanceFee: longDistanceFee,
+      guestName: guestName,
+      phoneNumber: phoneNumber,
+      deliveryAddress: deliveryAddress,
+      sendDigitalReceipt: sendDigitalReceipt,
+      invoiceReference: invoiceReference,
+      receiptDateTime: receiptDateTime,
+    );
+  }
+
   double get taxAmount => subtotal * taxPercentage / 100;
 
   double get total => subtotal + taxAmount + lateNightFee + longDistanceFee;
@@ -110,10 +143,36 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
   String? _selectedPayment;
   bool _isSettling = false;
 
+  /// Per-order fee toggles — staff decide at settlement, not from global settings.
+  bool _applyLateNightFee = false;
+  bool _applyLongDistanceFee = false;
+
   @override
   void initState() {
     super.initState();
     _selectedPayment = widget.bill.paymentMethod;
+    // Pre-check if the order already carried these fees from create time.
+    _applyLateNightFee = widget.bill.lateNightFee > 0;
+    _applyLongDistanceFee = widget.bill.longDistanceFee > 0;
+  }
+
+  /// Bill snapshot with the fees the staff toggled on this screen.
+  BillSettlementData get _effectiveBill {
+    final settings = ref.read(settingsProvider);
+    final lateNight = _applyLateNightFee
+        ? (widget.bill.lateNightFee > 0
+            ? widget.bill.lateNightFee
+            : settings.lateNightFee)
+        : 0.0;
+    final longDistance = _applyLongDistanceFee
+        ? (widget.bill.longDistanceFee > 0
+            ? widget.bill.longDistanceFee
+            : settings.longDistanceFee)
+        : 0.0;
+    return widget.bill.withFees(
+      lateNightFee: lateNight,
+      longDistanceFee: longDistance,
+    );
   }
 
   void _close() {
@@ -154,10 +213,12 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
     setState(() => _isSettling = true);
 
     try {
-      // Secure path — marks paid + records payment_method server-side.
+      // Secure path — marks paid + applies optional per-order fees server-side.
       final settledOrder = await ref.read(orderServiceProvider).settleOrder(
             orderId: widget.bill.orderNumber,
             paymentMethod: method,
+            applyLateNightFee: _applyLateNightFee,
+            applyLongDistanceFee: _applyLongDistanceFee,
           );
       widget.onSettled?.call(settledOrder);
 
@@ -195,7 +256,8 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final bill = widget.bill;
+    final settings = ref.watch(settingsProvider);
+    final bill = _effectiveBill;
     final narrow = MediaQuery.sizeOf(context).width < 900;
 
     return Scaffold(
@@ -224,6 +286,22 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                           total: bill.total,
                           onSelected: (v) =>
                               setState(() => _selectedPayment = v),
+                        ),
+                        SizedBox(height: context.h(14)),
+                        _ExtraFeesPanel(
+                          applyLateNight: _applyLateNightFee,
+                          applyLongDistance: _applyLongDistanceFee,
+                          lateNightAmount: settings.lateNightFee > 0
+                              ? settings.lateNightFee
+                              : widget.bill.lateNightFee,
+                          longDistanceAmount: settings.longDistanceFee > 0
+                              ? settings.longDistanceFee
+                              : widget.bill.longDistanceFee,
+                          enabled: !_isSettling,
+                          onLateNightChanged: (v) =>
+                              setState(() => _applyLateNightFee = v),
+                          onLongDistanceChanged: (v) =>
+                              setState(() => _applyLongDistanceFee = v),
                         ),
                         SizedBox(height: context.h(14)),
                         _BillingPanel(bill: bill),
@@ -262,6 +340,23 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                                   total: bill.total,
                                   onSelected: (v) =>
                                       setState(() => _selectedPayment = v),
+                                ),
+                                SizedBox(height: context.h(14)),
+                                _ExtraFeesPanel(
+                                  applyLateNight: _applyLateNightFee,
+                                  applyLongDistance: _applyLongDistanceFee,
+                                  lateNightAmount: settings.lateNightFee > 0
+                                      ? settings.lateNightFee
+                                      : widget.bill.lateNightFee,
+                                  longDistanceAmount:
+                                      settings.longDistanceFee > 0
+                                          ? settings.longDistanceFee
+                                          : widget.bill.longDistanceFee,
+                                  enabled: !_isSettling,
+                                  onLateNightChanged: (v) =>
+                                      setState(() => _applyLateNightFee = v),
+                                  onLongDistanceChanged: (v) => setState(
+                                      () => _applyLongDistanceFee = v),
                                 ),
                                 SizedBox(height: context.h(14)),
                                 _BillingPanel(bill: bill),
@@ -696,6 +791,153 @@ class _Method {
     // required this.subtitle,
     required this.icon,
   });
+}
+
+// =============================================================================
+// EXTRA FEES (per-order toggles at settlement)
+// =============================================================================
+
+/// Staff choose Late Night / Long Distance fees on this bill only.
+/// Amounts come from settings (or from the order if already set).
+class _ExtraFeesPanel extends StatelessWidget {
+  final bool applyLateNight;
+  final bool applyLongDistance;
+  final double lateNightAmount;
+  final double longDistanceAmount;
+  final bool enabled;
+  final ValueChanged<bool> onLateNightChanged;
+  final ValueChanged<bool> onLongDistanceChanged;
+
+  const _ExtraFeesPanel({
+    required this.applyLateNight,
+    required this.applyLongDistance,
+    required this.lateNightAmount,
+    required this.longDistanceAmount,
+    required this.enabled,
+    required this.onLateNightChanged,
+    required this.onLongDistanceChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(context.h(14)),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(context.h(10)),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.add_circle_outline,
+                size: context.h(18),
+                color: AppColors.primary,
+              ),
+              SizedBox(width: context.w(8)),
+              Expanded(
+                child: Text(
+                  'Extra fees for this order',
+                  style: AppTextStyles.section(context).copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: context.h(6)),
+          Text(
+            'Turn on only if this order needs the fee. Applied at settlement.',
+            style: AppTextStyles.caption(context).copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+          SizedBox(height: context.h(12)),
+          _feeToggleRow(
+            context,
+            colors,
+            title: 'Late Night Delivery',
+            amount: lateNightAmount,
+            value: applyLateNight,
+            onChanged: enabled ? onLateNightChanged : null,
+          ),
+          SizedBox(height: context.h(8)),
+          _feeToggleRow(
+            context,
+            colors,
+            title: 'Long Distance Fee',
+            amount: longDistanceAmount,
+            value: applyLongDistance,
+            onChanged: enabled ? onLongDistanceChanged : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _feeToggleRow(
+    BuildContext context,
+    AppColorScheme colors, {
+    required String title,
+    required double amount,
+    required bool value,
+    required ValueChanged<bool>? onChanged,
+  }) {
+    final amountLabel = amount > 0
+        ? '₹${amount.toStringAsFixed(amount == amount.roundToDouble() ? 0 : 2)}'
+        : 'Not configured';
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: context.w(12),
+        vertical: context.h(10),
+      ),
+      decoration: BoxDecoration(
+        color: value
+            ? AppColors.primary.withValues(alpha: 0.08)
+            : colors.surfaceVariant,
+        borderRadius: BorderRadius.circular(context.h(8)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.body(context).copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: context.h(2)),
+                Text(
+                  amountLabel,
+                  style: AppTextStyles.caption(context).copyWith(
+                    color: amount > 0 ? AppColors.primary : colors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IgnorePointer(
+            ignoring: onChanged == null,
+            child: RdxToggleButton(
+              value: value,
+              onChanged: onChanged ?? (_) {},
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // =============================================================================

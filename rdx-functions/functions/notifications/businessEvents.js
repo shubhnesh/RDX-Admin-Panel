@@ -4,10 +4,6 @@ const crypto = require("crypto");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const {
-  COUPON_FIELDS,
-  MENU_FIELDS,
-  OFFER_FIELDS,
-  hasMeaningfulChange,
   isMenuItemVisible,
   isPromotionActive,
 } = require("./notificationPolicy");
@@ -39,14 +35,6 @@ function itemName(data, fallback = "A menu item") {
   return name || fallback;
 }
 
-function promotionStartMillis(data) {
-  const value = data.start_date;
-  if (!value) return "now";
-  if (typeof value.toMillis === "function") return String(value.toMillis());
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "now" : String(date.getTime());
-}
-
 exports.notifyMenuItemCreated = functions
   .region(REGION)
   .firestore.document("menu_items/{itemId}")
@@ -63,31 +51,17 @@ exports.notifyMenuItemCreated = functions
     );
   });
 
-exports.notifyMenuItemUpdated = functions
-  .region(REGION)
-  .firestore.document("menu_items/{itemId}")
-  .onUpdate(async (change, context) => {
-    const before = change.before.data() || {};
-    const after = change.after.data() || {};
-    if (!isMenuItemVisible(after)) return null;
-    if (!hasMeaningfulChange(before, after, MENU_FIELDS)) return null;
+function ignoreDocumentUpdates(collection) {
+  return functions
+    .region(REGION)
+    .firestore.document(`${collection}/{documentId}`)
+    .onUpdate(async () => null);
+}
 
-    const becameVisible = !isMenuItemVisible(before);
-    const name = itemName(after);
-    return publishEvent(
-      "menu",
-      context.eventId,
-      becameVisible ? "New menu item" : "Menu updated",
-      becameVisible
-        ? `Now available: ${name}.`
-        : `${name} has been updated.`,
-      context.params.itemId
-    );
-  });
+// Keep these exported names so deployments replace stale senders in place.
+exports.notifyMenuItemUpdated = ignoreDocumentUpdates("menu_items");
 
-function registerPromotionEvents(collection, category, fields, titleFor) {
-  const collectionRef = db.collection(collection);
-
+function registerPromotionCreatedEvent(collection, category, titleFor) {
   const created = functions
     .region(REGION)
     .firestore.document(`${collection}/{documentId}`)
@@ -104,62 +78,30 @@ function registerPromotionEvents(collection, category, fields, titleFor) {
       );
     });
 
-  const updated = functions
-    .region(REGION)
-    .firestore.document(`${collection}/{documentId}`)
-    .onUpdate(async (change, context) => {
-      const before = change.before.data() || {};
-      const after = change.after.data() || {};
-      if (!isPromotionActive(after)) return null;
-
-      const wasActive = isPromotionActive(before);
-      const becameActive = !wasActive;
-      if (!becameActive && !hasMeaningfulChange(before, after, fields)) {
-        return null;
-      }
-
-      const title = titleFor(after);
-      const activationEventId = becameActive
-        ? `${collection}_${context.params.documentId}_activated_${promotionStartMillis(after)}`
-        : context.eventId;
-      return publishEvent(
-        category,
-        activationEventId,
-        becameActive ? title : `${title} updated`,
-        becameActive
-          ? `${titleFor(after, true)} is now available.`
-          : `${titleFor(after, true)} has been updated.`,
-        context.params.documentId
-      );
-    });
-
-  return { created, updated };
+  return created;
 }
 
-const couponEvents = registerPromotionEvents(
+exports.notifyCouponCreated = registerPromotionCreatedEvent(
   "coupons",
   "coupon",
-  COUPON_FIELDS,
   (coupon, body = false) => {
     const code = String(coupon.code || "").trim();
     return body ? (code ? `Coupon ${code}` : "A new coupon") : "New coupon";
   }
 );
 
-const offerEvents = registerPromotionEvents(
+exports.notifyCouponUpdated = ignoreDocumentUpdates("coupons");
+
+exports.notifyOfferCreated = registerPromotionCreatedEvent(
   "offers",
   "offer",
-  OFFER_FIELDS,
   (offer, body = false) => {
     const title = String(offer.title || "").trim();
     return body ? (title || "A new offer") : "New offer";
   }
 );
 
-exports.notifyCouponCreated = couponEvents.created;
-exports.notifyCouponUpdated = couponEvents.updated;
-exports.notifyOfferCreated = offerEvents.created;
-exports.notifyOfferUpdated = offerEvents.updated;
+exports.notifyOfferUpdated = ignoreDocumentUpdates("offers");
 
 exports.notifyAppOrderCreated = functions
   .region(REGION)

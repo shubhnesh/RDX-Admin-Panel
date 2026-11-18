@@ -3,10 +3,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
-  COUPON_FIELDS,
   CUSTOMER_TOPIC,
   createFcmMessage,
-  hasMeaningfulChange,
   isMenuItemVisible,
   isPromotionActive,
 } = require("./notificationPolicy");
@@ -52,24 +50,5 @@ test("promotions are sent only while their effective dates are active", () => {
       start_date: new Date("2026-11-16T00:00:00Z"),
     }, now),
     false
-  );
-});
-
-test("promotion usage-count changes do not trigger customer pushes", () => {
-  assert.equal(
-    hasMeaningfulChange(
-      { usage_count: 1, discount_value: 10 },
-      { usage_count: 2, discount_value: 10 },
-      COUPON_FIELDS
-    ),
-    false
-  );
-  assert.equal(
-    hasMeaningfulChange(
-      { discount_value: 10 },
-      { discount_value: 15 },
-      COUPON_FIELDS
-    ),
-    true
   );
 });

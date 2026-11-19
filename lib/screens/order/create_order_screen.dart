@@ -62,7 +62,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
       title: 'Discard cart?',
       message: 'You have items in your cart. Do you want to discard them?',
       cancelButtonLabel: 'No',
-      confirmButtonLabel: 'Yes',
+      confirmButtonLabel: 'Yes'
 );
 
     if (discard == true && mounted) {
@@ -83,8 +83,8 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const CheckoutScreen(),
-      ),
+        builder: (_) => const CheckoutScreen()
+      )
     );
   }
 
@@ -138,13 +138,13 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
       mediaQuery.padding.top + horizontalMargin,
       maxTop > mediaQuery.padding.top
           ? maxTop
-          : mediaQuery.padding.top + horizontalMargin,
+          : mediaQuery.padding.top + horizontalMargin
     );
 
     double left = buttonOffset.dx + buttonSize.width - panelWidth;
     left = left.clamp(
       horizontalMargin,
-      screenSize.width - panelWidth - horizontalMargin,
+      screenSize.width - panelWidth - horizontalMargin
     );
 
     _categoryOverlay = OverlayEntry(
@@ -158,8 +158,8 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onTap: _closeCategoryPicker,
-                    child: const SizedBox.expand(),
-                  ),
+                    child: const SizedBox.expand()
+                  )
                 ),
                 Positioned(
                   left: left,
@@ -170,15 +170,15 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                     child: _categoryPickerPanel(
                       AppColors.of(context),
                       currentProvider,
-                      panelHeight: panelHeight,
-                    ),
-                  ),
+                      panelHeight: panelHeight
+                    )
+                  )
                 ),
-              ],
+              ]
             );
-          },
+          }
         );
-      },
+      }
     );
 
     Overlay.of(context, rootOverlay: true).insert(_categoryOverlay!);
@@ -222,7 +222,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
             RdxHeader(
               title: 'Create New Order',
               showBackButton: true,
-              onBack: _handleBack,
+              onBack: _handleBack
             ),
             Expanded(
               child: menuState.isLoading
@@ -233,30 +233,30 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                               context.w(20),
                               context.h(16),
                               context.w(20),
-                              context.h(8),
+                              context.h(8)
                             )
                           : EdgeInsets.fromLTRB(
                               context.w(20),
                               context.h(16),
                               context.w(20),
-                              context.h(24),
+                              context.h(24)
                             ),
                       child: isCompact
                           ? _buildCompactLayout(
                               context,
                               menuState,
-                              colors,
+                              colors
                             )
                           : _buildDesktopLayout(
                               context,
                               menuState,
-                              colors,
-                            ),
-                    ),
+                              colors
+                            )
+                    )
             ),
-          ],
-        ),
-      ),
+          ]
+        )
+      )
     );
   }
 
@@ -267,7 +267,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
   Widget _buildDesktopLayout(
     BuildContext context,
     MenuProvider menuState,
-    AppColorScheme colors,
+    AppColorScheme colors
   ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -278,10 +278,10 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
         Expanded(
           child: Padding(
             padding: EdgeInsets.only(
-              right: context.w(20),
+              right: context.w(20)
             ),
-            child: _buildMenuArea(context, menuState, colors),
-          ),
+            child: _buildMenuArea(context, menuState, colors)
+          )
         ),
 
         // ---------------------------------------------------------------------
@@ -290,7 +290,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
         VerticalDivider(
           width: context.w(1),
           thickness: context.h(1),
-          color: colors.border,
+          color: colors.border
         ),
         SizedBox(width: context.w(20)),
 
@@ -299,9 +299,9 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
         // ---------------------------------------------------------------------
         SizedBox(
           width: context.w(360).clamp(320.0, 400.0),
-          child: CartPanel(onProceed: _goToCheckout),
+          child: CartPanel(onProceed: _goToCheckout)
         ),
-      ],
+      ]
     );
   }
 
@@ -312,7 +312,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
   Widget _buildCompactLayout(
     BuildContext context,
     MenuProvider menuState,
-    AppColorScheme colors,
+    AppColorScheme colors
   ) {
     final hasCartItems = ref.watch(cartProvider).isNotEmpty;
     final cartPanelHeight =
@@ -324,8 +324,8 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
           child: _buildMenuArea(
             context,
             menuState,
-            colors,
-          ),
+            colors
+          )
         ),
         if (hasCartItems) ...[
           SizedBox(height: context.h(3)),
@@ -333,11 +333,11 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
             height: cartPanelHeight,
             child: CartPanel(
               onProceed: _goToCheckout,
-              compactLayout: true,
-            ),
+              compactLayout: true
+            )
           ),
         ],
-      ],
+      ]
     );
   }
 
@@ -351,7 +351,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
   Widget _buildMenuArea(
     BuildContext context,
     MenuProvider menuState,
-    AppColorScheme colors,
+    AppColorScheme colors
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,7 +365,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
         Expanded(
           child: menuState.filteredItems.isEmpty
               ? const EmptyState(
-                  message: 'No menu items found',
+                  message: 'No menu items found'
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {
@@ -385,15 +385,15 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                           for (final item in menuState.filteredItems)
                             SizedBox(
                               width: cardWidth,
-                              child: LiveOrderMenuCard(item: item),
+                              child: LiveOrderMenuCard(item: item)
                             ),
-                        ],
-                      ),
+                        ]
+                      )
                     );
-                  },
-                ),
+                  }
+                )
         ),
-      ],
+      ]
     );
   }
 
@@ -411,12 +411,12 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
           child: RdxSearchBar(
             height: searchHeight,
             hintText: 'Search menu items',
-            onChanged: (value) => ref.read(menuProvider).setSearchQuery(value),
-          ),
+            onChanged: (value) => ref.read(menuProvider).setSearchQuery(value)
+          )
         ),
         SizedBox(width: context.w(10)),
         _filterButton(colors, provider),
-      ],
+      ]
     );
   }
 
@@ -425,13 +425,13 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
     final labels = ['All', ...provider.categoryList.map((c) => c.name)];
 
     // Measure the widest label so the button never changes size
-    final textStyle = AppTextStyles.label(context);
+    final textStyle = AppTextStyles.bodySemi(context);
     double maxTextWidth = 0;
     for (final label in labels) {
       final tp = TextPainter(
         text: TextSpan(text: label, style: textStyle),
         textDirection: TextDirection.ltr,
-        maxLines: 1,
+        maxLines: 1
       )..layout();
       if (tp.width > maxTextWidth) maxTextWidth = tp.width;
     }
@@ -461,8 +461,8 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
           border: Border.all(
             color: _categoryPickerOpen || isActive
                 ? AppColors.primary
-                : colors.border,
-          ),
+                : colors.border
+          )
         ),
         child: Row(
           mainAxisSize: MainAxisSize.max,
@@ -470,18 +470,18 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
             Icon(
               Icons.tune,
               size: context.h(19),
-              color: AppColors.primary,
+              color: AppColors.primary
             ),
             SizedBox(width: context.w(8)),
             Expanded(
               child: Text(
                 provider.selectedCategory,
-                style: AppTextStyles.label(context).copyWith(
-                  color: isActive ? AppColors.primary : colors.textSecondary,
+                style: AppTextStyles.bodySemi(context).copyWith(
+                  color: isActive ? AppColors.primary : colors.textSecondary
                 ),
                 overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
+                maxLines: 1
+              )
             ),
             SizedBox(width: context.w(4)),
             Icon(
@@ -489,11 +489,11 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                   ? Icons.keyboard_arrow_up
                   : Icons.keyboard_arrow_down,
               size: context.h(20),
-              color: colors.textMuted,
+              color: colors.textMuted
             ),
-          ],
-        ),
-      ),
+          ]
+        )
+      )
     );
   }
 
@@ -515,7 +515,7 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
         context.w(14),
         context.h(13),
         context.w(14),
-        context.h(12),
+        context.h(12)
       ),
       decoration: BoxDecoration(
         color: colors.surface,
@@ -523,25 +523,25 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: AppColors.black.withValues(alpha: 0.1),
             blurRadius: context.h(18),
-            offset: Offset(0, context.h(7)),
+            offset: Offset(0, context.h(7))
           ),
-        ],
+        ]
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Filter by category',
-            style: AppTextStyles.section(context)
-                .copyWith(color: colors.textPrimary),
+            style: AppTextStyles.bodyLargeSemi(context)
+                .copyWith(color: colors.textPrimary)
           ),
           SizedBox(height: context.h(4)),
           Text(
             'Tap a chip to filter the menu items.',
             style: AppTextStyles.caption(context)
-                .copyWith(color: colors.textSecondary),
+                .copyWith(color: colors.textSecondary)
           ),
           SizedBox(height: context.h(12)),
           Expanded(
@@ -549,9 +549,9 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                 ? Center(
                     child: Text(
                       'No categories yet.',
-                      style: AppTextStyles.bodySecondary(context)
-                          .copyWith(color: colors.textMuted),
-                    ),
+                      style: AppTextStyles.body(context)
+                          .copyWith(color: colors.textMuted)
+                    )
                   )
                 : SingleChildScrollView(
                     child: Wrap(
@@ -563,14 +563,14 @@ class _PlaceOrderScreenState extends ConsumerState<PlaceOrderScreen> {
                             label: label,
                             selected: provider.selectedCategory == label,
                             colors: colors,
-                            onTap: () => _selectCategory(provider, label),
+                            onTap: () => _selectCategory(provider, label)
                           ),
-                      ],
-                    ),
-                  ),
+                      ]
+                    )
+                  )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 }
@@ -599,23 +599,23 @@ class _FilterChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: EdgeInsets.symmetric(
           horizontal: context.w(14),
-          vertical: context.h(8),
+          vertical: context.h(8)
         ),
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : colors.surface,
           borderRadius: BorderRadius.circular(context.h(20)),
           border: Border.all(
-            color: selected ? AppColors.primary : colors.border,
-          ),
+            color: selected ? AppColors.primary : colors.border
+          )
         ),
         child: Text(
           label,
           style: selected
-              ? AppTextStyles.label(context).copyWith(color: Colors.white)
-              : AppTextStyles.label(context)
-                  .copyWith(color: colors.textSecondary),
-        ),
-      ),
+              ? AppTextStyles.bodySemi(context).copyWith(color: AppColors.white)
+              : AppTextStyles.bodySemi(context)
+                  .copyWith(color: colors.textSecondary)
+        )
+      )
     );
   }
 }

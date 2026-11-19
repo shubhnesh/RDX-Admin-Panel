@@ -44,10 +44,6 @@ class _StatsCollapseButtonState extends State<StatsCollapseButton> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: _hovering ? AppColors.primary : colors.surface,
-              // border: Border.all(
-              //   color: AppColors.primary,
-              //   width: 1.5,
-              // ),
             ),
             child: Center(
               child: Icon(
@@ -55,8 +51,7 @@ class _StatsCollapseButtonState extends State<StatsCollapseButton> {
                     ? Icons.keyboard_arrow_down_rounded
                     : Icons.keyboard_arrow_up_rounded,
                 size: context.h(22).clamp(16.0, 26.0),
-                color:
-                    _hovering ? AppColors.surface : AppColors.lightTextPrimary,
+                color: _hovering ? AppColors.white : colors.textPrimary,
               ),
             ),
           ),

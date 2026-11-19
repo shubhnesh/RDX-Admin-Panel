@@ -3,7 +3,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { requireAdmin } = require("../auth/roles");
-const { createFcmMessage } = require("./notificationPolicy");
+const { ADMIN_TOPIC, createFcmMessage } = require("./notificationPolicy");
 
 const db = admin.firestore();
 const MAX_DELIVERY_ATTEMPTS = 3;
@@ -28,7 +28,7 @@ function isDue(data, now = Date.now()) {
     scheduledDate.getTime() <= now;
 }
 
-async function deliverNotification(notificationRef) {
+async function deliverNotification(notificationRef, topic) {
   const claim = await db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(notificationRef);
     if (!snapshot.exists) return null;
@@ -72,6 +72,10 @@ async function deliverNotification(notificationRef) {
       title,
       message,
       category: cleanText(notification.category) || "broadcast",
+      topic:
+        cleanText(notification.audience) === "admin"
+          ? ADMIN_TOPIC
+          : undefined,
     };
   });
 
@@ -79,7 +83,10 @@ async function deliverNotification(notificationRef) {
 
   try {
     const messageId = await admin.messaging().send(
-      createFcmMessage(claim)
+      createFcmMessage({
+        ...claim,
+        topic: topic || claim.topic || undefined,
+      })
     );
     await notificationRef.update({
       delivery_status: "sent",
@@ -104,6 +111,8 @@ async function createAndDeliverNotification({
   message,
   category,
   sourceId,
+  audience = "allApp",
+  topic,
 }) {
   const notificationRef = db.collection("notifications").doc(eventId);
   try {
@@ -112,7 +121,7 @@ async function createAndDeliverNotification({
       message,
       category,
       source_id: sourceId || null,
-      audience: "allApp",
+      audience,
       created_at: admin.firestore.FieldValue.serverTimestamp(),
       scheduled_at: null,
       sent_at: null,
@@ -126,7 +135,7 @@ async function createAndDeliverNotification({
     if (!alreadyExists(error)) throw error;
   }
 
-  await deliverNotification(notificationRef);
+  await deliverNotification(notificationRef, topic);
 }
 
 exports.sendBroadcastNotification = functions

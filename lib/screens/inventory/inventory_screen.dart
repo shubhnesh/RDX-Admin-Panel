@@ -108,7 +108,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 pagePad.left,
                 pagePad.top,
                 pagePad.right,
-                0,
+                context.h(0),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,12 +122,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                           children: [
                             Text(
                               'Inventory',
-                              style: AppTextStyles.heading(context),
+                              style: AppTextStyles.h2(context),
                             ),
                             SizedBox(height: context.h(isMobile ? 2 : 4)),
                             Text(
                               'Track raw materials, stock levels, and replenishment alerts',
-                              style: AppTextStyles.bodySecondary(context)
+                              style: AppTextStyles.body(context)
                                   .copyWith(color: colors.textSecondary),
                             ),
                           ],
@@ -152,7 +152,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                   pagePad.left,
                   context.h(8),
                   pagePad.right,
-                  0,
+                  context.h(0),
                 ),
                 child: Row(
                   children: [
@@ -165,7 +165,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     Expanded(
                       child: Text(
                         provider.refreshError ?? provider.errorMessage!,
-                        style: AppTextStyles.bodySecondary(context)
+                        style: AppTextStyles.body(context)
                             .copyWith(color: colors.textSecondary),
                       ),
                     ),
@@ -205,7 +205,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                         children: [
                           if (showCategorySidebar) ...[
                             SizedBox(
-                              width: 220,
+                              width: context.w(220),
                               child: _buildCategoryPanel(context, provider),
                             ),
                             SizedBox(width: context.w(10)),
@@ -287,7 +287,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
       return Center(
         child: Text(
           'No materials match the current filters.',
-          style: AppTextStyles.bodySecondary(context),
+          style: AppTextStyles.body(context),
         ),
       );
     }
@@ -295,11 +295,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     return RdxTable(
       showFooter: false,
       columns: [
-        RdxTableColumn(title: 'RAW MATERIAL', minWidth: 200, flex: 1.5),
-        RdxTableColumn(title: 'CURRENT STOCK', minWidth: 130, flex: 1),
+        RdxTableColumn(title: 'RAW MATERIAL', minWidth: context.w(200), flex: 1.5),
+        RdxTableColumn(title: 'CURRENT STOCK', minWidth: context.w(130), flex: 1),
         RdxTableColumn(
           title: 'ADD / USE STOCK',
-          minWidth: 250,
+          minWidth: context.w(250),
           flex: 1.5,
           header: canEdit
               ? Center(
@@ -333,8 +333,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 )
               : null,
         ),
-        RdxTableColumn(title: 'PURCHASE COST (₹)', minWidth: 160, flex: 1),
-        RdxTableColumn(title: 'VARIANCE', minWidth: 170, flex: 1),
+        RdxTableColumn(title: 'PURCHASE COST (₹)', minWidth: context.w(160), flex: 1),
+        RdxTableColumn(title: 'VARIANCE', minWidth: context.w(170), flex: 1),
       ],
       rows: items.map((item) {
         final controller = _stockControllers.putIfAbsent(
@@ -352,15 +352,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         return [
           Text(
             item.name,
-            style: AppTextStyles.bodySecondary(context).copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppTextStyles.body(context),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           Text(
             _stockQuantityLabel(item, item.quantity),
-            style: AppTextStyles.bodySecondary(context),
+            style: AppTextStyles.body(context),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -375,7 +373,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     onlyItemId: item.id,
                   ),
                 )
-              : Text('—', style: AppTextStyles.bodySecondary(context)),
+              : Text('—', style: AppTextStyles.body(context)),
           canEdit && _stockMode == InventoryStockMode.add
               ? _purchaseCostField(
                   context,
@@ -385,7 +383,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     onlyItemId: item.id,
                   ),
                 )
-              : Text('—', style: AppTextStyles.bodySecondary(context)),
+              : Text('—', style: AppTextStyles.body(context)),
           _stockVariance(
             context,
             item,
@@ -423,14 +421,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 Expanded(
                   child: Text(
                     'CATEGORIES',
-                    style: AppTextStyles.label(context).copyWith(
+                    style: AppTextStyles.caption(context).copyWith(
                       color: colors.textMuted,
-                      fontWeight: FontWeight.w600,
-                      fontSize: Responsive.isMobile(context)
-                          ? context.h(11).clamp(10.0, 12.0)
-                          : Responsive.isNarrow(context)
-                              ? context.h(12).clamp(11.0, 13.0)
-                              : context.h(13).clamp(12.0, 14.0),
                       letterSpacing: 0.3,
                     ),
                   ),
@@ -455,16 +447,15 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     ),
                     child: Text(
                       'Edit',
-                      style: AppTextStyles.label(context).copyWith(
+                      style: AppTextStyles.bodySemi(context).copyWith(
                         color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
               ],
             ),
           ),
-          Divider(height: 1, color: colors.divider),
+          Divider(height: context.h(1), color: colors.divider),
           Expanded(
             child: Scrollbar(
               child: ListView(
@@ -553,14 +544,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 Expanded(
                   child: Text(
                     category == 'All' ? 'All categories' : category,
-                    style: AppTextStyles.bodySecondary(context).copyWith(
-                      color: provider.selectedCategory == category
-                          ? AppColors.primary
-                          : AppColors.of(context).textPrimary,
-                      fontWeight: provider.selectedCategory == category
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                    ),
+                    style: provider.selectedCategory == category
+                        ? AppTextStyles.bodySemi(context).copyWith(
+                            color: AppColors.primary,
+                          )
+                        : AppTextStyles.body(context).copyWith(
+                            color: AppColors.of(context).textPrimary,
+                          ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -605,9 +595,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 padding: EdgeInsets.symmetric(horizontal: context.w(4)),
                 child: Text(
                   '+',
-                  style: AppTextStyles.bodySecondary(context).copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTextStyles.body(context),
                 ),
               ),
               Expanded(
@@ -672,11 +660,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                   ),
                   child: Text(
                     option == InventoryStockMode.add ? 'Add' : 'Use',
-                    style: AppTextStyles.label(context).copyWith(
+                    style: AppTextStyles.bodySemi(context).copyWith(
                       color: _stockMode == option
-                          ? Colors.white
+                          ? AppColors.white
                           : colors.textSecondary,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -704,7 +691,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
       ],
-      style: AppTextStyles.bodySecondary(context),
+      style: AppTextStyles.body(context),
       decoration: InputDecoration(
         suffixText: suffix,
         isDense: true,
@@ -712,7 +699,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
           horizontal: context.w(6),
           vertical: context.h(10),
         ),
-        suffixStyle: AppTextStyles.label(context),
+        suffixStyle: AppTextStyles.bodySemi(context),
         filled: true,
         fillColor: colors.surface,
         border: OutlineInputBorder(
@@ -744,7 +731,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
       ],
-      style: AppTextStyles.bodySecondary(context),
+      style: AppTextStyles.body(context),
       decoration: InputDecoration(
         prefixText: '₹ ',
         isDense: true,
@@ -782,7 +769,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
       builder: (context, _) {
         if (controller.text.trim().isEmpty &&
             portionController.text.trim().isEmpty) {
-          return Text('—', style: AppTextStyles.bodySecondary(context));
+          return Text('—', style: AppTextStyles.body(context));
         }
         final amount = _enteredStockAmount(item, controller, portionController);
         final color = mode == InventoryStockMode.add
@@ -791,10 +778,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         return Text(
           '${mode == InventoryStockMode.add ? '+' : '−'}'
           '${_stockQuantityLabel(item, amount)}',
-          style: AppTextStyles.bodySecondary(context).copyWith(
-            color: color,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTextStyles.body(context).copyWith(color: color),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         );
@@ -848,12 +832,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
       padding: EdgeInsets.only(top: context.h(10)),
       child: Row(
         children: [
-          if (showCategorySidebar) SizedBox(width: 220 + context.w(10)),
+          if (showCategorySidebar) SizedBox(width: context.w(220) + context.w(10)),
           Expanded(
             child: Text(
               '${provider.filteredItems.length} '
               '${provider.filteredItems.length == 1 ? 'item' : 'items'}',
-              style: AppTextStyles.bodySecondary(context).copyWith(
+              style: AppTextStyles.body(context).copyWith(
                 color: AppColors.of(context).textSecondary,
               ),
             ),

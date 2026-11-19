@@ -114,6 +114,10 @@ exports.notifyAppOrderStatusChanged =
   businessNotificationEvents.notifyAppOrderStatusChanged;
 exports.notifySupportRequestCreated =
   businessNotificationEvents.notifySupportRequestCreated;
+exports.notifyOrderPaymentChanged =
+  businessNotificationEvents.notifyOrderPaymentChanged;
+exports.notifyOrderRefundChanged =
+  businessNotificationEvents.notifyOrderRefundChanged;
 exports.submitSupportRequest =
   businessNotificationEvents.submitSupportRequest;
 exports.activateScheduledPromotions =

@@ -203,18 +203,9 @@ class _RdxTableState extends State<RdxTable> {
   }
 
   TextStyle _headerStyle(BuildContext context, AppColorScheme colors) {
-    final isMobile = Responsive.isMobile(context);
-    final isNarrow = Responsive.isNarrow(context);
-    final size = isMobile
-        ? context.h(11).clamp(10.0, 12.0)
-        : isNarrow
-            ? context.h(12).clamp(11.0, 13.0)
-            : context.h(13).clamp(12.0, 14.0);
-
-    return AppTextStyles.label(context).copyWith(
+    // Style guide: table headers use caption (uppercase overline feel) or bodySemi.
+    return AppTextStyles.caption(context).copyWith(
       color: colors.textMuted,
-      fontWeight: FontWeight.w600,
-      fontSize: size,
       letterSpacing: 0.3,
     );
   }
@@ -338,7 +329,7 @@ class RdxTableActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final size = Responsive.isMobile(context) ? context.w(28) : context.w(32);
+    final size = Responsive.isMobile(context) ? context.h(28) : context.h(32);
     final iconSize =
         Responsive.isMobile(context) ? context.h(20) : context.h(22);
 
@@ -386,7 +377,7 @@ class RdxTableMoreButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final resolvedSize =
-        size ?? (Responsive.isMobile(context) ? context.w(28) : context.w(32));
+        size ?? (Responsive.isMobile(context) ? context.h(28) : context.h(32));
     final resolvedIconSize = iconSize ??
         (Responsive.isMobile(context) ? context.h(18) : context.h(20));
 

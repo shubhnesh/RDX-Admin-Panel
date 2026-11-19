@@ -32,15 +32,11 @@ class _AppBackButtonState extends State<AppBackButton> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: _hovering ? AppColors.primary : colors.surface,
-            // border: Border.all(
-            //   color: AppColors.primary,
-            //   width: 1.5,
-            // ),
           ),
           child: Icon(
             Icons.arrow_back_ios_new,
             size: context.h(18).clamp(14.0, 22.0),
-            color: _hovering ? AppColors.surface : AppColors.lightTextPrimary,
+            color: _hovering ? AppColors.white : colors.textPrimary,
           ),
         ),
       ),

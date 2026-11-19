@@ -4,70 +4,46 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/responsive_size.dart';
-import '../../../models/cart_item_model.dart';
 import '../../../models/menu_item_model.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../widgets/buttons/rdx_action_button.dart';
-import '../../../widgets/reusable_widgets/rdx_text_field.dart';
 
+/// Bottom sheet shown when "+ Add" is tapped on an item that has sizes.
+/// Lists only that item's sizes with their prices.
 class ItemCustomizeSheet extends ConsumerStatefulWidget {
   final MenuItemModel item;
-  const ItemCustomizeSheet({super.key, required this.item});
+
+  /// true on wide screens: rendered inside a centered dialog instead of a
+  /// bottom sheet (rounded on all corners, no drag handle).
+  final bool asDialog;
+
+  const ItemCustomizeSheet({
+    super.key,
+    required this.item,
+    this.asDialog = false,
+  });
 
   @override
   ConsumerState<ItemCustomizeSheet> createState() => _ItemCustomizeSheetState();
 }
 
 class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
-  int _quantity = 1;
-  String? _spiceLevel;
-  final Set<int> _selectedQuickAddOns = {};
-  final List<CartAddOn> _customAddOns = [];
-  final _notesController = TextEditingController();
-  final _customNameController = TextEditingController();
-  final _customPriceController = TextEditingController();
-  bool _addingCustom = false;
-
-  List<CartAddOn> get _allSelectedAddOns => [
-        for (final index in _selectedQuickAddOns) kQuickAddOns[index],
-        ..._customAddOns,
-      ];
-
-  double get _unitPrice =>
-      widget.item.price +
-      _allSelectedAddOns.fold(0.0, (sum, a) => sum + a.price);
+  MenuItemSize? _selected;
 
   @override
-  void dispose() {
-    _notesController.dispose();
-    _customNameController.dispose();
-    _customPriceController.dispose();
-    super.dispose();
-  }
-
-  void _addCustomAddOn() {
-    final name = _customNameController.text.trim();
-    if (name.isEmpty) return;
-    final price = (double.tryParse(_customPriceController.text.trim()) ?? 0)
-        .clamp(0, 10000)
-        .toDouble();
-    setState(() {
-      _customAddOns.add(CartAddOn(name: name, price: price));
-      _customNameController.clear();
-      _customPriceController.clear();
-      _addingCustom = false;
-    });
+  void initState() {
+    super.initState();
+    final sizes = widget.item.sizes;
+    _selected = sizes.isNotEmpty ? sizes.first : null;
   }
 
   void _submit() {
+    final size = _selected;
+    if (size == null) return;
     ref.read(cartProvider.notifier).addItem(
           menuItem: widget.item,
-          quantity: _quantity,
-          spiceLevel: _spiceLevel,
-          addOns: _allSelectedAddOns,
-          notes: _notesController.text.trim().isEmpty
-              ? null
-              : _notesController.text.trim(),
+          size: size.name,
+          sizePrice: size.price,
         );
     Navigator.of(context).pop();
   }
@@ -75,22 +51,26 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final selected = _selected;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(context.h(18))),
-          ),
-          child: Column(
-            children: [
-              SizedBox(height: context.h(10)),
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+      ),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: widget.asDialog
+            ? BorderRadius.circular(context.h(14))
+            : BorderRadius.vertical(top: Radius.circular(context.h(18))),
+        border: widget.asDialog ? Border.all(color: colors.border) : null,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: context.h(10)),
+            if (!widget.asDialog)
               Container(
                 width: context.w(40),
                 height: context.h(4),
@@ -99,281 +79,168 @@ class _ItemCustomizeSheetState extends ConsumerState<ItemCustomizeSheet> {
                   borderRadius: BorderRadius.circular(context.h(2)),
                 ),
               ),
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: EdgeInsets.fromLTRB(
-                    context.w(18),
-                    context.h(14),
-                    context.w(18),
-                    context.h(14),
-                  ),
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.item.name,
-                                style: AppTextStyles.section(context)
-                                    .copyWith(color: colors.textPrimary),
-                              ),
-                              SizedBox(height: context.h(3)),
-                              Text(
-                                '₹${widget.item.price.toStringAsFixed(0)} base price',
-                                style: AppTextStyles.bodySecondary(context)
-                                    .copyWith(color: colors.textSecondary),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: Icon(Icons.close, color: colors.textMuted),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: context.h(18)),
-                    Text('Quantity',
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textMuted)),
-                    SizedBox(height: context.h(8)),
-                    Row(
-                      children: [
-                        _stepperButton(
-                          colors,
-                          icon: Icons.remove,
-                          onTap: _quantity > 1
-                              ? () => setState(() => _quantity--)
-                              : null,
-                        ),
-                        SizedBox(width: context.w(16)),
-                        Text('$_quantity',
-                            style: AppTextStyles.section(context)
-                                .copyWith(color: colors.textPrimary)),
-                        SizedBox(width: context.w(16)),
-                        _stepperButton(
-                          colors,
-                          icon: Icons.add,
-                          onTap: _quantity < 20
-                              ? () => setState(() => _quantity++)
-                              : null,
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: context.h(20)),
-                    Text('Spice Level',
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textMuted)),
-                    SizedBox(height: context.h(8)),
-                    Wrap(
-                      spacing: context.w(8),
-                      runSpacing: context.h(8),
-                      children: [
-                        for (final level in kSpiceLevels)
-                          ChoiceChip(
-                            label: Text(level),
-                            selected: _spiceLevel == level,
-                            onSelected: (selected) => setState(
-                                () => _spiceLevel = selected ? level : null),
-                            selectedColor:
-                                AppColors.primary.withValues(alpha: 0.15),
-                            labelStyle: AppTextStyles.label(context).copyWith(
-                              color: _spiceLevel == level
-                                  ? AppColors.primary
-                                  : colors.textPrimary,
-                            ),
-                            side: BorderSide(
-                              color: _spiceLevel == level
-                                  ? AppColors.primary
-                                  : colors.border,
-                            ),
-                            backgroundColor: colors.surfaceVariant,
-                          ),
-                      ],
-                    ),
-                    SizedBox(height: context.h(20)),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text('Add-ons',
-                              style: AppTextStyles.bodySecondary(context)
-                                  .copyWith(color: colors.textMuted)),
-                        ),
-                        InkWell(
-                          onTap: () =>
-                              setState(() => _addingCustom = !_addingCustom),
-                          child: Text(
-                            _addingCustom ? 'Cancel' : '+ Custom add-on',
-                            style: AppTextStyles.label(context)
-                                .copyWith(color: AppColors.primary),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: context.h(8)),
-                    for (var i = 0; i < kQuickAddOns.length; i++)
-                      _addOnRow(
-                        colors,
-                        label: kQuickAddOns[i].displayLabel,
-                        selected: _selectedQuickAddOns.contains(i),
-                        onChanged: (v) => setState(() {
-                          if (v == true) {
-                            _selectedQuickAddOns.add(i);
-                          } else {
-                            _selectedQuickAddOns.remove(i);
-                          }
-                        }),
-                      ),
-                    for (final custom in _customAddOns)
-                      _addOnRow(
-                        colors,
-                        label: custom.displayLabel,
-                        selected: true,
-                        onChanged: (_) =>
-                            setState(() => _customAddOns.remove(custom)),
-                      ),
-                    if (_addingCustom) ...[
-                      SizedBox(height: context.h(6)),
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: RdxTextField(
-                              controller: _customNameController,
-                              maxLength: 25,
-                              hint: 'Add-on name',
-                            ),
-                          ),
-                          SizedBox(width: context.w(8)),
-                          Expanded(
-                            flex: 2,
-                            child: RdxTextField(
-                              controller: _customPriceController,
-                              maxLength: 4,
-                              hint: '₹0',
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                            ),
-                          ),
-                          SizedBox(width: context.w(8)),
-                          RdxActionButton(
-                            label: 'Add',
-                            isPrimary: true,
-                            onPressed: _addCustomAddOn,
-                            height: context.h(38),
-                            minWidth: context.w(60),
-                          ),
-                        ],
-                      ),
-                    ],
-                    SizedBox(height: context.h(20)),
-                    Text('Special Instructions',
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textMuted)),
-                    SizedBox(height: context.h(8)),
-                    RdxTextField(
-                      controller: _notesController,
-                      maxLength: 200,
-                      hint: 'e.g. no onions, extra crispy',
-                      maxLines: 3,
-                    ),
-                  ],
-                ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                context.w(18),
+                context.h(14),
+                context.w(8),
+                0,
               ),
-              Container(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.item.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodyLargeSemi(context)
+                          .copyWith(color: colors.textPrimary),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(Icons.close, color: colors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
                 padding: EdgeInsets.fromLTRB(
                   context.w(18),
-                  context.h(12),
+                  context.h(6),
                   context.w(18),
-                  context.h(16),
+                  context.h(14),
                 ),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: colors.divider)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '₹${(_unitPrice * _quantity).toStringAsFixed(0)}',
-                        style: AppTextStyles.section(context)
-                            .copyWith(color: colors.textPrimary),
-                      ),
-                    ),
-                    SizedBox(
-                      width: context.w(180),
-                      child: RdxActionButton(
-                        label: 'Add to Cart',
-                        isPrimary: true,
-                        onPressed: _submit,
-                      ),
-                    ),
-                  ],
-                ),
+                children: [
+                  Text(
+                    'Select size',
+                    style: AppTextStyles.body(context)
+                        .copyWith(color: colors.textMuted),
+                  ),
+                  SizedBox(height: context.h(10)),
+                  for (final size in widget.item.sizes)
+                    _sizeTile(colors, size, size == selected),
+                ],
               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _stepperButton(AppColorScheme colors,
-      {required IconData icon, required VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(context.h(18)),
-      child: Container(
-        padding: EdgeInsets.all(context.h(8)),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: onTap == null
-              ? colors.surfaceVariant
-              : AppColors.primary.withValues(alpha: 0.1),
-        ),
-        child: Icon(icon,
-            size: context.h(18),
-            color: onTap == null ? colors.textMuted : AppColors.primary),
-      ),
-    );
-  }
-
-  Widget _addOnRow(
-    AppColorScheme colors, {
-    required String label,
-    required bool selected,
-    required ValueChanged<bool?> onChanged,
-  }) {
-    return InkWell(
-      onTap: () => onChanged(!selected),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: context.h(4)),
-        child: Row(
-          children: [
-            Checkbox(
-              value: selected,
-              onChanged: onChanged,
-              activeColor: AppColors.primary,
-              visualDensity: VisualDensity.compact,
             ),
-            Expanded(
-              child: Text(label,
-                  style: AppTextStyles.body(context)
-                      .copyWith(color: colors.textPrimary)),
+            Container(
+              padding: EdgeInsets.fromLTRB(
+                context.w(18),
+                context.h(12),
+                context.w(18),
+                context.h(16),
+              ),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: colors.divider)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      selected == null
+                          ? ''
+                          : '₹${selected.price.toStringAsFixed(0)}',
+                      style: AppTextStyles.bodyLargeSemi(context)
+                          .copyWith(color: colors.textPrimary),
+                    ),
+                  ),
+                  SizedBox(
+                    width: context.w(180),
+                    child: RdxActionButton(
+                      label: 'Add to Cart',
+                      isPrimary: true,
+                      onPressed: selected == null ? null : _submit,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _sizeTile(AppColorScheme colors, MenuItemSize size, bool isSelected) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: context.h(8)),
+      child: Material(
+        color: isSelected
+            ? AppColors.primary.withValues(alpha: 0.08)
+            : colors.surface,
+        borderRadius: BorderRadius.circular(context.h(10)),
+        child: InkWell(
+          onTap: () => setState(() => _selected = size),
+          borderRadius: BorderRadius.circular(context.h(10)),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.w(14),
+              vertical: context.h(12),
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(context.h(10)),
+              border: Border.all(
+                color: isSelected ? AppColors.primary : colors.border,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isSelected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  size: context.h(20),
+                  color: isSelected ? AppColors.primary : colors.textMuted,
+                ),
+                SizedBox(width: context.w(10)),
+                Expanded(
+                  child: Text(
+                    size.name,
+                    style: AppTextStyles.bodySemi(context)
+                        .copyWith(color: colors.textPrimary),
+                  ),
+                ),
+                Text(
+                  '₹${size.price.toStringAsFixed(0)}',
+                  style: AppTextStyles.bodySemi(context).copyWith(
+                    color: isSelected ? AppColors.primary : colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-/// Opens [ItemCustomizeSheet] as a bottom sheet.
+/// Opens [ItemCustomizeSheet] for sized items. Items without sizes have
+/// nothing to choose, so they are added to the cart directly.
 Future<void> showItemCustomizeSheet(BuildContext context, MenuItemModel item) {
+  if (!item.hasSizes) {
+    ProviderScope.containerOf(context, listen: false)
+        .read(cartProvider.notifier)
+        .addItem(menuItem: item);
+    return Future<void>.value();
+  }
+  // Wide screens: a centered dialog looks better than a full-width sheet.
+  if (MediaQuery.sizeOf(context).width >= 900) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: ItemCustomizeSheet(item: item, asDialog: true),
+        ),
+      ),
+    );
+  }
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,

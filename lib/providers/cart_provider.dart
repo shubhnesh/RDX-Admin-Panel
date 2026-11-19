@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/cart_item_model.dart';
@@ -12,10 +13,24 @@ class CartNotifier extends StateNotifier<List<CartLineItem>> {
   void addItem({
     required MenuItemModel menuItem,
     int quantity = 1,
+    String? size,
+    double? sizePrice,
     String? spiceLevel,
     List<CartAddOn> addOns = const [],
     String? notes,
   }) {
+    // Same item + same size + same options → bump quantity instead of
+    // adding a duplicate line.
+    final existing = state.indexWhere((l) =>
+        l.menuItem.id == menuItem.id &&
+        l.size == size &&
+        l.spiceLevel == spiceLevel &&
+        (l.notes ?? '') == (notes ?? '') &&
+        listEquals(l.addOns, addOns));
+    if (existing != -1) {
+      updateQuantity(state[existing].id, state[existing].quantity + quantity);
+      return;
+    }
     final id =
         '${menuItem.id}_${DateTime.now().microsecondsSinceEpoch}';
     state = [
@@ -24,6 +39,8 @@ class CartNotifier extends StateNotifier<List<CartLineItem>> {
         id: id,
         menuItem: menuItem,
         quantity: quantity,
+        size: size,
+        sizePrice: sizePrice,
         spiceLevel: spiceLevel,
         addOns: List<CartAddOn>.from(addOns),
         notes: notes,

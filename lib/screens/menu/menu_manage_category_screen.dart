@@ -327,8 +327,7 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
             : [
                 Text(
                   '${category.subcategories.length} subcategor${category.subcategories.length == 1 ? 'y' : 'ies'}',
-                  style: AppTextStyles.body(context).copyWith(
-                    color: AppColors.of(context).textSecondary,
+                  style: AppTextStyles.body(context).copyWith(color: AppColors.of(context).textSecondary,
                   ),
                 ),
               ],
@@ -638,7 +637,7 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
                     : Padding(
                         padding: EdgeInsets.fromLTRB(
                           horizontal,
-                          0,
+                          context.h(0),
                           horizontal,
                           context.h(20),
                         ),
@@ -706,9 +705,7 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
         ),
         child: Text(
           label,
-          style: AppTextStyles.label(context).copyWith(
-            color: selected ? Colors.white : colors.textPrimary,
-          ),
+          style: AppTextStyles.bodySemi(context).copyWith(color: selected ? AppColors.white : colors.textPrimary),
         ),
       ),
     );
@@ -787,11 +784,11 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   Widget _categoryTable(BuildContext context, AppColorScheme colors) {
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Category', minWidth: 180, flex: 2),
-        RdxTableColumn(title: 'Subcategories', minWidth: 200, flex: 3),
+        RdxTableColumn(title: 'Category', minWidth: context.w(180), flex: 2),
+        RdxTableColumn(title: 'Subcategories', minWidth: context.w(200), flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: 90,
+          minWidth: context.w(90),
           alignment: Alignment.centerRight,
         ),
       ],
@@ -803,7 +800,7 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
               category.subcategories.isEmpty
                   ? '—'
                   : _formatSubcategories(category.subcategories),
-              style: AppTextStyles.bodySecondary(context)
+              style: AppTextStyles.body(context)
                   .copyWith(color: colors.textSecondary),
             ),
             _actionsCell(
@@ -826,10 +823,10 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   Widget _preparationTable(BuildContext context) {
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Preparation Style', minWidth: 220, flex: 3),
+        RdxTableColumn(title: 'Preparation Style', minWidth: context.w(220), flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: 90,
+          minWidth: context.w(90),
           alignment: Alignment.centerRight,
         ),
       ],
@@ -857,10 +854,10 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   Widget _regionalityTable(BuildContext context) {
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Regionality', minWidth: 220, flex: 3),
+        RdxTableColumn(title: 'Regionality', minWidth: context.w(220), flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: 90,
+          minWidth: context.w(90),
           alignment: Alignment.centerRight,
         ),
       ],
@@ -891,10 +888,10 @@ class _MenuManageCategoryScreenState extends State<MenuManageCategoryScreen> {
   Widget _tagTable(BuildContext context) {
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Tag', minWidth: 200, flex: 3),
+        RdxTableColumn(title: 'Tag', minWidth: context.w(200), flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: 90,
+          minWidth: context.w(90),
           alignment: Alignment.centerRight,
         ),
       ],

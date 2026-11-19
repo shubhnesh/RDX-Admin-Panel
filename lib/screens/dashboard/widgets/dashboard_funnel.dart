@@ -29,7 +29,7 @@ class DashboardFunnel extends StatelessWidget {
           const Color(0xFF86EFAC)),
       _Stage('Delivered', stats.funnelDelivered, stats.funnelDeliveredPercent,
           stats.funnelFractions['delivered'] ?? 0,
-          const Color(0xFF16A34A)),
+          AppColors.success),
       _Stage('Cancelled', stats.funnelCancelled, stats.funnelCancelledPercent,
           stats.funnelFractions['cancelled'] ?? 0,
           AppColors.danger),
@@ -125,10 +125,7 @@ class DashboardFunnel extends StatelessWidget {
         SizedBox(width: context.w(4)),
         Text(
           '${ratePercent.toStringAsFixed(0)}% of prior-stage count',
-          style: AppTextStyles.caption(context).copyWith(
-            color: colors.textMuted,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTextStyles.caption(context).copyWith(color: colors.textMuted),
         ),
       ],
     );
@@ -146,8 +143,7 @@ class DashboardFunnel extends StatelessWidget {
             Expanded(
               child: Text(
                 stage.label,
-                style: AppTextStyles.body(context)
-                    .copyWith(fontWeight: FontWeight.w600),
+                style: AppTextStyles.bodySemi(context),
               ),
             ),
             SizedBox(
@@ -155,8 +151,7 @@ class DashboardFunnel extends StatelessWidget {
               child: Text(
                 '${stage.count}',
                 textAlign: TextAlign.right,
-                style: AppTextStyles.body(context)
-                    .copyWith(fontWeight: FontWeight.w800),
+                style: AppTextStyles.bodyLargeSemi(context),
               ),
             ),
             SizedBox(width: context.w(10)),
@@ -165,10 +160,7 @@ class DashboardFunnel extends StatelessWidget {
               child: Text(
                 '${stage.percent.toStringAsFixed(0)}%',
                 textAlign: TextAlign.right,
-                style: AppTextStyles.caption(context).copyWith(
-                  color: const Color(0xFF16A34A),
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppTextStyles.caption(context).copyWith(color: AppColors.success),
               ),
             ),
           ],

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import '../../core/theme/app_colors.dart';
@@ -49,9 +48,7 @@ class MainSideNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const sidebarBg = AppColors.lightSidebar;
-    const textPrimary = AppColors.lightTextPrimary;
-    const textSecondary = AppColors.lightTextSecondary;
+    final colors = AppColors.of(context);
 
     final expandedW = context.w(expandedWidth);
     final collapsedW = context.w(collapsedWidth);
@@ -64,10 +61,10 @@ class MainSideNav extends StatelessWidget {
           duration: _animDuration,
           curve: _animCurve,
           width: currentW,
-          decoration: const BoxDecoration(
-            color: sidebarBg,
+          decoration: BoxDecoration(
+            color: colors.surface,
             border: Border(
-              right: BorderSide(color: AppColors.lightBorder, width: 1),
+              right: BorderSide(color: colors.border, width: 1),
             ),
           ),
           // ClipRect prevents any mid-animation overflow from ever
@@ -77,7 +74,7 @@ class MainSideNav extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // ── Header / brand ────────────────────────────────────
-                _buildHeader(context, textPrimary, textSecondary),
+                _buildHeader(context, colors),
                 SizedBox(height: context.h(8)),
                 // ── Primary nav ───────────────────────────────────────
                 Expanded(
@@ -103,7 +100,7 @@ class MainSideNav extends StatelessWidget {
                     horizontal: context.w(expanded ? 10 : 8),
                   ),
                   child: Divider(
-                    color: AppColors.lightDivider.withOpacity(0.8),
+                    color: colors.divider.withValues(alpha: 0.8),
                     height: 1,
                   ),
                 ),
@@ -153,57 +150,72 @@ class MainSideNav extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(
-    BuildContext context,
-    Color textPrimary,
-    Color textSecondary,
-  ) {
+  /// Brand block: text-only "RDX" wordmark with a small "Ops Center" tag.
+  /// When collapsed, only the "RDX" wordmark remains, centered in the rail.
+  Widget _buildHeader(BuildContext context, AppColorScheme colors) {
+    final inset = context.w(expanded ? 10 : 8);
+    final tile = context.h(42);
+
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        context.w(expanded ? 16 : 12),
-        context.h(20),
-        context.w(expanded ? 16 : 12),
-        context.h(12),
-      ),
-      child: Row(
-        mainAxisAlignment:
-            expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
-        children: [
-          // Safe logo: SVG decode can fail on web (CanvasKit not ready /
-          // hot-restart). Fallback icon avoids crashing the whole shell.
-          _NavLogo(
-            width: context.w(50),
-            height: context.h(35),
-          ),
-          Flexible(
-            child: AnimatedSize(
-              duration: _animDuration,
-              curve: _animCurve,
-              alignment: Alignment.centerLeft,
-              child: ClipRect(
-                child: expanded
-                    ? Padding(
-                        padding: EdgeInsets.only(left: context.w(10)),
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          opacity: expanded ? 1.0 : 0.0,
-                          child: Text(
-                            'Admin Panel',
-                            maxLines: 1,
-                            overflow: TextOverflow.clip,
-                            softWrap: false,
-                            style: AppTextStyles.heading(context).copyWith(
-                              color: textPrimary,
-                              fontSize: context.h(20),
-                            ),
+      padding: EdgeInsets.fromLTRB(inset, context.h(20), inset, context.h(12)),
+      child: SizedBox(
+        height: tile,
+        child: Row(
+          mainAxisAlignment:
+              expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: AnimatedSize(
+                duration: _animDuration,
+                curve: _animCurve,
+                alignment: Alignment.centerLeft,
+                child: ClipRect(
+                  child: Padding(
+                    padding: EdgeInsets.only(left: context.w(expanded ? 6 : 0)),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: expanded
+                          ? CrossAxisAlignment.start
+                          : CrossAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'RDX',
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.clip,
+                          style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                            color: colors.textPrimary,
+                            fontSize: expanded ? 19 : 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.4,
+                            height: 1.1,
                           ),
                         ),
-                      )
-                    : const SizedBox(width: 0, height: 0),
+                        if (expanded) ...[
+                          SizedBox(height: context.h(2)),
+                          Text(
+                            'Ops Center',
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.clip,
+                            style: AppTextStyles.caption(context).copyWith(
+                              color: colors.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.6,
+                              height: 1.1,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -225,8 +237,9 @@ class _EdgeToggleButtonState extends State<_EdgeToggleButton> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     // Single scale factor for both dimensions so the button stays a true circle.
-    final size = context.w(28);
+    final size = context.h(28);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -242,10 +255,10 @@ class _EdgeToggleButtonState extends State<_EdgeToggleButton> {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: _hovering ? AppColors.primary : AppColors.lightSurface,
+              color: _hovering ? AppColors.primary : colors.surface,
               shape: BoxShape.circle,
               border: Border.all(
-                color: _hovering ? AppColors.primary : AppColors.lightBorder,
+                color: _hovering ? AppColors.primary : colors.border,
                 width: 1.5,
               ),
             ),
@@ -255,7 +268,7 @@ class _EdgeToggleButtonState extends State<_EdgeToggleButton> {
               child: Icon(
                 Icons.keyboard_double_arrow_left_rounded,
                 size: size * (18 / 28),
-                color: _hovering ? Colors.white : AppColors.lightTextSecondary,
+                color: _hovering ? AppColors.white : colors.textSecondary,
               ),
             ),
           ),
@@ -285,9 +298,11 @@ class _NavTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg =
-        selected ? AppColors.primary.withOpacity(0.15) : Colors.transparent;
-    final color = selected ? AppColors.primary : AppColors.lightTextSecondary;
+    final colors = AppColors.of(context);
+    final bg = selected
+        ? AppColors.primary.withValues(alpha: 0.15)
+        : Colors.transparent;
+    final color = selected ? AppColors.primary : colors.textSecondary;
 
     final tileHeight = context.h(42);
     final squareSide = tileHeight;
@@ -346,11 +361,8 @@ class _NavTile extends StatelessWidget {
                           opacity: expanded ? 1.0 : 0.0,
                           child: Text(
                             item.label,
-                            style: AppTextStyles.section(context).copyWith(
-                              color: selected
-                                  ? AppColors.primary
-                                  : AppColors.lightTextSecondary,
-                            ),
+                            style: AppTextStyles.bodyLargeSemi(context)
+                                .copyWith(color: color),
                             maxLines: 1,
                             overflow: TextOverflow.clip,
                             softWrap: false,
@@ -389,9 +401,11 @@ class _FooterTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primary : AppColors.lightTextSecondary;
-    final bg =
-        selected ? AppColors.primary.withOpacity(0.15) : Colors.transparent;
+    final colors = AppColors.of(context);
+    final color = selected ? AppColors.primary : colors.textSecondary;
+    final bg = selected
+        ? AppColors.primary.withValues(alpha: 0.15)
+        : Colors.transparent;
 
     final tileHeight = context.h(42);
     final squareSide = tileHeight;
@@ -442,7 +456,7 @@ class _FooterTile extends StatelessWidget {
                           opacity: expanded ? 1.0 : 0.0,
                           child: Text(
                             label,
-                            style: AppTextStyles.section(context)
+                            style: AppTextStyles.bodyLargeSemi(context)
                                 .copyWith(color: color),
                             maxLines: 1,
                             overflow: TextOverflow.clip,
@@ -459,47 +473,5 @@ class _FooterTile extends StatelessWidget {
         },
       ),
     );
-  }
-}
-
-/// Logo with SVG + hard fallback so web CanvasKit decode errors never
-/// take down the side nav.
-class _NavLogo extends StatelessWidget {
-  final double width;
-  final double height;
-
-  const _NavLogo({required this.width, required this.height});
-
-  @override
-  Widget build(BuildContext context) {
-    final fallback = SizedBox(
-      width: width,
-      height: height,
-      child: Icon(
-        Icons.storefront_rounded,
-        size: height * 0.85,
-        color: Colors.black87,
-      ),
-    );
-
-    try {
-      return SizedBox(
-        width: width,
-        height: height,
-        child: SvgPicture.asset(
-          'assets/images/logo/rdx_logo_picture.svg',
-          width: width,
-          height: height,
-          fit: BoxFit.contain,
-          colorFilter: const ColorFilter.mode(
-            Colors.black,
-            BlendMode.srcIn,
-          ),
-          placeholderBuilder: (_) => fallback,
-        ),
-      );
-    } catch (_) {
-      return fallback;
-    }
   }
 }

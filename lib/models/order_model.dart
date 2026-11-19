@@ -280,6 +280,7 @@ class OrderItemModel {
   final String name;
   final int quantity;
   final double price;
+  final String? size;
   final String? spiceLevel;
   final List<String> addOns;
   final String? notes;
@@ -288,6 +289,7 @@ class OrderItemModel {
     required this.name,
     required this.quantity,
     required this.price,
+    this.size,
     this.spiceLevel,
     this.addOns = const [],
     this.notes,
@@ -302,6 +304,9 @@ class OrderItemModel {
       ),
       price: _parseDouble(
         json['price'],
+      ),
+      size: _parseNullableString(
+        json['size'],
       ),
       spiceLevel: _parseNullableString(
         json['spice_level'],
@@ -320,6 +325,7 @@ class OrderItemModel {
       'name': name,
       'quantity': quantity,
       'price': price,
+      'size': size,
       'spice_level': spiceLevel,
       'add_ons': addOns,
       'notes': notes,

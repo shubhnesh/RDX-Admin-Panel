@@ -11,15 +11,20 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: context.h(48).clamp(32.0, 56.0), color: AppColors.textMuted),
-          const SizedBox(height: 12),
+          Icon(
+            icon,
+            size: context.h(48).clamp(32.0, 56.0),
+            color: colors.textMuted,
+          ),
+          SizedBox(height: context.h(12)),
           Text(
             message,
-            style: AppTextStyles.bodySecondary(context),
+            style: AppTextStyles.body(context),
           ),
         ],
       ),

@@ -6,6 +6,12 @@ import 'package:rdx_admin/models/dashboard_stats_model.dart';
 import 'package:rdx_admin/screens/dashboard/widgets/dashboard_empty.dart';
 import 'package:rdx_admin/screens/dashboard/widgets/dashboard_card_style.dart';
 
+/// Popular menu items list.
+///
+/// Typography (STYLE_GUIDE):
+/// - Rank → bodySemi + textMuted
+/// - Item name → bodySemi
+/// - Orders count → body + textSecondary
 class DashboardTopSelling extends StatelessWidget {
   final List<TopSellingItem> items;
 
@@ -27,11 +33,16 @@ class DashboardTopSelling extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Popular menu items', style: DashboardCardStyle.title(context)),
+          Text(
+            'Popular menu items',
+            style: DashboardCardStyle.title(context),
+          ),
           if (items.isNotEmpty) ...[
             SizedBox(height: context.h(4)),
-            Text('Sales and order count for this period',
-                style: DashboardCardStyle.description(context)),
+            Text(
+              'Sales and order count for this period',
+              style: DashboardCardStyle.description(context),
+            ),
           ],
           if (items.isEmpty)
             SizedBox(
@@ -58,7 +69,10 @@ class DashboardTopSelling extends StatelessWidget {
   }
 
   Widget _row(
-      BuildContext context, AppColorScheme colors, TopSellingItem item) {
+    BuildContext context,
+    AppColorScheme colors,
+    TopSellingItem item,
+  ) {
     return Row(
       children: [
         SizedBox(
@@ -66,33 +80,23 @@ class DashboardTopSelling extends StatelessWidget {
           child: Text(
             '#${item.rank}',
             textAlign: TextAlign.center,
-            style: AppTextStyles.label(context).copyWith(
+            style: AppTextStyles.bodySemi(context).copyWith(
               color: colors.textMuted,
-              fontSize: context.h(18),
-              fontWeight: FontWeight.w700,
             ),
           ),
         ),
         SizedBox(width: context.w(12)),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.body(context)
-                    .copyWith(fontWeight: FontWeight.w600),
-              ),
-            ],
+          child: Text(
+            item.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.bodySemi(context),
           ),
         ),
         Text(
           '${item.orders} sold',
           style: AppTextStyles.body(context).copyWith(
-            fontSize: context.h(18),
-            fontWeight: FontWeight.w800,
             color: colors.textSecondary,
           ),
         ),

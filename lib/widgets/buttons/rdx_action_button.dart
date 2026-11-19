@@ -105,25 +105,25 @@ class RdxActionButton extends StatelessWidget {
     final btnHeight = height ?? context.h(40).clamp(32.0, 40.0);
 
     // Keep primary actions on-brand and secondary actions visually neutral.
-    final defaultTextColor = isPrimary ? Colors.white : colors.textPrimary;
+    final defaultTextColor = isPrimary ? AppColors.white : colors.textPrimary;
 
     final resolvedTextColor = textColor ?? defaultTextColor;
 
     final resolvedIconColor = iconColor ?? resolvedTextColor;
 
     final resolvedBackgroundColor = backgroundColor ??
-        (isPrimary ? AppColors.primary : const Color(0xFFF1F2F4));
+        (isPrimary ? AppColors.primary : colors.surfaceVariant);
 
     final resolvedBorderColor =
         borderColor ?? (isPrimary ? Colors.transparent : colors.border);
 
     final resolvedDisabledBackgroundColor = disabledBackgroundColor ??
-        (isPrimary ? const Color(0xFFE0E0E0) : const Color(0xFFF5F5F5));
+        (isPrimary
+            ? colors.surfaceVariant
+            : colors.surfaceVariant.withValues(alpha: 0.6));
 
     final resolvedDisabledTextColor = disabledTextColor ??
-        (isPrimary
-            ? const Color(0xFF757575)
-            : colors.textPrimary.withAlpha(120));
+        (isPrimary ? colors.textMuted : colors.textPrimary.withValues(alpha: 0.47));
     final resolvedDisabledIconColor =
         disabledIconColor ?? resolvedDisabledTextColor;
     final isDisabled = !enabled || (!isLoading && onPressed == null);
@@ -133,10 +133,10 @@ class RdxActionButton extends StatelessWidget {
     final effectiveIconColor =
         isDisabled ? resolvedDisabledIconColor : resolvedIconColor;
 
-    final textStyle = AppTextStyles.section(context).copyWith(
-      color: effectiveTextColor,
-      fontSize: compact ? context.h(12).clamp(11.0, 12.0) : null,
-    );
+    // Style guide: no fontSize override. Compact uses bodySmallSemi instead.
+    final textStyle = compact
+        ? AppTextStyles.bodySmallSemi(context).copyWith(color: effectiveTextColor)
+        : AppTextStyles.bodySemi(context).copyWith(color: effectiveTextColor);
 
     final child = isLoading
         ? SizedBox(

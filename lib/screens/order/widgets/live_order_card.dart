@@ -45,7 +45,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
   void _tapAdvance() {
     _log(
       'Status action tapped (order: ${order.id}, action: $actionText, '
-      'status: ${order.status.name}, callback: ${onAdvance != null}).',
+      'status: ${order.status.name}, callback: ${onAdvance != null}).'
     );
     onAdvance?.call(order);
   }
@@ -54,7 +54,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
     _log(
       'Secondary action tapped (order: ${order.id}, '
       'action: $secondaryActionText, '
-      'callback: ${onSecondaryAction != null}).',
+      'callback: ${onSecondaryAction != null}).'
     );
     onSecondaryAction?.call(order);
   }
@@ -74,15 +74,15 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
         borderRadius: BorderRadius.circular(context.h(10)),
         border: Border.all(
           color: colors.border,
-          width: 1,
+          width: 1
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: AppColors.black.withValues(alpha: 0.06),
             blurRadius: 8,
-            offset: const Offset(0, 3),
+            offset: const Offset(0, 3)
           ),
-        ],
+        ]
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -96,14 +96,14 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
             child: InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.vertical(
-                top: Radius.circular(context.h(10)),
+                top: Radius.circular(context.h(10))
               ),
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   context.w(14),
                   context.h(14),
                   context.w(14),
-                  context.h(12),
+                  context.h(12)
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,13 +118,13 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                           decoration: BoxDecoration(
                             color: colors.surfaceVariant,
                             borderRadius: BorderRadius.circular(context.w(7)),
-                            border: Border.all(color: colors.border),
+                            border: Border.all(color: colors.border)
                           ),
                           child: Icon(
                             primaryIcon,
                             size: context.w(15),
-                            color: colors.textPrimary,
-                          ),
+                            color: colors.textPrimary
+                          )
                         ),
                         SizedBox(width: context.w(9)),
                         Expanded(
@@ -132,16 +132,14 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                             primaryTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style:
-                                AppTextStyles.bodySecondary(context).copyWith(
-                              color: colors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                            style: AppTextStyles.bodySemi(context).copyWith(
+                              color: colors.textPrimary
+                            )
+                          )
                         ),
                         SizedBox(width: context.w(6)),
                         _orderTypeBadge(context, colors),
-                      ],
+                      ]
                     ),
 
                     SizedBox(height: context.h(15)),
@@ -152,7 +150,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                         Icon(
                           Icons.calendar_today_outlined,
                           size: context.h(15),
-                          color: colors.textMuted,
+                          color: colors.textMuted
                         ),
                         SizedBox(width: context.w(5)),
                         Expanded(
@@ -160,12 +158,12 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                             _formatOrderDateTime(order.createdAt),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.bodyTertiary(context).copyWith(
-                              color: colors.textSecondary,
-                            ),
-                          ),
+                            style: AppTextStyles.bodySmall(context).copyWith(
+                              color: colors.textSecondary
+                            )
+                          )
                         ),
-                      ],
+                      ]
                     ),
 
                     // PHONE NUMBER
@@ -176,7 +174,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                           Icon(
                             Icons.call_outlined,
                             size: context.h(15),
-                            color: colors.textMuted,
+                            color: colors.textMuted
                           ),
                           SizedBox(width: context.w(5)),
                           Expanded(
@@ -184,13 +182,12 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                               order.customerPhone.trim(),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style:
-                                  AppTextStyles.bodyTertiary(context).copyWith(
-                                color: colors.textSecondary,
-                              ),
-                            ),
+                              style: AppTextStyles.bodySmall(context).copyWith(
+                                color: colors.textSecondary
+                              )
+                            )
                           ),
-                        ],
+                        ]
                       ),
                     ],
 
@@ -211,11 +208,10 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                                 if (order.items.isEmpty)
                                   Text(
                                     'Order',
-                                    style: AppTextStyles.bodySecondary(context)
-                                        .copyWith(
-                                      color: colors.textSecondary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                    style:
+                                        AppTextStyles.bodySemi(context).copyWith(
+                                      color: colors.textSecondary
+                                    )
                                   )
                                 else if (!_itemsExpanded && hasMultipleItems)
                                   Text(
@@ -223,33 +219,30 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                                     '${order.items.first.name} and more...',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.bodySecondary(context)
-                                        .copyWith(
-                                      color: colors.textSecondary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                    style:
+                                        AppTextStyles.bodySemi(context).copyWith(
+                                      color: colors.textSecondary
+                                    )
                                   )
                                 else
                                   for (final item in order.items)
                                     Padding(
                                       padding: EdgeInsets.only(
-                                        bottom: context.h(3),
+                                        bottom: context.h(3)
                                       ),
                                       child: Text(
                                         '${item.quantity}x ${item.name}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style:
-                                            AppTextStyles.bodySecondary(context)
-                                                .copyWith(
-                                          color: colors.textSecondary,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
+                                        style: AppTextStyles.bodySemi(context)
+                                            .copyWith(
+                                          color: colors.textSecondary
+                                        )
+                                      )
                                     ),
-                              ],
-                            ),
-                          ),
+                              ]
+                            )
+                          )
                         ),
                         if (hasMultipleItems) ...[
                           SizedBox(width: context.w(6)),
@@ -279,8 +272,8 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                                   border: Border.all(
                                     color: _itemsHovering
                                         ? AppColors.primary
-                                        : colors.border,
-                                  ),
+                                        : colors.border
+                                  )
                                 ),
                                 child: Center(
                                   child: Icon(
@@ -289,15 +282,15 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                                         : Icons.keyboard_arrow_down_rounded,
                                     size: context.h(18).clamp(14.0, 18.0),
                                     color: _itemsHovering
-                                        ? AppColors.surface
-                                        : AppColors.lightTextPrimary,
-                                  ),
-                                ),
-                              ),
-                            ),
+                                        ? AppColors.white
+                                        : colors.textPrimary
+                                  )
+                                )
+                              )
+                            )
                           ),
                         ],
-                      ],
+                      ]
                     ),
 
                     SizedBox(height: context.h(10)),
@@ -308,19 +301,18 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                       children: [
                         Text(
                           '₹${_orderTotal.toStringAsFixed(0)}',
-                          style: AppTextStyles.section(context).copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                            color: colors.textPrimary
+                          )
                         ),
                         const Spacer(),
                         _paymentStatusBadge(context, isPaid: isPaid),
-                      ],
+                      ]
                     ),
-                  ],
-                ),
-              ),
-            ),
+                  ]
+                )
+              )
+            )
           ),
 
           // ── LOWER HALF (smaller) — NOT tappable as a whole ─────────────
@@ -331,14 +323,14 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
               context.w(14),
               context.h(6),
               context.w(14),
-              context.h(12),
+              context.h(12)
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   height: 1,
-                  color: colors.divider,
+                  color: colors.divider
                 ),
                 SizedBox(height: context.h(10)),
                 Row(
@@ -347,20 +339,20 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                     Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: context.w(7),
-                        vertical: context.h(5),
+                        vertical: context.h(5)
                       ),
                       decoration: BoxDecoration(
                         color: colors.surfaceVariant,
                         borderRadius: BorderRadius.circular(context.h(5)),
-                        border: Border.all(color: colors.border),
+                        border: Border.all(color: colors.border)
                       ),
                       child: Text(
                         '${order.items.length} '
                         '${order.items.length == 1 ? 'Item' : 'Items'}',
                         style: AppTextStyles.caption(context).copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
+                          color: colors.textSecondary
+                        )
+                      )
                     ),
                     const Spacer(),
                     if (secondaryActionText != null &&
@@ -369,7 +361,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                         context,
                         label: secondaryActionText!,
                         primary: false,
-                        onTap: _tapSecondaryAction,
+                        onTap: _tapSecondaryAction
                       ),
                       SizedBox(width: context.w(6)),
                     ],
@@ -378,15 +370,15 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
                         context,
                         label: actionText!,
                         primary: true,
-                        onTap: _tapAdvance,
+                        onTap: _tapAdvance
                       ),
-                  ],
+                  ]
                 ),
-              ],
-            ),
+              ]
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -406,7 +398,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
         child: Container(
           height: context.h(28).clamp(24.0, 28.0),
           padding: EdgeInsets.symmetric(
-            horizontal: context.w(11).clamp(7.0, 11.0),
+            horizontal: context.w(11).clamp(7.0, 11.0)
           ),
           alignment: Alignment.center,
           decoration: BoxDecoration(
@@ -415,18 +407,17 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
             border: primary
                 ? null
                 : Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.45),
-                  ),
+                    color: AppColors.primary.withValues(alpha: 0.45)
+                  )
           ),
           child: Text(
             label,
             style: AppTextStyles.caption(context).copyWith(
-              color: primary ? Colors.white : AppColors.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
+              color: primary ? AppColors.white : AppColors.primary
+            )
+          )
+        )
+      )
     );
   }
 
@@ -436,7 +427,7 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
 
   double get _orderTotal => order.items.fold<double>(
         0,
-        (sum, item) => sum + (item.price * item.quantity),
+        (sum, item) => sum + (item.price * item.quantity)
       );
 
   // -------------------------------------------------------------------------
@@ -449,29 +440,26 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
   Widget _orderTypeBadge(BuildContext context, AppColorScheme colors) {
     final isApp = order.orderSource == OrderSource.app;
     final label = isApp ? 'App' : _formatEnumLabel(order.orderType.name);
-    final accent = isApp ? const Color(0xFF7C5CFC) : AppColors.primary;
+    final accent = isApp ? colors.accent : colors.primary;
 
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: context.w(7),
-        vertical: context.h(4),
+        vertical: context.h(4)
       ),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(context.h(20)),
         border: Border.all(
-          color: accent.withValues(alpha: 0.35),
-        ),
+          color: accent.withValues(alpha: 0.35)
+        )
       ),
       child: Text(
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: AppTextStyles.caption(context).copyWith(
-          color: accent,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+        style: AppTextStyles.caption(context).copyWith(color: accent)
+      )
     );
   }
 
@@ -480,25 +468,23 @@ class _LiveOrderCardState extends State<LiveOrderCard> {
   // -------------------------------------------------------------------------
 
   Widget _paymentStatusBadge(BuildContext context, {required bool isPaid}) {
-    final color = isPaid ? const Color(0xFF20B47A) : const Color(0xFFE9A719);
+    final colors = AppColors.of(context);
+    final color = isPaid ? colors.success : colors.warning;
 
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: context.w(7),
-        vertical: context.h(4),
+        vertical: context.h(4)
       ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(context.h(20)),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4))
       ),
       child: Text(
         isPaid ? 'Paid' : 'Unpaid',
-        style: AppTextStyles.caption(context).copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+        style: AppTextStyles.caption(context).copyWith(color: color)
+      )
     );
   }
 

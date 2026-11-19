@@ -70,13 +70,13 @@ class DashboardCustomerInsights extends StatelessWidget {
                     sections: [
                       PieChartSectionData(
                         value: stats.orderSourceFractions['staff'] ?? 0,
-                        color: const Color(0xFFF59E0B),
+                        color: AppColors.warning,
                         radius: context.w(22),
                         showTitle: false,
                       ),
                       PieChartSectionData(
                         value: stats.orderSourceFractions['app'] ?? 0,
-                        color: const Color(0xFF3B82F6),
+                        color: AppColors.info,
                         radius: context.w(22),
                         showTitle: false,
                       ),
@@ -91,7 +91,7 @@ class DashboardCustomerInsights extends StatelessWidget {
                     _legendRow(
                       context,
                       colors,
-                      color: const Color(0xFFF59E0B),
+                      color: AppColors.warning,
                       label: 'Staff / POS',
                       count: staff,
                       pct: stats.staffOrderPercent,
@@ -100,7 +100,7 @@ class DashboardCustomerInsights extends StatelessWidget {
                     _legendRow(
                       context,
                       colors,
-                      color: const Color(0xFF3B82F6),
+                      color: AppColors.info,
                       label: 'Customer app',
                       count: app,
                       pct: stats.appOrderPercent,
@@ -111,9 +111,9 @@ class DashboardCustomerInsights extends StatelessWidget {
             ],
           ),
           SizedBox(height: context.h(16)),
-          Divider(color: colors.border, height: 1),
+          Divider(color: colors.border, height: context.h(1)),
           SizedBox(height: context.h(14)),
-          Text('Service type', style: AppTextStyles.bodySecondary(context)),
+          Text('Service type', style: AppTextStyles.body(context)),
           SizedBox(height: context.h(10)),
           _miniBar(
             context,
@@ -122,7 +122,7 @@ class DashboardCustomerInsights extends StatelessWidget {
             stats.dineInCount,
             stats.dineInPercent,
             stats.orderTypeFractions['dine_in'] ?? 0,
-            const Color(0xFF22C55E),
+            AppColors.success,
           ),
           SizedBox(height: context.h(8)),
           _miniBar(
@@ -132,7 +132,7 @@ class DashboardCustomerInsights extends StatelessWidget {
             stats.takeawayCount,
             stats.takeawayPercent,
             stats.orderTypeFractions['takeaway'] ?? 0,
-            const Color(0xFF22C55E),
+            AppColors.success,
           ),
           SizedBox(height: context.h(8)),
           _miniBar(
@@ -142,7 +142,7 @@ class DashboardCustomerInsights extends StatelessWidget {
             stats.deliveryCount,
             stats.deliveryPercent,
             stats.orderTypeFractions['delivery'] ?? 0,
-            const Color(0xFF22C55E),
+            AppColors.success,
           ),
         ],
       ),
@@ -160,8 +160,8 @@ class DashboardCustomerInsights extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 10,
-          height: 10,
+          width: context.w(10),
+          height: context.h(10),
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
@@ -170,16 +170,14 @@ class DashboardCustomerInsights extends StatelessWidget {
         SizedBox(width: context.w(8)),
         Expanded(
           child: Text(label,
-              style: AppTextStyles.body(context)
-                  .copyWith(fontWeight: FontWeight.w600)),
+              style: AppTextStyles.bodySemi(context)),
         ),
         SizedBox(
           width: context.w(36),
           child: Text(
             '$count',
             textAlign: TextAlign.right,
-            style: AppTextStyles.body(context)
-                .copyWith(fontWeight: FontWeight.w800),
+            style: AppTextStyles.bodyLargeSemi(context),
           ),
         ),
         SizedBox(width: context.w(8)),
@@ -188,10 +186,7 @@ class DashboardCustomerInsights extends StatelessWidget {
           child: Text(
             '${pct.toStringAsFixed(0)}%',
             textAlign: TextAlign.right,
-            style: AppTextStyles.caption(context).copyWith(
-              color: const Color(0xFF16A34A),
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppTextStyles.caption(context).copyWith(color: AppColors.success),
           ),
         ),
       ],
@@ -214,8 +209,7 @@ class DashboardCustomerInsights extends StatelessWidget {
           children: [
             Expanded(
               child: Text(label,
-                  style: AppTextStyles.body(context)
-                      .copyWith(fontWeight: FontWeight.w600)),
+                  style: AppTextStyles.bodySemi(context)),
             ),
             Text(
               '$value',
@@ -228,10 +222,7 @@ class DashboardCustomerInsights extends StatelessWidget {
               child: Text(
                 '${percent.toStringAsFixed(0)}%',
                 textAlign: TextAlign.right,
-                style: AppTextStyles.caption(context).copyWith(
-                  color: const Color(0xFF16A34A),
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppTextStyles.caption(context).copyWith(color: AppColors.success),
               ),
             ),
           ],

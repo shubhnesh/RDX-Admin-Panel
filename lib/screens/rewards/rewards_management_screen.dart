@@ -155,7 +155,7 @@ class _RewardsManagementScreenState
       title: 'Discard unsaved changes?',
       message: 'Your reward configuration edits have not been saved.',
       cancelButtonLabel: 'Keep editing',
-      confirmButtonLabel: 'Discard',
+      confirmButtonLabel: 'Discard'
     );
     return discard == true;
   }
@@ -176,21 +176,21 @@ class _RewardsManagementScreenState
               title: 'Rewards',
               subtitle: 'Points by order total · referrals · activity',
               showBackButton: true,
-              onBack: _handleBack,
+              onBack: _handleBack
             ),
             Expanded(
-              child: _sectionsLayout(context, colors, provider),
+              child: _sectionsLayout(context, colors, provider)
             ),
-          ],
-        ),
-      ),
+          ]
+        )
+      )
     );
   }
 
   Widget _sectionsLayout(
     BuildContext context,
     AppColorScheme colors,
-    RewardsAdminProvider provider,
+    RewardsAdminProvider provider
   ) {
     final body = _body(provider);
     final showSidebar = MediaQuery.sizeOf(context).width >= 1000;
@@ -200,12 +200,12 @@ class _RewardsManagementScreenState
         children: [
           _sectionSelector(context, colors),
           Expanded(child: body),
-        ],
+        ]
       );
     }
 
     final pagePad = context.defaultScreenPadding();
-    final contentPad = Responsive.pagePadding(context, bottom: 28)
+    final contentPad = Responsive.pagePadding(context, bottom: context.h(28))
         .resolve(Directionality.of(context));
 
     return Row(
@@ -215,16 +215,16 @@ class _RewardsManagementScreenState
           padding: EdgeInsets.fromLTRB(
             pagePad.left,
             contentPad.top,
-            0,
-            contentPad.bottom,
+            context.w(0),
+            contentPad.bottom
           ),
           child: SizedBox(
-            width: 200,
-            child: _sectionPanel(context, colors),
-          ),
+            width: context.w(200),
+            child: _sectionPanel(context, colors)
+          )
         ),
         Expanded(child: body),
-      ],
+      ]
     );
   }
 
@@ -233,7 +233,7 @@ class _RewardsManagementScreenState
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(10)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -246,25 +246,24 @@ class _RewardsManagementScreenState
             color: colors.surfaceVariant.withValues(alpha: 0.35),
             child: Text(
               'SECTIONS',
-              style: AppTextStyles.label(context).copyWith(
+              style: AppTextStyles.bodySemi(context).copyWith(
                 color: colors.textMuted,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
-              ),
-            ),
+                letterSpacing: 0.3
+              )
+            )
           ),
-          Divider(height: 1, color: colors.divider),
+          Divider(height: context.h(1), color: colors.divider),
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
                 for (var index = 0; index < _sections.length; index++)
                   _sectionTile(context, colors, index),
-              ],
-            ),
+              ]
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -279,7 +278,7 @@ class _RewardsManagementScreenState
           width: double.infinity,
           padding: EdgeInsets.symmetric(
             horizontal: context.w(12),
-            vertical: context.h(10),
+            vertical: context.h(10)
           ),
           decoration: BoxDecoration(
             color: selected
@@ -288,22 +287,22 @@ class _RewardsManagementScreenState
             border: Border(
               left: BorderSide(
                 color: selected ? AppColors.primary : Colors.transparent,
-                width: 3,
+                width: 3
               ),
-              bottom: BorderSide(color: colors.divider),
-            ),
+              bottom: BorderSide(color: colors.divider)
+            )
           ),
           child: Text(
             _sections[index],
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.bodySecondary(context).copyWith(
+            style: AppTextStyles.body(context).copyWith(
               color: selected ? AppColors.primary : colors.textPrimary,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-        ),
-      ),
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500
+            )
+          )
+        )
+      )
     );
   }
 
@@ -314,7 +313,7 @@ class _RewardsManagementScreenState
         pagePad.left,
         context.h(12),
         pagePad.right,
-        context.h(8),
+        context.h(8)
       ),
       child: Wrap(
         spacing: context.w(8),
@@ -325,10 +324,10 @@ class _RewardsManagementScreenState
               label: _sections[index],
               selected: _sectionIndex == index,
               colors: colors,
-              onTap: () => _selectSection(index),
+              onTap: () => _selectSection(index)
             ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -350,7 +349,7 @@ class _RewardsManagementScreenState
     return switch (_sectionIndex) {
       0 => RewardsOverviewTab(
           provider: provider,
-          onRefresh: _refreshCurrent,
+          onRefresh: _refreshCurrent
         ),
       1 => _earningRules(provider),
       2 => _referralSettings(provider),
@@ -365,14 +364,14 @@ class _RewardsManagementScreenState
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.lock_outline_rounded,
-                  size: 38, color: AppColors.danger),
+                  size: context.h(38), color: AppColors.danger),
               SizedBox(height: context.h(12)),
               Text(message, textAlign: TextAlign.center),
               SizedBox(height: context.h(12)),
               OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
-            ],
-          ),
-        ),
+            ]
+          )
+        )
       );
 
   // ─── Earning rules (core feature) ────────────────────────────────────────
@@ -382,7 +381,7 @@ class _RewardsManagementScreenState
     if (config == null || !_configurationLoaded) {
       return _errorState(
         provider.errorMessage ?? 'Reward configuration is unavailable.',
-        provider.load,
+        provider.load
       );
     }
     final readOnly = !provider.canConfigure;
@@ -393,14 +392,14 @@ class _RewardsManagementScreenState
           icon: Icons.info_outline,
           title: 'How points are earned',
           message:
-              'When a customer app order is marked paid and delivered, the server looks at the order amount (after discounts, before tax) and awards points from the matching price band. Use a fixed amount, or a min–max range for a random amount.',
+              'When a customer app order is marked paid and delivered, the server looks at the order amount (after discounts, before tax) and awards points from the matching price band. Use a fixed amount, or a min–max range for a random amount.'
         ),
         if (readOnly)
           _informationCard(
             icon: Icons.admin_panel_settings_outlined,
             title: 'View only',
             message:
-                'Your account can view rules but cannot change them.',
+                'Your account can view rules but cannot change them.'
           ),
         _switchCard(
           title: 'Rewards program',
@@ -410,7 +409,7 @@ class _RewardsManagementScreenState
           onChanged: (value) => setState(() {
             _rewardsEnabled = value;
             _configurationDirty = true;
-          }),
+          })
         ),
         SizedBox(height: context.h(16)),
         _panel(
@@ -422,8 +421,8 @@ class _RewardsManagementScreenState
                   onPressed: provider.isMutating || _earningBands.length >= 5
                       ? null
                       : _addBand,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add band'),
+                  icon: Icon(Icons.add, size: context.h(18)),
+                  label: const Text('Add band')
                 ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -431,7 +430,7 @@ class _RewardsManagementScreenState
               Text(
                 'Up to 5 bands. Amounts are in ₹ on the discounted item total.',
                 style: AppTextStyles.caption(context)
-                    .copyWith(color: AppColors.of(context).textMuted),
+                    .copyWith(color: AppColors.of(context).textMuted)
               ),
               SizedBox(height: context.h(12)),
               if (_earningBands.isEmpty)
@@ -439,16 +438,16 @@ class _RewardsManagementScreenState
                   padding: EdgeInsets.symmetric(vertical: context.h(16)),
                   child: Text(
                     'No bands yet. Add at least one so orders can earn points.',
-                    style: AppTextStyles.bodySecondary(context),
-                  ),
+                    style: AppTextStyles.body(context)
+                  )
                 )
               else
                 for (var i = 0; i < _earningBands.length; i++) ...[
                   if (i > 0) SizedBox(height: context.h(12)),
                   _bandCard(i, readOnly: readOnly, mutating: provider.isMutating),
                 ],
-            ],
-          ),
+            ]
+          )
         ),
         if (!readOnly) ...[
           SizedBox(height: context.h(16)),
@@ -460,13 +459,13 @@ class _RewardsManagementScreenState
                 isLoading: provider.isMutating,
                 onPressed: provider.isMutating || !_configurationDirty
                     ? null
-                    : () => _saveEarningRules(config, provider),
-              ),
-            ),
+                    : () => _saveEarningRules(config, provider)
+              )
+            )
           ),
         ],
         if (provider.errorMessage != null) _inlineError(provider.errorMessage!),
-      ],
+      ]
     );
   }
 
@@ -480,7 +479,7 @@ class _RewardsManagementScreenState
       decoration: BoxDecoration(
         color: colors.background,
         borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -489,8 +488,8 @@ class _RewardsManagementScreenState
             children: [
               Text(
                 'Band ${index + 1}',
-                style: AppTextStyles.label(context)
-                    .copyWith(fontWeight: FontWeight.w600),
+                style: AppTextStyles.bodySemi(context)
+                    .copyWith(fontWeight: FontWeight.w600)
               ),
               const Spacer(),
               if (!readOnly)
@@ -504,9 +503,9 @@ class _RewardsManagementScreenState
                             _configurationDirty = true;
                           }),
                   icon: Icon(Icons.close_rounded,
-                      size: 20, color: AppColors.danger),
+                      size: context.h(20), color: AppColors.danger)
                 ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(8)),
           Row(
@@ -522,8 +521,8 @@ class _RewardsManagementScreenState
                         band.copyWith(minTotal: v);
                     _configurationDirty = true;
                     setState(() {});
-                  },
-                ),
+                  }
+                )
               ),
               SizedBox(width: context.w(10)),
               Expanded(
@@ -536,14 +535,14 @@ class _RewardsManagementScreenState
                     _earningBands = List.of(_earningBands);
                     _earningBands[index] = band.copyWith(
                       maxTotal: v,
-                      clearMaxTotal: v == null,
+                      clearMaxTotal: v == null
                     );
                     _configurationDirty = true;
                     setState(() {});
-                  },
-                ),
+                  }
+                )
               ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(10)),
           RdxDropdown<RewardBandPointsMode>(
@@ -568,16 +567,16 @@ class _RewardsManagementScreenState
                     pointsMode: RewardBandPointsMode.fixed,
                     fixedPts: band.minPts,
                     minPts: band.minPts,
-                    maxPts: band.minPts,
+                    maxPts: band.minPts
                   );
                 } else {
                   _earningBands[index] = band.copyWith(
-                    pointsMode: RewardBandPointsMode.range,
+                    pointsMode: RewardBandPointsMode.range
                   );
                 }
                 _configurationDirty = true;
               });
-            },
+            }
           ),
           SizedBox(height: context.h(10)),
           if (isFixed)
@@ -590,11 +589,11 @@ class _RewardsManagementScreenState
                 _earningBands[index] = band.copyWith(
                   fixedPts: v,
                   minPts: v,
-                  maxPts: v,
+                  maxPts: v
                 );
                 _configurationDirty = true;
                 setState(() {});
-              },
+              }
             )
           else
             Row(
@@ -609,12 +608,12 @@ class _RewardsManagementScreenState
                       final max = band.maxPts < v ? v : band.maxPts;
                       _earningBands[index] = band.copyWith(
                         minPts: v,
-                        maxPts: max,
+                        maxPts: max
                       );
                       _configurationDirty = true;
                       setState(() {});
-                    },
-                  ),
+                    }
+                  )
                 ),
                 SizedBox(width: context.w(10)),
                 Expanded(
@@ -627,23 +626,23 @@ class _RewardsManagementScreenState
                       final min = band.minPts > v ? v : band.minPts;
                       _earningBands[index] = band.copyWith(
                         minPts: min,
-                        maxPts: v,
+                        maxPts: v
                       );
                       _configurationDirty = true;
                       setState(() {});
-                    },
-                  ),
+                    }
+                  )
                 ),
-              ],
+              ]
             ),
           SizedBox(height: context.h(6)),
           Text(
             band.summaryLabel,
             style: AppTextStyles.caption(context)
-                .copyWith(color: AppColors.primary),
+                .copyWith(color: AppColors.primary)
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -661,7 +660,7 @@ class _RewardsManagementScreenState
           pointsMode: RewardBandPointsMode.range,
           minPts: 1,
           maxPts: 5,
-          fixedPts: 1,
+          fixedPts: 1
         ),
       ];
       _configurationDirty = true;
@@ -670,7 +669,7 @@ class _RewardsManagementScreenState
 
   Future<void> _saveEarningRules(
     RewardConfiguration previous,
-    RewardsAdminProvider provider,
+    RewardsAdminProvider provider
   ) async {
     if (_earningBands.isEmpty) {
       RdxNoticeDialog.show(context, title: 'Invalid input', message: 'Add at least one price band.');
@@ -686,7 +685,7 @@ class _RewardsManagementScreenState
       title: 'Save earning rules?',
       message:
           'New orders will use these bands. Past ledger entries are unchanged.',
-      confirmButtonLabel: 'Save',
+      confirmButtonLabel: 'Save'
     );
     if (accepted != true || !mounted) return;
 
@@ -709,7 +708,7 @@ class _RewardsManagementScreenState
       referralValidFrom: previous.referralValidFrom,
       referralValidUntil: previous.referralValidUntil,
       referralQualificationConditions:
-          previous.referralQualificationConditions,
+          previous.referralQualificationConditions
     );
 
     try {
@@ -730,7 +729,7 @@ class _RewardsManagementScreenState
     if (config == null || !_configurationLoaded) {
       return _errorState(
         provider.errorMessage ?? 'Referral configuration is unavailable.',
-        provider.load,
+        provider.load
       );
     }
     final readOnly = !provider.canConfigure;
@@ -741,13 +740,13 @@ class _RewardsManagementScreenState
           icon: Icons.info_outline,
           title: 'How referrals work',
           message:
-              'A new customer applies a friend’s code once. Both get the points you set below when the new customer reaches the home screen (after signup). Self-referrals and duplicates are blocked by the server.',
+              'A new customer applies a friend’s code once. Both get the points you set below when the new customer reaches the home screen (after signup). Self-referrals and duplicates are blocked by the server.'
         ),
         if (readOnly)
           _informationCard(
             icon: Icons.admin_panel_settings_outlined,
             title: 'View only',
-            message: 'Your account cannot change referral settings.',
+            message: 'Your account cannot change referral settings.'
           ),
         _switchCard(
           title: 'Referral rewards',
@@ -757,7 +756,7 @@ class _RewardsManagementScreenState
           onChanged: (value) => setState(() {
             _referralsEnabled = value;
             _configurationDirty = true;
-          }),
+          })
         ),
         SizedBox(height: context.h(16)),
         _panel(
@@ -769,17 +768,17 @@ class _RewardsManagementScreenState
                 label: 'Points for the referrer (friend who shared)',
                 controller: _referrerPointsController,
                 enabled: !readOnly && !provider.isMutating,
-                validator: (v) => _integer(v, min: 0),
+                validator: (v) => _integer(v, min: 0)
               ),
               SizedBox(height: context.h(12)),
               _field(
                 label: 'Points for the new customer',
                 controller: _newUserPointsController,
                 enabled: !readOnly && !provider.isMutating,
-                validator: (v) => _integer(v, min: 0),
+                validator: (v) => _integer(v, min: 0)
               ),
-            ],
-          ),
+            ]
+          )
         ),
         if (!readOnly) ...[
           SizedBox(height: context.h(16)),
@@ -791,19 +790,19 @@ class _RewardsManagementScreenState
                 isLoading: provider.isMutating,
                 onPressed: provider.isMutating || !_configurationDirty
                     ? null
-                    : () => _saveReferralSettings(config, provider),
-              ),
-            ),
+                    : () => _saveReferralSettings(config, provider)
+              )
+            )
           ),
         ],
         if (provider.errorMessage != null) _inlineError(provider.errorMessage!),
-      ],
+      ]
     );
   }
 
   Future<void> _saveReferralSettings(
     RewardConfiguration previous,
-    RewardsAdminProvider provider,
+    RewardsAdminProvider provider
   ) async {
     final referrer = int.tryParse(_referrerPointsController.text.trim());
     final referred = int.tryParse(_newUserPointsController.text.trim());
@@ -816,7 +815,7 @@ class _RewardsManagementScreenState
       context,
       title: 'Save referral settings?',
       message: 'New referrals will use these point amounts.',
-      confirmButtonLabel: 'Save',
+      confirmButtonLabel: 'Save'
     );
     if (accepted != true || !mounted) return;
 
@@ -839,7 +838,7 @@ class _RewardsManagementScreenState
       referralValidFrom: previous.referralValidFrom,
       referralValidUntil: previous.referralValidUntil,
       referralQualificationConditions:
-          previous.referralQualificationConditions,
+          previous.referralQualificationConditions
     );
 
     try {
@@ -868,7 +867,7 @@ class _RewardsManagementScreenState
     }).toList();
 
     return Padding(
-      padding: Responsive.pagePadding(context, bottom: 28),
+      padding: Responsive.pagePadding(context, bottom: context.h(28)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -902,10 +901,10 @@ class _RewardsManagementScreenState
                         setState(() => _transactionType = type);
                         provider.loadTransactions(
                           type: type,
-                          search: _transactionSearch,
+                          search: _transactionSearch
                         );
-                      },
-                    ),
+                      }
+                    )
                   ),
                   SizedBox(width: context.w(10)),
                   Expanded(
@@ -914,18 +913,18 @@ class _RewardsManagementScreenState
                       hintText: 'Search user or order',
                       height: searchHeight,
                       onChanged: (value) =>
-                          setState(() => _transactionSearch = value),
-                    ),
+                          setState(() => _transactionSearch = value)
+                    )
                   ),
-                ],
+                ]
               );
               return constraints.maxWidth >= 480
                   ? row
                   : SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: SizedBox(width: 480, child: row),
+                      child: SizedBox(width: context.w(480), child: row)
                     );
-            },
+            }
           ),
           if (provider.errorMessage != null) ...[
             SizedBox(height: context.h(10)),
@@ -939,9 +938,9 @@ class _RewardsManagementScreenState
               child: Center(
                 child: EmptyState(
                   message:
-                      'No activity yet. Points appear here after a paid delivered order, a checkout redemption, or a referral bonus.',
-                ),
-              ),
+                      'No activity yet. Points appear here after a paid delivered order, a checkout redemption, or a referral bonus.'
+                )
+              )
             )
           else ...[
             Expanded(child: _transactionTable(filtered)),
@@ -955,18 +954,18 @@ class _RewardsManagementScreenState
                       : () => provider.loadTransactions(
                             type: _transactionType,
                             search: _transactionSearch,
-                            nextPage: true,
+                            nextPage: true
                           ),
-                  icon: const Icon(Icons.expand_more_rounded, size: 18),
+                  icon: Icon(Icons.expand_more_rounded, size: context.h(18)),
                   label: Text(
-                    provider.isLoading ? 'Loading…' : 'Load more',
-                  ),
-                ),
+                    provider.isLoading ? 'Loading…' : 'Load more'
+                  )
+                )
               ),
             ],
           ],
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -985,14 +984,14 @@ class _RewardsManagementScreenState
         _metricCard(
           'Outstanding',
           _number(a.outstandingPointsLiability),
-          Icons.account_balance_wallet_outlined,
+          Icons.account_balance_wallet_outlined
         ),
         _metricCard(
           'Referrals',
           _number(a.successfulReferrals),
-          Icons.group_add_outlined,
+          Icons.group_add_outlined
         ),
-      ],
+      ]
     );
   }
 
@@ -1003,7 +1002,7 @@ class _RewardsManagementScreenState
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1011,7 +1010,7 @@ class _RewardsManagementScreenState
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.primary),
+              Icon(icon, size: context.h(18), color: AppColors.primary),
               SizedBox(width: context.w(6)),
               Expanded(
                 child: Text(
@@ -1019,31 +1018,31 @@ class _RewardsManagementScreenState
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.caption(context)
-                      .copyWith(color: colors.textSecondary),
-                ),
+                      .copyWith(color: colors.textSecondary)
+                )
               ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(6)),
           Text(
             value,
-            style: AppTextStyles.section(context)
-                .copyWith(fontWeight: FontWeight.w700),
+            style: AppTextStyles.bodyLargeSemi(context)
+                .copyWith(fontWeight: FontWeight.w700)
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
   Widget _transactionTable(List<RewardTransaction> items) {
     return RdxTable(
       showFooter: false,
-      columns: const [
-        RdxTableColumn(title: 'USER', minWidth: 140, flex: 1.2),
-        RdxTableColumn(title: 'TYPE', minWidth: 110, flex: 0.9),
-        RdxTableColumn(title: 'POINTS', minWidth: 90, flex: 0.7),
-        RdxTableColumn(title: 'ORDER', minWidth: 120, flex: 1),
-        RdxTableColumn(title: 'WHEN', minWidth: 140, flex: 1),
+      columns: [
+        RdxTableColumn(title: 'USER', minWidth: context.w(140), flex: 1.2),
+        RdxTableColumn(title: 'TYPE', minWidth: context.w(110), flex: 0.9),
+        RdxTableColumn(title: 'POINTS', minWidth: context.w(90), flex: 0.7),
+        RdxTableColumn(title: 'ORDER', minWidth: context.w(120), flex: 1),
+        RdxTableColumn(title: 'WHEN', minWidth: context.w(140), flex: 1),
       ],
       rows: [
         for (final item in items)
@@ -1054,7 +1053,7 @@ class _RewardsManagementScreenState
             _plainCell(item.orderId ?? '—'),
             _plainCell(_date(item.createdAt)),
           ],
-      ],
+      ]
     );
   }
 
@@ -1069,26 +1068,26 @@ class _RewardsManagementScreenState
     final color = switch (type) {
       RewardTransactionType.earned ||
       RewardTransactionType.referralBonus =>
-        const Color(0xFF16A05A),
-      RewardTransactionType.redeemed => const Color(0xFFF39A24),
+        AppColors.success,
+      RewardTransactionType.redeemed => AppColors.warning,
       _ => AppColors.of(context).textSecondary,
     };
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: context.w(8),
-        vertical: context.h(3),
+        vertical: context.h(3)
       ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(6)
       ),
       child: Text(
         label,
         style: AppTextStyles.caption(context).copyWith(
           color: color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+          fontWeight: FontWeight.w600
+        )
+      )
     );
   }
 
@@ -1097,9 +1096,9 @@ class _RewardsManagementScreenState
     return Text(
       positive ? '+$points' : '$points',
       style: AppTextStyles.caption(context).copyWith(
-        color: positive ? const Color(0xFF16A05A) : AppColors.danger,
-        fontWeight: FontWeight.w600,
-      ),
+        color: positive ? AppColors.success : AppColors.danger,
+        fontWeight: FontWeight.w600
+      )
     );
   }
 
@@ -1109,8 +1108,8 @@ class _RewardsManagementScreenState
           text,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.caption(context),
-        ),
+          style: AppTextStyles.caption(context)
+        )
       );
 
   // ─── Shared helpers ──────────────────────────────────────────────────────
@@ -1120,14 +1119,14 @@ class _RewardsManagementScreenState
         onRefresh: _refreshCurrent,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: Responsive.pagePadding(context, bottom: 28),
+          padding: Responsive.pagePadding(context, bottom: context.h(28)),
           children: [
             for (var index = 0; index < children.length; index++) ...[
               if (index > 0) SizedBox(height: context.h(16)),
               children[index],
             ],
-          ],
-        ),
+          ]
+        )
       );
 
   Future<void> _refreshCurrent() async {
@@ -1157,7 +1156,7 @@ class _RewardsManagementScreenState
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1172,18 +1171,18 @@ class _RewardsManagementScreenState
                 Expanded(
                   child: Text(
                     title,
-                    style: AppTextStyles.section(context)
-                        .copyWith(color: colors.textPrimary),
-                  ),
+                    style: AppTextStyles.bodyLargeSemi(context)
+                        .copyWith(color: colors.textPrimary)
+                  )
                 ),
                 if (headerTrailing != null) headerTrailing,
-              ],
+              ]
             ),
             SizedBox(height: context.h(16)),
           ],
           child,
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -1197,12 +1196,12 @@ class _RewardsManagementScreenState
       width: double.infinity,
       padding: EdgeInsets.symmetric(
         horizontal: context.w(14),
-        vertical: context.h(12),
+        vertical: context.h(12)
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1EA),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18))
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1215,22 +1214,21 @@ class _RewardsManagementScreenState
               children: [
                 Text(
                   title,
-                  style: AppTextStyles.label(context).copyWith(
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTextStyles.bodySemi(context).copyWith(
+                    color: AppColors.primaryDark
+                    )
                 ),
                 SizedBox(height: context.h(4)),
                 Text(
                   message,
-                  style: AppTextStyles.bodyTertiary(context)
-                      .copyWith(color: colors.primary),
+                  style: AppTextStyles.caption(context)
+                      .copyWith(color: colors.primary)
                 ),
-              ],
-            ),
+              ]
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -1248,7 +1246,7 @@ class _RewardsManagementScreenState
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Opacity(
         opacity: enabled ? 1 : 0.5,
@@ -1262,25 +1260,25 @@ class _RewardsManagementScreenState
                 children: [
                   Text(
                     title,
-                    style: AppTextStyles.bodySecondary(context).copyWith(
+                    style: AppTextStyles.body(context).copyWith(
                       color: colors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                      fontWeight: FontWeight.w600
+                    )
                   ),
                   SizedBox(width: context.w(8)),
                   RdxToggleButton(value: value, onChanged: onChanged),
-                ],
+                ]
               ),
               SizedBox(height: context.h(4)),
               Text(
                 subtitle,
                 style: AppTextStyles.caption(context)
-                    .copyWith(color: colors.textSecondary),
+                    .copyWith(color: colors.textSecondary)
               ),
-            ],
-          ),
-        ),
-      ),
+            ]
+          )
+        )
+      )
     );
   }
 
@@ -1311,9 +1309,9 @@ class _RewardsManagementScreenState
                 onChanged: (_) {
                   _configurationDirty = true;
                   if (state.hasError) state.validate();
-                },
-              ),
-            ),
+                }
+              )
+            )
           ),
           if (state.hasError)
             Padding(
@@ -1321,11 +1319,11 @@ class _RewardsManagementScreenState
               child: Text(
                 state.errorText!,
                 style: AppTextStyles.caption(context)
-                    .copyWith(color: AppColors.danger),
-              ),
+                    .copyWith(color: AppColors.danger)
+              )
             ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -1338,7 +1336,7 @@ class _RewardsManagementScreenState
   }) {
     // Order totals are entered as whole rupees (integers); stored as double.
     final controller = TextEditingController(
-      text: value == null ? '' : value.round().toString(),
+      text: value == null ? '' : value.round().toString()
     );
     return Opacity(
       opacity: enabled ? 1 : 0.5,
@@ -1361,9 +1359,9 @@ class _RewardsManagementScreenState
             }
             final v = int.tryParse(t);
             if (v != null && v >= 0) onChanged(v.toDouble());
-          },
-        ),
-      ),
+          }
+        )
+      )
     );
   }
 
@@ -1390,9 +1388,9 @@ class _RewardsManagementScreenState
           onChanged: (raw) {
             final v = int.tryParse(raw.trim());
             if (v != null && v >= 0) onChanged(v);
-          },
-        ),
-      ),
+          }
+        )
+      )
     );
   }
 
@@ -1401,8 +1399,8 @@ class _RewardsManagementScreenState
         child: Text(
           message,
           style:
-              AppTextStyles.caption(context).copyWith(color: AppColors.danger),
-        ),
+              AppTextStyles.caption(context).copyWith(color: AppColors.danger)
+        )
       );
 
   String? _integer(String? value, {required int min}) {
@@ -1414,7 +1412,7 @@ class _RewardsManagementScreenState
 
   String _number(int value) => value.toString().replaceAllMapped(
         RegExp(r'\B(?=(\d{3})+(?!\d))'),
-        (match) => ',',
+        (match) => ','
       );
 
   String _date(DateTime value) {
@@ -1467,23 +1465,23 @@ class _SectionFilterChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: EdgeInsets.symmetric(
           horizontal: context.w(14),
-          vertical: context.h(8),
+          vertical: context.h(8)
         ),
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : colors.surface,
           borderRadius: BorderRadius.circular(context.h(20)),
           border: Border.all(
-            color: selected ? AppColors.primary : colors.border,
-          ),
+            color: selected ? AppColors.primary : colors.border
+          )
         ),
         child: Text(
           label,
           style: selected
-              ? AppTextStyles.label(context).copyWith(color: Colors.white)
-              : AppTextStyles.label(context)
-                  .copyWith(color: colors.textSecondary),
-        ),
-      ),
+              ? AppTextStyles.bodySemi(context).copyWith(color: AppColors.white)
+              : AppTextStyles.bodySemi(context)
+                  .copyWith(color: colors.textSecondary)
+        )
+      )
     );
   }
 }

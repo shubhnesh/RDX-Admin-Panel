@@ -441,17 +441,21 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                       children: [
                         form,
                         SizedBox(height: context.h(20)),
-                        Text(
-                          'Preview',
-                          style: AppTextStyles.section(context)
-                              .copyWith(color: colors.textPrimary),
+                        Center(
+                          child: Text(
+                            'Preview',
+                            style: AppTextStyles.bodyLargeSemi(context)
+                                .copyWith(color: colors.textPrimary),
+                          ),
                         ),
                         SizedBox(height: context.h(10)),
-                        Align(
-                          alignment: Alignment.center,
-                          child: SizedBox(
-                            width: previewCardWidth,
-                            child: preview,
+                        SizedBox(
+                          width: double.infinity,
+                          child: Center(
+                            child: SizedBox(
+                              width: previewCardWidth,
+                              child: preview,
+                            ),
                           ),
                         ),
                         SizedBox(height: context.h(20)),
@@ -491,7 +495,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                             children: [
                               Text(
                                 'Preview',
-                                style: AppTextStyles.section(context)
+                                style: AppTextStyles.bodyLargeSemi(context)
                                     .copyWith(color: colors.textPrimary),
                               ),
                               SizedBox(height: context.h(10)),
@@ -613,7 +617,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
           children: [
             Text(
               'Restrict this offer to a specific subcategory or item. Select Category first.',
-              style: AppTextStyles.bodySecondary(context)
+              style: AppTextStyles.body(context)
                   .copyWith(color: colors.textSecondary),
             ),
             SizedBox(height: context.h(16)),
@@ -764,7 +768,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                 children: [
                   Text(
                     'Start Date *',
-                    style: AppTextStyles.bodySecondary(context)
+                    style: AppTextStyles.body(context)
                         .copyWith(color: colors.textMuted),
                   ),
                   SizedBox(height: context.h(6)),
@@ -784,7 +788,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                 children: [
                   Text(
                     'End Date *',
-                    style: AppTextStyles.bodySecondary(context)
+                    style: AppTextStyles.body(context)
                         .copyWith(color: colors.textMuted),
                   ),
                   SizedBox(height: context.h(6)),
@@ -928,7 +932,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
               SizedBox(width: context.w(8)),
               Text(
                 title,
-                style: AppTextStyles.section(context),
+                style: AppTextStyles.bodyLargeSemi(context),
               ),
             ],
           ),
@@ -967,7 +971,6 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
     return Builder(builder: (context) {
       final colors = AppColors.of(context);
       final fieldHeight = RdxTextField.singleLineHeight(context);
-      final textFontSize = RdxTextField.textFontSize(context);
       final minimumDate = firstDate ?? DateTime(2024);
       final lastDate = DateTime(2030);
       final today = DateTime.now();
@@ -990,7 +993,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                 data: theme.copyWith(
                   colorScheme: theme.colorScheme.copyWith(
                     primary: colors.primary,
-                    onPrimary: Colors.white,
+                    onPrimary: AppColors.white,
                     surface: colors.surface,
                     onSurface: colors.textPrimary,
                   ),
@@ -998,7 +1001,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                     backgroundColor: colors.surface,
                     surfaceTintColor: Colors.transparent,
                     headerBackgroundColor: colors.primary,
-                    headerForegroundColor: Colors.white,
+                    headerForegroundColor: AppColors.white,
                     todayBackgroundColor: WidgetStatePropertyAll(
                       colors.primary.withValues(alpha: 0.12),
                     ),
@@ -1032,7 +1035,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
               horizontal: RdxTextField.horizontalPad(context),
             ),
             decoration: BoxDecoration(
-              color: date != null ? Colors.white : colors.surfaceVariant,
+              color: date != null ? colors.surface : colors.surfaceVariant,
               borderRadius: BorderRadius.circular(context.h(8).clamp(6.0, 8.0)),
               border: Border.all(color: colors.border),
             ),
@@ -1046,10 +1049,7 @@ class _CreateOfferScreenState extends ConsumerState<CreateOfferScreen> {
                 SizedBox(width: context.w(8)),
                 Text(
                   date == null ? 'Select date' : Formatters.date(date),
-                  style: AppTextStyles.bodySecondary(context).copyWith(
-                    color: date == null ? colors.textMuted : colors.textPrimary,
-                    fontSize: textFontSize,
-                  ),
+                  style: AppTextStyles.body(context).copyWith(color: date == null ? colors.textMuted : colors.textPrimary),
                 ),
               ],
             ),

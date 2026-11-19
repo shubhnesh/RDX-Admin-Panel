@@ -26,15 +26,15 @@ class LiveOrderMenuCard extends ConsumerWidget {
       opacity: item.available ? 1 : 0.55,
       child: MenuItemCard.withFooter(
         item: item,
-        footerBuilder: (context) => _orderFooter(context, ref, line),
-      ),
+        footerBuilder: (context) => _orderFooter(context, ref, line)
+      )
     );
   }
 
   Widget _orderFooter(
     BuildContext context,
     WidgetRef ref,
-    CartLineItem? line,
+    CartLineItem? line
   ) {
     final isMobile = context.isMobile;
     final controlHeight = context.h(isMobile ? 42 : 38);
@@ -55,8 +55,8 @@ class LiveOrderMenuCard extends ConsumerWidget {
               child: ScaleTransition(
                 scale: Tween<double>(begin: 0.94, end: 1).animate(animation),
                 alignment: Alignment.centerRight,
-                child: child,
-              ),
+                child: child
+              )
             ),
             layoutBuilder: (currentChild, previousChildren) {
               return Stack(
@@ -64,15 +64,16 @@ class LiveOrderMenuCard extends ConsumerWidget {
                 children: [
                   ...previousChildren,
                   if (currentChild != null) currentChild,
-                ],
+                ]
               );
             },
-            child: line == null
+            // Sized items always show "+ Add" so another size can be added.
+            child: line == null || item.hasSizes
                 ? _addButton(
                     context,
                     key: const ValueKey('add'),
                     enabled: item.available,
-                    onTap: () => showItemCustomizeSheet(context, item),
+                    onTap: () => showItemCustomizeSheet(context, item)
                   )
                 : _quantityStepper(
                     context,
@@ -84,11 +85,11 @@ class LiveOrderMenuCard extends ConsumerWidget {
                     onIncrement: () => ref
                         .read(cartProvider.notifier)
                         .updateQuantity(line.id, line.quantity + 1),
-                    isMobile: isMobile,
-                  ),
-          ),
-        ),
-      ),
+                    isMobile: isMobile
+                  )
+          )
+        )
+      )
     );
   }
 
@@ -123,11 +124,11 @@ class LiveOrderMenuCard extends ConsumerWidget {
               color: enabled
                   ? AppColors.primary
                   : AppColors.primary.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(context.h(7)),
+              borderRadius: BorderRadius.circular(context.h(7))
             ),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: context.w(isMobile ? 18 : 15),
+                horizontal: context.w(isMobile ? 18 : 15)
               ),
               child: Align(
                 alignment: Alignment.center,
@@ -136,16 +137,16 @@ class LiveOrderMenuCard extends ConsumerWidget {
                   '+ Add',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.caption(context).copyWith(
-                    color: Colors.white,
+                    color: AppColors.white,
                     fontWeight: FontWeight.w700,
-                    fontSize: context.h(isMobile ? 14 : 13),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+                    fontSize: context.h(isMobile ? 14 : 13)
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
     );
   }
 
@@ -168,7 +169,7 @@ class LiveOrderMenuCard extends ConsumerWidget {
             context,
             icon: Icons.remove,
             onTap: onDecrement,
-            isMobile: isMobile,
+            isMobile: isMobile
           ),
           SizedBox(width: isMobile ? context.w(8) : 0),
           SizedBox(
@@ -176,20 +177,19 @@ class LiveOrderMenuCard extends ConsumerWidget {
             child: Text(
               '$quantity',
               textAlign: TextAlign.center,
-              style: AppTextStyles.section(context).copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+              style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                )
+            )
           ),
           SizedBox(width: isMobile ? context.w(8) : 0),
           _stepperButton(
             context,
             icon: Icons.add,
             onTap: onIncrement,
-            isMobile: isMobile,
+            isMobile: isMobile
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -211,15 +211,15 @@ class LiveOrderMenuCard extends ConsumerWidget {
           height: buttonSize,
           decoration: BoxDecoration(
             color: AppColors.primary,
-            borderRadius: BorderRadius.circular(context.h(6)),
+            borderRadius: BorderRadius.circular(context.h(6))
           ),
           child: Icon(
             icon,
             size: context.h(isMobile ? 16 : 14),
-            color: Colors.white,
-          ),
-        ),
-      ),
+            color: AppColors.white
+          )
+        )
+      )
     );
   }
 }

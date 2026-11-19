@@ -45,13 +45,13 @@ class RewardsOverviewTab extends StatelessWidget {
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: Responsive.pagePadding(context, bottom: 28),
+        padding: Responsive.pagePadding(context, bottom: context.h(28)),
         children: [
           Container(
             width: double.infinity,
             padding: EdgeInsets.all(context.w(16)),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF1EA),
+              color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(context.h(8)),
               border: Border.all(
                 color: AppColors.primary.withValues(alpha: 0.18),
@@ -67,7 +67,7 @@ class RewardsOverviewTab extends StatelessWidget {
                     SizedBox(width: context.w(8)),
                     Text(
                       'Quick guide',
-                      style: AppTextStyles.section(context).copyWith(
+                      style: AppTextStyles.bodyLargeSemi(context).copyWith(
                         color: AppColors.primaryDark,
                       ),
                     ),
@@ -128,7 +128,7 @@ class RewardsOverviewTab extends StatelessWidget {
             ],
           ),
           SizedBox(height: context.h(20)),
-          Text('Recent activity', style: AppTextStyles.section(context)),
+          Text('Recent activity', style: AppTextStyles.bodyLargeSemi(context)),
           SizedBox(height: context.h(4)),
           Text(
             'Latest ledger entries',
@@ -212,7 +212,7 @@ class _MetricCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(item.icon, color: AppColors.primary, size: 20),
+              Icon(item.icon, color: AppColors.primary, size: context.h(20)),
               SizedBox(width: context.w(7)),
               Expanded(
                 child: Text(
@@ -232,7 +232,7 @@ class _MetricCard extends StatelessWidget {
             item.value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.heading(context).copyWith(
+            style: AppTextStyles.h2(context).copyWith(
               fontSize: context.sp(22),
               color: colors.textPrimary,
             ),
@@ -259,11 +259,11 @@ class _RecentTransactions extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
         height: context.h(280),
         child: RdxTable(
-          columns: const [
-            RdxTableColumn(title: 'User', minWidth: 140),
-            RdxTableColumn(title: 'Type', minWidth: 110),
-            RdxTableColumn(title: 'Points', minWidth: 90),
-            RdxTableColumn(title: 'When', minWidth: 140),
+          columns: [
+            RdxTableColumn(title: 'User', minWidth: context.w(140)),
+            RdxTableColumn(title: 'Type', minWidth: context.w(110)),
+            RdxTableColumn(title: 'Points', minWidth: context.w(90)),
+            RdxTableColumn(title: 'When', minWidth: context.w(140)),
           ],
           rows: [
             for (final item in items)

@@ -204,7 +204,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
             children: [
               Text(
                 dialogTitle,
-                style: AppTextStyles.section(context)
+                style: AppTextStyles.bodyLargeSemi(context)
                     .copyWith(color: colors.textPrimary),
               ),
               if (widget.description != null &&
@@ -212,7 +212,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
                 SizedBox(height: context.h(6)),
                 Text(
                   widget.description!,
-                  style: AppTextStyles.bodyTertiary(context)
+                  style: AppTextStyles.bodySmall(context)
                       .copyWith(color: colors.textSecondary),
                 ),
               ],
@@ -228,7 +228,7 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
                 SizedBox(height: context.h(16)),
                 Text(
                   widget.subItemsLabel ?? 'Subcategories (optional)',
-                  style: AppTextStyles.bodySecondary(context)
+                  style: AppTextStyles.body(context)
                       .copyWith(color: colors.textMuted),
                 ),
                 SizedBox(height: context.h(8)),
@@ -255,10 +255,10 @@ class _CategoryEntryDialogState<T> extends State<CategoryEntryDialog<T>> {
                           : _addSubItem,
                       style: IconButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFFE0E0E0),
-                        disabledForegroundColor: const Color(0xFF757575),
-                        fixedSize: Size.square(context.w(40).clamp(32.0, 40.0)),
+                        foregroundColor: AppColors.white,
+                        disabledBackgroundColor: colors.surfaceVariant,
+                        disabledForegroundColor: colors.textMuted,
+                        fixedSize: Size.square(context.h(40).clamp(32.0, 40.0)),
                         shape: const CircleBorder(),
                         padding: EdgeInsets.zero,
                       ),
@@ -352,7 +352,7 @@ class _SubItemChip extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.bodyTertiary(context),
+            style: AppTextStyles.bodySmall(context),
           ),
           SizedBox(width: context.w(4)),
           InkWell(

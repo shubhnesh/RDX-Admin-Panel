@@ -1,4 +1,4 @@
-/// Shared formatting helpers used across the admin panel so every screen
+/// Shared formatting helpers used across the Ops Center so every screen
 /// renders currency, dates, and relative time the same way.
 class Formatters {
   Formatters._();

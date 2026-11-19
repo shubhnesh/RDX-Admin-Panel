@@ -4,6 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   CUSTOMER_TOPIC,
+  ADMIN_TOPIC,
   createFcmMessage,
   isMenuItemVisible,
   isPromotionActive,
@@ -15,6 +16,19 @@ test("FCM message targets the customer topic with string data values", () => {
     title: "New offer",
     message: "An offer is available.",
     category: "offer",
+  });
+
+  test("FCM message can target the admin topic", () => {
+    const message = createFcmMessage({
+      notificationId: "admin-1",
+      title: "New support request",
+      message: "Customer support: Order issue",
+      category: "support",
+      topic: ADMIN_TOPIC,
+    });
+
+    assert.equal(message.topic, ADMIN_TOPIC);
+    assert.equal(message.data.category, "support");
   });
 
   assert.equal(message.topic, CUSTOMER_TOPIC);

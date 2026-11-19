@@ -150,8 +150,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
               coupon.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.body(context).copyWith(
-                color: AppColors.of(context).textSecondary,
+              style: AppTextStyles.body(context).copyWith(color: AppColors.of(context).textSecondary,
               ),
             ),
           Row(
@@ -208,8 +207,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
               offer.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.body(context).copyWith(
-                color: AppColors.of(context).textSecondary,
+              style: AppTextStyles.body(context).copyWith(color: AppColors.of(context).textSecondary,
               ),
             ),
           Row(
@@ -512,7 +510,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                   pagePad.left,
                   pagePad.top,
                   pagePad.right,
-                  0,
+                  context.h(0),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -527,12 +525,12 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                             children: [
                               Text(
                                 'Coupons & Offers',
-                                style: AppTextStyles.heading(context),
+                                style: AppTextStyles.h2(context),
                               ),
                               SizedBox(height: context.h(4)),
                               Text(
                                 'Manage active promotions and discount codes.',
-                                style: AppTextStyles.bodySecondary(context)
+                                style: AppTextStyles.body(context)
                                     .copyWith(color: colors.textSecondary),
                               ),
                             ],
@@ -587,7 +585,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                                     label: 'Active Offers',
                                     value: '${offerState.activeCount}',
                                     icon: Icons.local_offer_outlined,
-                                    accentColor: const Color(0xFF7C5CFC),
+                                    accentColor: AppColors.accent,
                                     minHeight: minHeight,
                                   ),
                                 ];
@@ -760,8 +758,7 @@ class _AddPromotionTile extends StatelessWidget {
                       Text(
                         title,
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.section(context).copyWith(
-                          color: colors.textMuted.withValues(alpha: 0.85),
+                        style: AppTextStyles.bodyLargeSemi(context).copyWith(color: colors.textMuted.withValues(alpha: 0.85),
                         ),
                       ),
                     ],
@@ -805,7 +802,7 @@ class _CouponsFiltersHeader extends SliverPersistentHeaderDelegate {
     return Material(
       color: background,
       elevation: overlapsContent || shrinkOffset > 0 ? 1.5 : 0,
-      shadowColor: Colors.black26,
+      shadowColor: AppColors.black.withValues(alpha: 0.26),
       child: Container(
         height: _height,
         alignment: Alignment.centerLeft,
@@ -817,7 +814,7 @@ class _CouponsFiltersHeader extends SliverPersistentHeaderDelegate {
               color: overlapsContent || shrinkOffset > 0
                   ? AppColors.of(context).border
                   : Colors.transparent,
-              width: 1,
+              width: context.w(1),
             ),
           ),
         ),

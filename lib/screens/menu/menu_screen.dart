@@ -216,8 +216,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
         itemDetails: [
           Text(
             item.category,
-            style: AppTextStyles.body(context).copyWith(
-              color: AppColors.of(context).textSecondary,
+            style: AppTextStyles.body(context).copyWith(color: AppColors.of(context).textSecondary,
             ),
           ),
         ],
@@ -308,7 +307,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                   pagePad.left,
                   pagePad.top,
                   pagePad.right,
-                  0,
+                  context.h(0),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -396,16 +395,14 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                     pagePad.left,
                     context.h(8),
                     pagePad.right,
-                    0,
+                    context.h(0),
                   ),
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
                           provider.errorMessage!,
-                          style: AppTextStyles.bodySecondary(context).copyWith(
-                            color: AppColors.danger,
-                          ),
+                          style: AppTextStyles.body(context).copyWith(color: AppColors.danger),
                         ),
                       ),
                       TextButton(
@@ -452,14 +449,12 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
             children: [
               Text(
                 'Menu Items',
-                style: AppTextStyles.heading(context),
+                style: AppTextStyles.h2(context),
               ),
               SizedBox(height: context.h(4)),
               Text(
                 'Manage your menu items, pricing and categories.',
-                style: AppTextStyles.bodySecondary(context).copyWith(
-                  color: colors.textSecondary,
-                ),
+                style: AppTextStyles.body(context).copyWith(color: colors.textSecondary),
               ),
             ],
           ),
@@ -510,7 +505,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final labels = ['All', ...provider.categoryList.map((c) => c.name)];
 
     // Measure the widest label so the button never changes size
-    final textStyle = AppTextStyles.label(context);
+    final textStyle = AppTextStyles.bodySemi(context);
     double maxTextWidth = 0;
     for (final label in labels) {
       final tp = TextPainter(
@@ -563,9 +558,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                 child: Text(
                   provider
                       .selectedCategory, // always shows "All" or selected name
-                  style: AppTextStyles.label(context).copyWith(
-                    color: isActive ? AppColors.primary : colors.textSecondary,
-                  ),
+                  style: AppTextStyles.bodySemi(context).copyWith(color: isActive ? AppColors.primary : colors.textSecondary),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
@@ -610,7 +603,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: AppColors.black.withValues(alpha: 0.1),
             blurRadius: context.h(18),
             offset: Offset(0, context.h(7)),
           ),
@@ -621,7 +614,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
         children: [
           Text(
             'Filter by category',
-            style: AppTextStyles.section(context)
+            style: AppTextStyles.bodyLargeSemi(context)
                 .copyWith(color: colors.textPrimary),
           ),
           SizedBox(height: context.h(4)),
@@ -636,7 +629,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                 ? Center(
                     child: Text(
                       'No categories yet.',
-                      style: AppTextStyles.bodySecondary(context)
+                      style: AppTextStyles.body(context)
                           .copyWith(color: colors.textMuted),
                     ),
                   )
@@ -777,8 +770,8 @@ class _FilterChip extends StatelessWidget {
         child: Text(
           label,
           style: selected
-              ? AppTextStyles.label(context).copyWith(color: Colors.white)
-              : AppTextStyles.label(context)
+              ? AppTextStyles.bodySemi(context).copyWith(color: AppColors.white)
+              : AppTextStyles.bodySemi(context)
                   .copyWith(color: colors.textSecondary),
         ),
       ),
@@ -845,8 +838,7 @@ class _AddItemTile extends ConsumerWidget {
                       Text(
                         'Add Item',
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.section(context).copyWith(
-                          color: colors.textMuted.withValues(alpha: 0.8),
+                        style: AppTextStyles.bodyLargeSemi(context).copyWith(color: colors.textMuted.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -890,7 +882,7 @@ class _MenuFiltersHeader extends SliverPersistentHeaderDelegate {
     return Material(
       color: background,
       elevation: overlapsContent || shrinkOffset > 0 ? 1.5 : 0,
-      shadowColor: Colors.black26,
+      shadowColor: AppColors.black.withValues(alpha: 0.26),
       child: Container(
         height: _height,
         alignment: Alignment.centerLeft,
@@ -902,7 +894,7 @@ class _MenuFiltersHeader extends SliverPersistentHeaderDelegate {
               color: overlapsContent || shrinkOffset > 0
                   ? AppColors.of(context).border
                   : Colors.transparent,
-              width: 1,
+              width: context.w(1),
             ),
           ),
         ),

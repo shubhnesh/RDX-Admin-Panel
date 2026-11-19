@@ -7,6 +7,12 @@ import 'package:rdx_admin/screens/dashboard/widgets/dashboard_empty.dart';
 import 'package:rdx_admin/screens/dashboard/widgets/dashboard_card_style.dart';
 
 /// Adapted from Zomato Service quality: cancelled %, unpaid, stock health.
+///
+/// Typography (STYLE_GUIDE):
+/// - Card title → DashboardCardStyle.title (bodyLargeSemi)
+/// - Metric label → caption
+/// - Metric value → h2 + primary
+/// - Hint → caption + textMuted
 class DashboardServiceQuality extends StatelessWidget {
   final DashboardStatsModel stats;
   final ValueChanged<String>? onNavigate;
@@ -40,8 +46,10 @@ class DashboardServiceQuality extends StatelessWidget {
             children: [
               if (hasData)
                 Expanded(
-                  child: Text('Service quality',
-                      style: DashboardCardStyle.title(context)),
+                  child: Text(
+                    'Service quality',
+                    style: DashboardCardStyle.title(context),
+                  ),
                 ),
             ],
           ),
@@ -73,7 +81,7 @@ class DashboardServiceQuality extends StatelessWidget {
                           hint: '${stats.funnelCancelled} of $total',
                           color: cancelledPct > 10
                               ? AppColors.danger
-                              : const Color(0xFF22C55E),
+                              : AppColors.success,
                           icon: Icons.cancel_outlined,
                         ),
                       ),
@@ -85,7 +93,7 @@ class DashboardServiceQuality extends StatelessWidget {
                           label: 'Delivery rate',
                           value: '${deliveredPct.toStringAsFixed(0)}%',
                           hint: '${stats.funnelDelivered} of $total',
-                          color: const Color(0xFF22C55E),
+                          color: AppColors.success,
                           icon: Icons.check_circle_outline,
                         ),
                       ),
@@ -104,7 +112,7 @@ class DashboardServiceQuality extends StatelessWidget {
                               : 'All clear',
                           color: stats.pendingPaymentCount > 0
                               ? AppColors.warning
-                              : const Color(0xFF22C55E),
+                              : AppColors.success,
                           icon: Icons.payments_outlined,
                           onTap: () => onNavigate?.call('/live-orders'),
                         ),
@@ -123,7 +131,7 @@ class DashboardServiceQuality extends StatelessWidget {
                               ? AppColors.danger
                               : (stats.lowStockCount > 0
                                   ? AppColors.warning
-                                  : const Color(0xFF22C55E)),
+                                  : AppColors.success),
                           icon: Icons.inventory_2_outlined,
                           onTap: () => onNavigate?.call('/inventory'),
                         ),
@@ -138,8 +146,11 @@ class DashboardServiceQuality extends StatelessWidget {
     );
   }
 
-  Widget _shell(BuildContext context, AppColorScheme colors,
-      {required Widget child}) {
+  Widget _shell(
+    BuildContext context,
+    AppColorScheme colors, {
+    required Widget child,
+  }) {
     return Container(
       width: double.infinity,
       height: context.h(360),
@@ -167,7 +178,7 @@ class DashboardServiceQuality extends StatelessWidget {
     final tile = Container(
       padding: EdgeInsets.symmetric(
         horizontal: context.w(16),
-        vertical: context.w(12),
+        vertical: context.h(12),
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -184,33 +195,25 @@ class DashboardServiceQuality extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppTextStyles.caption(context).copyWith(
-                    color: colors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            label,
+            style: AppTextStyles.caption(context).copyWith(
+              color: colors.textSecondary,
+            ),
           ),
           SizedBox(height: context.h(8)),
           Text(
             value,
-            style: AppTextStyles.heading(context).copyWith(
-              fontSize: context.h(20),
-              fontWeight: FontWeight.w800,
+            style: AppTextStyles.h2(context).copyWith(
               color: AppColors.primary,
             ),
           ),
           SizedBox(height: context.h(2)),
           Text(
             hint,
-            style: AppTextStyles.caption(context)
-                .copyWith(color: colors.textMuted),
+            style: AppTextStyles.caption(context).copyWith(
+              color: colors.textMuted,
+            ),
           ),
         ],
       ),

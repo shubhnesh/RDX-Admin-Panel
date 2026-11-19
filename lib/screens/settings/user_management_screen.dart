@@ -52,8 +52,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   Future<void> _openAdd({ManagedUserModel? existing}) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => AddUserScreen(existing: existing),
-      ),
+        builder: (_) => AddUserScreen(existing: existing)
+      )
     );
     if (mounted) await ref.read(userManagementProvider).load();
   }
@@ -62,7 +62,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     final auth = ref.read(authProvider);
     if (auth.user?.uid == user.uid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You cannot disable your own account.')),
+        const SnackBar(content: Text('You cannot disable your own account.'))
       );
       return;
     }
@@ -74,8 +74,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         itemName: user.email,
         deleteButtonLabel: 'Disable',
         warningMessage:
-            'This disables sign-in for this account. Role history is kept.',
-      ),
+            'This disables sign-in for this account. Role history is kept.'
+      )
     );
     if (confirmed != true || !mounted) return;
 
@@ -83,12 +83,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       await ref.read(userManagementProvider).disableUser(uid: user.uid);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User disabled.')),
+        const SnackBar(content: Text('User disabled.'))
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to disable user. $e')),
+        SnackBar(content: Text('Failed to disable user. $e'))
       );
     }
   }
@@ -109,15 +109,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             RdxHeader(
               title: 'User Management',
               showBackButton: true,
-              onBack: widget.onBack,
+              onBack: widget.onBack
             ),
             const Expanded(
               child: EmptyState(
-                message: 'Admin access required to manage users.',
-              ),
+                message: 'Admin access required to manage users.'
+              )
             ),
-          ],
-        ),
+          ]
+        )
       );
     }
 
@@ -128,7 +128,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           RdxHeader(
             title: 'User Management',
             showBackButton: true,
-            onBack: widget.onBack,
+            onBack: widget.onBack
           ),
           SizedBox(height: context.h(isNarrow ? 10 : 14)),
           Padding(
@@ -141,17 +141,17 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         controller: _searchController,
                         hintText: 'Search email or role',
                         height: RdxSearchBar.standardHeight(context),
-                        onChanged: provider.setSearch,
+                        onChanged: provider.setSearch
                       ),
                       SizedBox(height: context.h(10)),
                       Align(
                         alignment: Alignment.centerRight,
                         child: RdxHeaderActionButton(
                           label: 'Add user',
-                          onPressed: () => _openAdd(),
-                        ),
+                          onPressed: () => _openAdd()
+                        )
                       ),
-                    ],
+                    ]
                   )
                 : Row(
                     children: [
@@ -160,16 +160,16 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                           controller: _searchController,
                           hintText: 'Search email or role',
                           height: RdxSearchBar.standardHeight(context),
-                          onChanged: provider.setSearch,
-                        ),
+                          onChanged: provider.setSearch
+                        )
                       ),
                       SizedBox(width: context.w(12)),
                       RdxHeaderActionButton(
                         label: 'Add user',
-                        onPressed: () => _openAdd(),
+                        onPressed: () => _openAdd()
                       ),
-                    ],
-                  ),
+                    ]
+                  )
           ),
           SizedBox(height: context.h(12)),
           Expanded(
@@ -183,59 +183,59 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                             Text(
                               provider.errorMessage!,
                               style: AppTextStyles.body(context),
-                              textAlign: TextAlign.center,
+                              textAlign: TextAlign.center
                             ),
                             SizedBox(height: context.h(12)),
                             RdxActionButton(
                               label: 'Retry',
                               isPrimary: true,
-                              onPressed: () => provider.load(),
+                              onPressed: () => provider.load()
                             ),
-                          ],
-                        ),
+                          ]
+                        )
                       )
                     : Padding(
                         padding: EdgeInsets.fromLTRB(
                           horizontal,
-                          0,
+                          context.h(0),
                           horizontal,
-                          context.h(20),
+                          context.h(20)
                         ),
                         child: _buildBody(
                           context,
                           colors,
-                          provider.filteredUsers,
-                        ),
-                      ),
+                          provider.filteredUsers
+                        )
+                      )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
   Widget _buildBody(
     BuildContext context,
     AppColorScheme colors,
-    List<ManagedUserModel> users,
+    List<ManagedUserModel> users
   ) {
     if (users.isEmpty) {
       return EmptyState(
         message: ref.read(userManagementProvider).search.trim().isEmpty
             ? 'No users yet.'
-            : 'No users match your search.',
+            : 'No users match your search.'
       );
     }
 
     return RdxTable(
       showFooter: false,
       columns: [
-        RdxTableColumn(title: 'EMAIL', minWidth: 220, flex: 2.2),
-        RdxTableColumn(title: 'ROLE', minWidth: 100, flex: 1),
-        RdxTableColumn(title: 'STATUS', minWidth: 100, flex: 1),
+        RdxTableColumn(title: 'EMAIL', minWidth: context.w(220), flex: 2.2),
+        RdxTableColumn(title: 'ROLE', minWidth: context.w(100), flex: 1),
+        RdxTableColumn(title: 'STATUS', minWidth: context.w(100), flex: 1),
         RdxTableColumn(
           title: 'ACTIONS',
-          minWidth: 110,
-          alignment: Alignment.centerRight,
+          minWidth: context.w(110),
+          alignment: Alignment.centerRight
         ),
       ],
       rows: [
@@ -243,24 +243,24 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           [
             Text(
               u.email,
-              style: AppTextStyles.bodySecondary(context).copyWith(
-                fontWeight: FontWeight.w600,
+              style: AppTextStyles.body(context).copyWith(
+                fontWeight: FontWeight.w600
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.ellipsis
             ),
-            Text(u.roleLabel, style: AppTextStyles.bodySecondary(context)),
+            Text(u.roleLabel, style: AppTextStyles.body(context)),
             Text(
               u.disabled ? 'Disabled' : 'Active',
-              style: AppTextStyles.bodySecondary(context).copyWith(
+              style: AppTextStyles.body(context).copyWith(
                 color: u.disabled ? colors.textMuted : AppColors.success,
-                fontWeight: FontWeight.w600,
-              ),
+                fontWeight: FontWeight.w600
+              )
             ),
             _actions(u),
           ],
       ],
-      onRowTap: (index) => _openAdd(existing: users[index]),
+      onRowTap: (index) => _openAdd(existing: users[index])
     );
   }
 
@@ -271,14 +271,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         RdxTableActionButton(
           icon: Icons.edit_outlined,
           tooltip: 'Edit role',
-          onPressed: user.disabled ? null : () => _openAdd(existing: user),
+          onPressed: user.disabled ? null : () => _openAdd(existing: user)
         ),
         RdxTableActionButton(
           icon: Icons.person_off_outlined,
           tooltip: 'Disable',
-          onPressed: user.disabled ? null : () => _disableUser(user),
+          onPressed: user.disabled ? null : () => _disableUser(user)
         ),
-      ],
+      ]
     );
   }
 }

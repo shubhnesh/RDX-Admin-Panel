@@ -49,9 +49,9 @@ class CartPanel extends ConsumerWidget {
                         separatorBuilder: (_, __) =>
                             SizedBox(height: context.h(10)),
                         itemBuilder: (context, index) =>
-                            _CartItem(line: cart[index]),
-                      ),
-          ),
+                            _CartItem(line: cart[index])
+                      )
+          )
         ),
         SizedBox(height: context.h(compactLayout ? 8 : 16)),
         // Keep the actions outside the summary container, like Checkout.
@@ -63,8 +63,8 @@ class CartPanel extends ConsumerWidget {
                 height: compactLayout ? 32 : null,
                 onPressed: cart.isEmpty
                     ? null
-                    : () => ref.read(cartProvider.notifier).clear(),
-              ),
+                    : () => ref.read(cartProvider.notifier).clear()
+              )
             ),
             SizedBox(width: context.w(10)),
             Expanded(
@@ -78,21 +78,21 @@ class CartPanel extends ConsumerWidget {
                         () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const CheckoutScreen(),
-                            ),
+                              builder: (_) => const CheckoutScreen()
+                            )
                           );
-                        },
-              ),
+                        }
+              )
             ),
-          ],
+          ]
         )
-      ],
+      ]
     );
   }
 
   Widget _emptyCart(
     BuildContext context,
-    AppColorScheme colors,
+    AppColorScheme colors
   ) {
     return Center(
       child: Padding(
@@ -103,27 +103,26 @@ class CartPanel extends ConsumerWidget {
             Icon(
               Icons.shopping_cart_outlined,
               size: context.h(30),
-              color: colors.textMuted,
+              color: colors.textMuted
             ),
             SizedBox(height: context.h(8)),
             Text(
               'No items added',
-              style: AppTextStyles.label(context).copyWith(
-                color: colors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppTextStyles.bodySemi(context).copyWith(
+                color: colors.textSecondary
+                )
             ),
             SizedBox(height: context.h(3)),
             Text(
               'Select items from the menu',
               textAlign: TextAlign.center,
-              style: AppTextStyles.bodySecondary(context).copyWith(
-                color: colors.textMuted,
-              ),
+              style: AppTextStyles.body(context).copyWith(
+                color: colors.textMuted
+              )
             ),
-          ],
-        ),
-      ),
+          ]
+        )
+      )
     );
   }
 }
@@ -182,13 +181,13 @@ class _CompactCartItemsState extends State<_CompactCartItems> {
                 width: cardWidth,
                 child: _CartItem(
                   line: widget.items[index],
-                  compactLayout: true,
-                ),
-              ),
-            ),
-          ),
+                  compactLayout: true
+                )
+              )
+            )
+          )
         );
-      },
+      }
     );
   }
 }
@@ -238,7 +237,7 @@ class _CartItem extends ConsumerWidget {
               onDecrement: () =>
                   cartNotifier.updateQuantity(line.id, quantity - 1),
               onIncrement: () =>
-                  cartNotifier.updateQuantity(line.id, quantity + 1),
+                  cartNotifier.updateQuantity(line.id, quantity + 1)
             ),
             // Delete at the end of the same row
             Material(
@@ -251,23 +250,23 @@ class _CartItem extends ConsumerWidget {
                   height: compactLayout ? 18 : context.h(28),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE05151).withValues(alpha: 0.1),
+                    color: AppColors.danger.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(context.h(6)),
                     border: Border.all(
-                      color: const Color(0xFFE05151).withValues(alpha: 0.35),
-                    ),
+                      color: AppColors.danger.withValues(alpha: 0.35)
+                    )
                   ),
                   child: Icon(
                     Icons.delete_outline_rounded,
                     size: compactLayout ? 13 : context.h(16),
-                    color: const Color(0xFFE05151),
-                  ),
-                ),
-              ),
+                    color: AppColors.danger
+                  )
+                )
+              )
             ),
-          ],
+          ]
         );
-      },
+      }
     );
   }
 
@@ -288,7 +287,7 @@ class _CartItem extends ConsumerWidget {
             context,
             icon: Icons.remove,
             onTap: onDecrement,
-            compactLayout: compactLayout,
+            compactLayout: compactLayout
           ),
           SizedBox(
             width: compactLayout ? 20 : context.w(28),
@@ -297,20 +296,20 @@ class _CartItem extends ConsumerWidget {
               textAlign: TextAlign.center,
               style: (compactLayout
                       ? AppTextStyles.caption(context).copyWith(
-                          fontSize: 12,
+                          fontSize: 12
                         )
-                      : AppTextStyles.section(context))
-                  .copyWith(fontWeight: FontWeight.w600),
-            ),
+                      : AppTextStyles.bodyLargeSemi(context))
+                  .copyWith(fontWeight: FontWeight.w600)
+            )
           ),
           _stepperButton(
             context,
             icon: Icons.add,
             onTap: onIncrement,
-            compactLayout: compactLayout,
+            compactLayout: compactLayout
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -331,15 +330,15 @@ class _CartItem extends ConsumerWidget {
           height: buttonSize,
           decoration: BoxDecoration(
             color: AppColors.primary,
-            borderRadius: BorderRadius.circular(context.h(6)),
+            borderRadius: BorderRadius.circular(context.h(6))
           ),
           child: Icon(
             icon,
             size: compactLayout ? 11 : context.h(14),
-            color: Colors.white,
-          ),
-        ),
-      ),
+            color: AppColors.white
+          )
+        )
+      )
     );
   }
 }

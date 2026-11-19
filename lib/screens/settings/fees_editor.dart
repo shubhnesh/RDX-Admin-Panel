@@ -126,7 +126,7 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
           lateNightEnd: end,
           longDistanceFee: longDist,
           deliveryFee: delivery,
-          freeDeliveryAbove: freeAbove,
+          freeDeliveryAbove: freeAbove
         );
     if (!mounted) {
       _log('Fee save response received after the editor was disposed.');
@@ -141,7 +141,7 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
       Navigator.of(context).pop();
     } else {
       _snack(
-        ref.read(settingsProvider).errorMessage ?? 'Failed to save fees.',
+        ref.read(settingsProvider).errorMessage ?? 'Failed to save fees.'
       );
     }
   }
@@ -153,7 +153,7 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
 
   void _snack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(content: Text(message))
     );
   }
 
@@ -161,7 +161,7 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
   Widget build(BuildContext context) {
     if (!ref.watch(authProvider).permissions.canEditSettings) {
       return const Scaffold(
-        body: Center(child: Text('Only admins can edit order fees.')),
+        body: Center(child: Text('Only admins can edit order fees.'))
       );
     }
     final colors = AppColors.of(context);
@@ -173,7 +173,7 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
           const RdxHeader(
             title: 'Order Fees',
             subtitle: 'Edit fees charges',
-            showBackButton: true,
+            showBackButton: true
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -195,9 +195,9 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                        ],
+                        ]
                       ),
-                    ],
+                    ]
                   ),
                   SizedBox(height: context.h(16)),
                   _sectionCard(
@@ -214,7 +214,7 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                        ],
+                        ]
                       ),
                       SizedBox(height: context.h(16)),
                       RdxTextField(
@@ -225,9 +225,9 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                        ],
+                        ]
                       ),
-                    ],
+                    ]
                   ),
                   SizedBox(height: context.h(16)),
                   _sectionCard(
@@ -244,9 +244,9 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                        ],
+                        ]
                       ),
-                    ],
+                    ]
                   ),
                   SizedBox(height: context.h(16)),
                   _sectionCard(
@@ -263,7 +263,7 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                             decimal: true),
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                        ],
+                        ]
                       ),
                       SizedBox(height: context.h(16)),
                       LayoutBuilder(
@@ -273,15 +273,15 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                             label: 'Late night start',
                             value: _lateStartCtrl.text,
                             onChanged: (value) => setState(
-                              () => _lateStartCtrl.text = value,
-                            ),
+                              () => _lateStartCtrl.text = value
+                            )
                           );
                           final end = _LateNightTimeField(
                             label: 'Late night end',
                             value: _lateEndCtrl.text,
                             onChanged: (value) => setState(
-                              () => _lateEndCtrl.text = value,
-                            ),
+                              () => _lateEndCtrl.text = value
+                            )
                           );
                           if (stack) {
                             return Column(
@@ -289,7 +289,7 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                                 start,
                                 SizedBox(height: context.h(16)),
                                 end,
-                              ],
+                              ]
                             );
                           }
                           return Row(
@@ -298,11 +298,11 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                               Expanded(child: start),
                               SizedBox(width: context.w(16)),
                               Expanded(child: end),
-                            ],
+                            ]
                           );
-                        },
+                        }
                       ),
-                    ],
+                    ]
                   ),
                   SizedBox(height: context.h(16)),
                   Align(
@@ -311,15 +311,15 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
                       label: 'Save fees',
                       minWidth: context.w(140),
                       isLoading: _saving,
-                      onPressed: _save,
-                    ),
+                      onPressed: _save
+                    )
                   ),
-                ],
-              ),
-            ),
+                ]
+              )
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -336,7 +336,7 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(14)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,13 +345,13 @@ class _FeesEditorState extends ConsumerState<FeesEditor> {
             children: [
               Icon(icon, size: context.h(18), color: AppColors.primary),
               SizedBox(width: context.w(8)),
-              Text(title, style: AppTextStyles.section(context)),
-            ],
+              Text(title, style: AppTextStyles.bodyLargeSemi(context)),
+            ]
           ),
           SizedBox(height: context.h(16)),
           ...children,
-        ],
-      ),
+        ]
+      )
     );
   }
 }
@@ -371,7 +371,7 @@ class _LateNightTimeField extends StatelessWidget {
     final parts = value.split(':');
     return TimeOfDay(
       hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
+      minute: int.parse(parts[1])
     );
   }
 
@@ -394,8 +394,8 @@ class _LateNightTimeField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.bodySecondary(context)
-              .copyWith(color: colors.textSecondary),
+          style: AppTextStyles.body(context)
+              .copyWith(color: colors.textSecondary)
         ),
         SizedBox(height: context.h(6)),
         InkWell(
@@ -406,29 +406,29 @@ class _LateNightTimeField extends StatelessWidget {
                 : _parseTime(value);
             if (kDebugMode) {
               debugPrint(
-                '[FeesEditor] $label time picker opened.',
+                '[FeesEditor] $label time picker opened.'
               );
             }
             final selected = await showTimePicker(
               context: context,
-              initialTime: initialTime,
+              initialTime: initialTime
             );
             if (selected == null) {
               if (kDebugMode) {
                 debugPrint(
-                  '[FeesEditor] $label time selection cancelled.',
+                  '[FeesEditor] $label time selection cancelled.'
                 );
               }
               return;
             }
             if (kDebugMode) {
               debugPrint(
-                '[FeesEditor] $label time selected.',
+                '[FeesEditor] $label time selected.'
               );
             }
             onChanged(
               '${selected.hour.toString().padLeft(2, '0')}:'
-              '${selected.minute.toString().padLeft(2, '0')}',
+              '${selected.minute.toString().padLeft(2, '0')}'
             );
           },
           child: Container(
@@ -438,16 +438,16 @@ class _LateNightTimeField extends StatelessWidget {
             decoration: BoxDecoration(
               color: colors.background,
               borderRadius: BorderRadius.circular(context.h(5)),
-              border: Border.all(color: colors.border),
+              border: Border.all(color: colors.border)
             ),
             child: Text(
               displayValue,
-              style: AppTextStyles.section(context)
-                  .copyWith(color: colors.textSecondary),
-            ),
-          ),
+              style: AppTextStyles.bodyLargeSemi(context)
+                  .copyWith(color: colors.textSecondary)
+            )
+          )
         ),
-      ],
+      ]
     );
   }
 }

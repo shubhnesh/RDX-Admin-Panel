@@ -4,18 +4,23 @@ import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 
 /// Single shared look for every dashboard sub-module card.
+///
+/// Typography follows STYLE_GUIDE:
+/// - Card title → [AppTextStyles.bodyLargeSemi]
+/// - Card description → [AppTextStyles.body]
+/// - Period badge → [AppTextStyles.bodySemi] + primary color
 class DashboardCardStyle {
   DashboardCardStyle._();
 
   static const double radius = 16;
   static const Color salesAccent = AppColors.primary;
-  static const Color ordersAccent = Color(0xFF22C55E);
-  static const Color averageOrderValueAccent = Color(0xFF3B82F6);
+  static const Color ordersAccent = AppColors.success;
+  static const Color averageOrderValueAccent = AppColors.info;
 
   /// Lighter shadow so cards don't feel heavy stacked in sections.
   static List<BoxShadow> get shadow => [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
+          color: AppColors.black.withValues(alpha: 0.04),
           blurRadius: 5,
           offset: const Offset(0, 1),
         ),
@@ -31,19 +36,14 @@ class DashboardCardStyle {
     );
   }
 
-  /// Sub-module title — smaller than [DashboardSection] module heading.
+  /// Sub-module title — maps to bodyLargeSemi (section / card title role).
   static TextStyle title(BuildContext context) {
-    return AppTextStyles.label(context).copyWith(
-      fontSize: context.h(16),
-      fontWeight: FontWeight.w700,
-      letterSpacing: 0.1,
-    );
+    return AppTextStyles.bodyLargeSemi(context);
   }
 
+  /// Supporting line under the title — body role.
   static TextStyle description(BuildContext context) {
-    return AppTextStyles.caption(context).copyWith(
-      color: AppColors.of(context).textSecondary,
-      fontSize: context.h(14),
+    return AppTextStyles.body(context).copyWith(color: AppColors.of(context).textSecondary,
     );
   }
 
@@ -59,10 +59,7 @@ class DashboardCardStyle {
       ),
       child: Text(
         label,
-        style: AppTextStyles.label(context).copyWith(
-          color: AppColors.primary,
-          fontWeight: FontWeight.w700,
-        ),
+        style: AppTextStyles.bodySemi(context).copyWith(color: AppColors.primary),
       ),
     );
   }

@@ -125,8 +125,8 @@ class _CategoryTabChip extends StatelessWidget {
         child: Text(
           label,
           style: selected
-              ? AppTextStyles.label(context).copyWith(color: Colors.white)
-              : AppTextStyles.label(context)
+              ? AppTextStyles.bodySemi(context).copyWith(color: AppColors.white)
+              : AppTextStyles.bodySemi(context)
                   .copyWith(color: colors.textSecondary),
         ),
       ),

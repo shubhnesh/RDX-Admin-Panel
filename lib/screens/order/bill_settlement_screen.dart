@@ -93,7 +93,7 @@ class BillSettlementData {
       deliveryAddress: deliveryAddress,
       sendDigitalReceipt: sendDigitalReceipt,
       invoiceReference: invoiceReference,
-      receiptDateTime: receiptDateTime,
+      receiptDateTime: receiptDateTime
     );
   }
 
@@ -171,7 +171,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
         : 0.0;
     return widget.bill.withFees(
       lateNightFee: lateNight,
-      longDistanceFee: longDistance,
+      longDistanceFee: longDistance
     );
   }
 
@@ -218,7 +218,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
             orderId: widget.bill.orderNumber,
             paymentMethod: method,
             applyLateNightFee: _applyLateNightFee,
-            applyLongDistanceFee: _applyLongDistanceFee,
+            applyLongDistanceFee: _applyLongDistanceFee
           );
       widget.onSettled?.call(settledOrder);
 
@@ -230,7 +230,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
       await _showNotice(
         message.isNotEmpty
             ? message
-            : 'Failed to complete payment. Please try again.',
+            : 'Failed to complete payment. Please try again.'
       );
     } finally {
       if (mounted) setState(() => _isSettling = false);
@@ -266,7 +266,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
         children: [
           const RdxHeader(
             title: 'Bill & Receipt settlement',
-            showBackButton: true,
+            showBackButton: true
           ),
           Expanded(
             child: narrow
@@ -275,7 +275,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                       context.w(20),
                       context.h(12),
                       context.w(20),
-                      context.h(24),
+                      context.h(24)
                     ),
                     child: Column(
                       children: [
@@ -285,7 +285,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                           selected: _selectedPayment,
                           total: bill.total,
                           onSelected: (v) =>
-                              setState(() => _selectedPayment = v),
+                              setState(() => _selectedPayment = v)
                         ),
                         SizedBox(height: context.h(14)),
                         _ExtraFeesPanel(
@@ -301,7 +301,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                           onLateNightChanged: (v) =>
                               setState(() => _applyLateNightFee = v),
                           onLongDistanceChanged: (v) =>
-                              setState(() => _applyLongDistanceFee = v),
+                              setState(() => _applyLongDistanceFee = v)
                         ),
                         SizedBox(height: context.h(14)),
                         _BillingPanel(bill: bill),
@@ -310,20 +310,20 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                           height: context.h(420),
                           child: _ReceiptPanel(
                             bill: bill,
-                            selectedPayment: _selectedPayment,
-                          ),
+                            selectedPayment: _selectedPayment
+                          )
                         ),
                         SizedBox(height: context.h(14)),
                         _actionButtons(context),
-                      ],
-                    ),
+                      ]
+                    )
                   )
                 : Padding(
                     padding: EdgeInsets.fromLTRB(
                       context.w(20),
                       context.h(12),
                       context.w(20),
-                      context.h(16),
+                      context.h(16)
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -339,7 +339,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                                   selected: _selectedPayment,
                                   total: bill.total,
                                   onSelected: (v) =>
-                                      setState(() => _selectedPayment = v),
+                                      setState(() => _selectedPayment = v)
                                 ),
                                 SizedBox(height: context.h(14)),
                                 _ExtraFeesPanel(
@@ -356,18 +356,18 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                                   onLateNightChanged: (v) =>
                                       setState(() => _applyLateNightFee = v),
                                   onLongDistanceChanged: (v) => setState(
-                                      () => _applyLongDistanceFee = v),
+                                      () => _applyLongDistanceFee = v)
                                 ),
                                 SizedBox(height: context.h(14)),
                                 _BillingPanel(bill: bill),
-                              ],
-                            ),
-                          ),
+                              ]
+                            )
+                          )
                         ),
                         VerticalDivider(
                           width: context.w(1),
                           thickness: 1,
-                          color: colors.border,
+                          color: colors.border
                         ),
                         // Right column — receipt + actions (like create menu preview)
                         SizedBox(
@@ -380,21 +380,21 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
                                 Expanded(
                                   child: _ReceiptPanel(
                                     bill: bill,
-                                    selectedPayment: _selectedPayment,
-                                  ),
+                                    selectedPayment: _selectedPayment
+                                  )
                                 ),
                                 SizedBox(height: context.h(12)),
                                 _actionButtons(context),
-                              ],
-                            ),
-                          ),
+                              ]
+                            )
+                          )
                         ),
-                      ],
-                    ),
-                  ),
+                      ]
+                    )
+                  )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -412,7 +412,7 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
           isPrimary: true,
           // Print only after a payment method is chosen
           enabled: !_isSettling && hasPayment,
-          onPressed: _printBill,
+          onPressed: _printBill
         ),
         SizedBox(height: context.h(10)),
         RdxActionButton(
@@ -420,16 +420,16 @@ class _BillSettlementScreenState extends ConsumerState<BillSettlementScreen> {
           leadingIcon: Icons.check_circle_outline,
           isPrimary: true,
           enabled: !_isSettling && hasPayment,
-          onPressed: _markPaidAndComplete,
+          onPressed: _markPaidAndComplete
         ),
         SizedBox(height: context.h(10)),
         RdxActionButton(
           label: 'Close',
           isPrimary: false,
           enabled: !_isSettling,
-          onPressed: _close,
+          onPressed: _close
         ),
-      ],
+      ]
     );
   }
 }
@@ -457,7 +457,7 @@ class _ServiceCustomerPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,16 +467,16 @@ class _ServiceCustomerPanel extends StatelessWidget {
               Icon(
                 Icons.receipt_long_outlined,
                 size: context.h(18),
-                color: AppColors.primary,
+                color: AppColors.primary
               ),
               SizedBox(width: context.w(8)),
               Text(
                 'Service & customer',
-                style: AppTextStyles.section(context).copyWith(
-                  color: colors.textPrimary,
-                ),
+                style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                  color: colors.textPrimary
+                )
               ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(16)),
           LayoutBuilder(
@@ -486,19 +486,19 @@ class _ServiceCustomerPanel extends StatelessWidget {
                 context,
                 colors,
                 'Order ID',
-                bill.orderNumber,
+                bill.orderNumber
               );
               final serviceField = _serviceInfoField(
                 context,
                 colors,
                 'Service option',
-                bill.orderType,
+                bill.orderType
               );
               final orderTimeField = _serviceInfoField(
                 context,
                 colors,
                 'Order Time',
-                _formatOrderTime(bill.receiptDateTime),
+                _formatOrderTime(bill.receiptDateTime)
               );
               if (stack) {
                 return Column(
@@ -509,7 +509,7 @@ class _ServiceCustomerPanel extends StatelessWidget {
                     serviceField,
                     SizedBox(height: context.h(14)),
                     orderTimeField,
-                  ],
+                  ]
                 );
               }
               return Row(
@@ -520,9 +520,9 @@ class _ServiceCustomerPanel extends StatelessWidget {
                   Expanded(child: serviceField),
                   SizedBox(width: context.w(14)),
                   Expanded(child: orderTimeField),
-                ],
+                ]
               );
-            },
+            }
           ),
           SizedBox(height: context.h(16)),
           LayoutBuilder(
@@ -534,7 +534,7 @@ class _ServiceCustomerPanel extends StatelessWidget {
                 'Table',
                 hasTable
                     ? 'Table ${bill.tableNumber!.trim()}'
-                    : 'No table / counter',
+                    : 'No table / counter'
               );
               final customer = Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,8 +544,8 @@ class _ServiceCustomerPanel extends StatelessWidget {
                       context,
                       colors,
                       'Customer',
-                      customerName,
-                    ),
+                      customerName
+                    )
                   ),
                   if (hasPhone) ...[
                     SizedBox(width: context.w(12)),
@@ -554,11 +554,11 @@ class _ServiceCustomerPanel extends StatelessWidget {
                         context,
                         colors,
                         'Mobile number',
-                        bill.phoneNumber.trim(),
-                      ),
+                        bill.phoneNumber.trim()
+                      )
                     ),
                   ],
-                ],
+                ]
               );
 
               if (stack) {
@@ -570,7 +570,7 @@ class _ServiceCustomerPanel extends StatelessWidget {
                       SizedBox(height: context.h(14)),
                     ],
                     customer,
-                  ],
+                  ]
                 );
               }
               if (!isDineIn) return customer;
@@ -580,9 +580,9 @@ class _ServiceCustomerPanel extends StatelessWidget {
                   Expanded(child: table),
                   SizedBox(width: context.w(14)),
                   Expanded(child: customer),
-                ],
+                ]
               );
-            },
+            }
           ),
           if (hasAddress) ...[
             SizedBox(height: context.h(14)),
@@ -590,11 +590,11 @@ class _ServiceCustomerPanel extends StatelessWidget {
               context,
               colors,
               'Delivery address',
-              bill.deliveryAddress.trim(),
+              bill.deliveryAddress.trim()
             ),
           ],
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -602,16 +602,16 @@ class _ServiceCustomerPanel extends StatelessWidget {
     BuildContext context,
     AppColorScheme colors,
     String label,
-    String value,
+    String value
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: AppTextStyles.bodySecondary(context).copyWith(
-            color: colors.textMuted,
-          ),
+          style: AppTextStyles.body(context).copyWith(
+            color: colors.textMuted
+          )
         ),
         SizedBox(height: context.h(6)),
         Text(
@@ -620,10 +620,10 @@ class _ServiceCustomerPanel extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: AppTextStyles.body(context).copyWith(
             color: colors.textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
+            fontWeight: FontWeight.w500
+          )
         ),
-      ],
+      ]
     );
   }
 
@@ -678,19 +678,19 @@ class _PaymentMethodPanel extends StatelessWidget {
         id: 'Cash',
         title: 'Cash',
         // subtitle: '',
-        icon: Icons.payments_outlined,
+        icon: Icons.payments_outlined
       ),
       _Method(
         id: 'Card',
         title: 'Credit / Debit',
         // subtitle: 'Credit / Debit',
-        icon: Icons.credit_card_outlined,
+        icon: Icons.credit_card_outlined
       ),
       _Method(
         id: 'UPI',
         title: 'UPI / QR',
         // subtitle: 'Instant scan',
-        icon: Icons.qr_code_scanner,
+        icon: Icons.qr_code_scanner
       ),
     ];
 
@@ -700,7 +700,7 @@ class _PaymentMethodPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(10)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -710,16 +710,16 @@ class _PaymentMethodPanel extends StatelessWidget {
               Icon(
                 Icons.payment_outlined,
                 size: context.h(18),
-                color: AppColors.primary,
+                color: AppColors.primary
               ),
               SizedBox(width: context.w(8)),
               Text(
                 'Payment method',
-                style: AppTextStyles.section(context).copyWith(
-                  color: colors.textPrimary,
-                ),
+                style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                  color: colors.textPrimary
+                )
               ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(14)),
           Wrap(
@@ -728,10 +728,10 @@ class _PaymentMethodPanel extends StatelessWidget {
             children: [
               for (final method in methods)
                 _methodTile(context, colors, method),
-            ],
+            ]
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -749,12 +749,12 @@ class _PaymentMethodPanel extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.symmetric(
             horizontal: context.w(14),
-            vertical: context.h(12),
+            vertical: context.h(12)
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(context.h(10)),
             border: Border.all(
-                color: isSelected ? AppColors.primary : colors.border),
+                color: isSelected ? AppColors.primary : colors.border)
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -762,19 +762,19 @@ class _PaymentMethodPanel extends StatelessWidget {
               Icon(
                 m.icon,
                 size: context.h(18),
-                color: isSelected ? AppColors.primary : colors.textSecondary,
+                color: isSelected ? AppColors.primary : colors.textSecondary
               ),
               SizedBox(width: context.w(8)),
               Text(
                 m.title,
-                style: AppTextStyles.label(context).copyWith(
-                  color: isSelected ? colors.primary : colors.textSecondary,
-                ),
+                style: AppTextStyles.bodySemi(context).copyWith(
+                  color: isSelected ? colors.primary : colors.textSecondary
+                )
               ),
-            ],
-          ),
-        ),
-      ),
+            ]
+          )
+        )
+      )
     );
   }
 }
@@ -828,7 +828,7 @@ class _ExtraFeesPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(10)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -838,25 +838,25 @@ class _ExtraFeesPanel extends StatelessWidget {
               Icon(
                 Icons.add_circle_outline,
                 size: context.h(18),
-                color: AppColors.primary,
+                color: AppColors.primary
               ),
               SizedBox(width: context.w(8)),
               Expanded(
                 child: Text(
                   'Extra fees for this order',
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                    color: colors.textPrimary
+                  )
+                )
               ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(6)),
           Text(
             'Turn on only if this order needs the fee. Applied at settlement.',
             style: AppTextStyles.caption(context).copyWith(
-              color: colors.textSecondary,
-            ),
+              color: colors.textSecondary
+            )
           ),
           SizedBox(height: context.h(12)),
           _feeToggleRow(
@@ -865,7 +865,7 @@ class _ExtraFeesPanel extends StatelessWidget {
             title: 'Late Night Delivery',
             amount: lateNightAmount,
             value: applyLateNight,
-            onChanged: enabled ? onLateNightChanged : null,
+            onChanged: enabled ? onLateNightChanged : null
           ),
           SizedBox(height: context.h(8)),
           _feeToggleRow(
@@ -874,10 +874,10 @@ class _ExtraFeesPanel extends StatelessWidget {
             title: 'Long Distance Fee',
             amount: longDistanceAmount,
             value: applyLongDistance,
-            onChanged: enabled ? onLongDistanceChanged : null,
+            onChanged: enabled ? onLongDistanceChanged : null
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -896,13 +896,13 @@ class _ExtraFeesPanel extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: context.w(12),
-        vertical: context.h(10),
+        vertical: context.h(10)
       ),
       decoration: BoxDecoration(
         color: value
             ? AppColors.primary.withValues(alpha: 0.08)
             : colors.surfaceVariant,
-        borderRadius: BorderRadius.circular(context.h(8)),
+        borderRadius: BorderRadius.circular(context.h(8))
       ),
       child: Row(
         children: [
@@ -914,28 +914,28 @@ class _ExtraFeesPanel extends StatelessWidget {
                   title,
                   style: AppTextStyles.body(context).copyWith(
                     color: colors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                    fontWeight: FontWeight.w600
+                  )
                 ),
                 SizedBox(height: context.h(2)),
                 Text(
                   amountLabel,
                   style: AppTextStyles.caption(context).copyWith(
-                    color: amount > 0 ? AppColors.primary : colors.textMuted,
-                  ),
+                    color: amount > 0 ? AppColors.primary : colors.textMuted
+                  )
                 ),
-              ],
-            ),
+              ]
+            )
           ),
           IgnorePointer(
             ignoring: onChanged == null,
             child: RdxToggleButton(
               value: value,
-              onChanged: onChanged ?? (_) {},
-            ),
+              onChanged: onChanged ?? (_) {}
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 }
@@ -959,7 +959,7 @@ class _BillingPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(10)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -969,16 +969,16 @@ class _BillingPanel extends StatelessWidget {
               Icon(
                 Icons.calculate_outlined,
                 size: context.h(18),
-                color: AppColors.primary,
+                color: AppColors.primary
               ),
               SizedBox(width: context.w(8)),
               Text(
                 'Billing summary',
-                style: AppTextStyles.section(context).copyWith(
-                  color: colors.textPrimary,
-                ),
+                style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                  color: colors.textPrimary
+                )
               ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(14)),
           // Items list
@@ -994,8 +994,8 @@ class _BillingPanel extends StatelessWidget {
                         '${item.quantity}× ${item.name}',
                         style: AppTextStyles.body(context).copyWith(
                           color: colors.textPrimary,
-                          fontWeight: FontWeight.w500,
-                        ),
+                          fontWeight: FontWeight.w500
+                        )
                       ),
                       if (item.modifiers.isNotEmpty)
                         Padding(
@@ -1005,21 +1005,21 @@ class _BillingPanel extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.caption(context).copyWith(
-                              color: colors.textSecondary,
-                            ),
-                          ),
+                              color: colors.textSecondary
+                            )
+                          )
                         ),
-                    ],
-                  ),
+                    ]
+                  )
                 ),
                 Text(
                   '₹${item.amount.toStringAsFixed(2)}',
-                  style: AppTextStyles.bodySecondary(context).copyWith(
+                  style: AppTextStyles.body(context).copyWith(
                     color: colors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                    fontWeight: FontWeight.w600
+                  )
                 ),
-              ],
+              ]
             ),
             SizedBox(height: context.h(10)),
           ],
@@ -1029,14 +1029,14 @@ class _BillingPanel extends StatelessWidget {
             context,
             colors,
             'Subtotal (${bill.items.length} items)',
-            bill.subtotal,
+            bill.subtotal
           ),
           SizedBox(height: context.h(6)),
           _amountRow(
             context,
             colors,
             'GST (${bill.taxPercentage.toStringAsFixed(0)}%)',
-            bill.taxAmount,
+            bill.taxAmount
           ),
           if (bill.lateNightFee > 0) ...[
             SizedBox(height: context.h(6)),
@@ -1053,33 +1053,32 @@ class _BillingPanel extends StatelessWidget {
             width: double.infinity,
             padding: EdgeInsets.symmetric(
               horizontal: context.w(12),
-              vertical: context.h(12),
+              vertical: context.h(12)
             ),
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(context.h(8)),
+              borderRadius: BorderRadius.circular(context.h(8))
             ),
             child: Row(
               children: [
                 Text(
                   'Total due',
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                    color: colors.textPrimary
+                  )
                 ),
                 const Spacer(),
                 Text(
                   '₹${bill.total.toStringAsFixed(2)}',
-                  style: AppTextStyles.section(context).copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                    color: AppColors.primary
+                    )
                 ),
-              ],
-            ),
+              ]
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -1087,25 +1086,25 @@ class _BillingPanel extends StatelessWidget {
     BuildContext context,
     AppColorScheme colors,
     String label,
-    double amount,
+    double amount
   ) {
     return Row(
       children: [
         Expanded(
           child: Text(
             label,
-            style: AppTextStyles.bodySecondary(context).copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+            style: AppTextStyles.body(context).copyWith(
+              color: colors.textSecondary
+            )
+          )
         ),
         Text(
           '₹${amount.toStringAsFixed(2)}',
-          style: AppTextStyles.bodySecondary(context).copyWith(
-            color: colors.textPrimary,
-          ),
+          style: AppTextStyles.body(context).copyWith(
+            color: colors.textPrimary
+          )
         ),
-      ],
+      ]
     );
   }
 }
@@ -1131,7 +1130,7 @@ class _ReceiptPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(10)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1141,18 +1140,18 @@ class _ReceiptPanel extends StatelessWidget {
               context.w(14),
               context.h(12),
               context.w(14),
-              context.h(10),
+              context.h(10)
             ),
             child: Row(
               children: [
                 Text(
                   'Receipt',
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                    color: colors.textPrimary
+                  )
                 )
-              ],
-            ),
+              ]
+            )
           ),
           Divider(height: 1, color: colors.divider),
           Expanded(
@@ -1166,29 +1165,28 @@ class _ReceiptPanel extends StatelessWidget {
                     height: context.h(44),
                     decoration: BoxDecoration(
                       color: colors.textPrimary,
-                      shape: BoxShape.circle,
+                      shape: BoxShape.circle
                     ),
                     child: Icon(
                       Icons.restaurant,
                       size: context.h(22),
-                      color: colors.surface,
-                    ),
+                      color: colors.surface
+                    )
                   ),
                   SizedBox(height: context.h(8)),
                   Text(
                     bill.restaurantName,
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.section(context).copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                      color: colors.textPrimary
+                      )
                   ),
                   SizedBox(height: context.h(4)),
                   Text(
                     _formatFullDate(bill.receiptDateTime),
-                    style: AppTextStyles.bodyTertiary(context).copyWith(
-                      color: colors.textSecondary,
-                    ),
+                    style: AppTextStyles.caption(context).copyWith(
+                      color: colors.textSecondary
+                    )
                   ),
                   SizedBox(height: context.h(14)),
                   Divider(height: 1, color: colors.border),
@@ -1197,7 +1195,7 @@ class _ReceiptPanel extends StatelessWidget {
                     context,
                     colors,
                     'Order ID',
-                    '#${_shortId(bill.orderNumber)}',
+                    '#${_shortId(bill.orderNumber)}'
                   ),
                   _receiptInfoRow(
                     context,
@@ -1205,7 +1203,7 @@ class _ReceiptPanel extends StatelessWidget {
                     'Table No.',
                     bill.tableNumber?.trim().isNotEmpty == true
                         ? bill.tableNumber!
-                        : '—',
+                        : '—'
                   ),
                   if (bill.guestName.trim().isNotEmpty &&
                       bill.guestName.trim().toLowerCase() != 'walk-in customer')
@@ -1213,7 +1211,7 @@ class _ReceiptPanel extends StatelessWidget {
                       context,
                       colors,
                       'Guest',
-                      bill.guestName,
+                      bill.guestName
                     ),
                   SizedBox(height: context.h(10)),
                   Divider(height: 1, color: colors.border),
@@ -1223,20 +1221,18 @@ class _ReceiptPanel extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'Item',
-                          style: AppTextStyles.label(context).copyWith(
-                            color: colors.textMuted,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                          style: AppTextStyles.bodySemi(context).copyWith(
+                            color: colors.textMuted
+                            )
+                        )
                       ),
                       Text(
                         'Amount',
-                        style: AppTextStyles.label(context).copyWith(
-                          color: colors.textMuted,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: AppTextStyles.bodySemi(context).copyWith(
+                          color: colors.textMuted
+                          )
                       ),
-                    ],
+                    ]
                   ),
                   SizedBox(height: context.h(8)),
                   for (final item in bill.items) ...[
@@ -1247,33 +1243,33 @@ class _ReceiptPanel extends StatelessWidget {
                           child: Text(
                             '${item.quantity}× ${item.name}',
                             style:
-                                AppTextStyles.bodySecondary(context).copyWith(
+                                AppTextStyles.body(context).copyWith(
                               color: colors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                              fontWeight: FontWeight.w600
+                            )
+                          )
                         ),
                         Text(
                           '₹${item.amount.toStringAsFixed(2)}',
-                          style: AppTextStyles.bodySecondary(context).copyWith(
+                          style: AppTextStyles.body(context).copyWith(
                             color: colors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                            fontWeight: FontWeight.w600
+                          )
                         ),
-                      ],
+                      ]
                     ),
                     if (item.modifiers.isNotEmpty)
                       Padding(
                         padding: EdgeInsets.only(
                           top: context.h(2),
-                          left: context.w(12),
+                          left: context.w(12)
                         ),
                         child: Text(
                           item.modifiers.join(', '),
                           style: AppTextStyles.caption(context).copyWith(
-                            color: colors.textSecondary,
-                          ),
-                        ),
+                            color: colors.textSecondary
+                          )
+                        )
                       ),
                     SizedBox(height: context.h(8)),
                   ],
@@ -1283,14 +1279,14 @@ class _ReceiptPanel extends StatelessWidget {
                     context,
                     colors,
                     'Subtotal',
-                    bill.subtotal,
+                    bill.subtotal
                   ),
                   SizedBox(height: context.h(4)),
                   _receiptMoneyRow(
                     context,
                     colors,
                     'GST (${bill.taxPercentage.toStringAsFixed(0)}%)',
-                    bill.taxAmount,
+                    bill.taxAmount
                   ),
                   if (bill.lateNightFee > 0) ...[
                     SizedBox(height: context.h(4)),
@@ -1307,31 +1303,29 @@ class _ReceiptPanel extends StatelessWidget {
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(
                       horizontal: context.w(10),
-                      vertical: context.h(10),
+                      vertical: context.h(10)
                     ),
                     decoration: BoxDecoration(
                       color: colors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(context.h(8)),
+                      borderRadius: BorderRadius.circular(context.h(8))
                     ),
                     child: Row(
                       children: [
                         Text(
                           'Total',
-                          style: AppTextStyles.label(context).copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: AppTextStyles.bodySemi(context).copyWith(
+                            color: colors.textPrimary
+                            )
                         ),
                         const Spacer(),
                         Text(
                           '₹${bill.total.toStringAsFixed(2)}',
-                          style: AppTextStyles.section(context).copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                            color: colors.textPrimary
+                            )
                         ),
-                      ],
-                    ),
+                      ]
+                    )
                   ),
                   SizedBox(height: context.h(12)),
                   Container(
@@ -1339,39 +1333,37 @@ class _ReceiptPanel extends StatelessWidget {
                     padding: EdgeInsets.all(context.h(10)),
                     decoration: BoxDecoration(
                       color: colors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(context.h(8)),
+                      borderRadius: BorderRadius.circular(context.h(8))
                     ),
                     child: Text(
                       'Payment: ${(selectedPayment ?? 'Not selected')}',
-                      style: AppTextStyles.label(context).copyWith(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                      style: AppTextStyles.bodySemi(context).copyWith(
+                        color: colors.textPrimary
+                        )
+                    )
                   ),
                   SizedBox(height: context.h(16)),
                   Text(
                     'Thank you for dining with us!',
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.label(context).copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.bodySemi(context).copyWith(
+                      color: colors.textPrimary
+                      )
                   ),
                   SizedBox(height: context.h(4)),
                   Text(
                     'Please visit again soon.',
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.label(context).copyWith(
-                      color: colors.textSecondary,
-                    ),
+                    style: AppTextStyles.bodySemi(context).copyWith(
+                      color: colors.textSecondary
+                    )
                   ),
-                ],
-              ),
-            ),
+                ]
+              )
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -1379,26 +1371,26 @@ class _ReceiptPanel extends StatelessWidget {
     BuildContext context,
     AppColorScheme colors,
     String label,
-    String value,
+    String value
   ) {
     return Row(
       children: [
         Expanded(
           child: Text(
             label,
-            style: AppTextStyles.label(context).copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+            style: AppTextStyles.bodySemi(context).copyWith(
+              color: colors.textSecondary
+            )
+          )
         ),
         Text(
           value,
-          style: AppTextStyles.bodySecondary(context).copyWith(
+          style: AppTextStyles.body(context).copyWith(
             color: colors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
+            fontWeight: FontWeight.w600
+          )
         ),
-      ],
+      ]
     );
   }
 
@@ -1406,26 +1398,26 @@ class _ReceiptPanel extends StatelessWidget {
     BuildContext context,
     AppColorScheme colors,
     String label,
-    double amount,
+    double amount
   ) {
     return Row(
       children: [
         Expanded(
           child: Text(
             label,
-            style: AppTextStyles.label(context).copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+            style: AppTextStyles.bodySemi(context).copyWith(
+              color: colors.textSecondary
+            )
+          )
         ),
         Text(
           '₹${amount.toStringAsFixed(2)}',
-          style: AppTextStyles.bodySecondary(context).copyWith(
+          style: AppTextStyles.body(context).copyWith(
             color: colors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
+            fontWeight: FontWeight.w600
+          )
         ),
-      ],
+      ]
     );
   }
 

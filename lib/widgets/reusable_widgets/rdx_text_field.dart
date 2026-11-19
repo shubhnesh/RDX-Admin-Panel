@@ -159,23 +159,23 @@ class _RdxTextFieldState extends State<RdxTextField> {
         focusNode: _focusNode,
         textAlignVertical:
             isMultiline ? TextAlignVertical.top : TextAlignVertical.center,
-        style: AppTextStyles.bodySecondary(context)
+        style: AppTextStyles.body(context)
             .copyWith(fontSize: textFontSize),
         cursorColor: AppColors.primary,
         decoration: InputDecoration(
           hintText: widget.hint,
-          hintStyle: AppTextStyles.bodySecondary(context)
+          hintStyle: AppTextStyles.body(context)
               .copyWith(color: colors.textMuted, fontSize: textFontSize),
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
           prefixText: widget.prefixText,
-          prefixStyle: AppTextStyles.bodySecondary(context).copyWith(
+          prefixStyle: AppTextStyles.body(context).copyWith(
             fontSize: textFontSize,
           ),
           counterText: widget.counterText ?? '',
           filled: true,
           fillColor: _focusNode.hasFocus || hasText
-              ? Colors.white
+              ? AppColors.white
               : colors.surfaceVariant,
           hoverColor: Colors.transparent,
           isDense: true,
@@ -207,7 +207,7 @@ class _RdxTextFieldState extends State<RdxTextField> {
       children: [
         Text(
           widget.label!,
-          style: AppTextStyles.bodySecondary(context)
+          style: AppTextStyles.body(context)
               .copyWith(color: colors.textMuted),
         ),
         SizedBox(height: context.h(6).clamp(4.0, 6.0)),

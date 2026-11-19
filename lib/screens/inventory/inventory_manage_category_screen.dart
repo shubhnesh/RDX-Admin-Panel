@@ -315,7 +315,7 @@ class _InventoryManageCategoryScreenState
                     : Padding(
                         padding: EdgeInsets.fromLTRB(
                           horizontal,
-                          0,
+                          context.h(0),
                           horizontal,
                           context.h(20),
                         ),
@@ -390,9 +390,7 @@ class _InventoryManageCategoryScreenState
         ),
         child: Text(
           label,
-          style: AppTextStyles.label(context).copyWith(
-            color: selected ? Colors.white : colors.textPrimary,
-          ),
+          style: AppTextStyles.bodySemi(context).copyWith(color: selected ? AppColors.white : colors.textPrimary),
         ),
       ),
     );
@@ -421,10 +419,10 @@ class _InventoryManageCategoryScreenState
     }
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Category', minWidth: 180, flex: 3),
+        RdxTableColumn(title: 'Category', minWidth: context.w(180), flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: 90,
+          minWidth: context.w(90),
           alignment: Alignment.centerRight,
         ),
       ],
@@ -451,10 +449,10 @@ class _InventoryManageCategoryScreenState
     }
     return RdxTable(
       columns: [
-        RdxTableColumn(title: 'Unit of Measurement', minWidth: 180, flex: 3),
+        RdxTableColumn(title: 'Unit of Measurement', minWidth: context.w(180), flex: 3),
         RdxTableColumn(
           title: 'Actions',
-          minWidth: 90,
+          minWidth: context.w(90),
           alignment: Alignment.centerRight,
         ),
       ],

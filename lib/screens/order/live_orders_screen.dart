@@ -81,8 +81,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   Future<void> _openPlaceOrder() async {
     final placed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => const PlaceOrderScreen(),
-      ),
+        builder: (_) => const PlaceOrderScreen()
+      )
     );
 
     if (!mounted) return;
@@ -138,6 +138,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     _log('Payment flow opened from live orders (order: ${order.id}).');
     final items = order.items.map((item) {
       final modifiers = <String>[
+        if (item.size != null && item.size!.trim().isNotEmpty)
+          'Size: ${item.size}',
         if (item.spiceLevel != null && item.spiceLevel!.trim().isNotEmpty)
           'Spice: ${item.spiceLevel}',
         ...item.addOns,
@@ -149,7 +151,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         name: item.name,
         quantity: item.quantity,
         amount: item.price * item.quantity,
-        modifiers: modifiers,
+        modifiers: modifiers
       );
     }).toList();
 
@@ -175,7 +177,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 ? order.itemTotal
                 : order.items.fold<double>(
                     0,
-                    (sum, item) => sum + (item.price * item.quantity),
+                    (sum, item) => sum + (item.price * item.quantity)
                   ),
             // Snapshot from the order only — never live settings.
             taxPercentage: order.gstPercent,
@@ -188,19 +190,19 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             deliveryAddress: order.deliveryAddress,
             sendDigitalReceipt: false,
             invoiceReference: order.id,
-            receiptDateTime: DateTime.now(),
+            receiptDateTime: DateTime.now()
           ),
           onClose: () => Navigator.of(context).pop(),
-          onSettled: ref.read(liveOrdersProvider).applyOrderUpdate,
-        ),
-      ),
+          onSettled: ref.read(liveOrdersProvider).applyOrderUpdate
+        )
+      )
     );
   }
 
   Future<void> _advanceOrder(OrderModel order) async {
     _log(
       'Status action handling started (order: ${order.id}, '
-      '${order.status.name} -> ${order.status.nextStatus?.name ?? 'unchanged'}).',
+      '${order.status.name} -> ${order.status.nextStatus?.name ?? 'unchanged'}).'
     );
     try {
       await ref.read(liveOrdersProvider).advanceStatus(order);
@@ -208,14 +210,14 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     } catch (error) {
       _log(
         'Status action handling failed '
-        '(order: ${order.id}, ${error.runtimeType}): $error',
+        '(order: ${order.id}, ${error.runtimeType}): $error'
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Could not update order status. $error'),
-          behavior: SnackBarBehavior.floating,
-        ),
+          behavior: SnackBarBehavior.floating
+        )
       );
     }
   }
@@ -228,7 +230,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     final isLoading =
         ref.watch(liveOrdersProvider.select((provider) => provider.isLoading));
     final loadError = ref.watch(
-      liveOrdersProvider.select((provider) => provider.errorMessage),
+      liveOrdersProvider.select((provider) => provider.errorMessage)
     );
 
     final pagePad = context.defaultScreenPadding();
@@ -245,7 +247,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   pagePad.left,
                   pagePad.top,
                   pagePad.right,
-                  0,
+                  0
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,23 +261,23 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                             children: [
                               Text(
                                 'Live Orders',
-                                style: AppTextStyles.heading(context),
+                                style: AppTextStyles.h2(context)
                               ),
                               SizedBox(height: context.h(4)),
                               Text(
                                 'Track orders and create orders for customers',
-                                style: AppTextStyles.bodySecondary(context)
-                                    .copyWith(color: colors.textSecondary),
+                                style: AppTextStyles.body(context)
+                                    .copyWith(color: colors.textSecondary)
                               ),
-                            ],
-                          ),
+                            ]
+                          )
                         ),
                         SizedBox(width: context.w(12)),
                         RdxHeaderActionButton(
                           label: 'New Order',
-                          onPressed: _openPlaceOrder,
+                          onPressed: _openPlaceOrder
                         ),
-                      ],
+                      ]
                     ),
                     SizedBox(height: context.h(20)),
                     Align(
@@ -283,9 +285,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                       child: StatsCollapseButton(
                         collapsed: _statsCollapsed,
                         onPressed: () => setState(
-                          () => _statsCollapsed = !_statsCollapsed,
-                        ),
-                      ),
+                          () => _statsCollapsed = !_statsCollapsed
+                        )
+                      )
                     ),
                     SizedBox(height: context.h(8)),
                     AnimatedSize(
@@ -298,17 +300,17 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                               builder: (context, ref, _) {
                                 final stats = ref.watch(
                                   liveOrdersProvider.select(
-                                    (provider) => provider.overviewStats,
-                                  ),
+                                    (provider) => provider.overviewStats
+                                  )
                                 );
                                 return _buildOverviewStats(stats);
-                              },
-                            ),
+                              }
+                            )
                     ),
                     SizedBox(height: context.h(12)),
-                  ],
-                ),
-              ),
+                  ]
+                )
+              )
             ),
 
             // ── Pinned filters (always stay) ───────────────────────────────
@@ -328,8 +330,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                         labelBuilder: (s) =>
                             s == _BoardSource.live ? 'Live' : 'App',
                         onChanged: _onSourceChanged,
-                        isDense: true,
-                      ),
+                        isDense: true
+                      )
                     ),
                     SizedBox(width: context.w(10)),
                     Expanded(
@@ -337,12 +339,12 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                         labels: _statusLabels,
                         selectedLabel: _selectedStatus,
                         onSelected: _onStatusSelected,
-                        expand: false,
-                      ),
+                        expand: false
+                      )
                     ),
-                  ],
-                ),
-              ),
+                  ]
+                )
+              )
             ),
 
             if (loadError != null)
@@ -352,52 +354,52 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                     pagePad.left,
                     context.h(8),
                     pagePad.right,
-                    0,
+                    0
                   ),
                   child: Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: context.w(12),
-                      vertical: context.h(8),
+                      vertical: context.h(8)
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(context.h(8)),
+                      color: colors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(context.h(8))
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.cloud_off_outlined,
                           size: context.h(18),
-                          color: AppColors.warning,
+                          color: colors.warning
                         ),
                         SizedBox(width: context.w(8)),
                         Expanded(
                           child: Text(
                             loadError,
-                            style: AppTextStyles.bodySecondary(context),
-                          ),
+                            style: AppTextStyles.body(context)
+                          )
                         ),
                         TextButton(
                           onPressed: () => ref.read(liveOrdersProvider).load(),
-                          child: const Text('Retry'),
+                          child: const Text('Retry')
                         ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ]
+                    )
+                  )
+                )
               ),
 
             // ── Board ──────────────────────────────────────────────────────
             if (isLoading)
               const SliverFillRemaining(
                 hasScrollBody: false,
-                child: LoadingIndicator(),
+                child: LoadingIndicator()
               )
             else
               _buildBoardSliver(pagePad),
-          ],
-        ),
-      ),
+          ]
+        )
+      )
     );
   }
 
@@ -414,22 +416,22 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               pagePad.left,
-              context.h(8),
+              context.h(12),
               pagePad.right,
-              pagePad.bottom,
+              pagePad.bottom
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 if (constraints.maxWidth < _kColumnsBreakpoint) {
                   return _buildRowSection(
                     sections.first,
-                    sectionWidth: constraints.maxWidth,
+                    sectionWidth: constraints.maxWidth
                   );
                 }
                 return _buildSingleSectionList(sections.first);
-              },
-            ),
-          ),
+              }
+            )
+          )
         );
       }
     }
@@ -445,16 +447,16 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             child: Padding(
               padding: EdgeInsets.fromLTRB(
                 pagePad.left,
-                context.h(8),
+                context.h(12),
                 pagePad.right,
-                pagePad.bottom,
+                pagePad.bottom
               ),
               child: _buildRowsBoard(
                 sections,
                 maxWidth:
-                    constraints.crossAxisExtent - pagePad.left - pagePad.right,
-              ),
-            ),
+                    constraints.crossAxisExtent - pagePad.left - pagePad.right
+              )
+            )
           );
         }
 
@@ -463,22 +465,22 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               pagePad.left,
-              context.h(8),
+              context.h(12),
               pagePad.right,
-              pagePad.bottom,
+              pagePad.bottom
             ),
             child: LayoutBuilder(
               builder: (context, c) {
                 return _buildColumnsBoard(
                   sections,
                   maxWidth: c.maxWidth,
-                  maxHeight: context.h(600),
+                  maxHeight: context.h(600)
                 );
-              },
-            ),
-          ),
+              }
+            )
+          )
         );
-      },
+      }
     );
   }
 
@@ -490,7 +492,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       int liveCount,
       int appCount,
       int pendingPaymentCount,
-    }) stats,
+    }) stats
   ) {
     return SizedBox(
       width: double.infinity,
@@ -505,28 +507,28 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               label: 'Total Orders',
               value: '${stats.totalOrders}',
               icon: Icons.receipt_long_outlined,
-              minHeight: minH,
+              minHeight: minH
             ),
             StatCard(
               label: 'Live Orders',
               value: '${stats.liveCount}',
               icon: Icons.star_outline_rounded,
-              accentColor: const Color(0xFF5AC8FA),
-              minHeight: minH,
+              accentColor: AppColors.info,
+              minHeight: minH
             ),
             StatCard(
               label: 'App Orders',
               value: '${stats.appCount}',
               icon: Icons.phone_android_outlined,
-              accentColor: const Color(0xFF7C5CFC),
-              minHeight: minH,
+              accentColor: AppColors.accent,
+              minHeight: minH
             ),
             StatCard(
               label: 'Pending Payment',
               value: '${stats.pendingPaymentCount}',
               icon: Icons.payments_outlined,
-              accentColor: const Color(0xFFE9A719),
-              minHeight: minH,
+              accentColor: AppColors.warning,
+              minHeight: minH
             ),
           ];
 
@@ -536,10 +538,10 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 Expanded(child: cards[i]),
                 if (i != cards.length - 1) SizedBox(width: spacing),
               ],
-            ],
+            ]
           );
-        },
-      ),
+        }
+      )
     );
   }
 
@@ -574,9 +576,9 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               .orderIdsFor(
                 statuses: section.statuses,
                 source: section.source,
-                paymentStatus: section.paymentStatus,
+                paymentStatus: section.paymentStatus
               )
-              .isEmpty,
+              .isEmpty
         );
     final boardHeight = compactEmptyFinalBoard
         ? context.h(220)
@@ -595,10 +597,10 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         thumbVisibility: WidgetStatePropertyAll(showBoardScrollbar),
         trackVisibility: const WidgetStatePropertyAll(false),
         thumbColor: WidgetStatePropertyAll(
-          colors.textMuted.withValues(alpha: 0.35),
+          colors.textMuted.withValues(alpha: 0.35)
         ),
-        trackColor: const WidgetStatePropertyAll(Colors.transparent),
-      ),
+        trackColor: const WidgetStatePropertyAll(Colors.transparent)
+      )
     );
 
     return Theme(
@@ -627,7 +629,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 : signal.scrollDelta.dx;
             final next = (pos.pixels + delta).clamp(
               pos.minScrollExtent,
-              pos.maxScrollExtent,
+              pos.maxScrollExtent
             );
             if (next != pos.pixels) {
               _boardScrollController.jumpTo(next);
@@ -653,23 +655,23 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                       SizedBox(
                         width: columnWidth,
                         height: boardHeight,
-                        child: _buildColumnSection(sections[i], columnIndex: i),
+                        child: _buildColumnSection(sections[i], columnIndex: i)
                       ),
                       if (i != sections.length - 1) SizedBox(width: gap),
                     ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+                  ]
+                )
+              )
+            )
+          )
+        )
+      )
     );
   }
 
   Widget _watchSectionOrders(
     _SectionData data,
-    Widget Function(List<String> orderIds) builder,
+    Widget Function(List<String> orderIds) builder
   ) {
     return Consumer(
       builder: (context, ref, _) {
@@ -678,12 +680,12 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             (provider) => provider.orderIdsFor(
               statuses: data.statuses,
               source: data.source,
-              paymentStatus: data.paymentStatus,
-            ),
-          ),
+              paymentStatus: data.paymentStatus
+            )
+          )
         );
         return builder(orderIds);
-      },
+      }
     );
   }
 
@@ -692,7 +694,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       key: ValueKey(orderId),
       builder: (context, ref, _) {
         final order = ref.watch(
-          liveOrdersProvider.select((provider) => provider.orderById(orderId)),
+          liveOrdersProvider.select((provider) => provider.orderById(orderId))
         );
         if (order == null) return const SizedBox.shrink();
 
@@ -702,27 +704,27 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           onAdvance: data.onAdvance,
           secondaryActionText: data.secondaryActionTextFor(order),
           onSecondaryAction: data.secondaryOnAdvanceFor(order),
-          onTap: () => _openOrderDetail(order),
+          onTap: () => _openOrderDetail(order)
         );
-      },
+      }
     );
   }
 
   Widget _buildSingleSectionList(_SectionData data) {
     return _watchSectionOrders(
       data,
-      (orderIds) => _buildSingleSectionListContent(data, orderIds),
+      (orderIds) => _buildSingleSectionListContent(data, orderIds)
     );
   }
 
   Widget _buildSingleSectionListContent(
     _SectionData data,
-    List<String> orderIds,
+    List<String> orderIds
   ) {
     final isEmpty = orderIds.isEmpty;
     final listController = _columnScrollControllers.putIfAbsent(
       0,
-      ScrollController.new,
+      ScrollController.new
     );
 
     return SizedBox(
@@ -735,7 +737,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           if (isEmpty)
             _buildEmptySection(
               emptyIcon: data.emptyIcon,
-              emptyText: data.emptyText,
+              emptyText: data.emptyText
             )
           else
             Expanded(
@@ -749,14 +751,14 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   itemBuilder: (context, index) {
                     return Padding(
                       padding: EdgeInsets.only(bottom: context.h(12)),
-                      child: _buildOrderCard(data, orderIds[index]),
+                      child: _buildOrderCard(data, orderIds[index])
                     );
-                  },
-                ),
-              ),
+                  }
+                )
+              )
             ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -769,8 +771,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       (orderIds) => _buildColumnSectionContent(
         data,
         orderIds,
-        columnIndex: columnIndex,
-      ),
+        columnIndex: columnIndex
+      )
     );
   }
 
@@ -783,7 +785,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     final colors = AppColors.of(context);
     final listController = _columnScrollControllers.putIfAbsent(
       columnIndex,
-      ScrollController.new,
+      ScrollController.new
     );
     final listHovered = _hoveredListColumnIndex == columnIndex;
 
@@ -795,7 +797,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         if (isEmpty)
           _buildEmptySection(
             emptyIcon: data.emptyIcon,
-            emptyText: data.emptyText,
+            emptyText: data.emptyText
           )
         else
           Expanded(
@@ -818,11 +820,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                     thumbVisibility: WidgetStatePropertyAll(listHovered),
                     trackVisibility: const WidgetStatePropertyAll(false),
                     thumbColor: WidgetStatePropertyAll(
-                      colors.textMuted.withValues(alpha: 0.35),
+                      colors.textMuted.withValues(alpha: 0.35)
                     ),
                     trackColor:
-                        const WidgetStatePropertyAll(Colors.transparent),
-                  ),
+                        const WidgetStatePropertyAll(Colors.transparent)
+                  )
                 ),
                 child: Scrollbar(
                   controller: listController,
@@ -838,15 +840,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                     itemBuilder: (context, index) {
                       return Padding(
                         padding: EdgeInsets.only(bottom: context.h(12)),
-                        child: _buildOrderCard(data, orderIds[index]),
+                        child: _buildOrderCard(data, orderIds[index])
                       );
-                    },
-                  ),
-                ),
-              ),
-            ),
+                    }
+                  )
+                )
+              )
+            )
           ),
-      ],
+      ]
     );
   }
 
@@ -862,7 +864,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           _buildRowSection(sections[i], sectionWidth: sectionWidth),
           if (i < sections.length - 1) SizedBox(height: context.h(20)),
         ],
-      ],
+      ]
     );
   }
 
@@ -875,8 +877,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       (orderIds) => _buildRowSectionContent(
         data,
         orderIds,
-        sectionWidth: sectionWidth,
-      ),
+        sectionWidth: sectionWidth
+      )
     );
   }
 
@@ -886,8 +888,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     required double sectionWidth,
   }) {
     final isEmpty = orderIds.isEmpty;
+    // One width shared by the header, the empty state and every order card,
+    // so the empty state never stretches wider than a card.
+    final cardWidth = sectionWidth.clamp(0.0, context.w(360)).toDouble();
     return SizedBox(
-      width: sectionWidth, // ← fixed, does not expand with screen width
+      width: cardWidth,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -895,11 +900,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
           SizedBox(height: context.h(12)),
           if (isEmpty)
             SizedBox(
-              width: sectionWidth,
+              width: cardWidth,
               child: _buildEmptySection(
                 emptyIcon: data.emptyIcon,
-                emptyText: data.emptyText,
-              ),
+                emptyText: data.emptyText
+              )
             )
           else
             SingleChildScrollView(
@@ -912,19 +917,19 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                       Padding(
                         padding: EdgeInsets.only(
                           right:
-                              index == orderIds.length - 1 ? 0 : context.w(12),
+                              index == orderIds.length - 1 ? 0 : context.w(12)
                         ),
                         child: SizedBox(
-                          width: sectionWidth,
-                          child: _buildOrderCard(data, orderIds[index]),
-                        ),
+                          width: cardWidth,
+                          child: _buildOrderCard(data, orderIds[index])
+                        )
                       ),
-                  ],
-                ),
-              ),
+                  ]
+                )
+              )
             ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -935,7 +940,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   void _openOrderDetail(OrderModel order) {
     Navigator.of(context).pushNamed(
       AppRoutes.orderDetail,
-      arguments: order.id,
+      arguments: order.id
     );
   }
 
@@ -943,7 +948,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     return Padding(
       padding: EdgeInsets.only(
         left: context.w(3),
-        right: context.w(3),
+        right: context.w(3)
       ),
       child: Row(
         children: [
@@ -952,8 +957,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             height: context.h(7),
             decoration: BoxDecoration(
               color: data.color,
-              shape: BoxShape.circle,
-            ),
+              shape: BoxShape.circle
+            )
           ),
           SizedBox(width: context.w(9)),
           Flexible(
@@ -961,13 +966,13 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               '${data.title} ($count)',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.section(context).copyWith(
-                color: AppColors.primary,
-              ),
-            ),
+              style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                color: AppColors.primary
+              )
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -982,6 +987,10 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
   //   APP ORDERS | PREPARING | OUT FOR DELIVERY | DELIVERED
   //
   // Pending Payment is filter-only (not a board column).
+  //
+  // Column accent colours come from AppColors tokens:
+  //   info = new/live, accent = app, warning = preparing / pending payment,
+  //   success = ready / final stage, danger = cancelled.
   // ---------------------------------------------------------------------------
 
   List<_SectionData> _buildVisibleSectionsData() {
@@ -996,7 +1005,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'LIVE ORDERS',
-            color: const Color(0xFF5AC8FA),
+            color: AppColors.info,
             statuses: const [OrderStatus.pending],
             source: source,
             actionText: 'Start Preparing',
@@ -1004,8 +1013,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             showPayNow: true,
             onPayNow: _openPayment,
             emptyIcon: Icons.star_outline_rounded,
-            emptyText: 'No orders',
-          ),
+            emptyText: 'No orders'
+          )
         );
       }
 
@@ -1013,7 +1022,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'PREPARING',
-            color: const Color(0xFFE9A719),
+            color: AppColors.warning,
             statuses: const [OrderStatus.preparing],
             source: source,
             actionText: 'Mark Ready',
@@ -1021,8 +1030,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             showPayNow: true,
             onPayNow: _openPayment,
             emptyIcon: Icons.access_time_rounded,
-            emptyText: 'No orders preparing',
-          ),
+            emptyText: 'No orders preparing'
+          )
         );
       }
 
@@ -1030,7 +1039,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'READY',
-            color: const Color(0xFF20B47A),
+            color: AppColors.success,
             statuses: const [OrderStatus.ready],
             source: source,
             actionText: null,
@@ -1040,8 +1049,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             onPayNow: _openPayment,
             hideAdvanceUntilPaid: true,
             emptyIcon: Icons.check_circle_outline,
-            emptyText: 'No orders ready',
-          ),
+            emptyText: 'No orders ready'
+          )
         );
       }
 
@@ -1049,15 +1058,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'PENDING PAYMENT',
-            color: const Color(0xFFE9A719),
+            color: AppColors.warning,
             statuses: const [OrderStatus.ready, OrderStatus.delivered],
             source: source,
             paymentStatus: PaymentStatus.unpaid,
             actionText: 'Pay Now',
             onAdvance: _openPayment,
             emptyIcon: Icons.payments_outlined,
-            emptyText: 'No pending payments',
-          ),
+            emptyText: 'No pending payments'
+          )
         );
       }
 
@@ -1066,15 +1075,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'SERVED',
-            color: const Color(0xFF20B47A),
+            color: AppColors.success,
             statuses: const [OrderStatus.delivered],
             source: source,
             paymentStatus: PaymentStatus.paid,
             actionText: null,
             onAdvance: null,
             emptyIcon: Icons.room_service_outlined,
-            emptyText: 'No served orders',
-          ),
+            emptyText: 'No served orders'
+          )
         );
       }
 
@@ -1082,14 +1091,14 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'CANCELLED',
-            color: const Color(0xFFE05151),
+            color: AppColors.danger,
             statuses: const [OrderStatus.cancelled],
             source: source,
             actionText: null,
             onAdvance: null,
             emptyIcon: Icons.cancel_outlined,
-            emptyText: 'No cancelled orders',
-          ),
+            emptyText: 'No cancelled orders'
+          )
         );
       }
     } else {
@@ -1099,7 +1108,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'APP ORDERS',
-            color: const Color(0xFF7C5CFC),
+            color: AppColors.accent,
             statuses: const [OrderStatus.pending],
             source: source,
             actionText: 'Start Preparing',
@@ -1107,8 +1116,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             showPayNow: true,
             onPayNow: _openPayment,
             emptyIcon: Icons.phone_android_outlined,
-            emptyText: 'No orders',
-          ),
+            emptyText: 'No orders'
+          )
         );
       }
 
@@ -1116,7 +1125,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'PREPARING',
-            color: const Color(0xFFE9A719),
+            color: AppColors.warning,
             statuses: const [OrderStatus.preparing],
             source: source,
             actionText: 'Mark Ready',
@@ -1124,8 +1133,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             showPayNow: true,
             onPayNow: _openPayment,
             emptyIcon: Icons.access_time_rounded,
-            emptyText: 'No orders preparing',
-          ),
+            emptyText: 'No orders preparing'
+          )
         );
       }
 
@@ -1133,7 +1142,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'OUT FOR DELIVERY',
-            color: const Color(0xFF20B47A),
+            color: AppColors.success,
             statuses: const [OrderStatus.ready],
             source: source,
             actionText: null,
@@ -1143,8 +1152,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             onPayNow: _openPayment,
             hideAdvanceUntilPaid: true,
             emptyIcon: Icons.delivery_dining_outlined,
-            emptyText: 'No orders out for delivery',
-          ),
+            emptyText: 'No orders out for delivery'
+          )
         );
       }
 
@@ -1152,15 +1161,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'PENDING PAYMENT',
-            color: const Color(0xFFE9A719),
+            color: AppColors.warning,
             statuses: const [OrderStatus.ready, OrderStatus.delivered],
             source: source,
             paymentStatus: PaymentStatus.unpaid,
             actionText: 'Pay Now',
             onAdvance: _openPayment,
             emptyIcon: Icons.payments_outlined,
-            emptyText: 'No pending payments',
-          ),
+            emptyText: 'No pending payments'
+          )
         );
       }
 
@@ -1169,15 +1178,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'DELIVERED',
-            color: const Color(0xFF20B47A),
+            color: AppColors.success,
             statuses: const [OrderStatus.delivered],
             source: source,
             paymentStatus: PaymentStatus.paid,
             actionText: null,
             onAdvance: null,
             emptyIcon: Icons.check_circle_outline,
-            emptyText: 'No delivered orders',
-          ),
+            emptyText: 'No delivered orders'
+          )
         );
       }
 
@@ -1185,14 +1194,14 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
         sections.add(
           _SectionData(
             title: 'CANCELLED',
-            color: const Color(0xFFE05151),
+            color: AppColors.danger,
             statuses: const [OrderStatus.cancelled],
             source: source,
             actionText: null,
             onAdvance: null,
             emptyIcon: Icons.cancel_outlined,
-            emptyText: 'No cancelled orders',
-          ),
+            emptyText: 'No cancelled orders'
+          )
         );
       }
     }
@@ -1208,19 +1217,21 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     IconData? emptyIcon,
     String? emptyText,
   }) {
+    final colors = AppColors.of(context);
+
     return Container(
       width: double.infinity,
       height: context.h(170),
       decoration: BoxDecoration(
-        color: AppColors.lightSurface,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(
-          context.h(12),
-        ),
+          context.h(12)
+        )
       ),
       child: CustomPaint(
         painter: _DashedBorderPainter(
-          color: AppColors.lightBorder,
-          radius: 12,
+          color: colors.border,
+          radius: 12
         ),
         child: Center(
           child: Column(
@@ -1231,31 +1242,31 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   width: context.w(42),
                   height: context.h(42),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF1EA),
+                    color: AppColors.primary.withValues(alpha: 0.08),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFFFFD8C5),
-                    ),
+                      color: AppColors.primary.withValues(alpha: 0.25)
+                    )
                   ),
                   child: Icon(
                     emptyIcon,
                     size: context.h(22),
-                    color: AppColors.primary,
-                  ),
+                    color: AppColors.primary
+                  )
                 ),
                 SizedBox(height: context.h(12)),
               ],
               Text(
                 emptyText ?? 'No orders',
                 textAlign: TextAlign.center,
-                style: AppTextStyles.bodySecondary(context).copyWith(
-                  color: AppColors.textMuted,
-                ),
+                style: AppTextStyles.body(context).copyWith(
+                  color: colors.textMuted
+                )
               ),
-            ],
-          ),
-        ),
-      ),
+            ]
+          )
+        )
+      )
     );
   }
 }
@@ -1344,14 +1355,14 @@ class _DashedBorderPainter extends CustomPainter {
       0.5,
       0.5,
       size.width - 1,
-      size.height - 1,
+      size.height - 1
     );
 
     path.addRRect(
       RRect.fromRectAndRadius(
         rect,
-        Radius.circular(radius),
-      ),
+        Radius.circular(radius)
+      )
     );
 
     final pathMetrics = path.computeMetrics();
@@ -1365,12 +1376,12 @@ class _DashedBorderPainter extends CustomPainter {
       while (distance < metric.length) {
         final nextDistance = (distance + dashLength).clamp(
           0,
-          metric.length,
+          metric.length
         );
 
         final segment = metric.extractPath(
           distance,
-          nextDistance.toDouble(),
+          nextDistance.toDouble()
         );
 
         canvas.drawPath(segment, paint);
@@ -1382,7 +1393,7 @@ class _DashedBorderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(
-    covariant _DashedBorderPainter oldDelegate,
+    covariant _DashedBorderPainter oldDelegate
   ) {
     return oldDelegate.color != color || oldDelegate.radius != radius;
   }
@@ -1402,7 +1413,7 @@ class _LiveOrdersFiltersHeader extends SliverPersistentHeaderDelegate {
   });
 
   // Fixed strip height (filters only).
-  static const double _height = 52;
+  static const double _height = 56;
 
   @override
   double get minExtent => _height;
@@ -1414,12 +1425,12 @@ class _LiveOrdersFiltersHeader extends SliverPersistentHeaderDelegate {
   Widget build(
     BuildContext context,
     double shrinkOffset,
-    bool overlapsContent,
+    bool overlapsContent
   ) {
     return Material(
       color: background,
       elevation: overlapsContent || shrinkOffset > 0 ? 1.5 : 0,
-      shadowColor: Colors.black26,
+      shadowColor: AppColors.black.withValues(alpha: 0.15),
       child: Container(
         height: _height,
         alignment: Alignment.centerLeft,
@@ -1431,12 +1442,12 @@ class _LiveOrdersFiltersHeader extends SliverPersistentHeaderDelegate {
               color: overlapsContent || shrinkOffset > 0
                   ? AppColors.of(context).border
                   : Colors.transparent,
-              width: 1,
-            ),
-          ),
+              width: 1
+            )
+          )
         ),
-        child: child,
-      ),
+        child: child
+      )
     );
   }
 

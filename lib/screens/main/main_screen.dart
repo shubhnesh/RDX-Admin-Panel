@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rdx_admin/screens/notifications/notifications_screen.dart';
+import 'package:rdx_admin/screens/coupons/coupons_screen.dart';
+import 'package:rdx_admin/screens/dashboard/dashboard_screen.dart';
+import 'package:rdx_admin/screens/inventory/inventory_screen.dart';
+import 'package:rdx_admin/screens/menu/menu_screen.dart';
+import 'package:rdx_admin/screens/notifications/notification_screen.dart';
 import 'package:rdx_admin/screens/order/live_orders_screen.dart';
+import 'package:rdx_admin/screens/rewards/rewards_management_screen.dart';
+import 'package:rdx_admin/screens/settings/settings_screen.dart';
+import 'package:rdx_admin/screens/settings/user_management_screen.dart';
+import 'package:rdx_admin/screens/support/support_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/dialogs/rdx_notice_dialog.dart';
-import '../../widgets/reusable_widgets/main_side_nav.dart';
+import 'main_side_nav.dart';
 import '../../core/router/app_router.dart';
-import '../dashboard/dashboard_screen.dart';
-import '../menu/menu_screen.dart';
-import '../coupons/coupons_screen.dart';
-import '../inventory/inventory_screen.dart';
-import '../rewards/rewards_management_screen.dart';
-import '../settings/settings_screen.dart';
-import '../settings/user_management_screen.dart';
-import '../support/support_screen.dart';
 
 /// Persistent app shell: collapsible sidebar + IndexedStack content.
 /// Nav items and default route depend on [AuthProvider.permissions].
@@ -45,17 +45,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       '/live-orders': LiveOrdersScreen(),
       '/menu': const MenuScreen(),
       '/coupons': const CouponsScreen(),
-      '/notifications': const NotificationsScreen(),
+      '/notifications': const NotificationScreen(),
       '/inventory': const InventoryScreen(),
       '/rewards': RewardsManagementScreen(onBack: () => _navigate('/settings')),
       '/user-management':
           UserManagementScreen(onBack: () => _navigate('/settings')),
       '/settings': SettingsScreen(
-        onRewards: () => _navigate('/rewards'),
-        onUserManagement: () => _navigate('/user-management'),
-        onSupport: () => _navigate('/support'),
-        onLogout: _logout,
-      ),
+          onRewards: () => _navigate('/rewards'),
+          onUserManagement: () => _navigate('/user-management'),
+          onSupport: () => _navigate('/support'),
+          onLogout: _logout),
       '/support': SupportScreen(onBack: () => _navigate('/settings')),
     };
   }
@@ -66,52 +65,43 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     if (perms.canViewDashboard) {
       items.add(const SidebarItem(
-        label: 'Dashboard',
-        icon: Icons.dashboard_outlined,
-        route: '/dashboard',
-      ));
+          label: 'Dashboard',
+          icon: Icons.dashboard_outlined,
+          route: '/dashboard'));
     }
     if (perms.canViewOrders) {
       items.add(const SidebarItem(
-        label: 'Orders',
-        icon: Icons.receipt_long_outlined,
-        route: '/live-orders',
-      ));
+          label: 'Orders',
+          icon: Icons.receipt_long_outlined,
+          route: '/live-orders'));
     }
     if (perms.canViewMenu) {
       items.add(const SidebarItem(
-        label: 'Menu',
-        icon: Icons.restaurant_menu_outlined,
-        route: '/menu',
-      ));
+          label: 'Menu', icon: Icons.restaurant_menu_outlined, route: '/menu'));
     }
     if (perms.canViewCoupons) {
       items.add(const SidebarItem(
-        label: 'Coupons',
-        icon: Icons.local_offer_outlined,
-        route: '/coupons',
-      ));
+          label: 'Coupons',
+          icon: Icons.local_offer_outlined,
+          route: '/coupons'));
     }
     if (perms.canViewNotifications) {
       items.add(const SidebarItem(
-        label: 'Notifications',
-        icon: Icons.notifications_outlined,
-        route: '/notifications',
-      ));
+          label: 'Notifications',
+          icon: Icons.notifications_outlined,
+          route: '/notifications'));
     }
     if (perms.canViewInventory) {
       items.add(const SidebarItem(
-        label: 'Inventory',
-        icon: Icons.inventory_2_outlined,
-        route: '/inventory',
-      ));
+          label: 'Inventory',
+          icon: Icons.inventory_2_outlined,
+          route: '/inventory'));
     }
     if (perms.canViewSettings) {
       items.add(const SidebarItem(
-        label: 'Settings',
-        icon: Icons.settings_outlined,
-        route: '/settings',
-      ));
+          label: 'Settings',
+          icon: Icons.settings_outlined,
+          route: '/settings'));
     }
     return items;
   }
@@ -133,22 +123,18 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         route != '/support' &&
         route != '/rewards' &&
         route != '/user-management') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('You do not have access to this section.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('You do not have access to this section.')));
       return;
     }
     if (route == '/rewards' && !perms.canViewRewards) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rewards are admin-only.')),
-      );
+          const SnackBar(content: Text('Rewards are admin-only.')));
       return;
     }
     if (route == '/user-management' && !perms.canManageUsers) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User management is admin-only.')),
-      );
+          const SnackBar(content: Text('User management is admin-only.')));
       return;
     }
 
@@ -160,22 +146,19 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   void _toggleSidebar() => setState(() => _sidebarExpanded = !_sidebarExpanded);
 
   Future<void> _logout() async {
-    final confirmed = await RdxNoticeDialog.showConfirmation(
-      context,
-      title: 'Log out?',
-      message: 'Are you sure you want to log out?',
-      cancelButtonLabel: 'Cancel',
-      confirmButtonLabel: 'Log out',
-    );
+    final confirmed = await RdxNoticeDialog.showConfirmation(context,
+        title: 'Log out?',
+        message: 'Are you sure you want to log out?',
+        cancelButtonLabel: 'Cancel',
+        confirmButtonLabel: 'Log out');
     if (confirmed != true || !mounted) return;
 
     try {
       await ref.read(authProvider).signOut();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to log out. $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to log out. $e')));
     }
   }
 
@@ -183,28 +166,26 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final routes = _screens.keys.toList();
 
     return Navigator(
-      key: _contentNavigatorKey,
-      onGenerateRoute: (settings) {
-        if (settings.name == '/') {
-          return MaterialPageRoute(
-            settings: settings,
-            builder: (_) => ValueListenableBuilder<String>(
-              valueListenable: _currentRouteNotifier,
-              builder: (context, currentRoute, child) {
-                return IndexedStack(
-                  index:
-                      routes.indexOf(currentRoute).clamp(0, routes.length - 1),
-                  children:
-                      routes.map<Widget>((route) => _screens[route]!).toList(),
-                );
-              },
-            ),
-          );
-        }
+        key: _contentNavigatorKey,
+        onGenerateRoute: (settings) {
+          if (settings.name == '/') {
+            return MaterialPageRoute(
+                settings: settings,
+                builder: (_) => ValueListenableBuilder<String>(
+                    valueListenable: _currentRouteNotifier,
+                    builder: (context, currentRoute, child) {
+                      return IndexedStack(
+                          index: routes
+                              .indexOf(currentRoute)
+                              .clamp(0, routes.length - 1),
+                          children: routes
+                              .map<Widget>((route) => _screens[route]!)
+                              .toList());
+                    }));
+          }
 
-        return AppRoutes.generateRoute(settings);
-      },
-    );
+          return AppRoutes.generateRoute(settings);
+        });
   }
 
   @override
@@ -226,41 +207,32 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     if (useBottomNav) {
       return Scaffold(
-        backgroundColor: colors.background,
-        body: SafeArea(
-          bottom: false,
-          child: _content(),
-        ),
-        bottomNavigationBar: _MainBottomNav(
-          currentIndex: _bottomNavIndex(navItems),
-          items: navItems,
-          onTap: (index) => _navigate(navItems[index].route),
-        ),
-      );
+          backgroundColor: colors.background,
+          body: SafeArea(bottom: false, child: _content()),
+          bottomNavigationBar: _MainBottomNav(
+              currentIndex: _bottomNavIndex(navItems),
+              items: navItems,
+              onTap: (index) => _navigate(navItems[index].route)));
     }
 
     final sideNav = MainSideNav(
-      items: navItems
-          .where((item) =>
-              item.route != '/settings' && item.route != '/notifications')
-          .toList(),
-      currentRoute: _currentRoute,
-      onNavigate: _navigate,
-      expanded: _sidebarExpanded,
-      onToggleExpand: _toggleSidebar,
-      onAddOrder: auth.permissions.canCreateOrders ? () {} : null,
-      showNotifications: auth.permissions.canViewNotifications,
-    );
+        items: navItems
+            .where((item) =>
+                item.route != '/settings' && item.route != '/notifications')
+            .toList(),
+        currentRoute: _currentRoute,
+        onNavigate: _navigate,
+        expanded: _sidebarExpanded,
+        onToggleExpand: _toggleSidebar,
+        onAddOrder: auth.permissions.canCreateOrders ? () {} : null,
+        showNotifications: auth.permissions.canViewNotifications);
 
     return Scaffold(
-      backgroundColor: colors.background,
-      body: Row(
-        children: [
+        backgroundColor: colors.background,
+        body: Row(children: [
           sideNav,
           Expanded(child: _content()),
-        ],
-      ),
-    );
+        ]));
   }
 
   int _bottomNavIndex(List<SidebarItem> items) {
@@ -292,34 +264,26 @@ class _MainBottomNav extends StatelessWidget {
     final barHeight = Responsive.bottomNavHeight(context);
 
     return Material(
-      elevation: 8,
-      color: colors.surface,
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          border: Border(top: BorderSide(color: colors.border)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: barHeight,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < items.length; i++)
-                  Expanded(
-                    child: _MainBottomNavTile(
-                      item: items[i],
-                      selected: i == currentIndex,
-                      onTap: () => onTap(i),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+        elevation: 8,
+        color: colors.surface,
+        child: Container(
+            decoration: BoxDecoration(
+                color: colors.surface,
+                border: Border(top: BorderSide(color: colors.border))),
+            child: SafeArea(
+                top: false,
+                child: SizedBox(
+                    height: barHeight,
+                    child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var i = 0; i < items.length; i++)
+                            Expanded(
+                                child: _MainBottomNavTile(
+                                    item: items[i],
+                                    selected: i == currentIndex,
+                                    onTap: () => onTap(i))),
+                        ])))));
   }
 }
 
@@ -340,30 +304,20 @@ class _MainBottomNavTile extends StatelessWidget {
     final color = selected ? AppColors.primary : colors.textMuted;
 
     return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            selected ? _selectedIcon(item.icon) : item.icon,
-            size: context.h(20).clamp(18.0, 23.0),
-            color: color,
-          ),
+        onTap: onTap,
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(selected ? _selectedIcon(item.icon) : item.icon,
+              size: context.h(20).clamp(18.0, 23.0), color: color),
           SizedBox(height: context.h(3)),
-          Text(
-            item.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: context.sp(11).clamp(9.0, 12.5),
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: color,
-              height: 1.1,
-            ),
-          ),
-        ],
-      ),
-    );
+          Text(item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: context.sp(11).clamp(9.0, 12.5),
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: color,
+                  height: 1.1)),
+        ]));
   }
 
   static IconData _selectedIcon(IconData icon) {

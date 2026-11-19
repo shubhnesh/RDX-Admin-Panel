@@ -110,7 +110,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               pagePad.left,
                               pagePad.top,
                               pagePad.right,
-                              0,
+                              context.h(0),
                             ),
                             child: MediaQuery(
                               data: media,
@@ -139,7 +139,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         SliverPadding(
                           padding: EdgeInsets.fromLTRB(
                             pagePad.left,
-                            0,
+                            context.h(0),
                             pagePad.right,
                             bottomPad,
                           ),
@@ -284,12 +284,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               Text(
                 'Insights',
-                style: AppTextStyles.heading(context),
+                style: AppTextStyles.h2(context),
               ),
               SizedBox(height: context.h(4)),
               Text(
                 'Performance overview',
-                style: AppTextStyles.bodySecondary(context)
+                style: AppTextStyles.body(context)
                     .copyWith(color: colors.textSecondary),
               ),
             ],
@@ -418,7 +418,7 @@ class _DashboardFilterDelegate extends SliverPersistentHeaderDelegate {
     return Material(
       color: backgroundColor,
       elevation: overlapsContent || shrinkOffset > 0 ? 1.5 : 0,
-      shadowColor: Colors.black26,
+      shadowColor: AppColors.black.withValues(alpha: 0.26),
       child: Container(
         height: extent,
         alignment: Alignment.centerLeft,

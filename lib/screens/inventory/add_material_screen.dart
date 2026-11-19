@@ -469,7 +469,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
               ),
               label: Text(
                 'Create & Manage Category',
-                style: AppTextStyles.label(context)
+                style: AppTextStyles.bodySemi(context)
                     .copyWith(color: AppColors.primary),
               ),
             ),
@@ -487,7 +487,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
             SizedBox(height: context.h(6)),
             Text(
               'Material name cannot be changed after creation.',
-              style: AppTextStyles.bodyTertiary(context)
+              style: AppTextStyles.bodySmall(context)
                   .copyWith(color: colors.textMuted),
             ),
           ],
@@ -523,7 +523,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
             SizedBox(height: context.h(6)),
             Text(
               'Category cannot be changed after creation.',
-              style: AppTextStyles.bodyTertiary(context)
+              style: AppTextStyles.bodySmall(context)
                   .copyWith(color: colors.textMuted),
             ),
           ],
@@ -547,7 +547,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
             Text(
               'This sets the per-unit cost for future restocks and does not '
               'change the cost already recorded for stock on hand.',
-              style: AppTextStyles.bodyTertiary(context)
+              style: AppTextStyles.bodySmall(context)
                   .copyWith(color: colors.textMuted),
             ),
           ],
@@ -635,7 +635,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
             Text(
               'Stock quantity is locked here. Update stock from the inventory '
               'table to keep stock records accurate.',
-              style: AppTextStyles.bodyTertiary(context)
+              style: AppTextStyles.bodySmall(context)
                   .copyWith(color: colors.textMuted),
             ),
           ],
@@ -655,7 +655,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
           SizedBox(height: context.h(6)),
           Text(
             'Restock alert triggers when stock falls below this amount — no confusing PAR terminology',
-            style: AppTextStyles.bodyTertiary(context)
+            style: AppTextStyles.bodySmall(context)
                 .copyWith(color: colors.textMuted),
           ),
           SizedBox(height: context.h(20)),
@@ -675,10 +675,8 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
                     Expanded(
                       child: Text(
                         'Stock status preview',
-                        style: AppTextStyles.bodySecondary(context).copyWith(
-                          color: colors.textMuted,
-                          letterSpacing: 0.5,
-                        ),
+                        style: AppTextStyles.body(context).copyWith(color: colors.textMuted,
+                          letterSpacing: 0.5),
                       ),
                     ),
                   ],
@@ -686,7 +684,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
                 SizedBox(height: context.h(8)),
                 Text(
                   'Stock percentage and status update after saving.',
-                  style: AppTextStyles.bodyTertiary(context)
+                  style: AppTextStyles.bodySmall(context)
                       .copyWith(color: colors.textSecondary),
                 ),
               ],
@@ -713,7 +711,7 @@ class _AddMaterialScreenState extends ConsumerState<AddMaterialScreen> {
                 Expanded(
                   child: Text(
                     'Stock status is based on the current quantity and minimum stock level.',
-                    style: AppTextStyles.bodyTertiary(context)
+                    style: AppTextStyles.bodySmall(context)
                         .copyWith(color: colors.primary),
                   ),
                 ),
@@ -813,7 +811,7 @@ class _SectionCard extends ConsumerWidget {
               Icon(icon, size: context.h(18), color: AppColors.primary),
               SizedBox(width: context.w(8)),
               Expanded(
-                child: Text(title, style: AppTextStyles.section(context)),
+                child: Text(title, style: AppTextStyles.bodyLargeSemi(context)),
               ),
               if (headerTrailing != null) ...[
                 headerTrailing!,

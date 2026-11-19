@@ -9,6 +9,11 @@ import 'package:rdx_admin/screens/dashboard/widgets/dashboard_empty.dart';
 import 'package:rdx_admin/screens/dashboard/widgets/dashboard_card_style.dart';
 
 /// Zomato Sales-style KPI strip: Net sales · Orders delivered · AOV
+///
+/// Typography (STYLE_GUIDE):
+/// - Label → bodySemi (emphasized label)
+/// - Value → h2 (page-level number weight for KPIs)
+/// - Change % / "vs. prev" → caption
 class DashboardKpiCards extends StatelessWidget {
   final DashboardStatsModel stats;
 
@@ -107,7 +112,7 @@ class _KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title + change badge on the same row (badge at the end)
+          // Label + change badge
           Row(
             children: [
               Container(
@@ -122,7 +127,7 @@ class _KpiCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: AppTextStyles.label(context).copyWith(
+                  style: AppTextStyles.bodySemi(context).copyWith(
                     color: colors.textSecondary,
                     letterSpacing: 0.2,
                   ),
@@ -155,8 +160,6 @@ class _KpiCard extends StatelessWidget {
                       '${up ? '+' : ''}${changePercent.toStringAsFixed(0)}%',
                       style: AppTextStyles.caption(context).copyWith(
                         color: accent,
-                        fontWeight: FontWeight.w700,
-                        fontSize: context.h(11),
                       ),
                     ),
                     SizedBox(width: context.w(3)),
@@ -164,7 +167,6 @@ class _KpiCard extends StatelessWidget {
                       'vs. prev',
                       style: AppTextStyles.caption(context).copyWith(
                         color: colors.textMuted,
-                        fontSize: context.h(10),
                       ),
                     ),
                   ],
@@ -175,9 +177,7 @@ class _KpiCard extends StatelessWidget {
           SizedBox(height: context.h(10)),
           Text(
             value,
-            style: AppTextStyles.heading(context).copyWith(
-              fontSize: context.h(24),
-              fontWeight: FontWeight.w800,
+            style: AppTextStyles.h2(context).copyWith(
               letterSpacing: -0.4,
             ),
           ),

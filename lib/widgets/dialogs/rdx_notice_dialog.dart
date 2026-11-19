@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
+import 'package:rdx_admin/core/utils/responsive_size.dart';
 
 /// Simple notice / validation dialog with a title, message, and OK action.
 ///
@@ -65,11 +66,11 @@ class RdxNoticeDialog extends StatelessWidget {
     return AlertDialog(
       backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(context.h(12)),
       ),
       title: Text(
         title,
-        style: AppTextStyles.section(context).copyWith(
+        style: AppTextStyles.bodyLargeSemi(context).copyWith(
           color: colors.textPrimary,
         ),
       ),
@@ -79,14 +80,14 @@ class RdxNoticeDialog extends StatelessWidget {
           color: colors.textSecondary,
         ),
       ),
-      // One shared style: every TextButton in the actions uses theme orange.
+      // One shared style: every TextButton in the actions uses theme primary.
       actions: [
         Theme(
           data: Theme.of(context).copyWith(
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary,
-                textStyle: AppTextStyles.label(context),
+                textStyle: AppTextStyles.bodySemi(context),
               ),
             ),
           ),

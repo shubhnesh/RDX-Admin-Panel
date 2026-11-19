@@ -98,42 +98,13 @@ class RdxDeleteDialog extends StatelessWidget {
     );
   }
 
-  // Widget _buildHeader(BuildContext context) {
-  //   final colors = AppColors.of(context);
-
-  //   return Row(
-  //     children: [
-  //       Expanded(
-  //         child: Text(
-  //           title,
-  //           style: AppTextStyles.section(context),
-  //         ),
-  //       ),
-  //       if (showCloseButton)
-  //         IconButton(
-  //           icon: Icon(
-  //             Icons.close,
-  //             size: context.h(20),
-  //             color: colors.textMuted,
-  //           ),
-  //           onPressed: () => Navigator.of(context).pop(false),
-  //           padding: EdgeInsets.zero,
-  //           constraints: BoxConstraints(
-  //             minWidth: context.w(30),
-  //             minHeight: context.h(30),
-  //           ),
-  //         ),
-  //     ],
-  //   );
-  // }
-
   Widget _buildItemSummary(BuildContext context) {
     final colors = AppColors.of(context);
 
     return Container(
       padding: EdgeInsets.all(context.h(14)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(10)),
         border: Border.all(color: colors.border),
       ),
@@ -146,7 +117,7 @@ class RdxDeleteDialog extends StatelessWidget {
                 child: Text(
                   itemName,
                   style: AppTextStyles.body(context).copyWith(
-                    fontWeight: FontWeight.w600,
+                    color: colors.textPrimary,
                   ),
                 ),
               ),
@@ -203,7 +174,7 @@ class RdxDeleteDialog extends StatelessWidget {
                 if (warningTitle != null)
                   Text(
                     warningTitle!,
-                    style: AppTextStyles.label(context).copyWith(
+                    style: AppTextStyles.bodySemi(context).copyWith(
                       color: AppColors.danger,
                       letterSpacing: 0.5,
                     ),
@@ -236,8 +207,8 @@ class RdxDeleteDialog extends StatelessWidget {
       isPrimary: true,
       iconSize: context.h(18),
       backgroundColor: AppColors.danger,
-      textColor: Colors.white,
-      iconColor: Colors.white,
+      textColor: AppColors.white,
+      iconColor: AppColors.white,
     );
     if (narrow) {
       return Column(
@@ -296,7 +267,7 @@ class RdxDeleteMetric extends StatelessWidget {
             ],
             Text(
               label,
-              style: AppTextStyles.label(context).copyWith(
+              style: AppTextStyles.bodySemi(context).copyWith(
                 color: labelColor ?? colors.textMuted,
               ),
             ),

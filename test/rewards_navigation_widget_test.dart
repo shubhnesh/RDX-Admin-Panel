@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rdx_admin/widgets/reusable_widgets/main_side_nav.dart';
+import 'package:rdx_admin/screens/main/main_side_nav.dart';
 
 void main() {
   testWidgets('Rewards is available in the existing admin navigation',

@@ -76,7 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final auth = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F8),
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           const _PageBackground(),
@@ -120,11 +120,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(context.w(28)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: AppColors.black.withOpacity(0.07),
             blurRadius: context.w(60),
             offset: Offset(0, context.h(24)),
           ),
@@ -172,11 +172,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         context.h(26),
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.97),
+        color: AppColors.surface.withOpacity(0.97),
         borderRadius: BorderRadius.circular(context.w(26)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: AppColors.black.withOpacity(0.06),
             blurRadius: context.w(45),
             offset: Offset(0, context.h(20)),
           ),
@@ -202,7 +202,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         context.h(35),
       ),
       decoration: const BoxDecoration(
-        color: Color(0xFF171B22),
+        color: AppColors.darkSurface,
       ),
       child: Stack(
         children: [
@@ -238,17 +238,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               SizedBox(height: context.h(22)),
               RichText(
                 text: TextSpan(
-                  style: TextStyle(
-                    fontSize: context.w(38),
-                    height: 1.08,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -1,
-                  ),
+                  style: AppTextStyles.h1(context).copyWith(height: 1.08,
+                    letterSpacing: -1),
                   children: const [
                     TextSpan(
                       text: 'Admin ',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.white,
                       ),
                     ),
                     TextSpan(
@@ -265,11 +261,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 'Manage your restaurant,\n'
                 'orders, customers and more —\n'
                 'all in one place.',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.58),
-                  fontSize: context.w(15),
+                style: AppTextStyles.bodyLarge(context).copyWith(color: AppColors.white.withOpacity(0.58),
                   height: 1.55,
-                  fontWeight: FontWeight.w400,
                 ),
               ),
               const Spacer(),
@@ -277,10 +270,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               SizedBox(height: context.h(20)),
               Text(
                 'RDX ADMIN • RESTAURANT MANAGEMENT',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.25),
-                  fontSize: context.w(9),
-                  fontWeight: FontWeight.w700,
+                style: AppTextStyles.overline(context).copyWith(color: AppColors.white.withOpacity(0.25),
                   letterSpacing: 1.2,
                 ),
               ),
@@ -301,19 +291,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           height: context.h(48),
           fit: BoxFit.contain,
           colorFilter: const ColorFilter.mode(
-            Colors.white,
+            AppColors.white,
             BlendMode.srcIn,
           ),
         ),
         SizedBox(width: context.w(13)),
         Text(
           'RDX',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: context.w(24),
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.5,
-          ),
+          style: AppTextStyles.h2(context).copyWith(color: AppColors.white,
+            letterSpacing: 1.5),
         ),
       ],
     );
@@ -350,14 +336,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         width: double.infinity,
         padding: EdgeInsets.all(context.w(13)),
         decoration: BoxDecoration(
-          color: const Color(0xFF222731),
+          color: AppColors.darkSurfaceRaised,
           borderRadius: BorderRadius.circular(context.w(17)),
           border: Border.all(
-            color: Colors.white.withOpacity(0.07),
+            color: AppColors.white.withOpacity(0.07),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.28),
+              color: AppColors.black.withOpacity(0.28),
               blurRadius: context.w(30),
               offset: Offset(0, context.h(15)),
             ),
@@ -371,7 +357,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 vertical: context.h(8),
               ),
               decoration: BoxDecoration(
-                color: const Color(0xFF191D24),
+                color: AppColors.darkSurface,
                 borderRadius: BorderRadius.circular(context.w(10)),
               ),
               child: Column(
@@ -424,7 +410,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         width: context.w(32),
                         height: context.h(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.07),
+                          color: AppColors.white.withOpacity(0.07),
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
@@ -457,7 +443,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Container(
                       padding: EdgeInsets.all(context.w(12)),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF292E37),
+                        color: AppColors.darkSurfaceElevated,
                         borderRadius: BorderRadius.circular(context.w(10)),
                       ),
                       child: Column(
@@ -516,7 +502,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       child: Icon(
         icon,
         size: context.w(15),
-        color: active ? AppColors.primary : Colors.white.withOpacity(0.3),
+        color: active ? AppColors.primary : AppColors.white.withOpacity(0.3),
       ),
     );
   }
@@ -530,7 +516,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Container(
       padding: EdgeInsets.all(context.w(10)),
       decoration: BoxDecoration(
-        color: const Color(0xFF292E37),
+        color: AppColors.darkSurfaceElevated,
         borderRadius: BorderRadius.circular(context.w(10)),
       ),
       child: Row(
@@ -555,19 +541,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.38),
-                    fontSize: context.w(8),
+                  style: AppTextStyles.overline(context).copyWith(color: AppColors.white.withOpacity(0.38),
                   ),
                 ),
                 SizedBox(height: context.h(2)),
                 Text(
                   value,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: context.w(12),
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTextStyles.bodySmallSemi(context).copyWith(color: AppColors.white),
                 ),
               ],
             ),
@@ -585,12 +565,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   ) {
     return Text(
       text,
-      style: TextStyle(
-        color: Colors.white.withOpacity(
+      style: (bold
+              ? AppTextStyles.bodySemi(context)
+              : AppTextStyles.overline(context))
+          .copyWith(
+        color: AppColors.white.withOpacity(
           bold ? 0.82 : 0.48,
         ),
-        fontSize: context.w(size),
-        fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
       ),
     );
   }
@@ -604,7 +585,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     AuthProvider auth,
   ) {
     return Container(
-      color: Colors.white,
+      color: AppColors.surface,
       padding: EdgeInsets.fromLTRB(
         context.w(65),
         context.h(50),
@@ -626,33 +607,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           alignment: Alignment.topRight,
           child: Text(
             'We. Serve. Passion',
-            style: TextStyle(
-              color: const Color(0xFF6F788A),
-              fontSize: context.w(12),
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.1,
-            ),
+            style: AppTextStyles.bodySmallSemi(context).copyWith(color: AppColors.textMuted,
+              letterSpacing: 1.1),
           ),
         ),
         SizedBox(height: context.h(58)),
         Text(
           'Welcome',
-          style: AppTextStyles.heading(context).copyWith(
-            color: const Color(0xFF182033),
-            fontSize: context.w(31),
-            height: 1.15,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.7,
-          ),
+          style: AppTextStyles.h1(context).copyWith(color: AppColors.textPrimary),
         ),
         SizedBox(height: context.h(9)),
         Text(
           'Sign in with your RDX admin or staff account to continue.',
-          style: AppTextStyles.bodySecondary(context).copyWith(
-            color: const Color(0xFF7B8494),
-            fontSize: context.w(14),
-            height: 1.45,
-          ),
+          style: AppTextStyles.body(context).copyWith(color: AppColors.textMuted,
+            height: 1.45),
         ),
         SizedBox(height: context.h(35)),
         _buildLabel(
@@ -715,11 +683,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             child: Text(
               'Forgot password?',
-              style: AppTextStyles.label(context).copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-                fontSize: context.w(13),
-              ),
+              style: AppTextStyles.bodySemi(context).copyWith(color: AppColors.primary),
             ),
           ),
         ),
@@ -733,10 +697,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Text(
             'Need access? Ask your restaurant admin to create an account.',
             textAlign: TextAlign.center,
-            style: AppTextStyles.label(context).copyWith(
-              color: const Color(0xFF7B8494),
-              fontSize: context.w(13),
-            ),
+            style: AppTextStyles.body(context).copyWith(color: AppColors.textMuted),
           ),
         ),
       ],
@@ -753,11 +714,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   ) {
     return Text(
       text,
-      style: AppTextStyles.label(context).copyWith(
-        color: const Color(0xFF30394A),
-        fontSize: context.w(13),
-        fontWeight: FontWeight.w600,
-      ),
+      style: AppTextStyles.bodySemi(context).copyWith(color: AppColors.textSecondary),
     );
   }
 
@@ -906,7 +863,7 @@ class _BackgroundPainter extends CustomPainter {
     Size size,
   ) {
     final paint = Paint()
-      ..color = const Color(0xFF172033).withOpacity(0.018)
+      ..color = AppColors.textPrimary.withOpacity(0.018)
       ..strokeWidth = 1;
 
     const gap = 32.0;

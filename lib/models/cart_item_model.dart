@@ -27,6 +27,8 @@ class CartLineItem {
   final String id;
   final MenuItemModel menuItem;
   final int quantity;
+  final String? size;
+  final double? sizePrice;
   final String? spiceLevel;
   final List<CartAddOn> addOns;
   final String? notes;
@@ -35,13 +37,15 @@ class CartLineItem {
     required this.id,
     required this.menuItem,
     required this.quantity,
+    this.size,
+    this.sizePrice,
     this.spiceLevel,
     this.addOns = const [],
     this.notes,
   });
 
   double get unitPrice =>
-      menuItem.price + addOns.fold<double>(0, (sum, a) => sum + a.price);
+      (sizePrice ?? menuItem.price) + addOns.fold<double>(0, (sum, a) => sum + a.price);
 
   double get subtotal => unitPrice * quantity;
 
@@ -57,6 +61,8 @@ class CartLineItem {
       id: id ?? this.id,
       menuItem: menuItem ?? this.menuItem,
       quantity: quantity ?? this.quantity,
+      size: size,
+      sizePrice: sizePrice,
       spiceLevel: spiceLevel ?? this.spiceLevel,
       addOns: addOns ?? this.addOns,
       notes: notes ?? this.notes,

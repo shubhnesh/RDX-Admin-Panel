@@ -72,7 +72,7 @@ class MenuItemCard extends StatelessWidget {
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: AppColors.black.withValues(alpha: 0.04),
             blurRadius: context.h(10),
             offset: Offset(0, context.h(3)),
           ),
@@ -122,7 +122,7 @@ class MenuItemCard extends StatelessWidget {
                           context,
                           'Featured',
                           AppColors.primary,
-                          Colors.white,
+                          AppColors.white,
                         ),
                       ),
                     if (dietarySelected)
@@ -143,7 +143,7 @@ class MenuItemCard extends StatelessWidget {
               contentHPad,
               contentTopPad,
               contentHPad,
-              0,
+              context.h(0),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,9 +158,7 @@ class MenuItemCard extends StatelessWidget {
                         categorySelected ? item.category : 'Category',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodyTertiary(context).copyWith(
-                          color: AppColors.primary,
-                        ),
+                        style: AppTextStyles.bodySmall(context).copyWith(color: AppColors.primary),
                       ),
                     ),
                     if (showPrice) ...[
@@ -169,9 +167,7 @@ class MenuItemCard extends StatelessWidget {
                       '₹${item.price.toStringAsFixed(2)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.section(context).copyWith(
-                        color: colors.primary,
-                      ),
+                      style: AppTextStyles.bodyLargeSemi(context).copyWith(color: colors.primary),
                     ),
                     ],
                   ],
@@ -181,9 +177,7 @@ class MenuItemCard extends StatelessWidget {
                   item.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(color: colors.textPrimary),
                 ),
                 // Always reserve ingredients-line height for stable card size.
                 SizedBox(height: context.h(2)),
@@ -191,10 +185,8 @@ class MenuItemCard extends StatelessWidget {
                   item.ingredients.isNotEmpty
                       ? item.ingredients.join(', ')
                       : ' ',
-                  style: AppTextStyles.bodyTertiary(context).copyWith(
-                    color:
-                        item.ingredients.isNotEmpty ? null : Colors.transparent,
-                  ),
+                  style: AppTextStyles.bodySmall(context).copyWith(color:
+                        item.ingredients.isNotEmpty ? null : Colors.transparent),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -259,7 +251,7 @@ class MenuItemCard extends StatelessWidget {
                 : Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Divider(height: 1, color: colors.divider),
+                      Divider(height: context.h(1), color: colors.divider),
                       SizedBox(height: context.h(6)),
                       Row(
                         children: [
@@ -275,11 +267,9 @@ class MenuItemCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style:
-                                  AppTextStyles.bodyTertiary(context).copyWith(
-                                color: item.available
+                                  AppTextStyles.bodySmall(context).copyWith(color: item.available
                                     ? AppColors.success
-                                    : colors.textMuted,
-                              ),
+                                    : colors.textMuted),
                             ),
                           ),
                           Builder(
@@ -293,7 +283,7 @@ class MenuItemCard extends StatelessWidget {
                                   child: Icon(
                                     Icons.more_vert_rounded,
                                     size: context.h(18),
-                                    color: const Color(0xFF5D687A),
+                                    color: AppColors.of(context).textMuted,
                                   ),
                                 ),
                               );
@@ -328,9 +318,7 @@ class MenuItemCard extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.caption(context).copyWith(
-          color: foreground,
-        ),
+        style: AppTextStyles.caption(context).copyWith(color: foreground),
       ),
     );
   }
@@ -347,9 +335,7 @@ class MenuItemCard extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.caption(context).copyWith(
-          color: color,
-        ),
+        style: AppTextStyles.caption(context).copyWith(color: color),
       ),
     );
   }
@@ -362,7 +348,7 @@ class MenuItemCard extends StatelessWidget {
         vertical: context.h(2),
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
+        color: AppColors.white.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(context.h(5)),
       ),
       child: Row(
@@ -372,9 +358,7 @@ class MenuItemCard extends StatelessWidget {
           SizedBox(width: context.w(5)),
           Text(
             _dietaryLabel(item.dietaryType),
-            style: AppTextStyles.caption(context).copyWith(
-              color: color,
-            ),
+            style: AppTextStyles.caption(context).copyWith(color: color),
           ),
         ],
       ),

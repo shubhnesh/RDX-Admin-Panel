@@ -113,8 +113,8 @@
 // }
 import 'package:flutter/material.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
+import 'package:rdx_admin/widgets/buttons/app_back_button.dart';
 import '../../core/utils/responsive_size.dart';
-import '../buttons/app_back_button.dart';
 
 /// Shared inline page heading used throughout the admin screens.
 class RdxHeader extends StatelessWidget implements PreferredSizeWidget {

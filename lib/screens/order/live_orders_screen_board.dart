@@ -31,10 +31,11 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final provider = ref.watch(liveOrdersProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.lightBackground,
+      backgroundColor: colors.background,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -50,13 +51,13 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               children: [
                 Text(
                   'Live Orders',
-                  style: AppTextStyles.heading(context),
+                  style: AppTextStyles.h2(context),
                 ),
                 SizedBox(height: context.h(4)),
                 Text(
                   'Track orders and create orders for customers',
-                  style: AppTextStyles.bodySecondary(context)
-                      .copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.body(context)
+                      .copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
@@ -76,7 +77,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       _buildSection(
         title: 'LIVE ORDERS',
         count: provider.live.length,
-        color: const Color(0xFFE51B3E),
+        color: AppColors.primary,
         orders: provider.live,
         actionText: 'Start Preparing',
         onAdvance: provider.advanceStatus,
@@ -84,7 +85,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       _buildSection(
         title: 'PREPARING',
         count: provider.preparing.length,
-        color: const Color(0xFFE9A719),
+        color: AppColors.warning,
         orders: provider.preparing,
         actionText: 'Mark Ready',
         onAdvance: provider.advanceStatus,
@@ -92,7 +93,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       _buildSection(
         title: 'READY',
         count: provider.ready.length,
-        color: const Color(0xFF20B47A),
+        color: AppColors.success,
         orders: provider.ready,
         actionText: null,
         onAdvance: provider.advanceStatus,
@@ -100,7 +101,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
       _buildSection(
         title: 'DELIVERING',
         count: 0,
-        color: const Color(0xFF31568E),
+        color: AppColors.info,
         orders: const <OrderModel>[],
         actionText: null,
         onAdvance: provider.advanceStatus,
@@ -177,6 +178,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     IconData? emptyIcon,
     String? emptyText,
   }) {
+    final colors = AppColors.of(context);
     final bool isEmpty = orders.isEmpty;
 
     return Column(
@@ -201,8 +203,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
               SizedBox(width: context.w(9)),
               Text(
                 title,
-                style: AppTextStyles.section(context)
-                    .copyWith(color: AppColors.lightTextPrimary),
+                style: AppTextStyles.bodyLargeSemi(context)
+                    .copyWith(color: colors.textPrimary),
               ),
               const Spacer(),
               Container(
@@ -215,16 +217,16 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                 ),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.lightSurface,
+                  color: colors.surface,
                   borderRadius: BorderRadius.circular(context.h(15)),
                   border: Border.all(
-                    color: AppColors.lightBorder,
+                    color: colors.border,
                     width: context.h(3),
                   ),
                 ),
                 child: Text(
                   '$count',
-                  style: AppTextStyles.bodySecondary(context),
+                  style: AppTextStyles.body(context),
                 ),
               ),
             ],
@@ -235,12 +237,12 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
             width: double.infinity,
             height: context.h(170),
             decoration: BoxDecoration(
-              color: AppColors.lightSurface,
+              color: colors.surface,
               borderRadius: BorderRadius.circular(context.h(12)),
             ),
             child: CustomPaint(
               painter: _DashedBorderPainter(
-                color: AppColors.lightBorder,
+                color: colors.border,
                 radius: 12,
               ),
               child: Center(
@@ -252,10 +254,10 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF1EA),
+                          color: AppColors.primary.withValues(alpha: 0.08),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: const Color(0xFFFFD8C5),
+                            color: AppColors.primary.withValues(alpha: 0.25),
                           ),
                         ),
                         child: Icon(
@@ -269,8 +271,8 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                     Text(
                       emptyText ?? 'No orders',
                       textAlign: TextAlign.center,
-                      style: AppTextStyles.bodySecondary(context)
-                          .copyWith(color: AppColors.textMuted),
+                      style: AppTextStyles.body(context)
+                          .copyWith(color: colors.textMuted),
                     ),
                   ],
                 ),
@@ -301,20 +303,22 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
     required String? actionText,
     required ValueChanged<OrderModel> onAdvance,
   }) {
+    final colors = AppColors.of(context);
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF151515),
+        color: colors.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: const Color(0xFF302B2B),
+          color: colors.border,
           width: 1,
         ),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x22000000),
+            color: AppColors.black.withValues(alpha: 0.06),
             blurRadius: 8,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -340,19 +344,19 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.caption(context)
-                            .copyWith(color: const Color(0xFFE0DCDC)),
+                            .copyWith(color: colors.textPrimary),
                       ),
                     ),
                     Icon(
                       Icons.schedule_outlined,
                       size: context.h(12).clamp(10.0, 14.0),
-                      color: Color(0xFF777070),
+                      color: colors.textMuted,
                     ),
                     const SizedBox(width: 5),
                     Text(
                       _formatOrderTime(order.createdAt),
                       style: AppTextStyles.caption(context)
-                          .copyWith(color: const Color(0xFF888080)),
+                          .copyWith(color: colors.textMuted),
                     ),
                   ],
                 ),
@@ -366,7 +370,7 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.caption(context)
-                      .copyWith(color: const Color(0xFFD7D1D1)),
+                      .copyWith(color: colors.textSecondary),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -374,12 +378,12 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.caption(context)
-                      .copyWith(color: const Color(0xFF858080)),
+                      .copyWith(color: colors.textMuted),
                 ),
                 const SizedBox(height: 12),
                 Container(
                   height: 1,
-                  color: const Color(0xFF292525),
+                  color: colors.divider,
                 ),
                 const SizedBox(height: 11),
                 Row(
@@ -391,17 +395,15 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF252020),
+                        color: colors.surfaceVariant,
                         borderRadius: BorderRadius.circular(5),
-                        border: Border.all(
-                          color: const Color(0xFF302A2A),
-                        ),
+                        border: Border.all(color: colors.border),
                       ),
                       child: Text(
                         '${order.items.length} '
                         '${order.items.length == 1 ? 'Item' : 'Items'}',
                         style: AppTextStyles.caption(context)
-                            .copyWith(color: const Color(0xFFA69D9D)),
+                            .copyWith(color: colors.textSecondary),
                       ),
                     ),
                     const Spacer(),
@@ -415,14 +417,14 @@ class _LiveOrdersScreenState extends ConsumerState<LiveOrdersScreen> {
                             height: 28,
                             padding: const EdgeInsets.symmetric(horizontal: 11),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF214D9B),
+                              color: AppColors.primary,
                               borderRadius: BorderRadius.circular(5),
                             ),
                             alignment: Alignment.center,
                             child: Text(
                               actionText,
                               style: AppTextStyles.caption(context)
-                                  .copyWith(color: Colors.white),
+                                  .copyWith(color: AppColors.white),
                             ),
                           ),
                         ),

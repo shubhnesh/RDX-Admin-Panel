@@ -5,6 +5,11 @@ import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/screens/dashboard/widgets/dashboard_card_style.dart';
 
 /// Large module wrapper — title, optional subtitle, optional action, children.
+///
+/// Typography (STYLE_GUIDE):
+/// - Section title → bodyLargeSemi (module heading, not page h2)
+/// - Subtitle → body
+/// - Action label → bodySemi + accent color
 class DashboardSection extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -68,16 +73,13 @@ class DashboardSection extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTextStyles.heading(context).copyWith(
-                        fontSize: context.h(18),
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: AppTextStyles.bodyLargeSemi(context),
                     ),
                     if (subtitle != null) ...[
                       SizedBox(height: context.h(2)),
                       Text(
                         subtitle!,
-                        style: AppTextStyles.bodySecondary(context),
+                        style: AppTextStyles.body(context),
                       ),
                     ],
                   ],
@@ -106,9 +108,8 @@ class DashboardSection extends StatelessWidget {
                         ),
                         child: Text(
                           actionLabel!,
-                          style: AppTextStyles.label(context).copyWith(
+                          style: AppTextStyles.bodySemi(context).copyWith(
                             color: color,
-                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),

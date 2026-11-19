@@ -239,12 +239,12 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
 
     // ---- Same text styles as RdxTextField ---------------------------------
     final textStyle = widget.textStyle ??
-        AppTextStyles.bodySecondary(context).copyWith(
+        AppTextStyles.body(context).copyWith(
           fontSize: textFontSize,
           color: widget.textColor,
         );
     final hintStyle = widget.hintStyle ??
-        AppTextStyles.bodySecondary(context).copyWith(
+        AppTextStyles.body(context).copyWith(
           color: widget.hintColor ?? colors.textMuted,
           fontSize: textFontSize,
         );
@@ -259,7 +259,7 @@ class _RdxSearchBarState extends State<RdxSearchBar> {
     );
 
     final fillColor = widget.backgroundColor ??
-        (_focusNode.hasFocus || hasText ? Colors.white : colors.surfaceVariant);
+        (_focusNode.hasFocus || hasText ? AppColors.white : colors.surfaceVariant);
 
     final iconColor = widget.hintColor ?? colors.textMuted;
 

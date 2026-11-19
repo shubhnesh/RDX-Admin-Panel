@@ -117,14 +117,14 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
           uid: widget.existing!.uid,
           email: email,
           displayName: displayName,
-          role: role,
+          role: role
         );
       } else {
         await provider.createUser(
           email: email,
           password: password,
           role: role,
-          displayName: displayName.isEmpty ? null : displayName,
+          displayName: displayName.isEmpty ? null : displayName
         );
       }
       if (!mounted) return;
@@ -136,7 +136,7 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
     } catch (e) {
       if (!mounted) return;
       await _showNotice(
-        isEdit ? 'Failed to update user details.' : 'Failed to create user. $e',
+        isEdit ? 'Failed to update user details.' : 'Failed to create user. $e'
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -161,8 +161,8 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
         deleteButtonLabel: 'Disable user',
         warningTitle: 'SIGN-IN WILL BE DISABLED',
         warningMessage:
-            'This disables the account. Existing account data and history are retained.',
-      ),
+            'This disables the account. Existing account data and history are retained.'
+      )
     );
     if (confirmed != true || !mounted) return;
 
@@ -191,13 +191,13 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
           children: [
             RdxHeader(
               title: isEdit ? 'User Details' : 'Add User',
-              showBackButton: true,
+              showBackButton: true
             ),
             const Expanded(
-              child: Center(child: Text('Admin access required.')),
+              child: Center(child: Text('Admin access required.'))
             ),
-          ],
-        ),
+          ]
+        )
       );
     }
 
@@ -211,14 +211,14 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
             subtitle: isEdit
                 ? 'Update this account’s details and access role.'
                 : 'Create an Admin or Staff account. Staff is the worker role.',
-            showBackButton: true,
+            showBackButton: true
           ),
           Expanded(
             child: SingleChildScrollView(
               padding: Responsive.pagePadding(
                 context,
                 top: context.h(16),
-                bottom: context.h(32),
+                bottom: context.h(32)
               ),
               child: Column(
                 children: [
@@ -233,14 +233,14 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
                           maxLength: 50,
                           label: 'Login ID (email) *',
                           hint: 'staff@restaurant.com',
-                          keyboardType: TextInputType.emailAddress,
+                          keyboardType: TextInputType.emailAddress
                         ),
                         SizedBox(height: context.h(16)),
                         RdxTextField(
                           controller: _nameCtrl,
                           maxLength: 40,
                           label: 'Display name',
-                          hint: 'Optional',
+                          hint: 'Optional'
                         ),
                         if (!isEdit) ...[
                           SizedBox(height: context.h(16)),
@@ -255,23 +255,23 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
                                   ? 'Show password'
                                   : 'Hide password',
                               onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
+                                () => _obscurePassword = !_obscurePassword
                               ),
                               icon: Icon(
                                 _obscurePassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
-                                size: context.w(18),
-                              ),
-                            ),
+                                size: context.h(18)
+                              )
+                            )
                           ),
                           SizedBox(height: context.h(6)),
                           Text(
                             'This creates the Firebase Authentication login. '
                             'Share the email and password securely; the user '
                             'can reset the password from the login screen.',
-                            style: AppTextStyles.bodyTertiary(context)
-                                .copyWith(color: colors.textMuted),
+                            style: AppTextStyles.caption(context)
+                                .copyWith(color: colors.textMuted)
                           ),
                         ],
                         SizedBox(height: context.h(16)),
@@ -283,17 +283,17 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
                           hint: 'Select role',
                           onChanged: (v) {
                             if (v != null) setState(() => _role = v);
-                          },
+                          }
                         ),
                         SizedBox(height: context.h(6)),
                         Text(
                           'Admin: full access, including user management.\n'
                           'Staff: dashboard and orders, with read-only inventory and settings.',
-                          style: AppTextStyles.bodyTertiary(context)
-                              .copyWith(color: colors.textMuted),
+                          style: AppTextStyles.caption(context)
+                              .copyWith(color: colors.textMuted)
                         ),
-                      ],
-                    ),
+                      ]
+                    )
                   ),
                   if (isEdit) ...[
                     SizedBox(height: context.h(16)),
@@ -301,7 +301,7 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
                       enabled: !_saving,
                       saving: _saving,
                       onSave: _save,
-                      onDelete: _deleteUser,
+                      onDelete: _deleteUser
                     ),
                   ] else ...[
                     SizedBox(height: context.h(16)),
@@ -313,24 +313,24 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
                           minWidth: context.w(140),
                           onPressed: _saving
                               ? null
-                              : () => Navigator.of(context).pop(),
+                              : () => Navigator.of(context).pop()
                         ),
                         SizedBox(width: context.w(10)),
                         RdxActionButton.save(
                           label: 'Create user',
                           minWidth: context.w(140),
                           onPressed: _save,
-                          isLoading: _saving,
+                          isLoading: _saving
                         ),
-                      ],
+                      ]
                     ),
                   ],
-                ],
-              ),
-            ),
+                ]
+              )
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 }
@@ -359,8 +359,8 @@ class _UserActionsSection extends StatelessWidget {
         children: [
           Text(
             'Save account changes or disable sign-in access. Account history is retained.',
-            style: AppTextStyles.bodySecondary(context)
-                .copyWith(color: colors.textSecondary),
+            style: AppTextStyles.body(context)
+                .copyWith(color: colors.textSecondary)
           ),
           SizedBox(height: context.h(14)),
           Wrap(
@@ -371,17 +371,17 @@ class _UserActionsSection extends StatelessWidget {
                 label: 'Save',
                 minWidth: context.w(140),
                 onPressed: enabled ? onSave : null,
-                isLoading: saving,
+                isLoading: saving
               ),
               RdxActionButton.discard(
                 label: 'Delete',
                 minWidth: context.w(140),
-                onPressed: enabled ? onDelete : null,
+                onPressed: enabled ? onDelete : null
               ),
-            ],
+            ]
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 }
@@ -405,7 +405,7 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(12)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -414,13 +414,13 @@ class _SectionCard extends StatelessWidget {
             children: [
               Icon(icon, size: context.h(18), color: AppColors.primary),
               SizedBox(width: context.w(8)),
-              Text(title, style: AppTextStyles.section(context)),
-            ],
+              Text(title, style: AppTextStyles.bodyLargeSemi(context)),
+            ]
           ),
           SizedBox(height: context.h(16)),
           child,
-        ],
-      ),
+        ]
+      )
     );
   }
 }

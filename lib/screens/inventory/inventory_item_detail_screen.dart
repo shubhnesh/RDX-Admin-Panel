@@ -238,15 +238,14 @@ class _InventoryItemDetailScreenState
             if (_historyNotice != null) ...[
               Text(
                 _historyNotice!,
-                style: AppTextStyles.bodySecondary(context).copyWith(
-                  color: AppColors.of(context).textSecondary,
+                style: AppTextStyles.body(context).copyWith(color: AppColors.of(context).textSecondary,
                 ),
               ),
               SizedBox(height: context.h(8)),
             ],
             Text(
               'No stock history is available.',
-              style: AppTextStyles.bodySecondary(context),
+              style: AppTextStyles.body(context),
             ),
           ],
         ),
@@ -287,8 +286,7 @@ class _InventoryItemDetailScreenState
           if (_historyNotice != null) ...[
             Text(
               _historyNotice!,
-              style: AppTextStyles.bodySecondary(context).copyWith(
-                color: AppColors.of(context).textSecondary,
+              style: AppTextStyles.body(context).copyWith(color: AppColors.of(context).textSecondary,
               ),
             ),
             SizedBox(height: context.h(12)),
@@ -308,8 +306,7 @@ class _InventoryItemDetailScreenState
                   for (final dateKey in sortedDateKeys) ...[
                     Text(
                       _historyDateLabel(grouped[dateKey]!.first.occurredAt),
-                      style: AppTextStyles.label(context).copyWith(
-                        color: AppColors.of(context).textMuted,
+                      style: AppTextStyles.bodySemi(context).copyWith(color: AppColors.of(context).textMuted,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -323,9 +320,7 @@ class _InventoryItemDetailScreenState
                     SizedBox(height: context.h(4)),
                     Text(
                       'Could not load more history: $_historyError',
-                      style: AppTextStyles.bodySecondary(context).copyWith(
-                        color: AppColors.danger,
-                      ),
+                      style: AppTextStyles.body(context).copyWith(color: AppColors.danger),
                     ),
                   ],
                   if (_historyCursor != null)
@@ -353,8 +348,7 @@ class _InventoryItemDetailScreenState
               child: Text(
                 'End of stock history',
                 textAlign: TextAlign.center,
-                style: AppTextStyles.label(context).copyWith(
-                  color: AppColors.of(context).textMuted,
+                style: AppTextStyles.bodySemi(context).copyWith(color: AppColors.of(context).textMuted,
                 ),
               ),
             ),
@@ -425,7 +419,7 @@ class _InventoryItemDetailScreenState
             ),
             Expanded(
               child: Padding(
-                padding: Responsive.pagePadding(context, top: 12, bottom: 12),
+                padding: Responsive.pagePadding(context, top: context.h(12), bottom: context.h(12)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -526,17 +520,12 @@ class _StockHistoryTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.bodySecondary(context).copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTextStyles.body(context).copyWith(color: colors.textPrimary),
                 ),
               ),
               Text(
                 time,
-                style: AppTextStyles.label(context).copyWith(
-                  color: colors.textMuted,
-                ),
+                style: AppTextStyles.bodySemi(context).copyWith(color: colors.textMuted),
               ),
             ],
           ),
@@ -581,17 +570,12 @@ class _StockHistoryTile extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.label(context).copyWith(
-            color: colors.textMuted,
-          ),
+          style: AppTextStyles.bodySemi(context).copyWith(color: colors.textMuted),
         ),
         SizedBox(width: context.w(6)),
         Text(
           value,
-          style: AppTextStyles.bodySecondary(context).copyWith(
-            color: colors.textPrimary,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTextStyles.body(context).copyWith(color: colors.textPrimary),
         ),
       ],
     );
@@ -648,15 +632,13 @@ class _SectionCard extends StatelessWidget {
                 SizedBox(width: context.w(8)),
                 Text(
                   title,
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(color: colors.textPrimary),
                 ),
               ],
             ),
           ),
           // Full-bleed underline (touches card edges)
-          Divider(height: 1, thickness: 1, color: colors.divider),
+          Divider(height: context.h(1), thickness: 1, color: colors.divider),
           if (expandChild)
             Expanded(
               child: Padding(
@@ -788,9 +770,7 @@ class _ActionsSection extends StatelessWidget {
           Expanded(
             child: Text(
               'Remove this item from inventory.',
-              style: AppTextStyles.bodySecondary(context).copyWith(
-                color: colors.textSecondary,
-              ),
+              style: AppTextStyles.body(context).copyWith(color: colors.textSecondary),
             ),
           ),
           SizedBox(width: context.w(12)),

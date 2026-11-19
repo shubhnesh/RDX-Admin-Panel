@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/screens/order/bill_settlement_screen.dart';
 import 'package:rdx_admin/widgets/dialogs/rdx_notice_dialog.dart';
-import 'package:rdx_admin/services/table_config_service.dart';
-import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/text_styles.dart';
 import '../../core/utils/responsive_size.dart';
@@ -16,11 +15,6 @@ import '../../widgets/reusable_widgets/rdx_header.dart';
 import '../../widgets/reusable_widgets/rdx_dropdown.dart';
 import '../../widgets/reusable_widgets/rdx_text_field.dart';
 import 'widgets/order_summary_widgets.dart';
-
-/// Sentinel value as the first entry in the table dropdown.
-/// Selecting it opens the set/edit total-tables dialog (same pattern as
-/// create-category on the menu screen).
-const String _kSetTableCountValue = '__set_table_count__';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -39,77 +33,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   OrderType _orderType = OrderType.dineIn;
 
-  final _tableConfigService = TableConfigService();
-
-  /// Total tables configured for the restaurant (`null` = not set yet).
-  int? _totalTables;
-
-  /// Selected table number as a string (e.g. `"4"`), or `null`.
-  String? _selectedTable;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTableCount();
-  }
-
-  Future<void> _loadTableCount() async {
-    try {
-      final count = await _tableConfigService.fetchTableCount();
-      if (!mounted) return;
-      setState(() {
-        _totalTables = count;
-        if (_selectedTable != null && count != null) {
-          final n = int.tryParse(_selectedTable!);
-          if (n == null || n < 1 || n > count) {
-            _selectedTable = null;
-          }
-        }
-      });
-    } catch (_) {
-      // Leave null; user can still set count from the dropdown.
-    }
-  }
-
-  /// Opens the set/edit total-tables dialog ([CategoryEntryDialog]) and
-  /// persists via [TableConfigService] independently of form submission.
-  Future<void> _openTableCountDialog() async {
-    final result = await CategoryEntryDialog.show<int>(
-      context,
-      title: 'Set Total Tables',
-      editTitle: 'Edit Total Tables',
-      nameLabel: 'Total tables *',
-      nameHint: 'Enter count',
-      initialName: _totalTables?.toString(),
-      saveButtonLabel: 'Done',
-      onSave: (name, _) async {
-        final n = int.tryParse(name.trim());
-        if (n == null ||
-            n < TableConfigService.minTables ||
-            n > TableConfigService.maxTables) {
-          throw FormatException(
-            'Enter a number between ${TableConfigService.minTables} '
-            'and ${TableConfigService.maxTables}.',
-          );
-        }
-        // Persist independently of the checkout form.
-        await _tableConfigService.saveTableCount(n);
-        return n;
-      },
-    );
-
-    if (result == null || !mounted) return;
-
-    setState(() {
-      _totalTables = result;
-      if (_selectedTable != null) {
-        final n = int.tryParse(_selectedTable!);
-        if (n == null || n < 1 || n > result) {
-          _selectedTable = null;
-        }
-      }
-    });
-  }
+  /// Table number typed by staff (digits only, max 3).
+  final _tableNumber = TextEditingController();
 
   @override
   void dispose() {
@@ -117,6 +42,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _customerPhone.dispose();
     _deliveryAddress.dispose();
     _orderNotes.dispose();
+    _tableNumber.dispose();
     super.dispose();
   }
 
@@ -134,10 +60,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
-    if (_orderType == OrderType.dineIn &&
-        (_selectedTable == null || _selectedTable!.isEmpty)) {
-      await _showNotice('Please select a table number.');
-      return;
+    if (_orderType == OrderType.dineIn) {
+      final table = int.tryParse(_tableNumber.text.trim());
+      if (table == null || table < 1) {
+        await _showNotice('Please enter a valid table number.');
+        return;
+      }
     }
 
     if (_orderType == OrderType.delivery &&
@@ -152,7 +80,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         {
           'product_id': line.menuItem.id,
           'quantity': line.quantity,
-          // Size is not yet stored on CartLineItem in admin; omit for now.
+          'size': line.size,
           'notes': line.notes,
           'spice_level': line.spiceLevel,
           'add_ons': line.addOns.map((a) => a.name).toList(),
@@ -163,7 +91,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ? 'Walk-in Customer'
         : _customerName.text.trim();
     final phoneNumber = _customerPhone.text.trim();
-    final tableNumber = _orderType == OrderType.dineIn ? _selectedTable : null;
+    final tableNumber = _orderType == OrderType.dineIn
+        ? int.parse(_tableNumber.text.trim()).toString()
+        : null;
     final deliveryAddress =
         _orderType == OrderType.delivery ? _deliveryAddress.text.trim() : '';
     final orderNotes =
@@ -205,13 +135,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               quantity: item.quantity,
               amount: item.price * item.quantity,
               modifiers: [
+                if (item.size != null && item.size!.trim().isNotEmpty)
+                  'Size: ${item.size}',
                 if (item.spiceLevel != null &&
                     item.spiceLevel!.trim().isNotEmpty)
                   'Spice: ${item.spiceLevel}',
                 ...item.addOns,
                 if (item.notes != null && item.notes!.trim().isNotEmpty)
                   'Note: ${item.notes}',
-              ],
+              ]
             )
         else
           // Fallback to cart display if CF returned empty items (shouldn't happen).
@@ -221,20 +153,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               quantity: line.quantity,
               amount: line.subtotal,
               modifiers: [
+                if (line.size != null && line.size!.trim().isNotEmpty)
+                  'Size: ${line.size}',
                 if (line.spiceLevel != null &&
                     line.spiceLevel!.trim().isNotEmpty)
                   'Spice: ${line.spiceLevel}',
                 ...line.addOns.map((a) => a.displayLabel),
                 if (line.notes != null && line.notes!.trim().isNotEmpty)
                   'Note: ${line.notes}',
-              ],
+              ]
             ),
       ];
 
       // Subtotal from server item lines (authoritative).
       final serverSubtotal = billItems.fold<double>(
         0,
-        (sum, b) => sum + b.amount,
+        (sum, b) => sum + b.amount
       );
 
       final feeSettings = ref.read(settingsProvider);
@@ -268,10 +202,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               deliveryAddress: deliveryAddress,
               sendDigitalReceipt: false,
               invoiceReference: created.id,
-              receiptDateTime: DateTime.now(),
-            ),
-          ),
-        ),
+              receiptDateTime: DateTime.now()
+            )
+          )
+        )
       );
     } catch (e) {
       controller.state = AsyncError(e, StackTrace.current);
@@ -280,7 +214,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       await _showNotice(
         message.isNotEmpty
             ? message
-            : 'Failed to place order. Please try again.',
+            : 'Failed to place order. Please try again.'
       );
     }
   }
@@ -320,8 +254,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final emptyOrderMessage = Text(
       'No items in the order.',
       style: AppTextStyles.body(context).copyWith(
-        color: colors.textSecondary,
-      ),
+        color: colors.textSecondary
+      )
     );
     final orderItems = LayoutBuilder(
       builder: (context, constraints) {
@@ -330,7 +264,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         final columns =
             (constraints.maxWidth / (maxCardWidth + spacing)).floor().clamp(
                   1,
-                  3,
+                  3
                 );
         final cardWidth =
             (constraints.maxWidth - spacing * (columns - 1)) / columns;
@@ -341,18 +275,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             for (final line in cart)
               SizedBox(
                 width: cardWidth,
-                child: OrderSummaryItemCard(line: line),
+                child: OrderSummaryItemCard(line: line)
               ),
-          ],
+          ]
         );
         final scrollView = SingleChildScrollView(child: cards);
 
         if (!isNarrow) return scrollView;
         return ConstrainedBox(
           constraints: BoxConstraints(maxHeight: context.h(360)),
-          child: scrollView,
+          child: scrollView
         );
-      },
+      }
     );
 
     final orderSummary = OrderSummaryPanel(
@@ -368,23 +302,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         if (isNarrow) cart.isEmpty ? emptyOrderMessage : orderItems,
         Divider(
           color: colors.divider,
-          height: context.h(20),
+          height: context.h(20)
         ),
         Row(
           children: [
             Expanded(
               child: Text(
                 'Total items',
-                style: AppTextStyles.bodySecondary(context)
-                    .copyWith(color: colors.textSecondary),
-              ),
+                style: AppTextStyles.body(context)
+                    .copyWith(color: colors.textSecondary)
+              )
             ),
             Text(
               '$totalItems',
-              style: AppTextStyles.bodySecondary(context)
-                  .copyWith(color: colors.textPrimary),
+              style: AppTextStyles.body(context)
+                  .copyWith(color: colors.textPrimary)
             ),
-          ],
+          ]
         ),
         SizedBox(height: context.h(6)),
         _summaryAmountRow(context, colors, 'Subtotal', subtotal),
@@ -393,7 +327,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           context,
           colors,
           'GST (${gstPercent.toStringAsFixed(0)}%)',
-          tax,
+          tax
         ),
         if (deliveryFeePreview > 0) ...[
           SizedBox(height: context.h(6)),
@@ -401,7 +335,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             context,
             colors,
             'Delivery fee',
-            deliveryFeePreview,
+            deliveryFeePreview
           ),
         ],
         SizedBox(height: context.h(10)),
@@ -409,21 +343,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           children: [
             Text(
               'Total',
-              style: AppTextStyles.section(context).copyWith(
-                color: colors.textPrimary,
-              ),
+              style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                color: colors.textPrimary
+              )
             ),
             const Spacer(),
             Text(
               '₹${total.toStringAsFixed(2)}',
-              style: AppTextStyles.section(context).copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                color: AppColors.primary
+                )
             ),
-          ],
+          ]
         ),
-      ],
+      ]
     );
 
     final detailPanels = Column(
@@ -442,14 +375,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   controller: _customerName,
                   maxLength: 20,
                   label: 'Customer Name',
-                  hint: 'Enter customer name',
+                  hint: 'Enter customer name'
                 );
                 final phoneField = RdxTextField(
                   controller: _customerPhone,
                   maxLength: 10,
                   label: 'Phone Number',
                   hint: 'Enter phone number',
-                  keyboardType: TextInputType.phone,
+                  keyboardType: TextInputType.phone
                 );
                 if (stack) {
                   return Column(
@@ -457,7 +390,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       nameField,
                       SizedBox(height: context.h(14)),
                       phoneField,
-                    ],
+                    ]
                   );
                 }
                 return Row(
@@ -465,11 +398,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     Expanded(child: nameField),
                     SizedBox(width: context.w(14)),
                     Expanded(child: phoneField),
-                  ],
+                  ]
                 );
-              },
+              }
             ),
-          ],
+          ]
         ),
         SizedBox(height: context.h(16)),
         _panel(
@@ -489,44 +422,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 setState(() {
                   _orderType = value;
                   if (value != OrderType.dineIn) {
-                    _selectedTable = null;
+                    _tableNumber.clear();
                   }
                   if (value != OrderType.delivery) {
                     _deliveryAddress.clear();
                   }
                 });
-              },
+              }
             ),
             if (_orderType == OrderType.dineIn) ...[
               SizedBox(height: context.h(14)),
-              RdxDropdown<String>(
+              RdxTextField(
+                controller: _tableNumber,
                 label: 'Table Number *',
-                value: _selectedTable,
-                searchable: true,
-                items: [
-                  _kSetTableCountValue,
-                  if (_totalTables != null)
-                    for (var i = 1; i <= _totalTables!; i++) '$i',
-                ],
-                labelBuilder: (value) {
-                  if (value == _kSetTableCountValue) {
-                    return _totalTables == null
-                        ? '+ Set table count'
-                        : '+ Edit table count ($_totalTables)';
-                  }
-                  return 'Table $value';
-                },
-                hint: _totalTables == null
-                    ? 'Set table count first'
-                    : 'Select or search table',
-                onChanged: (value) {
-                  if (value == null) return;
-                  if (value == _kSetTableCountValue) {
-                    _openTableCountDialog();
-                    return;
-                  }
-                  setState(() => _selectedTable = value);
-                },
+                hint: 'Enter table number',
+                maxLength: 3,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly]
               ),
             ],
             if (_orderType == OrderType.delivery) ...[
@@ -536,10 +448,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 maxLength: 200,
                 label: 'Delivery Address *',
                 hint: 'Enter delivery address',
-                maxLines: 3,
+                maxLines: 3
               ),
             ],
-          ],
+          ]
         ),
         SizedBox(height: context.h(16)),
         _panel(
@@ -553,11 +465,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               maxLength: 40,
               label: 'Kitchen Notes',
               hint: 'Write any special instructions for your order',
-              maxLines: 3,
+              maxLines: 3
             ),
-          ],
+          ]
         ),
-      ],
+      ]
     );
 
     return Scaffold(
@@ -566,7 +478,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         children: [
           const RdxHeader(
             title: 'Checkout',
-            showBackButton: true,
+            showBackButton: true
           ),
           Expanded(
             child: Form(
@@ -577,7 +489,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         context.w(20),
                         context.h(16),
                         context.w(20),
-                        context.h(28),
+                        context.h(28)
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,15 +497,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           orderSummary,
                           SizedBox(height: context.h(16)),
                           detailPanels,
-                        ],
-                      ),
+                        ]
+                      )
                     )
                   : Padding(
                       padding: EdgeInsets.fromLTRB(
                         context.w(20),
                         context.h(16),
                         context.w(20),
-                        context.h(24),
+                        context.h(24)
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -601,13 +513,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           Expanded(
                             child: SingleChildScrollView(
                               padding: EdgeInsets.only(right: context.w(20)),
-                              child: detailPanels,
-                            ),
+                              child: detailPanels
+                            )
                           ),
                           VerticalDivider(
                             width: context.w(1),
                             thickness: context.h(1),
-                            color: colors.border,
+                            color: colors.border
                           ),
                           SizedBox(width: context.w(20)),
                           SizedBox(
@@ -619,13 +531,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 SizedBox(height: context.h(16)),
                                 _actionButtons(
                                     context, cart.isNotEmpty, placing),
-                              ],
-                            ),
+                              ]
+                            )
                           ),
-                        ],
-                      ),
-                    ),
-            ),
+                        ]
+                      )
+                    )
+            )
           ),
           if (isNarrow)
             SafeArea(
@@ -635,13 +547,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   context.w(20),
                   context.h(10),
                   context.w(20),
-                  context.h(14),
+                  context.h(14)
                 ),
-                child: _actionButtons(context, cart.isNotEmpty, placing),
-              ),
+                child: _actionButtons(context, cart.isNotEmpty, placing)
+              )
             ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -651,18 +563,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         Expanded(
           child: RdxActionButton.discard(
             enabled: !placing,
-            onPressed: () => Navigator.pop(context),
-          ),
+            onPressed: () => Navigator.pop(context)
+          )
         ),
         SizedBox(width: context.w(10)),
         Expanded(
           child: RdxActionButton.save(
             isLoading: placing,
             enabled: hasItems,
-            onPressed: _placeOrder,
-          ),
+            onPressed: _placeOrder
+          )
         ),
-      ],
+      ]
     );
   }
 
@@ -674,25 +586,25 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     BuildContext context,
     AppColorScheme colors,
     String label,
-    double amount,
+    double amount
   ) {
     return Row(
       children: [
         Expanded(
           child: Text(
             label,
-            style: AppTextStyles.bodySecondary(context).copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
+            style: AppTextStyles.body(context).copyWith(
+              color: colors.textSecondary
+            )
+          )
         ),
         Text(
           '₹${amount.toStringAsFixed(2)}',
-          style: AppTextStyles.bodySecondary(context).copyWith(
-            color: colors.textPrimary,
-          ),
+          style: AppTextStyles.body(context).copyWith(
+            color: colors.textPrimary
+          )
         ),
-      ],
+      ]
     );
   }
 
@@ -715,7 +627,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -727,19 +639,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                    color: colors.textPrimary
+                  )
+                )
               ),
               if (headerTrailing != null) headerTrailing,
-            ],
+            ]
           ),
           SizedBox(height: context.h(16)),
           if (expandedContent != null) Expanded(child: expandedContent),
           ...children,
-        ],
-      ),
+        ]
+      )
     );
   }
 }

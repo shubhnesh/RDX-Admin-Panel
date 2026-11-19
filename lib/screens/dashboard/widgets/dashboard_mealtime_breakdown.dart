@@ -96,14 +96,12 @@ class DashboardMealtimeBreakdown extends StatelessWidget {
             Expanded(
               child: Text(
                 item.label,
-                style: AppTextStyles.body(context)
-                    .copyWith(fontWeight: FontWeight.w600),
+                style: AppTextStyles.bodySemi(context),
               ),
             ),
             Text(
               '${item.count}',
-              style: AppTextStyles.body(context)
-                  .copyWith(fontWeight: FontWeight.w800),
+              style: AppTextStyles.bodyLargeSemi(context),
             ),
             SizedBox(width: context.w(8)),
             SizedBox(
@@ -111,10 +109,7 @@ class DashboardMealtimeBreakdown extends StatelessWidget {
               child: Text(
                 '${item.percent.toStringAsFixed(0)}%',
                 textAlign: TextAlign.right,
-                style: AppTextStyles.caption(context).copyWith(
-                  color: const Color(0xFF16A34A),
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppTextStyles.caption(context).copyWith(color: AppColors.success),
               ),
             ),
           ],

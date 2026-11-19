@@ -43,26 +43,26 @@ class OrderDetailsScreen extends ConsumerWidget {
                 return _headerTitle(order);
               },
               loading: () => 'Order detail',
-              error: (_, __) => 'Order detail',
+              error: (_, __) => 'Order detail'
             ),
-            showBackButton: true,
+            showBackButton: true
           ),
           Expanded(
             child: asyncOrder.when(
               loading: () => const LoadingIndicator(),
               error: (error, _) => EmptyState(
-                message: 'Failed to load order.\n$error',
+                message: 'Failed to load order.\n$error'
               ),
               data: (order) {
                 if (order == null) {
                   return const EmptyState(message: 'Order not found.');
                 }
                 return _OrderDetailBody(order: order);
-              },
-            ),
+              }
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -112,7 +112,7 @@ class _OrderDetailBody extends ConsumerWidget {
           context.w(20),
           context.h(16),
           context.w(20),
-          context.h(28),
+          context.h(28)
         ),
         child: Column(
           children: [
@@ -124,11 +124,11 @@ class _OrderDetailBody extends ConsumerWidget {
                 order: order,
                 subtotal: subtotal,
                 tax: tax,
-                taxPercent: taxPercent,
-              ),
+                taxPercent: taxPercent
+              )
             ),
-          ],
-        ),
+          ]
+        )
       );
     }
 
@@ -137,7 +137,7 @@ class _OrderDetailBody extends ConsumerWidget {
         context.w(20),
         context.h(16),
         context.w(20),
-        context.h(24),
+        context.h(24)
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -145,13 +145,13 @@ class _OrderDetailBody extends ConsumerWidget {
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.only(right: context.w(22)),
-              child: _LeftFormColumn(order: order),
-            ),
+              child: _LeftFormColumn(order: order)
+            )
           ),
           VerticalDivider(
             width: context.w(1),
             thickness: 1,
-            color: colors.border,
+            color: colors.border
           ),
           SizedBox(
             width: context.w(340),
@@ -161,12 +161,12 @@ class _OrderDetailBody extends ConsumerWidget {
                 order: order,
                 subtotal: subtotal,
                 tax: tax,
-                taxPercent: taxPercent,
-              ),
-            ),
+                taxPercent: taxPercent
+              )
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 }
@@ -200,11 +200,11 @@ class _LeftFormColumn extends ConsumerWidget {
                 final stack = c.maxWidth < 400;
                 final orderIdField = _InfoField(
                   label: 'Order ID',
-                  value: order.id,
+                  value: order.id
                 );
                 final serviceField = _InfoField(
                   label: 'Service option',
-                  value: _orderTypeLabel(order.orderType),
+                  value: _orderTypeLabel(order.orderType)
                 );
                 if (stack) {
                   return Column(
@@ -213,7 +213,7 @@ class _LeftFormColumn extends ConsumerWidget {
                       orderIdField,
                       SizedBox(height: context.h(14)),
                       serviceField,
-                    ],
+                    ]
                   );
                 }
                 return Row(
@@ -222,9 +222,9 @@ class _LeftFormColumn extends ConsumerWidget {
                     Expanded(child: orderIdField),
                     SizedBox(width: context.w(14)),
                     Expanded(child: serviceField),
-                  ],
+                  ]
                 );
-              },
+              }
             ),
             SizedBox(height: context.h(16)),
             // TABLE + CUSTOMER (name + phone when provided at checkout)
@@ -236,7 +236,7 @@ class _LeftFormColumn extends ConsumerWidget {
                   label: 'Table',
                   value: (order.tableNumber?.trim().isNotEmpty ?? false)
                       ? 'Table ${order.tableNumber}'
-                      : 'No table / counter',
+                      : 'No table / counter'
                 );
                 final customer = Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,19 +244,19 @@ class _LeftFormColumn extends ConsumerWidget {
                     Expanded(
                       child: _InfoField(
                         label: 'Customer',
-                        value: customerName,
-                      ),
+                        value: customerName
+                      )
                     ),
                     if (order.customerPhone.trim().isNotEmpty) ...[
                       SizedBox(width: context.w(12)),
                       Expanded(
                         child: _InfoField(
                           label: 'Mobile number',
-                          value: order.customerPhone.trim(),
-                        ),
+                          value: order.customerPhone.trim()
+                        )
                       ),
                     ],
-                  ],
+                  ]
                 );
                 if (stack) {
                   return Column(
@@ -267,7 +267,7 @@ class _LeftFormColumn extends ConsumerWidget {
                         SizedBox(height: context.h(14)),
                       ],
                       customer,
-                    ],
+                    ]
                   );
                 }
                 if (!isDineIn) return customer;
@@ -277,19 +277,19 @@ class _LeftFormColumn extends ConsumerWidget {
                     Expanded(child: table),
                     SizedBox(width: context.w(14)),
                     Expanded(child: customer),
-                  ],
+                  ]
                 );
-              },
+              }
             ),
             if (order.orderType == OrderType.delivery &&
                 order.deliveryAddress.trim().isNotEmpty) ...[
               SizedBox(height: context.h(14)),
               _InfoField(
                 label: 'Delivery address',
-                value: order.deliveryAddress,
+                value: order.deliveryAddress
               ),
             ],
-          ],
+          ]
         ),
 
         SizedBox(height: context.h(16)),
@@ -309,7 +309,7 @@ class _LeftFormColumn extends ConsumerWidget {
               SizedBox(height: context.h(14)),
               _CancelledBanner(),
             ],
-          ],
+          ]
         ),
 
         if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
@@ -323,16 +323,16 @@ class _LeftFormColumn extends ConsumerWidget {
                 padding: EdgeInsets.all(context.h(12)),
                 decoration: BoxDecoration(
                   color: colors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(context.h(8)),
+                  borderRadius: BorderRadius.circular(context.h(8))
                 ),
                 child: Text(
                   order.notes!,
-                  style: AppTextStyles.bodySecondary(context).copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
+                  style: AppTextStyles.body(context).copyWith(
+                    color: colors.textSecondary
+                  )
+                )
               ),
-            ],
+            ]
           ),
         ],
 
@@ -347,36 +347,35 @@ class _LeftFormColumn extends ConsumerWidget {
               width: double.infinity,
               padding: EdgeInsets.symmetric(
                 horizontal: context.w(12),
-                vertical: context.h(12),
+                vertical: context.h(12)
               ),
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(context.h(8)),
+                borderRadius: BorderRadius.circular(context.h(8))
               ),
               child: Row(
                 children: [
                   Text(
                     'Total due',
-                    style: AppTextStyles.section(context).copyWith(
-                      color: colors.textPrimary,
-                    ),
+                    style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                      color: colors.textPrimary
+                    )
                   ),
                   const Spacer(),
                   Text(
                     '₹${order.total.toStringAsFixed(2)}',
-                    style: AppTextStyles.section(context).copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                      color: AppColors.primary
+                      )
                   ),
-                ],
-              ),
+                ]
+              )
             ),
             SizedBox(height: context.h(12)),
             _PaymentStatusCard(order: order),
-          ],
+          ]
         ),
-      ],
+      ]
     );
   }
 
@@ -418,7 +417,7 @@ class _RightOrderSummary extends ConsumerWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(10)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         children: [
@@ -428,38 +427,38 @@ class _RightOrderSummary extends ConsumerWidget {
               context.w(12),
               context.h(12),
               context.w(12),
-              context.h(10),
+              context.h(10)
             ),
             child: Row(
               children: [
                 Text(
                   'Order items',
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                    color: colors.textPrimary
+                  )
                 ),
                 if (order.items.isNotEmpty) ...[
                   SizedBox(width: context.w(6)),
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: context.w(7),
-                      vertical: context.h(2),
+                      vertical: context.h(2)
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(context.h(20)),
+                      borderRadius: BorderRadius.circular(context.h(20))
                     ),
                     child: Text(
                       '${order.items.length}',
                       style: AppTextStyles.caption(context).copyWith(
                         color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                        fontWeight: FontWeight.w700
+                      )
+                    )
                   ),
                 ],
-              ],
-            ),
+              ]
+            )
           ),
 
           Divider(height: 1, color: colors.divider),
@@ -473,15 +472,15 @@ class _RightOrderSummary extends ConsumerWidget {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.symmetric(
                       horizontal: context.w(10),
-                      vertical: context.h(10),
+                      vertical: context.h(10)
                     ),
                     itemCount: order.items.length,
                     separatorBuilder: (_, __) =>
                         SizedBox(height: context.h(10)),
                     itemBuilder: (context, index) {
                       return _CartStyleItemCard(item: order.items[index]);
-                    },
-                  ),
+                    }
+                  )
           ),
 
           // Totals + Print (primary only — no Paid button)
@@ -490,12 +489,12 @@ class _RightOrderSummary extends ConsumerWidget {
               context.w(12),
               context.h(10),
               context.w(12),
-              context.h(12),
+              context.h(12)
             ),
             decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(color: colors.border),
-              ),
+                top: BorderSide(color: colors.border)
+              )
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -506,7 +505,7 @@ class _RightOrderSummary extends ConsumerWidget {
                   context,
                   colors,
                   'GST (${taxPercent.toStringAsFixed(0)}%)',
-                  tax,
+                  tax
                 ),
                 if (order.deliveryFee > 0) ...[
                   SizedBox(height: context.h(6)),
@@ -519,7 +518,7 @@ class _RightOrderSummary extends ConsumerWidget {
                     context,
                     colors,
                     'Late Night Delivery',
-                    order.lateNightFee,
+                    order.lateNightFee
                   ),
                 ],
                 if (order.longDistanceFee > 0) ...[
@@ -528,7 +527,7 @@ class _RightOrderSummary extends ConsumerWidget {
                     context,
                     colors,
                     'Long Distance Fee',
-                    order.longDistanceFee,
+                    order.longDistanceFee
                   ),
                 ],
                 SizedBox(height: context.h(10)),
@@ -537,16 +536,15 @@ class _RightOrderSummary extends ConsumerWidget {
                   children: [
                     Text(
                       'Total due',
-                      style: AppTextStyles.section(context),
+                      style: AppTextStyles.bodyLargeSemi(context)
                     ),
                     Text(
                       '₹${order.total.toStringAsFixed(2)}',
-                      style: AppTextStyles.section(context).copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                        color: AppColors.primary
+                        )
                     ),
-                  ],
+                  ]
                 ),
                 SizedBox(height: context.h(14)),
                 if (!isPaid)
@@ -555,19 +553,19 @@ class _RightOrderSummary extends ConsumerWidget {
                     child: RdxActionButton(
                       label: 'Pay Now',
                       isPrimary: true,
-                      onPressed: () => _openSettlement(context, ref),
-                    ),
+                      onPressed: () => _openSettlement(context, ref)
+                    )
                   ),
                 if (order.status != OrderStatus.cancelled &&
                     order.status != OrderStatus.delivered) ...[
                   SizedBox(height: context.h(10)),
                   _TerminateAction(order: order),
                 ],
-              ],
-            ),
+              ]
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -581,19 +579,18 @@ class _RightOrderSummary extends ConsumerWidget {
             Icon(
               Icons.receipt_long_outlined,
               size: context.h(30),
-              color: colors.textMuted,
+              color: colors.textMuted
             ),
             SizedBox(height: context.h(8)),
             Text(
               'No items',
-              style: AppTextStyles.label(context).copyWith(
-                color: colors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppTextStyles.bodySemi(context).copyWith(
+                color: colors.textSecondary
+                )
             ),
-          ],
-        ),
-      ),
+          ]
+        )
+      )
     );
   }
 
@@ -601,17 +598,17 @@ class _RightOrderSummary extends ConsumerWidget {
     BuildContext context,
     AppColorScheme colors,
     String label,
-    double amount,
+    double amount
   ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: AppTextStyles.bodySecondary(context)),
+        Text(label, style: AppTextStyles.body(context)),
         Text(
           '₹${amount.toStringAsFixed(2)}',
-          style: AppTextStyles.bodySecondary(context),
+          style: AppTextStyles.body(context)
         ),
-      ],
+      ]
     );
   }
 
@@ -644,11 +641,13 @@ class _RightOrderSummary extends ConsumerWidget {
                   quantity: item.quantity,
                   amount: item.price * item.quantity,
                   modifiers: [
+                    if (item.size != null && item.size!.trim().isNotEmpty)
+                      'Size: ${item.size}',
                     if (item.spiceLevel != null &&
                         item.spiceLevel!.trim().isNotEmpty)
                       item.spiceLevel!,
                     ...item.addOns,
-                  ],
+                  ]
                 ),
             ],
             paymentMethod: order.paymentMethod?.label,
@@ -664,11 +663,11 @@ class _RightOrderSummary extends ConsumerWidget {
             deliveryAddress: order.deliveryAddress,
             sendDigitalReceipt: false,
             invoiceReference: order.id,
-            receiptDateTime: DateTime.now(),
+            receiptDateTime: DateTime.now()
           ),
-          onClose: () => Navigator.of(context).pop(),
-        ),
-      ),
+          onClose: () => Navigator.of(context).pop()
+        )
+      )
     );
 
     if (!context.mounted) return;
@@ -710,11 +709,11 @@ class _CartStyleItemCard extends StatelessWidget {
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: AppColors.black.withValues(alpha: 0.04),
             blurRadius: context.h(10),
-            offset: Offset(0, context.h(3)),
+            offset: Offset(0, context.h(3))
           ),
-        ],
+        ]
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -727,39 +726,42 @@ class _CartStyleItemCard extends StatelessWidget {
                   item.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                    color: colors.textPrimary
+                  )
+                )
               ),
               SizedBox(width: context.w(8)),
               Text(
                 '₹${amount.toStringAsFixed(2)}',
-                style: AppTextStyles.section(context).copyWith(
-                  color: colors.textPrimary,
-                ),
+                style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                  color: colors.textPrimary
+                )
               ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(2)),
           Text(
             '₹${item.price.toStringAsFixed(2)} each',
-            style: AppTextStyles.bodySecondary(context).copyWith(
-              color: AppColors.primary,
-            ),
+            style: AppTextStyles.body(context).copyWith(
+              color: AppColors.primary
+            )
           ),
           SizedBox(height: context.h(6)),
           Text(
             'Qty: ${item.quantity}',
-            style: AppTextStyles.label(context).copyWith(
-              color: colors.textSecondary,
-            ),
+            style: AppTextStyles.bodySemi(context).copyWith(
+              color: colors.textSecondary
+            )
           ),
-          if ((item.spiceLevel != null && item.spiceLevel!.trim().isNotEmpty) ||
+          if ((item.size != null && item.size!.trim().isNotEmpty) ||
+              (item.spiceLevel != null && item.spiceLevel!.trim().isNotEmpty) ||
               item.addOns.isNotEmpty) ...[
             SizedBox(height: context.h(4)),
             Text(
               [
+                if (item.size != null && item.size!.trim().isNotEmpty)
+                  item.size!,
                 if (item.spiceLevel != null &&
                     item.spiceLevel!.trim().isNotEmpty)
                   item.spiceLevel!,
@@ -768,8 +770,8 @@ class _CartStyleItemCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.caption(context).copyWith(
-                color: colors.textSecondary,
-              ),
+                color: colors.textSecondary
+              )
             ),
           ],
           if (item.notes != null && item.notes!.trim().isNotEmpty) ...[
@@ -780,12 +782,12 @@ class _CartStyleItemCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.caption(context).copyWith(
                 color: colors.textMuted,
-                fontStyle: FontStyle.italic,
-              ),
+                fontStyle: FontStyle.italic
+              )
             ),
           ],
-        ],
-      ),
+        ]
+      )
     );
   }
 }
@@ -815,7 +817,7 @@ class _FormSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -827,17 +829,17 @@ class _FormSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                    color: colors.textPrimary
+                  )
+                )
               ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(16)),
           ...children,
-        ],
-      ),
+        ]
+      )
     );
   }
 }
@@ -857,9 +859,9 @@ class _InfoField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.bodySecondary(context).copyWith(
-            color: colors.textMuted,
-          ),
+          style: AppTextStyles.body(context).copyWith(
+            color: colors.textMuted
+          )
         ),
         SizedBox(height: context.h(6)),
         Text(
@@ -868,10 +870,10 @@ class _InfoField extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: AppTextStyles.body(context).copyWith(
             color: colors.textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
+            fontWeight: FontWeight.w500
+          )
         ),
-      ],
+      ]
     );
   }
 }
@@ -913,8 +915,8 @@ class _StatusRow extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(
                       color:
-                          i <= activeIndex ? AppColors.primary : colors.border,
-                    ),
+                          i <= activeIndex ? AppColors.primary : colors.border
+                    )
                   ),
                   // Always show check for completed + current when delivered;
                   // never show the step number on a finished step.
@@ -922,15 +924,15 @@ class _StatusRow extends StatelessWidget {
                       ? Icon(
                           Icons.check,
                           size: context.h(14),
-                          color: Colors.white,
+                          color: AppColors.white
                         )
                       : Text(
                           '${i + 1}',
                           style: AppTextStyles.caption(context).copyWith(
                             color: colors.textMuted,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                            fontWeight: FontWeight.w700
+                          )
+                        )
                 ),
                 SizedBox(height: context.h(6)),
                 Text(
@@ -941,11 +943,11 @@ class _StatusRow extends StatelessWidget {
                         ? colors.textPrimary
                         : colors.textMuted,
                     fontWeight:
-                        i == activeIndex ? FontWeight.w700 : FontWeight.w500,
-                  ),
+                        i == activeIndex ? FontWeight.w700 : FontWeight.w500
+                  )
                 ),
-              ],
-            ),
+              ]
+            )
           ),
           if (i < steps.length - 1)
             Expanded(
@@ -953,12 +955,12 @@ class _StatusRow extends StatelessWidget {
                 padding: EdgeInsets.only(bottom: context.h(18)),
                 child: Container(
                   height: 2,
-                  color: i < activeIndex ? AppColors.primary : colors.border,
-                ),
-              ),
+                  color: i < activeIndex ? AppColors.primary : colors.border
+                )
+              )
             ),
         ],
-      ],
+      ]
     );
   }
 
@@ -992,9 +994,9 @@ class _WorkflowAction extends ConsumerWidget {
       return Text(
         'Complete payment before marking this order delivered.',
         textAlign: TextAlign.center,
-        style: AppTextStyles.bodySecondary(context).copyWith(
-          color: colors.textSecondary,
-        ),
+        style: AppTextStyles.body(context).copyWith(
+          color: colors.textSecondary
+        )
       );
     }
 
@@ -1019,7 +1021,7 @@ class _WorkflowAction extends ConsumerWidget {
           try {
             await OrderService().updateOrderStatus(
               orderId: order.id,
-              newStatus: nextStatus,
+              newStatus: nextStatus
             );
             if (!context.mounted) return;
             ref.invalidate(orderDetailProvider(order.id));
@@ -1027,11 +1029,11 @@ class _WorkflowAction extends ConsumerWidget {
           } catch (e) {
             if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to update status. $e')),
+              SnackBar(content: Text('Failed to update status. $e'))
             );
           }
-        },
-      ),
+        }
+      )
     );
   }
 }
@@ -1048,7 +1050,7 @@ class _TerminateAction extends ConsumerWidget {
       message: 'This will cancel the order. It will be kept in history and '
           'shown under the Cancelled tab. This cannot be undone.',
       cancelButtonLabel: 'Keep order',
-      confirmButtonLabel: 'Terminate',
+      confirmButtonLabel: 'Terminate'
 );
 
     if (confirmed != true) return;
@@ -1057,7 +1059,7 @@ class _TerminateAction extends ConsumerWidget {
       // ✅ FIXED — named parameters
       await OrderService().updateOrderStatus(
         orderId: order.id,
-        newStatus: OrderStatus.cancelled,
+        newStatus: OrderStatus.cancelled
       );
       if (!context.mounted) return;
       ref.invalidate(orderDetailProvider(order.id));
@@ -1065,7 +1067,7 @@ class _TerminateAction extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to terminate order. $e')),
+        SnackBar(content: Text('Failed to terminate order. $e'))
       );
     }
   }
@@ -1077,8 +1079,8 @@ class _TerminateAction extends ConsumerWidget {
       child: RdxActionButton(
         label: 'Terminate',
         isPrimary: false,
-        onPressed: () => _confirmAndCancel(context, ref),
-      ),
+        onPressed: () => _confirmAndCancel(context, ref)
+      )
     );
   }
 }
@@ -1091,30 +1093,30 @@ class _CancelledBanner extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(context.h(12)),
       decoration: BoxDecoration(
-        color: const Color(0xFFE05151).withValues(alpha: 0.08),
+        color: AppColors.danger.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(context.h(8)),
         border: Border.all(
-          color: const Color(0xFFE05151).withValues(alpha: 0.35),
-        ),
+          color: AppColors.danger.withValues(alpha: 0.35)
+        )
       ),
       child: Row(
         children: [
           Icon(
             Icons.cancel_outlined,
             size: context.h(18),
-            color: const Color(0xFFE05151),
+            color: AppColors.danger
           ),
           SizedBox(width: context.w(10)),
           Expanded(
             child: Text(
               'This order was terminated and is kept in history.',
-              style: AppTextStyles.bodySecondary(context).copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
+              style: AppTextStyles.body(context).copyWith(
+                color: colors.textSecondary
+              )
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 }
@@ -1138,7 +1140,7 @@ class _PaymentStatusCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(context.h(8)),
-          border: Border.all(color: colors.border),
+          border: Border.all(color: colors.border)
         ),
         child: Row(
           children: [
@@ -1147,14 +1149,14 @@ class _PaymentStatusCard extends StatelessWidget {
               width: context.h(34),
               height: context.h(34),
               decoration: const BoxDecoration(
-                color: Color(0xFF20B47A),
-                shape: BoxShape.circle,
+                color: AppColors.success,
+                shape: BoxShape.circle
               ),
               child: Icon(
                 Icons.check_rounded,
                 size: context.h(18),
-                color: Colors.white,
-              ),
+                color: AppColors.white
+              )
             ),
             SizedBox(width: context.w(12)),
             Expanded(
@@ -1165,28 +1167,27 @@ class _PaymentStatusCard extends StatelessWidget {
                     'Payment completed',
                     style: AppTextStyles.body(context).copyWith(
                       color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                      fontWeight: FontWeight.w700
+                    )
                   ),
                   SizedBox(height: context.h(2)),
                   Text(
                     order.paymentMethod?.label ?? 'Paid',
-                    style: AppTextStyles.label(context).copyWith(
-                      color: colors.textSecondary,
-                    ),
+                    style: AppTextStyles.bodySemi(context).copyWith(
+                      color: colors.textSecondary
+                    )
                   ),
-                ],
-              ),
+                ]
+              )
             ),
             Text(
               '₹${order.total.toStringAsFixed(2)}',
-              style: AppTextStyles.section(context).copyWith(
-                color: const Color(0xFF20B47A),
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                color: AppColors.success
+                )
             ),
-          ],
-        ),
+          ]
+        )
       );
     }
 

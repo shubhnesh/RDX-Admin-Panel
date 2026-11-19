@@ -48,7 +48,7 @@ class DashboardHourlyChart extends StatelessWidget {
               ),
               Text(
                 stats.periodLabel,
-                style: AppTextStyles.label(context)
+                style: AppTextStyles.bodySemi(context)
                     .copyWith(color: AppColors.primary),
               ),
             ],
@@ -64,7 +64,7 @@ class DashboardHourlyChart extends StatelessWidget {
             child: !hasData
                 ? Center(
                     child: Text('Not enough data yet',
-                        style: AppTextStyles.bodySecondary(context)),
+                        style: AppTextStyles.body(context)),
                   )
                 : BarChart(
                     BarChartData(
@@ -87,7 +87,7 @@ class DashboardHourlyChart extends StatelessWidget {
                                 return const SizedBox.shrink();
                               }
                               return Padding(
-                                padding: const EdgeInsets.only(top: 4),
+                                padding: EdgeInsets.only(top: context.h(4)),
                                 child: Text(
                                   labels[i],
                                   style: AppTextStyles.caption(context)

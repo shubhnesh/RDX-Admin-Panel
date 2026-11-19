@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/utils/formatters.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/stat_card.dart';
@@ -25,7 +26,6 @@ class InventoryStatsRow extends StatelessWidget {
       width: double.infinity,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Same breakpoint + spacing/height rules as Live Orders stats
           final isNarrow = constraints.maxWidth < 600;
           final spacing = isNarrow ? context.w(6) : context.w(16);
           final minH = isNarrow ? context.h(62) : context.h(72);
@@ -35,7 +35,7 @@ class InventoryStatsRow extends StatelessWidget {
               label: 'Expenditure',
               value: Formatters.currency(expenditure),
               icon: Icons.payments_outlined,
-              accentColor: const Color(0xFFE9A719),
+              accentColor: AppColors.warning,
               minHeight: minH,
             ),
             StatCard(
@@ -48,21 +48,21 @@ class InventoryStatsRow extends StatelessWidget {
               label: 'Added',
               value: '$addedItemCount',
               icon: Icons.add_circle_outline,
-              accentColor: const Color(0xFF20B47A),
+              accentColor: AppColors.success,
               minHeight: minH,
             ),
             StatCard(
               label: 'Used',
               value: '$usedItemCount',
               icon: Icons.remove_circle_outline,
-              accentColor: const Color(0xFFE05151),
+              accentColor: AppColors.danger,
               minHeight: minH,
             ),
             StatCard(
               label: 'Needs Restock',
               value: '$needsRestock',
               icon: Icons.warning_amber_rounded,
-              accentColor: const Color(0xFFE05151),
+              accentColor: AppColors.danger,
               minHeight: minH,
             ),
           ];

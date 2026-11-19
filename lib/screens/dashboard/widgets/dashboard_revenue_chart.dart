@@ -49,7 +49,7 @@ class DashboardRevenueChart extends StatelessWidget {
               ),
               Text(
                 stats.periodLabel,
-                style: AppTextStyles.label(context)
+                style: AppTextStyles.bodySemi(context)
                     .copyWith(color: AppColors.primary),
               ),
             ],
@@ -65,7 +65,7 @@ class DashboardRevenueChart extends StatelessWidget {
             child: !hasData
                 ? Center(
                     child: Text('Not enough data yet',
-                        style: AppTextStyles.bodySecondary(context)),
+                        style: AppTextStyles.body(context)),
                   )
                 : LineChart(
                     LineChartData(
@@ -107,7 +107,7 @@ class DashboardRevenueChart extends StatelessWidget {
                                 'S'
                               ];
                               return Padding(
-                                padding: const EdgeInsets.only(top: 4),
+                                padding: EdgeInsets.only(top: context.h(4)),
                                 child: Text(
                                   days[d.weekday - 1],
                                   style: AppTextStyles.caption(context)

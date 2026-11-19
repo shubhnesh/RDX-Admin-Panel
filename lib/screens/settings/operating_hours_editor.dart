@@ -67,12 +67,12 @@ class _OperatingHoursEditorState extends ConsumerState<OperatingHoursEditor> {
     final weekdays = OperatingHours(
       open: _weekdaysOpen,
       close: _weekdaysClose,
-      isOpen: _weekdaysEnabled,
+      isOpen: _weekdaysEnabled
     );
     final weekends = OperatingHours(
       open: _weekendsOpen,
       close: _weekendsClose,
-      isOpen: _weekendsEnabled,
+      isOpen: _weekendsEnabled
     );
 
     final save = _saveQueue.then((_) async {
@@ -80,7 +80,7 @@ class _OperatingHoursEditorState extends ConsumerState<OperatingHoursEditor> {
       setState(() => _saving = true);
       final ok = await ref.read(settingsProvider).saveOperatingHours(
             weekdaysHours: weekdays,
-            weekendsHours: weekends,
+            weekendsHours: weekends
           );
       if (!mounted) return;
       setState(() => _saving = false);
@@ -89,7 +89,7 @@ class _OperatingHoursEditorState extends ConsumerState<OperatingHoursEditor> {
           : 'Operating-hours save failed.');
       if (!ok) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save operating hours')),
+          const SnackBar(content: Text('Failed to save operating hours'))
         );
       }
     });
@@ -139,10 +139,10 @@ class _OperatingHoursEditorState extends ConsumerState<OperatingHoursEditor> {
               padding: EdgeInsets.only(bottom: context.h(8)),
               child: Text(
                 'Turn a schedule off to edit its hours. Changes save automatically.',
-                style: AppTextStyles.label(context)
-                    .copyWith(color: colors.textSecondary),
-              ),
-            ),
+                style: AppTextStyles.bodySemi(context)
+                    .copyWith(color: colors.textSecondary)
+              )
+            )
           ),
         _HoursRow(
           label: 'Weekdays',
@@ -153,7 +153,7 @@ class _OperatingHoursEditorState extends ConsumerState<OperatingHoursEditor> {
           colors: colors,
           onChanged: _updateWeekdaysEnabled,
           onOpenChanged: _updateWeekdaysOpen,
-          onCloseChanged: _updateWeekdaysClose,
+          onCloseChanged: _updateWeekdaysClose
         ),
         _HoursRow(
           label: 'Weekends',
@@ -164,7 +164,7 @@ class _OperatingHoursEditorState extends ConsumerState<OperatingHoursEditor> {
           colors: colors,
           onChanged: _updateWeekendsEnabled,
           onOpenChanged: _updateWeekendsOpen,
-          onCloseChanged: _updateWeekendsClose,
+          onCloseChanged: _updateWeekendsClose
         ),
         if (_saving)
           Padding(
@@ -175,21 +175,21 @@ class _OperatingHoursEditorState extends ConsumerState<OperatingHoursEditor> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    width: context.h(14),
+                    width: context.w(14),
                     height: context.h(14),
-                    child: const CircularProgressIndicator(strokeWidth: 2),
+                    child: const CircularProgressIndicator(strokeWidth: 2)
                   ),
                   SizedBox(width: context.w(8)),
                   Text(
                     'Saving...',
-                    style: AppTextStyles.label(context)
-                        .copyWith(color: colors.textSecondary),
+                    style: AppTextStyles.bodySemi(context)
+                        .copyWith(color: colors.textSecondary)
                   ),
-                ],
-              ),
-            ),
+                ]
+              )
+            )
           ),
-      ],
+      ]
     );
   }
 }
@@ -198,7 +198,7 @@ class _HHMMInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
-    TextEditingValue newValue,
+    TextEditingValue newValue
   ) {
     var digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.length > 4) digits = digits.substring(0, 4);
@@ -218,7 +218,7 @@ class _HHMMInputFormatter extends TextInputFormatter {
         : '${digits.substring(0, 2)}:${digits.substring(2)}';
     return TextEditingValue(
       text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+      selection: TextSelection.collapsed(offset: text.length)
     );
   }
 }
@@ -257,8 +257,8 @@ class _HoursRow extends StatelessWidget {
             opening: true,
             enabled: canEdit && !isOpen,
             colors: colors,
-            onChanged: onOpenChanged,
-          ),
+            onChanged: onOpenChanged
+          )
         ),
         SizedBox(width: context.w(12)),
         Expanded(
@@ -267,15 +267,15 @@ class _HoursRow extends StatelessWidget {
             opening: false,
             enabled: canEdit && !isOpen,
             colors: colors,
-            onChanged: onCloseChanged,
-          ),
+            onChanged: onCloseChanged
+          )
         ),
-      ],
+      ]
     );
     final toggle =
         canEdit ? RdxToggleButton(value: isOpen, onChanged: onChanged) : null;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: context.h(8)),
       child: narrow
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -285,16 +285,16 @@ class _HoursRow extends StatelessWidget {
                     Expanded(
                       child: Text(
                         label,
-                        style: AppTextStyles.bodySecondary(context)
-                            .copyWith(color: colors.textSecondary),
-                      ),
+                        style: AppTextStyles.body(context)
+                            .copyWith(color: colors.textSecondary)
+                      )
                     ),
                     if (toggle != null) toggle,
-                  ],
+                  ]
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: context.h(8)),
                 times,
-              ],
+              ]
             )
           : Row(
               children: [
@@ -302,29 +302,29 @@ class _HoursRow extends StatelessWidget {
                   flex: 2,
                   child: Text(
                     label,
-                    style: AppTextStyles.bodySecondary(context)
-                        .copyWith(color: colors.textSecondary),
-                  ),
+                    style: AppTextStyles.body(context)
+                        .copyWith(color: colors.textSecondary)
+                  )
                 ),
                 Expanded(
                   flex: 3,
                   child: Center(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: context.w(420)),
-                      child: times,
-                    ),
-                  ),
+                      child: times
+                    )
+                  )
                 ),
                 if (toggle != null)
                   Expanded(
                     flex: 1,
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: toggle,
-                    ),
+                      child: toggle
+                    )
                   ),
-              ],
-            ),
+              ]
+            )
     );
   }
 }
@@ -392,7 +392,7 @@ class _ProfileTimeState extends State<_ProfileTime> {
     final box = BoxDecoration(
       color: widget.colors.background,
       borderRadius: BorderRadius.circular(context.h(5)),
-      border: Border.all(color: widget.colors.border),
+      border: Border.all(color: widget.colors.border)
     );
     if (_editing) {
       return Container(
@@ -407,7 +407,7 @@ class _ProfileTimeState extends State<_ProfileTime> {
           keyboardType: TextInputType.number,
           maxLength: 5,
           inputFormatters: [_HHMMInputFormatter()],
-          style: AppTextStyles.section(context)
+          style: AppTextStyles.bodyLargeSemi(context)
               .copyWith(color: widget.colors.textPrimary),
           decoration: const InputDecoration(
             isCollapsed: true,
@@ -418,10 +418,10 @@ class _ProfileTimeState extends State<_ProfileTime> {
             disabledBorder: InputBorder.none,
             errorBorder: InputBorder.none,
             focusedErrorBorder: InputBorder.none,
-            contentPadding: EdgeInsets.zero,
+            contentPadding: EdgeInsets.zero
           ),
-          onSubmitted: (_) => _commit(),
-        ),
+          onSubmitted: (_) => _commit()
+        )
       );
     }
     return InkWell(
@@ -434,7 +434,7 @@ class _ProfileTimeState extends State<_ProfileTime> {
               _controller.text = widget.text.split(' ').first;
               _controller.selection = TextSelection(
                 baseOffset: 0,
-                extentOffset: _controller.text.length,
+                extentOffset: _controller.text.length
               );
               WidgetsBinding.instance
                   .addPostFrameCallback((_) => _focusNode.requestFocus());
@@ -448,10 +448,10 @@ class _ProfileTimeState extends State<_ProfileTime> {
           widget.text,
           style: _smallScreenTextStyle(
             context,
-            AppTextStyles.section(context),
-          ).copyWith(color: widget.colors.textSecondary),
-        ),
-      ),
+            AppTextStyles.bodyLargeSemi(context)
+          ).copyWith(color: widget.colors.textSecondary)
+        )
+      )
     );
   }
 }

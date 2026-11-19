@@ -157,7 +157,7 @@ class PromotionCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: AppColors.black.withValues(alpha: 0.05),
             blurRadius: context.h(12),
             offset: Offset(0, context.h(4)),
           ),
@@ -224,8 +224,8 @@ class PromotionCard extends StatelessWidget {
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
                                     colors: [
-                                      Colors.black.withValues(alpha: 0.0),
-                                      Colors.black.withValues(alpha: 0.22),
+                                      AppColors.black.withValues(alpha: 0.0),
+                                      AppColors.black.withValues(alpha: 0.22),
                                     ],
                                     stops: const [0.55, 1.0],
                                   ),
@@ -276,14 +276,10 @@ class PromotionCard extends StatelessWidget {
                           _discountLabel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.body(context).copyWith(
-                            color: isExpired
+                          style: AppTextStyles.h3(context).copyWith(color: isExpired
                                 ? colors.textMuted
                                 : AppColors.primary,
-                            fontWeight: FontWeight.w800,
-                            fontSize: context.h(18),
-                            letterSpacing: -0.3,
-                          ),
+                            letterSpacing: -0.3),
                         ),
                         SizedBox(height: context.h(4)),
 
@@ -296,12 +292,9 @@ class PromotionCard extends StatelessWidget {
                                 title,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.heading(context).copyWith(
-                                  fontSize: context.h(15),
-                                  color: isExpired
+                                style: AppTextStyles.bodyLargeSemi(context).copyWith(color: isExpired
                                       ? colors.textMuted
-                                      : colors.textPrimary,
-                                ),
+                                      : colors.textPrimary),
                               ),
                             ),
                             if (isCoupon && code != null) ...[
@@ -322,7 +315,7 @@ class PromotionCard extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   // Match menu card secondary text (ingredients / meta)
-                                  style: AppTextStyles.bodyTertiary(context)
+                                  style: AppTextStyles.bodySmall(context)
                                       .copyWith(
                                     color: colors.textMuted,
                                   ),
@@ -364,7 +357,7 @@ class PromotionCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 // Match menu card secondary text
-                                style: AppTextStyles.bodyTertiary(context)
+                                style: AppTextStyles.bodySmall(context)
                                     .copyWith(
                                   color: colors.textMuted,
                                 ),
@@ -413,7 +406,7 @@ class PromotionCard extends StatelessWidget {
         vertical: context.h(2),
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
+        color: AppColors.white.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(context.h(5)),
       ),
       child: Row(
@@ -450,11 +443,7 @@ class PromotionCard extends StatelessWidget {
           SizedBox(width: context.w(3)),
           Text(
             label,
-            style: AppTextStyles.caption(context).copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-              fontSize: context.h(10),
-            ),
+            style: AppTextStyles.overline(context).copyWith(color: color),
           ),
         ],
       ),
@@ -500,10 +489,7 @@ class PromotionCard extends StatelessWidget {
               Text(
                 'Copy',
                 // Match menu card meta text
-                style: AppTextStyles.bodyTertiary(context).copyWith(
-                  color: colors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppTextStyles.bodySmallSemi(context).copyWith(color: colors.textSecondary),
               ),
             ],
           ),
@@ -529,10 +515,7 @@ class PromotionCard extends StatelessWidget {
       child: Text(
         label,
         // Match menu card detail chips (caption)
-        style: AppTextStyles.caption(context).copyWith(
-          color: colors.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
+        style: AppTextStyles.caption(context).copyWith(color: colors.textSecondary),
       ),
     );
   }

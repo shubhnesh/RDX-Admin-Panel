@@ -164,7 +164,7 @@
 //             ),
 //             alignment: Alignment.center,
 //             decoration: BoxDecoration(
-//               color: _open || hasValue ? Colors.white : colors.surfaceVariant,
+//               color: _open || hasValue ? AppColors.white : colors.surfaceVariant,
 //               borderRadius: BorderRadius.circular(context.h(8)),
 //               border: Border.all(color: colors.border, width: 1),
 //             ),
@@ -213,7 +213,7 @@
 //         children: [
 //           Text(
 //             widget.label!,
-//             style: AppTextStyles.label(context)
+//             style: AppTextStyles.bodySemi(context)
 //                 .copyWith(color: colors.textSecondary),
 //           ),
 //           SizedBox(height: context.h(6)),
@@ -251,7 +251,7 @@
 //         border: Border.all(color: colors.border),
 //         boxShadow: [
 //           BoxShadow(
-//             color: Colors.black.withValues(alpha: 0.12),
+//             color: AppColors.black.withValues(alpha: 0.12),
 //             blurRadius: context.h(18),
 //             offset: Offset(0, context.h(6)),
 //           ),
@@ -299,7 +299,7 @@
 //                               maxLines: 1,
 //                               overflow: TextOverflow.ellipsis,
 //                               style: selected
-//                                   ? AppTextStyles.label(context)
+//                                   ? AppTextStyles.bodySemi(context)
 //                                       .copyWith(color: AppColors.primary)
 //                                   : AppTextStyles.body(context),
 //                             ),
@@ -490,7 +490,7 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
     final colors = AppColors.of(context);
     final hasValue =
         widget.value != null && widget.items.any((e) => e == widget.value);
-    final valueTextStyle = AppTextStyles.bodySecondary(context).copyWith(
+    final valueTextStyle = AppTextStyles.body(context).copyWith(
       fontSize: RdxTextField.textFontSize(context),
     );
 
@@ -522,7 +522,7 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
             ),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _open || hasValue ? Colors.white : colors.surfaceVariant,
+              color: _open || hasValue ? AppColors.white : colors.surfaceVariant,
               borderRadius: BorderRadius.circular(context.h(8)),
               border: Border.all(color: colors.border, width: 1),
             ),
@@ -535,7 +535,7 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
                     overflow: TextOverflow.ellipsis,
                     style: hasValue
                         ? valueTextStyle
-                        : AppTextStyles.bodySecondary(context).copyWith(
+                        : AppTextStyles.body(context).copyWith(
                             color: colors.textMuted,
                             fontSize: RdxTextField.textFontSize(context),
                           ),
@@ -573,9 +573,9 @@ class _RdxDropdownState<T> extends State<RdxDropdown<T>> {
         children: [
           Text(
             widget.label!,
-            // style: AppTextStyles.bodySecondary(context)
+            // style: AppTextStyles.body(context)
             //     .copyWith(color: colors.textSecondary),
-            style: AppTextStyles.bodySecondary(context)
+            style: AppTextStyles.body(context)
                 .copyWith(color: colors.textMuted),
           ),
           SizedBox(height: context.h(6)),
@@ -663,7 +663,7 @@ class _DropdownMenuPanelState<T> extends State<_DropdownMenuPanel<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final optionTextStyle = AppTextStyles.bodySecondary(context).copyWith(
+    final optionTextStyle = AppTextStyles.body(context).copyWith(
       fontSize: RdxTextField.textFontSize(context),
     );
 
@@ -675,7 +675,7 @@ class _DropdownMenuPanelState<T> extends State<_DropdownMenuPanel<T>> {
         border: Border.all(color: widget.colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: AppColors.black.withValues(alpha: 0.12),
             blurRadius: context.h(18),
             offset: Offset(0, context.h(6)),
           ),

@@ -7,6 +7,7 @@ const {
   isMenuItemVisible,
   isPromotionActive,
 } = require("./notificationPolicy");
+const { ADMIN_TOPIC } = require("./notificationPolicy");
 const {
   createAndDeliverNotification,
 } = require("./pushNotifications");
@@ -20,14 +21,53 @@ function eventDocumentId(category, eventId) {
   return `auto_${category}_${hash}`;
 }
 
-function publishEvent(category, eventId, title, message, sourceId) {
-  return createAndDeliverNotification({
-    eventId: eventDocumentId(category, eventId),
-    title,
-    message,
-    category,
-    sourceId,
-  });
+function publishEvent(
+  category,
+  eventId,
+  title,
+  message,
+  sourceId,
+  { customer = true, admin = false } = {}
+) {
+  const deliveries = [];
+  if (customer) {
+    deliveries.push(createAndDeliverNotification({
+      eventId: eventDocumentId(category, eventId),
+      title,
+      message,
+      category,
+      sourceId,
+      audience: "allApp",
+    }));
+  }
+  if (admin) {
+    deliveries.push(createAndDeliverNotification({
+      eventId: eventDocumentId(`${category}_admin`, eventId),
+      title,
+      message,
+      category,
+      sourceId,
+      audience: "admin",
+      topic: ADMIN_TOPIC,
+    }));
+  }
+  return Promise.all(deliveries);
+}
+
+function orderName(order) {
+  return String(order.customer_name || "").trim() || "A customer";
+}
+
+function orderAmount(order) {
+  const amount = Number(order.total);
+  return Number.isFinite(amount) && amount > 0
+    ? ` Total: Rs. ${amount.toFixed(2)}.`
+    : "";
+}
+
+function statusLabel(status) {
+  const value = String(status || "").trim().toLowerCase();
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : "Updated";
 }
 
 function itemName(data, fallback = "A menu item") {
@@ -115,12 +155,15 @@ exports.notifyAppOrderCreated = functions
       return null;
     }
 
+    const name = orderName(order);
+    const orderId = context.params.orderId;
     return publishEvent(
       "order",
       context.eventId,
-      "New order activity",
-      "A customer placed a new order.",
-      context.params.orderId
+      "Order placed successfully",
+      `${name} placed order ${orderId}.${orderAmount(order)}`,
+      orderId,
+      { customer: false, admin: true }
     );
   });
 
@@ -138,27 +181,88 @@ exports.notifyAppOrderStatusChanged = functions
       return null;
     }
 
+    const status = statusLabel(after.status);
+    const orderId = context.params.orderId;
     return publishEvent(
       "order",
       context.eventId,
-      "Order status updated",
-      "An order status has changed.",
-      context.params.orderId
+      `Order ${status}`,
+      `Order ${orderId} is now ${String(after.status || "updated").toLowerCase()}.`,
+      orderId,
+      { customer: true, admin: true }
+    );
+  });
+
+exports.notifyOrderPaymentChanged = functions
+  .region(REGION)
+  .firestore.document("orders/{orderId}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data() || {};
+    const after = change.after.data() || {};
+    const beforePaid = String(before.payment_status || "").toLowerCase() === "paid";
+    const afterPaid = String(after.payment_status || "").toLowerCase() === "paid";
+    if (beforePaid === afterPaid || !afterPaid) return null;
+
+    const orderId = context.params.orderId;
+    const method = String(after.payment_method || "the selected payment method")
+      .trim();
+    return publishEvent(
+      "payment",
+      context.eventId,
+      "Payment completed",
+      `Payment received for order ${orderId} via ${method}.${orderAmount(after)}`,
+      orderId,
+      { customer: true, admin: true }
+    );
+  });
+
+exports.notifyOrderRefundChanged = functions
+  .region(REGION)
+  .firestore.document("orders/{orderId}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data() || {};
+    const after = change.after.data() || {};
+    const wasCancelled =
+      String(before.status || "").toLowerCase() === "cancelled";
+    const isCancelled =
+      String(after.status || "").toLowerCase() === "cancelled";
+    if (wasCancelled || !isCancelled) return null;
+
+    const refundedPoints =
+      Math.max(0, Math.floor(Number(after.reward_points_refunded) || 0));
+    const paid = String(after.payment_status || "").toLowerCase() === "paid";
+    if (!paid && refundedPoints <= 0) return null;
+
+    const orderId = context.params.orderId;
+    const detail = paid
+      ? `The paid amount for order ${orderId} is eligible for refund processing.`
+      : `${refundedPoints} reward points were refunded for order ${orderId}.`;
+    return publishEvent(
+      "refund",
+      context.eventId,
+      "Refund update",
+      detail,
+      orderId,
+      { customer: true, admin: true }
     );
   });
 
 exports.notifySupportRequestCreated = functions
   .region(REGION)
   .firestore.document("support_requests/{requestId}")
-  .onCreate(async (_snapshot, context) =>
-    publishEvent(
+  .onCreate(async (snapshot, context) => {
+    const request = snapshot.data() || {};
+    const subject = String(request.subject || "Support request").trim();
+    const category = String(request.category || "general").trim();
+    return publishEvent(
       "support",
       context.eventId,
-      "Support activity",
-      "A new support request has been submitted.",
-      context.params.requestId
-    )
-  );
+      "New support request",
+      `${category}: ${subject}`,
+      context.params.requestId,
+      { customer: false, admin: true }
+    );
+  });
 
 exports.submitSupportRequest = functions
   .region(REGION)

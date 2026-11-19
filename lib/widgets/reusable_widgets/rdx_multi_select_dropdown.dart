@@ -240,7 +240,7 @@ class _RdxMultiDropdownState<T> extends State<RdxMultiDropdown<T>> {
             ),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _open || hasValue ? Colors.white : colors.surfaceVariant,
+              color: _open || hasValue ? AppColors.white : colors.surfaceVariant,
               borderRadius: BorderRadius.circular(context.h(8)),
               border: Border.all(color: colors.border, width: 1),
             ),
@@ -303,7 +303,7 @@ class _RdxMultiDropdownState<T> extends State<RdxMultiDropdown<T>> {
         children: [
           Text(
             widget.label!,
-            style: AppTextStyles.label(context)
+            style: AppTextStyles.bodySemi(context)
                 .copyWith(color: colors.textSecondary),
           ),
           SizedBox(height: context.h(6)),
@@ -411,7 +411,7 @@ class _MultiDropdownMenuPanelState<T>
         border: Border.all(color: widget.colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: AppColors.black.withValues(alpha: 0.12),
             blurRadius: context.h(18),
             offset: Offset(0, context.h(6)),
           ),
@@ -469,7 +469,6 @@ class _MultiDropdownMenuPanelState<T>
                       allSelected ? 'Clear all' : 'Select all',
                       style: AppTextStyles.caption(context).copyWith(
                         color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -554,7 +553,7 @@ class _MultiDropdownMenuPanelState<T>
                                       ? Icon(
                                           Icons.check_rounded,
                                           size: context.h(12),
-                                          color: Colors.white,
+                                          color: AppColors.white,
                                         )
                                       : null,
                                 ),

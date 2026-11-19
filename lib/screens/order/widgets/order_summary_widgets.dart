@@ -33,7 +33,7 @@ class OrderSummaryPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(8)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,35 +45,35 @@ class OrderSummaryPanel extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.section(context).copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
+                  style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                    color: colors.textPrimary
+                  )
+                )
               ),
               Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: context.w(7),
-                  vertical: context.h(2),
+                  vertical: context.h(2)
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(context.h(20)),
+                  borderRadius: BorderRadius.circular(context.h(20))
                 ),
                 child: Text(
                   '$itemCount',
                   style: AppTextStyles.caption(context).copyWith(
                     color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                    fontWeight: FontWeight.w700
+                  )
+                )
               ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(16)),
           if (expandedContent != null) Expanded(child: expandedContent!),
           ...children,
-        ],
-      ),
+        ]
+      )
     );
   }
 }
@@ -96,6 +96,7 @@ class OrderSummaryItemCard extends StatelessWidget {
     final colors = AppColors.of(context);
     final imageUrl = line.menuItem.imageUrl.trim();
     final imageSize = compactLayout ? 40.0 : context.w(64);
+    final sizeLabel = line.size?.trim() ?? '';
     final details = [
       if (line.spiceLevel != null && line.spiceLevel!.trim().isNotEmpty)
         line.spiceLevel!.trim(),
@@ -112,11 +113,11 @@ class OrderSummaryItemCard extends StatelessWidget {
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: AppColors.black.withValues(alpha: 0.04),
             blurRadius: context.h(10),
-            offset: Offset(0, context.h(3)),
+            offset: Offset(0, context.h(3))
           ),
-        ],
+        ]
       ),
       child: compactLayout
           ? Row(
@@ -133,9 +134,9 @@ class OrderSummaryItemCard extends StatelessWidget {
                             imageUrl,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) =>
-                                _thumbnailPlaceholder(context, colors),
-                          ),
-                  ),
+                                _thumbnailPlaceholder(context, colors)
+                          )
+                  )
                 ),
                 SizedBox(width: context.w(compactLayout ? 10 : 4)),
                 Expanded(
@@ -143,15 +144,45 @@ class OrderSummaryItemCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        line.menuItem.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.caption(context).copyWith(
-                          fontSize: 13,
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      // Size sits on the name row as a small pill so the
+                      // compact card keeps the same height (no overflow).
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              line.menuItem.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.caption(context).copyWith(
+                                fontSize: 13,
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w600
+                              )
+                            )
+                          ),
+                          if (sizeLabel.isNotEmpty) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(4)
+                              ),
+                              child: Text(
+                                sizeLabel,
+                                maxLines: 1,
+                                style: AppTextStyles.caption(context).copyWith(
+                                  fontSize: 10,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700
+                                )
+                              )
+                            ),
+                          ],
+                        ]
                       ),
                       if (details.isNotEmpty)
                         Text(
@@ -160,8 +191,8 @@ class OrderSummaryItemCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.caption(context).copyWith(
                             fontSize: 12,
-                            color: colors.textSecondary,
-                          ),
+                            color: colors.textSecondary
+                          )
                         ),
                       SizedBox(height: context.h(5)),
                       if (quantityControlBuilder != null)
@@ -170,13 +201,13 @@ class OrderSummaryItemCard extends StatelessWidget {
                         Text(
                           'Qty: ${line.quantity}',
                           style: AppTextStyles.caption(context).copyWith(
-                            color: colors.textSecondary,
-                          ),
+                            color: colors.textSecondary
+                          )
                         ),
-                    ],
-                  ),
+                    ]
+                  )
                 ),
-              ],
+              ]
             )
           : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,9 +223,9 @@ class OrderSummaryItemCard extends StatelessWidget {
                             imageUrl,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) =>
-                                _thumbnailPlaceholder(context, colors),
-                          ),
-                  ),
+                                _thumbnailPlaceholder(context, colors)
+                          )
+                  )
                 ),
                 SizedBox(width: context.w(10)),
                 Expanded(
@@ -209,36 +240,37 @@ class OrderSummaryItemCard extends StatelessWidget {
                               line.menuItem.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.section(context).copyWith(
-                                color: colors.textPrimary,
-                              ),
-                            ),
+                              style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                                color: colors.textPrimary
+                              )
+                            )
                           ),
                           SizedBox(width: context.w(8)),
                           Text(
                             '₹${line.subtotal.toStringAsFixed(2)}',
-                            style: AppTextStyles.section(context).copyWith(
-                              color: colors.textPrimary,
-                            ),
+                            style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                              color: colors.textPrimary
+                            )
                           ),
-                        ],
+                        ]
                       ),
                       SizedBox(height: context.h(2)),
                       Text(
+                        '${line.size != null ? '${line.size} · ' : ''}'
                         '₹${line.unitPrice.toStringAsFixed(2)} each',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodyTertiary(context).copyWith(
-                          color: AppColors.primary,
-                        ),
+                        style: AppTextStyles.caption(context).copyWith(
+                          color: AppColors.primary
+                        )
                       ),
                       SizedBox(height: context.h(6)),
                       quantityControlBuilder?.call(context, line.quantity) ??
                           Text(
                             'Qty: ${line.quantity}',
                             style: AppTextStyles.caption(context).copyWith(
-                              color: colors.textSecondary,
-                            ),
+                              color: colors.textSecondary
+                            )
                           ),
                       if (line.spiceLevel != null &&
                           line.spiceLevel!.trim().isNotEmpty) ...[
@@ -248,8 +280,8 @@ class OrderSummaryItemCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.caption(context).copyWith(
-                            color: colors.textSecondary,
-                          ),
+                            color: colors.textSecondary
+                          )
                         ),
                       ],
                       if (line.addOns.isNotEmpty) ...[
@@ -261,8 +293,8 @@ class OrderSummaryItemCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.caption(context).copyWith(
-                            color: colors.textSecondary,
-                          ),
+                            color: colors.textSecondary
+                          )
                         ),
                       ],
                       if (line.notes != null &&
@@ -274,29 +306,29 @@ class OrderSummaryItemCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.caption(context).copyWith(
                             color: colors.textMuted,
-                            fontStyle: FontStyle.italic,
-                          ),
+                            fontStyle: FontStyle.italic
+                          )
                         ),
                       ],
-                    ],
-                  ),
+                    ]
+                  )
                 ),
-              ],
-            ),
+              ]
+            )
     );
   }
 
   Widget _thumbnailPlaceholder(
     BuildContext context,
-    AppColorScheme colors,
+    AppColorScheme colors
   ) {
     return Container(
       color: colors.surfaceVariant,
       child: Icon(
         Icons.restaurant_outlined,
         color: colors.textMuted,
-        size: context.h(22),
-      ),
+        size: context.h(22)
+      )
     );
   }
 }

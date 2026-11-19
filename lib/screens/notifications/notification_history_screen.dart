@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
-import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_header.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_table.dart';
 import '../../core/theme/app_colors.dart';
@@ -74,7 +73,6 @@ class _NotificationHistoryScreenState
                               colors,
                               isMobile,
                               isTablet,
-                              provider,
                             ),
                             SizedBox(
                               height: isMobile ? context.h(14) : context.h(18),
@@ -117,7 +115,6 @@ class _NotificationHistoryScreenState
     AppColorScheme colors,
     bool isMobile,
     bool isTablet,
-    NotificationProvider provider,
   ) {
     if (isMobile) {
       return Column(
@@ -138,15 +135,6 @@ class _NotificationHistoryScreenState
               ),
             ],
           ),
-          SizedBox(height: context.h(9)),
-          SizedBox(
-            height: context.h(40),
-            width: double.infinity,
-            child: _refreshButton(
-              colors,
-              provider,
-            ),
-          ),
         ],
       );
     }
@@ -163,10 +151,6 @@ class _NotificationHistoryScreenState
             Icons.calendar_today_outlined,
           ),
           _statusDropdown(colors),
-          _refreshButton(
-            colors,
-            provider,
-          ),
         ],
       );
     }
@@ -180,11 +164,6 @@ class _NotificationHistoryScreenState
         ),
         SizedBox(width: context.w(8)),
         _statusDropdown(colors),
-        const Spacer(),
-        _refreshButton(
-          colors,
-          provider,
-        ),
       ],
     );
   }
@@ -252,31 +231,6 @@ class _NotificationHistoryScreenState
           setState(() => _statusFilter = value);
         },
       ),
-    );
-  }
-
-  // ============================================================
-  // REFRESH BUTTON
-  // ============================================================
-
-  Widget _refreshButton(
-    AppColorScheme colors,
-    NotificationProvider provider,
-  ) {
-    final isLoading = provider.isLoading;
-
-    return RdxActionButton(
-      label: 'Refresh',
-      onPressed: isLoading
-          ? null
-          : () async {
-              await ref.read(notificationProvider).load();
-            },
-      isPrimary: true,
-      isLoading: isLoading,
-      height: context.h(40),
-      leadingIcon: Icons.refresh,
-      iconSize: context.h(18),
     );
   }
 

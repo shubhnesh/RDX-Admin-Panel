@@ -82,7 +82,7 @@ class StatCard extends StatelessWidget {
             ? null
             : [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.035),
+                  color: AppColors.black.withValues(alpha: 0.035),
                   blurRadius: context.h(10),
                   offset: Offset(0, context.h(3)),
                 ),
@@ -94,26 +94,15 @@ class StatCard extends StatelessWidget {
     );
   }
 
-  /// Value / data text only — scales with screen width.
+  /// Value / data text — style guide tokens only (h2 / h3).
   TextStyle _valueStyle(BuildContext context, AppColorScheme colors) {
     final width = MediaQuery.sizeOf(context).width;
-
-    // Explicit breakpoints so the number clearly shrinks/grows.
-    final double fontSize;
-    if (width < 400) {
-      fontSize = context.h(15).clamp(13.0, 16.0);
-    } else if (width < 600) {
-      fontSize = context.h(17).clamp(15.0, 18.0);
-    } else if (width < 900) {
-      fontSize = context.h(20).clamp(17.0, 21.0);
-    } else {
-      fontSize = context.h(24).clamp(20.0, 26.0);
-    }
-
-    return AppTextStyles.heading(context).copyWith(
+    // Narrow: h3 (18), otherwise h2 (24). Color override only.
+    final base = width < 600
+        ? AppTextStyles.h3(context)
+        : AppTextStyles.h2(context);
+    return base.copyWith(
       color: colors.textPrimary,
-      fontSize: fontSize,
-      fontWeight: FontWeight.w700,
       height: 1.15,
     );
   }
@@ -139,7 +128,7 @@ class StatCard extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.section(context).copyWith(
+                style: AppTextStyles.bodyLargeSemi(context).copyWith(
                   color: colors.textMuted,
                 ),
               ),
@@ -190,7 +179,7 @@ class StatCard extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.section(context).copyWith(
+                style: AppTextStyles.bodyLargeSemi(context).copyWith(
                   color: colors.textMuted,
                 ),
               ),
@@ -256,7 +245,7 @@ class StatCard extends StatelessWidget {
             subtitle!,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.label(context).copyWith(
+            style: AppTextStyles.bodySemi(context).copyWith(
               color: color,
             ),
           ),
@@ -276,20 +265,22 @@ class StatCard extends StatelessWidget {
     required double iconSize,
     required double radius,
   }) {
-    final double s = context.w(size);
+    // Circular container diameter and icon size always scale via context.h
+    // per responsive sizing convention (size argument → context.h).
+    final double s = context.h(size);
 
     return Container(
       width: s,
       height: s,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(context.w(radius)),
+        borderRadius: BorderRadius.circular(context.h(radius)),
       ),
       alignment: Alignment.center,
       child: Icon(
         icon,
         color: color,
-        size: context.w(iconSize),
+        size: context.h(iconSize),
       ),
     );
   }

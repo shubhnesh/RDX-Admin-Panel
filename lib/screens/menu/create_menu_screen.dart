@@ -957,13 +957,17 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                                   children: [
                                     _mainColumn(context, colors),
                                     SizedBox(height: context.h(16)),
-                                    Text(
-                                      'Preview',
-                                      style: AppTextStyles.section(context)
-                                          .copyWith(color: colors.textPrimary),
+                                    Center(
+                                      child: Text(
+                                        'Preview',
+                                        style:
+                                            AppTextStyles.bodyLargeSemi(context)
+                                                .copyWith(
+                                                    color: colors.textPrimary),
+                                      ),
                                     ),
                                     SizedBox(height: context.h(10)),
-                                    preview,
+                                    Center(child: preview),
                                     SizedBox(height: context.h(14)),
                                     _actionButtons(context, colors),
                                   ],
@@ -1004,7 +1008,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                                             Text(
                                               'Preview',
                                               style:
-                                                  AppTextStyles.section(context)
+                                                  AppTextStyles.bodyLargeSemi(context)
                                                       .copyWith(
                                                           color: colors
                                                               .textPrimary),
@@ -1122,7 +1126,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 if (_hasSizes)
                   Text(
                     '${_sizeNameControllers.length}/$_maxSizes',
-                    style: AppTextStyles.bodyTertiary(context)
+                    style: AppTextStyles.bodySmall(context)
                         .copyWith(color: colors.textMuted),
                   ),
               ],
@@ -1202,14 +1206,12 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
               children: [
                 Text(
                   'Ingredients',
-                  style: AppTextStyles.bodySecondary(context).copyWith(
-                    color: colors.textMuted,
-                  ),
+                  style: AppTextStyles.body(context).copyWith(color: colors.textMuted),
                 ),
                 const Spacer(),
                 Text(
                   '${_ingredients.length}/10',
-                  style: AppTextStyles.bodyTertiary(context)
+                  style: AppTextStyles.bodySmall(context)
                       .copyWith(color: colors.textMuted),
                 ),
               ],
@@ -1236,7 +1238,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                       : _addIngredient,
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.white,
                     disabledBackgroundColor: const Color(0xFFE0E0E0),
                     disabledForegroundColor: const Color(0xFF757575),
                     fixedSize: Size.square(context.w(40).clamp(32.0, 40.0)),
@@ -1442,9 +1444,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 children: [
                   Text(
                     'Tags',
-                    style: AppTextStyles.bodySecondary(context).copyWith(
-                      color: colors.textMuted,
-                    ),
+                    style: AppTextStyles.body(context).copyWith(color: colors.textMuted),
                   ),
                   SizedBox(width: context.w(6)),
                   InkWell(
@@ -1489,7 +1489,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
               ),
               label: Text(
                 'Create & Manage Category',
-                style: AppTextStyles.label(context)
+                style: AppTextStyles.bodySemi(context)
                     .copyWith(color: AppColors.primary),
               ),
             ),
@@ -1505,9 +1505,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 'Optional. Mark this item as a side dish or dip preferred with '
                 'a category, subcategory, or specific menu item. Leave as None '
                 'to skip.',
-                style: AppTextStyles.bodyTertiary(context).copyWith(
-                  color: colors.textMuted,
-                ),
+                style: AppTextStyles.bodySmall(context).copyWith(color: colors.textMuted),
               ),
               SizedBox(height: context.h(14)),
               Builder(builder: (context) {
@@ -1636,7 +1634,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 Expanded(
                   child: Text(
                     'Tip: Add high quality images and detailed descriptions to attract more customers.',
-                    style: AppTextStyles.bodyTertiary(context)
+                    style: AppTextStyles.bodySmall(context)
                         .copyWith(color: colors.primary),
                   ),
                 ),
@@ -1672,7 +1670,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
                 Expanded(
                   child: Text(
                     title,
-                    style: AppTextStyles.section(context)
+                    style: AppTextStyles.bodyLargeSemi(context)
                         .copyWith(color: colors.textPrimary),
                   ),
                 ),
@@ -1723,7 +1721,7 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
             children: [
               Text(
                 title,
-                style: AppTextStyles.bodySecondary(context)
+                style: AppTextStyles.body(context)
                     .copyWith(color: colors.textMuted),
               ),
               SizedBox(width: context.w(8)),
@@ -1740,15 +1738,14 @@ class _CreateMenuScreenState extends ConsumerState<CreateMenuScreen> {
       FilterChip(
         label: Text(
           tag,
-          style: AppTextStyles.label(context).copyWith(
-            color: _tags.contains(tag) ? AppColors.primary : colors.textPrimary,
+          style: AppTextStyles.bodySemi(context).copyWith(color: _tags.contains(tag) ? AppColors.primary : colors.textPrimary,
           ),
         ),
         selected: _tags.contains(tag),
         showCheckmark: true,
         checkmarkColor: AppColors.primary,
         backgroundColor: colors.surfaceVariant,
-        selectedColor: Colors.white,
+        selectedColor: AppColors.white,
         side: BorderSide(
           color: _tags.contains(tag) ? AppColors.primary : colors.border,
         ),
@@ -1885,7 +1882,7 @@ class _IngredientChip extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.bodyTertiary(context),
+            style: AppTextStyles.bodySmall(context),
           ),
           SizedBox(width: context.w(4)),
           InkWell(

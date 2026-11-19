@@ -1,6 +1,7 @@
 "use strict";
 
 const CUSTOMER_TOPIC = "all_customers";
+const ADMIN_TOPIC = "all_admins";
 
 function isMenuItemVisible(data = {}) {
   const isAvailable = data.is_available ?? data.available;
@@ -25,9 +26,15 @@ function isPromotionActive(data = {}, now = new Date()) {
   return (!startDate || startDate <= now) && (!endDate || endDate > now);
 }
 
-function createFcmMessage({ notificationId, title, message, category }) {
+function createFcmMessage({
+  notificationId,
+  title,
+  message,
+  category,
+  topic = CUSTOMER_TOPIC,
+}) {
   return {
-    topic: CUSTOMER_TOPIC,
+    topic,
     notification: { title, body: message },
     data: {
       notification_id: notificationId,
@@ -43,6 +50,7 @@ function createFcmMessage({ notificationId, title, message, category }) {
 
 module.exports = {
   CUSTOMER_TOPIC,
+  ADMIN_TOPIC,
   createFcmMessage,
   isMenuItemVisible,
   isPromotionActive,

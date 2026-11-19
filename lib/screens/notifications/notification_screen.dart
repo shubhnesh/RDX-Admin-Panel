@@ -10,15 +10,14 @@ import '../../providers/notification_provider.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
 import 'notification_history_screen.dart';
 
-class NotificationsScreen extends ConsumerStatefulWidget {
-  const NotificationsScreen({super.key});
+class NotificationScreen extends ConsumerStatefulWidget {
+  const NotificationScreen({super.key});
 
   @override
-  ConsumerState<NotificationsScreen> createState() =>
-      _NotificationsScreenState();
+  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
   @override
@@ -101,7 +100,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   SizedBox(width: context.w(7)),
                   Text(
                     'COMMUNICATION HUB',
-                    style: AppTextStyles.section(context)
+                    style: AppTextStyles.bodyLargeSemi(context)
                         .copyWith(color: AppColors.primary),
                   ),
                 ],
@@ -109,12 +108,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               SizedBox(height: context.h(6)),
               Text(
                 'Broadcast System',
-                style: AppTextStyles.heading(context),
+                style: AppTextStyles.h2(context),
               ),
               SizedBox(height: context.h(6)),
               Text(
                 'Send important updates and announcements to your customer app users.',
-                style: AppTextStyles.bodySecondary(context),
+                style: AppTextStyles.body(context),
               ),
             ],
           ),
@@ -126,7 +125,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         //     icon: Icon(Icons.history_outlined, size: context.h(16)),
         //     label: Text(
         //       'Notification History',
-        //       style: AppTextStyles.bodySecondary(context)
+        //       style: AppTextStyles.body(context)
         //           .copyWith(color: colors.textPrimary),
         //     ),
         //     style: OutlinedButton.styleFrom(
@@ -226,14 +225,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   //             children: [
   //               Text(
   //                 stat.label,
-  //                 style: AppTextStyles.section(context)
+  //                 style: AppTextStyles.bodyLargeSemi(context)
   //                     .copyWith(color: colors.textMuted),
   //               ),
   //               SizedBox(height: context.h(6)),
-  //               Text(stat.value, style: AppTextStyles.heading(context)),
+  //               Text(stat.value, style: AppTextStyles.h2(context)),
   //               SizedBox(height: context.h(6)),
   //               Text(stat.subtitle,
-  //                   style: AppTextStyles.bodySecondary(context)),
+  //                   style: AppTextStyles.body(context)),
   //             ],
   //           ),
   //         ),
@@ -304,7 +303,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               ),
               SizedBox(width: context.w(8)),
               Text('Compose Notification',
-                  style: AppTextStyles.section(context)),
+                  style: AppTextStyles.bodyLargeSemi(context)),
             ],
           ),
           SizedBox(height: context.h(23)),
@@ -431,7 +430,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                             Expanded(
                               child: Text(
                                 'Schedule Notification',
-                                style: AppTextStyles.section(context),
+                                style: AppTextStyles.bodyLargeSemi(context),
                               ),
                             ),
                             IconButton(
@@ -557,7 +556,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               ),
                               child: Text(
                                 'Cancel',
-                                style: AppTextStyles.label(context)
+                                style: AppTextStyles.bodySemi(context)
                                     .copyWith(color: colors.textPrimary),
                               ),
                             ),
@@ -592,7 +591,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                               'Notification scheduled successfully.',
                                               style: AppTextStyles.body(context)
                                                   .copyWith(
-                                                      color: Colors.white),
+                                                      color: AppColors.white),
                                             ),
                                             behavior: SnackBarBehavior.floating,
                                           ),
@@ -626,8 +625,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Widget _scheduleFieldLabel(String text, AppColorScheme colors) {
     return Text(
       text,
-      style: AppTextStyles.bodySecondary(context)
-          .copyWith(color: colors.textMuted),
+      style: AppTextStyles.body(context).copyWith(color: colors.textMuted),
     );
   }
 
@@ -646,7 +644,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         width: double.infinity,
         padding: EdgeInsets.symmetric(horizontal: context.w(10)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.white,
           borderRadius: BorderRadius.circular(context.h(7)),
           border: Border.all(color: const Color(0xFFD7D7D7)),
         ),
@@ -705,13 +703,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 children: [
                   Text(
                     'Notification History',
-                    style: AppTextStyles.section(context)
+                    style: AppTextStyles.bodyLargeSemi(context)
                         .copyWith(color: colors.textPrimary),
                   ),
                   SizedBox(height: context.h(3)),
                   Text(
                     'View sent and scheduled notifications',
-                    style: AppTextStyles.bodySecondary(context),
+                    style: AppTextStyles.body(context),
                   ),
                 ],
               ),
@@ -739,8 +737,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Widget _fieldLabel(AppColorScheme colors, String text) {
     return Text(
       text,
-      style: AppTextStyles.bodySecondary(context)
-          .copyWith(color: colors.textMuted),
+      style: AppTextStyles.body(context).copyWith(color: colors.textMuted),
     );
   }
 
@@ -791,7 +788,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       SnackBar(
         content: Text(
           'Notification sent successfully.',
-          style: AppTextStyles.body(context).copyWith(color: Colors.white),
+          style: AppTextStyles.body(context).copyWith(color: AppColors.white),
         ),
         behavior: SnackBarBehavior.floating,
       ),

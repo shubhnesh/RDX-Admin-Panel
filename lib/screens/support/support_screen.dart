@@ -70,7 +70,7 @@ class _SupportScreenState extends State<SupportScreen> {
           RdxHeader(
             title: 'Contact Technical Support',
             showBackButton: true,
-            onBack: widget.onBack,
+            onBack: widget.onBack
           ),
           Expanded(
             child: LayoutBuilder(
@@ -86,7 +86,7 @@ class _SupportScreenState extends State<SupportScreen> {
                           _buildFormSection(context, colors),
                           SizedBox(height: context.h(24)),
                           _buildDirectChannels(context, colors),
-                        ],
+                        ]
                       )
                     : Padding(
                         padding: Responsive.pagePadding(context),
@@ -103,25 +103,25 @@ class _SupportScreenState extends State<SupportScreen> {
                                     _buildCategorySection(context, colors),
                                     SizedBox(height: context.h(20)),
                                     _buildFormSection(context, colors),
-                                  ],
-                                ),
-                              ),
+                                  ]
+                                )
+                              )
                             ),
                             SizedBox(width: context.w(24)),
                             SizedBox(
                               width: context.w(300),
-                              child: _buildDirectChannels(context, colors),
+                              child: _buildDirectChannels(context, colors)
                             ),
-                          ],
-                        ),
+                          ]
+                        )
                       );
 
                 return content;
-              },
-            ),
+              }
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -131,9 +131,9 @@ class _SupportScreenState extends State<SupportScreen> {
       children: [
         Text(
           'Questions? Our Support team is here. Create tickets or reply to existing problems.',
-          style: AppTextStyles.bodySecondary(context),
+          style: AppTextStyles.body(context)
         ),
-      ],
+      ]
     );
   }
 
@@ -146,14 +146,14 @@ class _SupportScreenState extends State<SupportScreen> {
             Icon(
               Icons.category_outlined,
               size: context.h(18),
-              color: AppColors.primary,
+              color: AppColors.primary
             ),
             SizedBox(width: context.w(8)),
             Text(
               'Issue Category',
-              style: AppTextStyles.section(context),
+              style: AppTextStyles.bodyLargeSemi(context)
             ),
-          ],
+          ]
         ),
         SizedBox(height: context.h(12)),
         Wrap(
@@ -165,7 +165,7 @@ class _SupportScreenState extends State<SupportScreen> {
             final verticalPadding = context.h(8).clamp(6.0, 10.0);
             return Material(
               color: selected
-                  ? AppColors.primary.withOpacity(0.15)
+                  ? AppColors.primary.withValues(alpha: 0.15)
                   : colors.surface,
               borderRadius: BorderRadius.circular(context.h(10)),
               child: InkWell(
@@ -174,13 +174,13 @@ class _SupportScreenState extends State<SupportScreen> {
                 child: Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: horizontalPadding,
-                    vertical: verticalPadding,
+                    vertical: verticalPadding
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(context.h(10)),
                     border: Border.all(
-                      color: selected ? AppColors.primary : colors.border,
-                    ),
+                      color: selected ? AppColors.primary : colors.border
+                    )
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -189,25 +189,25 @@ class _SupportScreenState extends State<SupportScreen> {
                         c.$2,
                         size: context.h(16).clamp(14.0, 18.0),
                         color:
-                            selected ? AppColors.primary : colors.textSecondary,
+                            selected ? AppColors.primary : colors.textSecondary
                       ),
                       SizedBox(width: context.w(6).clamp(4.0, 8.0)),
                       Text(
                         c.$1,
                         style: selected
-                            ? AppTextStyles.label(context)
+                            ? AppTextStyles.bodySemi(context)
                                 .copyWith(color: colors.primary)
-                            : AppTextStyles.label(context)
-                                .copyWith(color: colors.textSecondary),
+                            : AppTextStyles.bodySemi(context)
+                                .copyWith(color: colors.textSecondary)
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                    ]
+                  )
+                )
+              )
             );
-          }).toList(),
+          }).toList()
         ),
-      ],
+      ]
     );
   }
 
@@ -217,7 +217,7 @@ class _SupportScreenState extends State<SupportScreen> {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(12)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,21 +227,21 @@ class _SupportScreenState extends State<SupportScreen> {
               Icon(
                 Icons.description_outlined,
                 size: context.h(18),
-                color: AppColors.primary,
+                color: AppColors.primary
               ),
               SizedBox(width: context.w(8)),
               Text(
                 'Describe the Issue',
-                style: AppTextStyles.section(context),
+                style: AppTextStyles.bodyLargeSemi(context)
               ),
-            ],
+            ]
           ),
           SizedBox(height: context.h(16)),
           RdxTextField(
             controller: _subjectController,
             maxLength: 40,
             label: 'Subject',
-            hint: 'Brief summary of the issue',
+            hint: 'Brief summary of the issue'
           ),
           SizedBox(height: context.h(16)),
           RdxTextField(
@@ -249,7 +249,7 @@ class _SupportScreenState extends State<SupportScreen> {
             maxLength: 300,
             label: 'Describe the issue',
             hint: 'Provide as much detail as possible…',
-            maxLines: 6,
+            maxLines: 6
           ),
           SizedBox(height: context.h(16)),
           Container(
@@ -260,8 +260,8 @@ class _SupportScreenState extends State<SupportScreen> {
               borderRadius: BorderRadius.circular(context.h(10)),
               border: Border.all(
                 color: colors.border,
-                style: BorderStyle.solid,
-              ),
+                style: BorderStyle.solid
+              )
             ),
             child: Column(
               children: [
@@ -269,12 +269,12 @@ class _SupportScreenState extends State<SupportScreen> {
                     size: context.h(32), color: colors.textMuted),
                 SizedBox(height: context.h(8)),
                 Text('Drag & drop screenshots or logs',
-                    style: AppTextStyles.bodySecondary(context)),
+                    style: AppTextStyles.body(context)),
                 SizedBox(height: context.h(4)),
                 Text('PNG, JPG, PDF up to 10 MB',
                     style: AppTextStyles.body(context)),
-              ],
-            ),
+              ]
+            )
           ),
           SizedBox(height: context.h(20)),
           Align(
@@ -285,11 +285,11 @@ class _SupportScreenState extends State<SupportScreen> {
               isPrimary: true,
               isLoading: _sending,
               leadingIcon: Icons.send_rounded,
-              iconSize: context.h(17),
-            ),
+              iconSize: context.h(17)
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -299,14 +299,14 @@ class _SupportScreenState extends State<SupportScreen> {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(context.h(12)),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.border)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Direct Channels',
-            style: AppTextStyles.section(context),
+            style: AppTextStyles.bodyLargeSemi(context)
           ),
           SizedBox(height: context.h(16)),
           _channelRow(
@@ -314,7 +314,7 @@ class _SupportScreenState extends State<SupportScreen> {
             colors,
             icon: Icons.email_outlined,
             title: 'Email Support 1',
-            subtitle: 'kashyapshubhnesh@gmail.com',
+            subtitle: 'kashyapshubhnesh@gmail.com'
           ),
           SizedBox(height: context.h(16)),
           _channelRow(
@@ -322,7 +322,7 @@ class _SupportScreenState extends State<SupportScreen> {
             colors,
             icon: Icons.email_outlined,
             title: 'Email Support 2',
-            subtitle: 'siddhantbisht440@gmail.com',
+            subtitle: 'siddhantbisht440@gmail.com'
           ),
           SizedBox(height: context.h(14)),
           _channelRow(
@@ -330,7 +330,7 @@ class _SupportScreenState extends State<SupportScreen> {
             colors,
             icon: Icons.phone_outlined,
             title: 'Phone Hotline 1',
-            subtitle: '+91 9528714534',
+            subtitle: '+91 9528714534'
           ),
           SizedBox(height: context.h(14)),
           _channelRow(
@@ -338,7 +338,7 @@ class _SupportScreenState extends State<SupportScreen> {
             colors,
             icon: Icons.phone_outlined,
             title: 'Phone Hotline 2',
-            subtitle: '+91 8791158024',
+            subtitle: '+91 8791158024'
           ),
           // SizedBox(height: context.h(14)),
           // _channelRow(
@@ -353,9 +353,9 @@ class _SupportScreenState extends State<SupportScreen> {
             width: double.infinity,
             padding: EdgeInsets.all(context.h(14)),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(context.h(10)),
-              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3))
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,18 +366,18 @@ class _SupportScreenState extends State<SupportScreen> {
                         size: context.h(18), color: AppColors.primary),
                     SizedBox(width: context.w(8)),
                     Text('Average Response',
-                        style: AppTextStyles.bodySecondary(context)
+                        style: AppTextStyles.body(context)
                             .copyWith(color: colors.textPrimary)),
-                  ],
+                  ]
                 ),
                 SizedBox(height: context.h(6)),
                 Text('Under 2 hours on business days',
-                    style: AppTextStyles.bodySecondary(context)),
-              ],
-            ),
+                    style: AppTextStyles.body(context)),
+              ]
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -395,14 +395,14 @@ class _SupportScreenState extends State<SupportScreen> {
           height: context.h(40),
           decoration: BoxDecoration(
             color: colors.surfaceVariant,
-            borderRadius: BorderRadius.circular(context.h(10)),
+            borderRadius: BorderRadius.circular(context.h(10))
           ),
           alignment: Alignment.center,
           child: Icon(
             icon,
             size: context.h(20),
-            color: AppColors.primary,
-          ),
+            color: AppColors.primary
+          )
         ),
         SizedBox(width: context.w(12)),
         Expanded(
@@ -411,18 +411,18 @@ class _SupportScreenState extends State<SupportScreen> {
             children: [
               Text(
                 title,
-                style: AppTextStyles.bodySecondary(context)
-                    .copyWith(color: colors.primary),
+                style: AppTextStyles.body(context)
+                    .copyWith(color: colors.primary)
               ),
               Text(
                 subtitle,
-                style: AppTextStyles.bodySecondary(context)
-                    .copyWith(color: colors.textPrimary),
+                style: AppTextStyles.body(context)
+                    .copyWith(color: colors.textPrimary)
               ),
-            ],
-          ),
+            ]
+          )
         ),
-      ],
+      ]
     );
   }
 }

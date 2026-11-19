@@ -5,6 +5,12 @@ import 'package:rdx_admin/core/utils/responsive_size.dart';
 import 'package:rdx_admin/models/dashboard_stats_model.dart';
 import 'package:rdx_admin/screens/dashboard/widgets/dashboard_empty.dart';
 
+/// Offers / coupons summary strip.
+///
+/// Typography (STYLE_GUIDE):
+/// - Label → bodySemi
+/// - Value → h2 + primary color
+/// - Warning banner → caption + warning color
 class DashboardOffersSummary extends StatelessWidget {
   final DashboardStatsModel stats;
 
@@ -66,15 +72,17 @@ class DashboardOffersSummary extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.timer_outlined,
-                      size: context.h(18), color: AppColors.warning),
+                  Icon(
+                    Icons.timer_outlined,
+                    size: context.h(18),
+                    color: AppColors.warning,
+                  ),
                   SizedBox(width: context.w(8)),
                   Expanded(
                     child: Text(
                       'Some coupons are expiring soon — check attention list',
                       style: AppTextStyles.caption(context).copyWith(
                         color: AppColors.warning,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -97,7 +105,7 @@ class DashboardOffersSummary extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: context.w(18),
-        vertical: context.w(14),
+        vertical: context.h(14),
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -116,7 +124,7 @@ class DashboardOffersSummary extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.label(context).copyWith(
+            style: AppTextStyles.bodySemi(context).copyWith(
               color: colors.textSecondary,
               letterSpacing: 0.2,
             ),
@@ -124,9 +132,7 @@ class DashboardOffersSummary extends StatelessWidget {
           SizedBox(height: context.h(6)),
           Text(
             value,
-            style: AppTextStyles.heading(context).copyWith(
-              fontSize: context.h(22),
-              fontWeight: FontWeight.w800,
+            style: AppTextStyles.h2(context).copyWith(
               color: color,
             ),
           ),

@@ -113,7 +113,7 @@ class RdxActionMenuDialog extends StatelessWidget {
         child: Material(
           color: backgroundColor ?? colors.surface,
           elevation: context.h(elevation),
-          shadowColor: Colors.black26,
+          shadowColor: AppColors.black.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(context.w(borderRadius)),
           clipBehavior: Clip.antiAlias,
           child: Padding(
@@ -190,7 +190,7 @@ class RdxActionMenuDialog extends StatelessWidget {
                       title!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.section(context),
+                      style: AppTextStyles.bodyLargeSemi(context),
                     ),
                   if (subtitle != null) ...[
                     SizedBox(height: context.h(2)),
@@ -198,7 +198,7 @@ class RdxActionMenuDialog extends StatelessWidget {
                       subtitle!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.label(context).copyWith(
+                      style: AppTextStyles.bodySemi(context).copyWith(
                         color: colors.textMuted,
                       ),
                     ),
@@ -216,7 +216,7 @@ class RdxActionMenuDialog extends StatelessWidget {
                 height: context.h(28),
                 child: Icon(
                   Icons.close,
-                  size: context.w(18),
+                  size: context.h(18),
                 ),
               ),
             ),
@@ -385,7 +385,7 @@ class _RdxActionMenuTile extends StatelessWidget {
               if (item.icon != null) ...[
                 Icon(
                   item.icon,
-                  size: context.w(17),
+                  size: context.h(17),
                   color: iconColor,
                 ),
                 SizedBox(width: context.w(9)),
@@ -400,7 +400,7 @@ class _RdxActionMenuTile extends StatelessWidget {
                         item.title!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.label(context)
+                        style: AppTextStyles.bodySemi(context)
                             .copyWith(color: textColor),
                       ),
                     if (item.subtitle != null) ...[
@@ -409,9 +409,7 @@ class _RdxActionMenuTile extends StatelessWidget {
                         item.subtitle!,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.label(
-                          context,
-                        ).copyWith(
+                        style: AppTextStyles.bodySemi(context).copyWith(
                           color: colors.textMuted,
                         ),
                       ),

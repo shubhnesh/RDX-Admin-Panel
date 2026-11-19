@@ -29,7 +29,7 @@ class DashboardEmpty extends StatelessWidget {
             SizedBox(height: context.h(8)),
             Text(
               title,
-              style: AppTextStyles.bodySecondary(context)
+              style: AppTextStyles.body(context)
                   .copyWith(color: colors.textSecondary),
             ),
             SizedBox(height: context.h(4)),

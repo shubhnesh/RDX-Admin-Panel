@@ -42,8 +42,8 @@ class OrderMenuItemCard extends ConsumerWidget {
 
     final quantityInCart = ref.watch(
       cartProvider.select(
-        (cart) => ref.read(cartProvider.notifier).quantityForMenuItem(item.id),
-      ),
+        (cart) => ref.read(cartProvider.notifier).quantityForMenuItem(item.id)
+      )
     );
 
     final outerRadius = context.h(isNarrow ? 12 : 10);
@@ -55,7 +55,7 @@ class OrderMenuItemCard extends ConsumerWidget {
       contentHPad,
       context.h(6),
       contentHPad,
-      context.h(8),
+      context.h(8)
     );
 
     return Opacity(
@@ -69,11 +69,11 @@ class OrderMenuItemCard extends ConsumerWidget {
               border: Border.all(color: colors.border),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: AppColors.black.withValues(alpha: 0.04),
                   blurRadius: context.h(10),
-                  offset: Offset(0, context.h(3)),
+                  offset: Offset(0, context.h(3))
                 ),
-              ],
+              ]
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(
@@ -95,8 +95,8 @@ class OrderMenuItemCard extends ConsumerWidget {
                                     child: Icon(
                                       Icons.restaurant_outlined,
                                       color: colors.textMuted,
-                                      size: context.h(isNarrow ? 36 : 32),
-                                    ),
+                                      size: context.h(isNarrow ? 36 : 32)
+                                    )
                                   )
                                 : Image.network(
                                     item.imageUrl,
@@ -106,10 +106,10 @@ class OrderMenuItemCard extends ConsumerWidget {
                                       child: Icon(
                                         Icons.restaurant_outlined,
                                         color: colors.textMuted,
-                                        size: context.h(isNarrow ? 36 : 32),
-                                      ),
-                                    ),
-                                  ),
+                                        size: context.h(isNarrow ? 36 : 32)
+                                      )
+                                    )
+                                  )
                           ),
                           if (item.featuredItem)
                             Positioned(
@@ -119,18 +119,18 @@ class OrderMenuItemCard extends ConsumerWidget {
                                 context,
                                 'Featured',
                                 AppColors.primary,
-                                Colors.white,
-                              ),
+                                AppColors.white
+                              )
                             ),
                           Positioned(
                             right: context.w(8),
                             bottom: context.h(8),
-                            child: _dietaryBadge(context, item),
+                            child: _dietaryBadge(context, item)
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
+                        ]
+                      )
+                    )
+                  )
                 ),
 
                 // ── Content ─────────────────────────────────────────
@@ -140,7 +140,7 @@ class OrderMenuItemCard extends ConsumerWidget {
                       contentHPad,
                       contentTopPad,
                       contentHPad,
-                      0,
+                      0
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,39 +154,39 @@ class OrderMenuItemCard extends ConsumerWidget {
                                 item.category,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.bodyTertiary(context)
+                                style: AppTextStyles.caption(context)
                                     .copyWith(
-                                  color: AppColors.primary,
-                                ),
-                              ),
+                                  color: AppColors.primary
+                                )
+                              )
                             ),
                             SizedBox(width: context.w(8)),
                             Text(
                               '₹${item.price.toStringAsFixed(2)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.section(context).copyWith(
-                                color: colors.primary,
-                              ),
+                              style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                                color: colors.primary
+                              )
                             ),
-                          ],
+                          ]
                         ),
                         SizedBox(height: context.h(2)),
                         Text(
                           item.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.section(context).copyWith(
-                            color: colors.textPrimary,
-                          ),
+                          style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                            color: colors.textPrimary
+                          )
                         ),
                         if (item.ingredients.isNotEmpty) ...[
                           SizedBox(height: context.h(2)),
                           Text(
                             item.ingredients.join(', '),
-                            style: AppTextStyles.bodyTertiary(context),
+                            style: AppTextStyles.caption(context),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            overflow: TextOverflow.ellipsis
                           ),
                         ],
                         SizedBox(height: context.h(6)),
@@ -199,7 +199,7 @@ class OrderMenuItemCard extends ConsumerWidget {
                                 _detailChip(
                                   context,
                                   _titleCase(preparation),
-                                  colors.textSecondary,
+                                  colors.textSecondary
                                 ),
                               for (final tag in item.tags
                                   .where(
@@ -208,14 +208,14 @@ class OrderMenuItemCard extends ConsumerWidget {
                                 _detailChip(
                                   context,
                                   _titleCase(tag),
-                                  colors.textSecondary,
+                                  colors.textSecondary
                                 ),
-                            ],
-                          ),
+                            ]
+                          )
                         ),
-                      ],
-                    ),
-                  ),
+                      ]
+                    )
+                  )
                 ),
 
                 // ── Fixed bottom — Add button ────────────────────────
@@ -232,14 +232,14 @@ class OrderMenuItemCard extends ConsumerWidget {
                         child: RdxActionButton(
                           label: '+ Add',
                           isPrimary: true,
-                          onPressed: unavailable ? null : () => _addItem(context),
-                        ),
+                          onPressed: unavailable ? null : () => _addItem(context)
+                        )
                       ),
-                    ],
-                  ),
+                    ]
+                  )
                 ),
-              ],
-            ),
+              ]
+            )
           ),
 
           // ── Cart quantity badge ───────────────────────────────────
@@ -250,30 +250,30 @@ class OrderMenuItemCard extends ConsumerWidget {
               child: Container(
                 constraints: BoxConstraints(
                   minWidth: context.h(22),
-                  minHeight: context.h(22),
+                  minHeight: context.h(22)
                 ),
                 alignment: Alignment.center,
                 padding: EdgeInsets.symmetric(
-                  horizontal: context.w(5),
+                  horizontal: context.w(5)
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(context.h(20)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: context.h(4),
+                      color: AppColors.black.withValues(alpha: 0.15),
+                      blurRadius: context.h(4)
                     ),
-                  ],
+                  ]
                 ),
                 child: Text(
                   '$quantityInCart',
                   style: AppTextStyles.caption(context).copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w700
+                  )
+                )
+              )
             ),
 
           // ── Unavailable overlay ────────────────────────────────────
@@ -283,24 +283,23 @@ class OrderMenuItemCard extends ConsumerWidget {
                 child: Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: context.w(10),
-                    vertical: context.h(5),
+                    vertical: context.h(5)
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(context.h(6)),
+                    color: AppColors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(context.h(6))
                   ),
                   child: Text(
                     'Unavailable',
-                    style: AppTextStyles.label(context).copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
+                    style: AppTextStyles.bodySemi(context).copyWith(
+                      color: AppColors.white
+                      )
+                  )
+                )
+              )
             ),
-        ],
-      ),
+        ]
+      )
     );
   }
 
@@ -310,23 +309,23 @@ class OrderMenuItemCard extends ConsumerWidget {
     BuildContext context,
     String label,
     Color background,
-    Color foreground,
+    Color foreground
   ) {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: context.w(5),
-        vertical: context.h(2),
+        vertical: context.h(2)
       ),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(context.h(5)),
+        borderRadius: BorderRadius.circular(context.h(5))
       ),
       child: Text(
         label,
         style: AppTextStyles.caption(context).copyWith(
-          color: foreground,
-        ),
-      ),
+          color: foreground
+        )
+      )
     );
   }
 
@@ -334,18 +333,18 @@ class OrderMenuItemCard extends ConsumerWidget {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: context.w(6),
-        vertical: context.h(3),
+        vertical: context.h(3)
       ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(context.h(4)),
+        borderRadius: BorderRadius.circular(context.h(4))
       ),
       child: Text(
         label,
         style: AppTextStyles.caption(context).copyWith(
-          color: color,
-        ),
-      ),
+          color: color
+        )
+      )
     );
   }
 
@@ -354,11 +353,11 @@ class OrderMenuItemCard extends ConsumerWidget {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: context.w(5),
-        vertical: context.h(2),
+        vertical: context.h(2)
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(context.h(5)),
+        color: AppColors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(context.h(5))
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -368,11 +367,11 @@ class OrderMenuItemCard extends ConsumerWidget {
           Text(
             _dietaryLabel(item.dietaryType),
             style: AppTextStyles.caption(context).copyWith(
-              color: color,
-            ),
+              color: color
+            )
           ),
-        ],
-      ),
+        ]
+      )
     );
   }
 

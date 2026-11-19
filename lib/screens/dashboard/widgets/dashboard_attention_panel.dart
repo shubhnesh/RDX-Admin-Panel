@@ -50,10 +50,7 @@ class DashboardAttentionPanel extends StatelessWidget {
                   ),
                   child: Text(
                     '${items.length}',
-                    style: AppTextStyles.label(context).copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTextStyles.bodySemi(context).copyWith(color: AppColors.primary),
                   ),
                 ),
               ),
@@ -139,19 +136,14 @@ class _AttentionRow extends StatelessWidget {
                 children: [
                   Text(
                     item.title,
-                    style: AppTextStyles.label(context).copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.bodySemi(context).copyWith(color: colors.textPrimary),
                   ),
                   SizedBox(height: context.h(2)),
                   Text(
                     item.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption(context).copyWith(
-                      color: colors.textSecondary,
-                    ),
+                    style: AppTextStyles.caption(context).copyWith(color: colors.textSecondary),
                   ),
                 ],
               ),

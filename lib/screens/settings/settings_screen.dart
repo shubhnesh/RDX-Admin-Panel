@@ -34,58 +34,45 @@ class SettingsScreen extends ConsumerWidget {
     final canManageUsers = auth.permissions.canManageUsers;
 
     return Scaffold(
-      backgroundColor: colors.background,
-      body: SingleChildScrollView(
-        padding: Responsive.pagePadding(context, top: context.h(16)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        backgroundColor: colors.background,
+        body: SingleChildScrollView(
+            padding: Responsive.pagePadding(context, top: context.h(16)),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('System Settings',
-                          style: AppTextStyles.heading(context)),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('System Settings', style: AppTextStyles.h2(context)),
                       SizedBox(height: context.h(4)),
                       Text(
                           canEdit
                               ? 'Manage essential configuration for your restaurant operations.'
                               : 'Restaurant information and operating settings.',
-                          style: AppTextStyles.bodySecondary(context)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: context.h(18)),
-            LayoutBuilder(
-              builder: (context, constraints) {
+                          style: AppTextStyles.body(context)),
+                    ])),
+              ]),
+              SizedBox(height: context.h(18)),
+              LayoutBuilder(builder: (context, constraints) {
                 final compact = constraints.maxWidth < 760;
                 final identity =
                     _IdentityCard(colors: colors, canEdit: canEdit);
                 final hours = _SettingsCard(
-                  title: 'Operating Hours',
-                  icon: Icons.access_time_outlined,
-                  colors: colors,
-                  child: OperatingHoursEditor(canEdit: canEdit),
-                );
+                    title: 'Operating Hours',
+                    icon: Icons.access_time_outlined,
+                    colors: colors,
+                    child: OperatingHoursEditor(canEdit: canEdit));
                 final fees = _OrderFeesSettings(
-                  provider: provider,
-                  colors: colors,
-                  canEdit: canEdit,
-                );
+                    provider: provider, colors: colors, canEdit: canEdit);
                 final supportAccount = _SupportAccountCard(
-                  colors: colors,
-                  onRewards: canViewRewards ? onRewards : null,
-                  onUserManagement: canManageUsers ? onUserManagement : null,
-                  onSupport: onSupport,
-                  onLogout: onLogout,
-                  showRewards: canViewRewards,
-                  showUserManagement: canManageUsers,
-                );
+                    colors: colors,
+                    onRewards: canViewRewards ? onRewards : null,
+                    onUserManagement: canManageUsers ? onUserManagement : null,
+                    onSupport: onSupport,
+                    onLogout: onLogout,
+                    showRewards: canViewRewards,
+                    showUserManagement: canManageUsers);
 
                 if (compact) {
                   return Column(children: [
@@ -99,10 +86,8 @@ class SettingsScreen extends ConsumerWidget {
                   ]);
                 }
                 return Column(children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(
                         flex: 3,
                         child: Column(children: [
                           identity,
@@ -112,17 +97,11 @@ class SettingsScreen extends ConsumerWidget {
                           hours,
                           SizedBox(height: context.h(14)),
                           supportAccount,
-                        ]),
-                      ),
-                    ],
-                  ),
+                        ])),
+                  ]),
                 ]);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+              }),
+            ])));
   }
 }
 
@@ -147,113 +126,67 @@ class _SupportAccountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _SettingsCard(
-        title: 'Support & Account',
-        icon: Icons.manage_accounts_outlined,
-        colors: colors,
-        child: Column(
-          children: [
-            if (showRewards) ...[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  Icons.stars_outlined,
-                  size: 20,
-                  color: colors.textSecondary,
-                ),
-                title: Text(
-                  'Rewards',
-                  style: AppTextStyles.section(context)
-                      .copyWith(color: colors.textPrimary),
-                ),
-                subtitle: Text(
-                  'Manage points, redemptions and referral rewards.',
-                  style: AppTextStyles.bodySecondary(context),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: colors.textMuted,
-                ),
-                onTap: onRewards,
-              ),
-              Divider(height: context.h(1), color: colors.divider),
-            ],
-            if (showUserManagement) ...[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  Icons.manage_accounts_outlined,
-                  size: 20,
-                  color: colors.textSecondary,
-                ),
-                title: Text(
-                  'User management',
-                  style: AppTextStyles.section(context)
-                      .copyWith(color: colors.textPrimary),
-                ),
-                subtitle: Text(
+      title: 'Support & Account',
+      icon: Icons.manage_accounts_outlined,
+      colors: colors,
+      child: Column(children: [
+        if (showRewards) ...[
+          ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.stars_outlined,
+                  size: context.h(20), color: colors.textSecondary),
+              title: Text('Rewards',
+                  style: AppTextStyles.bodyLargeSemi(context)
+                      .copyWith(color: colors.textPrimary)),
+              subtitle: Text('Manage points, redemptions and referral rewards.',
+                  style: AppTextStyles.body(context)),
+              trailing: Icon(Icons.chevron_right, color: colors.textMuted),
+              onTap: onRewards),
+          Divider(height: context.h(1), color: colors.divider),
+        ],
+        if (showUserManagement) ...[
+          ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.manage_accounts_outlined,
+                  size: context.h(20), color: colors.textSecondary),
+              title: Text('User management',
+                  style: AppTextStyles.bodyLargeSemi(context)
+                      .copyWith(color: colors.textPrimary)),
+              subtitle: Text(
                   'Create accounts and assign admin or staff access.',
-                  style: AppTextStyles.bodySecondary(context),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: colors.textMuted,
-                ),
-                onTap: onUserManagement,
-              ),
-              Divider(height: context.h(1), color: colors.divider),
-            ],
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                Icons.support_agent_outlined,
-                size: 20,
-                color: colors.textSecondary,
-              ),
-              title: Text(
-                'Support',
-                style: AppTextStyles.section(context)
-                    .copyWith(color: colors.textPrimary),
-              ),
-              subtitle: Text(
-                'Get help with your account or restaurant setup.',
+                  style: AppTextStyles.body(context)),
+              trailing: Icon(Icons.chevron_right, color: colors.textMuted),
+              onTap: onUserManagement),
+          Divider(height: context.h(1), color: colors.divider),
+        ],
+        ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.support_agent_outlined,
+                size: context.h(20), color: colors.textSecondary),
+            title: Text('Support',
+                style: AppTextStyles.bodyLargeSemi(context)
+                    .copyWith(color: colors.textPrimary)),
+            subtitle: Text('Get help with your account or restaurant setup.',
                 style: _smallScreenTextStyle(
-                  context,
-                  AppTextStyles.bodySecondary(context),
-                ),
+                    context, AppTextStyles.body(context))),
+            trailing: Icon(Icons.chevron_right, color: colors.textMuted),
+            onTap: onSupport),
+        Divider(height: context.h(1), color: colors.divider),
+        ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.exit_to_app_rounded,
+                size: context.h(20), color: AppColors.danger),
+            title: Text(
+              'Log out',
+              style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                color: AppColors.danger,
               ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: colors.textMuted,
-              ),
-              onTap: onSupport,
             ),
-            Divider(height: context.h(1), color: colors.divider),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(
-                Icons.exit_to_app_rounded,
-                size: 20,
-                color: Color(0xFFE05151),
-              ),
-              title: const Text(
-                'Log out',
-                style: TextStyle(
-                  color: Color(0xFFE05151),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Text(
-                'Sign out of your account.',
+            subtitle: Text('Sign out of your account.',
                 style: _smallScreenTextStyle(
-                  context,
-                  AppTextStyles.bodySecondary(context),
-                ),
-              ),
-              onTap: onLogout,
-            ),
-          ],
-        ),
-      );
+                    context, AppTextStyles.body(context))),
+            onTap: onLogout),
+      ]));
 }
 
 class _IdentityCard extends ConsumerWidget {
@@ -275,39 +208,39 @@ class _IdentityCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.read(settingsProvider);
     return _SettingsCard(
-      title: 'Restaurant Identity',
-      icon: Icons.storefront_outlined,
-      colors: colors,
-      trailing: canEdit
-          ? TextButton(
-              onPressed: () => _openProfile(context),
-              child: const Text('Edit Restaurant Profile'),
-            )
-          : null,
-      child: Column(children: [
-        _LabeledInput(
-            label: 'Restaurant Name',
-            value: settings.restaurantName,
-            colors: colors),
-        SizedBox(height: context.h(10)),
-        _LabeledInput(
-            label: 'Primary Address', value: settings.address, colors: colors),
-        SizedBox(height: context.h(10)),
-        Row(children: [
-          Expanded(
-              child: _LabeledInput(
-                  label: 'Support Email',
-                  value: settings.email,
-                  colors: colors)),
-          SizedBox(width: context.w(10)),
-          Expanded(
-              child: _LabeledInput(
-                  label: 'Contact Phone',
-                  value: settings.phone,
-                  colors: colors))
-        ]),
-      ]),
-    );
+        title: 'Restaurant Identity',
+        icon: Icons.storefront_outlined,
+        colors: colors,
+        trailing: canEdit
+            ? TextButton(
+                onPressed: () => _openProfile(context),
+                child: const Text('Edit Restaurant Profile'))
+            : null,
+        child: Column(children: [
+          _LabeledInput(
+              label: 'Restaurant Name',
+              value: settings.restaurantName,
+              colors: colors),
+          SizedBox(height: context.h(10)),
+          _LabeledInput(
+              label: 'Primary Address',
+              value: settings.address,
+              colors: colors),
+          SizedBox(height: context.h(10)),
+          Row(children: [
+            Expanded(
+                child: _LabeledInput(
+                    label: 'Support Email',
+                    value: settings.email,
+                    colors: colors)),
+            SizedBox(width: context.w(10)),
+            Expanded(
+                child: _LabeledInput(
+                    label: 'Contact Phone',
+                    value: settings.phone,
+                    colors: colors))
+          ]),
+        ]));
   }
 }
 
@@ -329,11 +262,7 @@ class _SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
-        context.w(12),
-        context.h(12),
-        context.w(12),
-        context.h(14),
-      ),
+          context.w(12), context.h(12), context.w(12), context.h(14)),
       decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(context.h(8)),
@@ -341,17 +270,15 @@ class _SettingsCard extends StatelessWidget {
       child: Column(children: [
         Row(children: [
           Expanded(
-            child: Row(children: [
-              Icon(icon, size: context.h(18), color: AppColors.primary),
-              SizedBox(width: context.w(8)),
-              Flexible(
+              child: Row(children: [
+            Icon(icon, size: context.h(18), color: AppColors.primary),
+            SizedBox(width: context.w(8)),
+            Flexible(
                 child: Text(title,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.section(context)
-                        .copyWith(color: colors.textPrimary)),
-              ),
-            ]),
-          ),
+                    style: AppTextStyles.bodyLargeSemi(context)
+                        .copyWith(color: colors.textPrimary))),
+          ])),
           if (trailing != null) trailing!,
         ]),
         SizedBox(height: context.h(10)),
@@ -382,8 +309,7 @@ class _FieldLabel extends StatelessWidget {
   const _FieldLabel(this.label, this.colors);
   @override
   Widget build(BuildContext context) => Text(label,
-      style: AppTextStyles.bodySecondary(context)
-          .copyWith(color: colors.textSecondary));
+      style: AppTextStyles.body(context).copyWith(color: colors.textSecondary));
 }
 
 class _SettingsInput extends StatelessWidget {
@@ -392,22 +318,18 @@ class _SettingsInput extends StatelessWidget {
   const _SettingsInput({required this.value, required this.colors});
   @override
   Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          horizontal: context.w(10),
-          vertical: context.h(9),
-        ),
-        decoration: BoxDecoration(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+          horizontal: context.w(10), vertical: context.h(9)),
+      decoration: BoxDecoration(
           color: colors.background,
           borderRadius: BorderRadius.circular(context.h(5)),
-          border: Border.all(color: colors.border),
-        ),
-        child: Text(value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.body(context)
-                .copyWith(color: colors.textSecondary)),
-      );
+          border: Border.all(color: colors.border)),
+      child: Text(value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.body(context)
+              .copyWith(color: colors.textSecondary)));
 }
 
 class _OrderFeesSettings extends StatelessWidget {
@@ -427,40 +349,32 @@ class _OrderFeesSettings extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _SettingsCard(
-        title: 'Order fees',
-        icon: Icons.payments_outlined,
-        colors: colors,
-        trailing: canEdit
-            ? TextButton(
-                onPressed: () => _editFees(context),
-                child: const Text('Edit fees charges'),
-              )
-            : null,
-        child: Column(
-          children: [
-            _FeeValueTile(
-              title: 'GST',
-              value: '${_formatFeeValue(provider.gstPercent)}%',
-              colors: colors,
-            ),
-            _FeeValueTile(
-              title: 'Delivery fee',
-              value: '₹${_formatFeeValue(provider.deliveryFee)}',
-              colors: colors,
-            ),
-            _FeeValueTile(
-              title: 'Late night delivery fee',
-              value: '₹${_formatFeeValue(provider.lateNightFee)}',
-              colors: colors,
-            ),
-            _FeeValueTile(
-              title: 'Long distance fee',
-              value: '₹${_formatFeeValue(provider.longDistanceFee)}',
-              colors: colors,
-            ),
-          ],
-        ),
-      );
+      title: 'Order fees',
+      icon: Icons.payments_outlined,
+      colors: colors,
+      trailing: canEdit
+          ? TextButton(
+              onPressed: () => _editFees(context),
+              child: const Text('Edit fees charges'))
+          : null,
+      child: Column(children: [
+        _FeeValueTile(
+            title: 'GST',
+            value: '${_formatFeeValue(provider.gstPercent)}%',
+            colors: colors),
+        _FeeValueTile(
+            title: 'Delivery fee',
+            value: '₹${_formatFeeValue(provider.deliveryFee)}',
+            colors: colors),
+        _FeeValueTile(
+            title: 'Late night delivery fee',
+            value: '₹${_formatFeeValue(provider.lateNightFee)}',
+            colors: colors),
+        _FeeValueTile(
+            title: 'Long distance fee',
+            value: '₹${_formatFeeValue(provider.longDistanceFee)}',
+            colors: colors),
+      ]));
 
   Future<void> _editFees(BuildContext context) async {
     _log('Edit order fees action tapped.');
@@ -468,16 +382,12 @@ class _OrderFeesSettings extends StatelessWidget {
     if (!context.mounted) return;
     if (provider.errorMessage != null) {
       _log('Fee editor opening stopped; settings refresh failed.');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(provider.errorMessage!)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(provider.errorMessage!)));
       return;
     }
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const FeesEditor(),
-      ),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const FeesEditor()));
     _log('Returned from order fee editor.');
   }
 
@@ -499,28 +409,17 @@ class _FeeValueTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.symmetric(vertical: context.h(8)),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: _smallScreenTextStyle(
-                  context,
-                  AppTextStyles.bodySecondary(context),
-                ).copyWith(color: colors.textPrimary),
-              ),
-            ),
-            Text(
-              value,
-              style: _smallScreenTextStyle(
-                context,
-                AppTextStyles.bodySecondary(context),
-              ).copyWith(color: colors.textPrimary),
-            ),
-          ],
-        ),
-      );
+      padding: EdgeInsets.symmetric(vertical: context.h(8)),
+      child: Row(children: [
+        Expanded(
+            child: Text(title,
+                style:
+                    _smallScreenTextStyle(context, AppTextStyles.body(context))
+                        .copyWith(color: colors.textPrimary))),
+        Text(value,
+            style: _smallScreenTextStyle(context, AppTextStyles.body(context))
+                .copyWith(color: colors.textPrimary)),
+      ]));
 }
 
 TextStyle _smallScreenTextStyle(BuildContext context, TextStyle style) {

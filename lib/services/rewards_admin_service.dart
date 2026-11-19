@@ -31,11 +31,33 @@ class RewardsAdminService {
   final FirebaseFunctions _functions;
   final FirebaseFirestore _firestore;
 
-  static const int pageSize = 25;
+  /// Rows fetched per request (tables load more on demand).
+  static const int pageSize = 10;
 
   void _log(String message) {
     if (kDebugMode) debugPrint('[Rewards] $message');
   }
+
+  // ---- Change tracking ----------------------------------------------------
+
+  /// Emits per-area change counters. A counter only goes up when something
+  /// in that area is added, edited or removed (see rewardsVersion.js), so the
+  /// app re-fetches only what actually changed. One tiny document.
+  Stream<Map<String, int>> watchVersions() {
+    return _firestore.doc('rewards_meta/state').snapshots().map((snap) {
+      final data = snap.data() ?? const <String, dynamic>{};
+      int read(String key) => (data[key] as num?)?.toInt() ?? 0;
+      return {
+        'ledger': read('ledger'),
+        'referrals': read('referrals'),
+        'redemptions': read('redemptions'),
+        'catalog': read('catalog'),
+        'config': read('config'),
+      };
+    });
+  }
+
+  // ---- Permissions --------------------------------------------------------
 
   Future<bool> hasReadPermission() async {
     _log('Checking rewards read permission.');
@@ -54,7 +76,6 @@ class RewardsAdminService {
   }
 
   Future<void> _requireClaim(String claim) async {
-    _log('Verifying required permission claim: $claim.');
     if (!await _hasClaim(claim)) {
       _log('Required permission claim is missing: $claim.');
       throw FirebaseFunctionsException(
@@ -64,6 +85,8 @@ class RewardsAdminService {
     }
   }
 
+  /// Uses the locally stored token first (works offline). Only when the claim
+  /// is missing does it force a network refresh, in case claims were updated.
   Future<bool> _hasClaim(String claim) async {
     if (Firebase.apps.isEmpty) {
       _log('Permission check unavailable: Firebase is not initialized.');
@@ -74,21 +97,25 @@ class RewardsAdminService {
       _log('Permission check denied: no signed-in user.');
       return false;
     }
-    _log('Refreshing claims for permission check.');
-    try {
-      final token = await user.getIdTokenResult(true);
+
+    bool allowed(IdTokenResult token) {
       final claims = token.claims;
-      final hasRewardAdminRole =
-          (claim == 'rewardsReadAdmin' || claim == 'rewardsConfigAdmin') &&
-              claims?['role'] == 'admin';
-      final allowed = claims?[claim] == true || hasRewardAdminRole;
-      _log('Permission claim lookup completed (granted: $allowed).');
-      return allowed;
+      final isRewardsClaim =
+          claim == 'rewardsReadAdmin' || claim == 'rewardsConfigAdmin';
+      return claims?[claim] == true ||
+          (isRewardsClaim && claims?['role'] == 'admin');
+    }
+
+    try {
+      if (allowed(await user.getIdTokenResult())) return true;
+      return allowed(await user.getIdTokenResult(true));
     } on FirebaseAuthException catch (error) {
       _log('Permission claim lookup failed (Auth code: ${error.code}).');
       rethrow;
     }
   }
+
+  // ---- Callable plumbing --------------------------------------------------
 
   Future<T> _call<T>(
     String name, {
@@ -99,11 +126,9 @@ class RewardsAdminService {
     _log('$name started.');
     try {
       await _requireClaim(requiredClaim);
-      _log('$name authorized; sending callable request.');
       final result = await _functions.httpsCallable(name).call<Object?>(data);
-      _log('$name response received; parsing result.');
       final parsed = parse(result.data);
-      _log('$name result parsed successfully.');
+      _log('$name completed.');
       return parsed;
     } on FirebaseFunctionsException catch (error) {
       _log('$name failed (Functions code: ${error.code}).');
@@ -117,23 +142,108 @@ class RewardsAdminService {
     }
   }
 
-  Future<RewardConfiguration> fetchConfiguration() => _call(
+  // ---- Raw fetchers (JSON maps, so the provider can cache them) -----------
+
+  Future<Map<String, dynamic>> fetchConfigurationRaw() => _call(
         'getRewardConfiguration',
-        parse: (result) =>
-            RewardConfiguration.fromCallable(_asMap(result, 'configuration')),
+        parse: (result) => _asMap(result, 'configuration'),
       );
 
-  Future<void> updateConfiguration(RewardConfiguration configuration) async {
-    await _call<void>(
-      'updateRewardConfiguration',
-      requiredClaim: 'rewardsConfigAdmin',
-      data: {
-        'config': configuration.toCallableMap(),
-        'requestId': _requestId(),
-      },
-      parse: (_) {},
-    );
-  }
+  Future<Map<String, dynamic>> fetchAnalyticsRaw({
+    required DateTime from,
+    required DateTime to,
+  }) =>
+      _call(
+        'fetchRewardAnalytics',
+        data: {
+          'range': {
+            'from': from.toUtc().toIso8601String(),
+            'to': to.toUtc().toIso8601String(),
+          },
+        },
+        parse: (result) => _asMap(result, 'analytics'),
+      );
+
+  /// One page ([pageSize] rows) of transactions / referrals / redemptions.
+  Future<Map<String, dynamic>> fetchPageRaw(
+    String function, {
+    String? type,
+    String? status,
+    String? cursor,
+    String? search,
+  }) =>
+      _call(
+        function,
+        data: {
+          'filters': {
+            if (type != null) 'type': type,
+            if (status != null) 'status': status,
+            if (search != null && search.trim().isNotEmpty)
+              'search': search.trim(),
+          },
+          'cursor': cursor,
+          'limit': pageSize,
+        },
+        parse: (result) => _asMap(result, 'page'),
+      );
+
+  // ---- Typed fetchers (kept for existing callers) -------------------------
+
+  Future<RewardConfiguration> fetchConfiguration() async =>
+      RewardConfiguration.fromCallable(await fetchConfigurationRaw());
+
+  Future<RewardAnalytics> fetchAnalytics({
+    required DateTime from,
+    required DateTime to,
+  }) async =>
+      RewardAnalytics.fromMap(await fetchAnalyticsRaw(from: from, to: to));
+
+  Future<RewardPage<RewardTransaction>> fetchTransactions({
+    String? type,
+    String? cursor,
+    String? search,
+  }) async =>
+      RewardPage<RewardTransaction>.fromCallable(
+        await fetchPageRaw(
+          'fetchRewardTransactions',
+          type: type,
+          cursor: cursor,
+          search: search,
+        ),
+        RewardTransaction.fromMap,
+      );
+
+  Future<RewardPage<RewardReferralRecord>> fetchReferrals({
+    String? status,
+    String? cursor,
+    String? search,
+  }) async =>
+      RewardPage<RewardReferralRecord>.fromCallable(
+        await fetchPageRaw(
+          'fetchReferralRecords',
+          status: status,
+          cursor: cursor,
+          search: search,
+        ),
+        RewardReferralRecord.fromMap,
+      );
+
+  Future<RewardPage<RewardRedemptionRecord>> fetchRedemptions({
+    String? status,
+    String? cursor,
+    String? search,
+  }) async =>
+      RewardPage<RewardRedemptionRecord>.fromCallable(
+        await fetchPageRaw(
+          'fetchRedemptionRecords',
+          status: status,
+          cursor: cursor,
+          search: search,
+        ),
+        RewardRedemptionRecord.fromMap,
+      );
+
+  // ---- Catalog ------------------------------------------------------------
 
   Future<List<FoodReward>> fetchFoodRewards() async {
     const operation = 'fetchFoodRewards';
@@ -145,7 +255,6 @@ class RewardsAdminService {
           .orderBy(FieldPath.documentId)
           .limit(100)
           .get();
-      _log('$operation received ${snapshot.docs.length} catalog records.');
       final rewards = snapshot.docs.map(FoodReward.fromFirestore).toList();
       _log('$operation parsed ${rewards.length} catalog records.');
       return rewards;
@@ -156,6 +265,20 @@ class RewardsAdminService {
       _log('$operation failed (${error.runtimeType}).');
       rethrow;
     }
+  }
+
+  // ---- Mutations ----------------------------------------------------------
+
+  Future<void> updateConfiguration(RewardConfiguration configuration) async {
+    await _call<void>(
+      'updateRewardConfiguration',
+      requiredClaim: 'rewardsConfigAdmin',
+      data: {
+        'config': configuration.toCallableMap(),
+        'requestId': _requestId(),
+      },
+      parse: (_) {},
+    );
   }
 
   Future<void> createFoodReward(FoodReward reward) async {
@@ -216,84 +339,6 @@ class RewardsAdminService {
             reason: reason,
           );
         },
-      );
-
-  Future<RewardAnalytics> fetchAnalytics({
-    required DateTime from,
-    required DateTime to,
-  }) =>
-      _call(
-        'fetchRewardAnalytics',
-        data: {
-          'range': {
-            'from': from.toUtc().toIso8601String(),
-            'to': to.toUtc().toIso8601String(),
-          },
-        },
-        parse: (result) => RewardAnalytics.fromMap(_asMap(result, 'analytics')),
-      );
-
-  Future<RewardPage<RewardTransaction>> fetchTransactions({
-    String? type,
-    String? cursor,
-    String? search,
-  }) =>
-      _fetchPage(
-        'fetchRewardTransactions',
-        type: type,
-        cursor: cursor,
-        search: search,
-        parse: RewardTransaction.fromMap,
-      );
-
-  Future<RewardPage<RewardReferralRecord>> fetchReferrals({
-    String? status,
-    String? cursor,
-    String? search,
-  }) =>
-      _fetchPage(
-        'fetchReferralRecords',
-        status: status,
-        cursor: cursor,
-        search: search,
-        parse: RewardReferralRecord.fromMap,
-      );
-
-  Future<RewardPage<RewardRedemptionRecord>> fetchRedemptions({
-    String? status,
-    String? cursor,
-    String? search,
-  }) =>
-      _fetchPage(
-        'fetchRedemptionRecords',
-        status: status,
-        cursor: cursor,
-        search: search,
-        parse: RewardRedemptionRecord.fromMap,
-      );
-
-  Future<RewardPage<T>> _fetchPage<T>(
-    String function, {
-    String? type,
-    String? status,
-    String? cursor,
-    String? search,
-    required T Function(Map<String, dynamic>) parse,
-  }) =>
-      _call(
-        function,
-        data: {
-          'filters': {
-            if (type != null) 'type': type,
-            if (status != null) 'status': status,
-            if (search != null && search.trim().isNotEmpty)
-              'search': search.trim(),
-          },
-          'cursor': cursor,
-          'limit': pageSize,
-        },
-        parse: (result) =>
-            RewardPage<T>.fromCallable(_asMap(result, 'page'), parse),
       );
 
   static Map<String, dynamic> _asMap(Object? value, String field) {

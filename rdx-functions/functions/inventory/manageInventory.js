@@ -16,6 +16,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const DAY_MS = 24 * 60 * 60 * 1000;
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+const META_REF = db.doc("inventory_meta/state");
 
 function number(value, fallback = 0) {
   const parsed = Number(value);
@@ -403,6 +404,7 @@ async function saveInventoryItem(raw) {
         unit_cost: item.unitCost,
         total_cost: item.totalCost,
       });
+      bumpVersion(transaction);
     });
     return { id: ref.id };
   }
@@ -434,6 +436,7 @@ async function saveInventoryItem(raw) {
       unit_cost: item.unitCost,
       updated_at: now,
     });
+    bumpVersion(transaction);
   });
   return { id: requestedId };
 }
@@ -510,6 +513,7 @@ async function changeStock(action, id, rawQuantity, rawPurchaseCost) {
         unit_cost: purchaseCost / quantity,
         total_cost: purchaseCost,
       });
+      bumpVersion(transaction);
       return;
     }
 
@@ -543,6 +547,7 @@ async function changeStock(action, id, rawQuantity, rawPurchaseCost) {
       unit_cost: unitCost,
       total_cost: usedCost,
     });
+    bumpVersion(transaction);
   });
 }
 
@@ -689,7 +694,110 @@ async function deleteInventoryItem(id) {
       );
     }
     transaction.delete(ref);
+    bumpVersion(transaction);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Pagination + change-version support
+// ---------------------------------------------------------------------------
+const PAGE_SIZE_DEFAULT = 10;
+const PAGE_SIZE_MAX = 100;
+
+/** Bump inside every inventory write so clients know when to re-fetch. */
+function bumpVersion(transaction) {
+  transaction.set(META_REF, {
+    version: admin.firestore.FieldValue.increment(1),
+    updated_at: admin.firestore.Timestamp.now(),
+  }, { merge: true });
+}
+
+async function readVersion() {
+  const snap = await META_REF.get();
+  return snap.exists ? number(snap.get("version")) : 0;
+}
+
+function parseFilters(data) {
+  return {
+    search: String(data.search || ""),
+    category: String(data.category || "All"),
+    stockLevel: String(data.stock_level || "All"),
+  };
+}
+
+function isDefaultFilter(filters) {
+  return !filters.search.trim() &&
+    filters.category === "All" &&
+    filters.stockLevel === "All";
+}
+
+/** Filter, order by id and slice one page. Cursor = id of the last item. */
+function pageFromItems(items, filters, cursor, limit) {
+  const matched = items
+    .filter((item) => matchesFilters(item, filters))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const start = cursor ? matched.findIndex((item) => item.id > cursor) : 0;
+  const slice = start === -1 ? [] : matched.slice(start, start + limit);
+  const hasMore = start !== -1 && start + limit < matched.length;
+  return {
+    items: slice,
+    next_cursor: hasMore ? slice[slice.length - 1].id : null,
+    has_more: hasMore,
+    total_matching: matched.length,
+  };
+}
+
+async function getInventoryPage(data) {
+  // Read the version FIRST: if data changes mid-request the client simply
+  // sees a newer version on its next check and re-fetches.
+  const version = await readVersion();
+  const period = String(data.period || "overall");
+  const periodWindow = resolvePeriod(period);
+  const limit = Math.min(
+    Math.max(Math.trunc(number(data.limit, PAGE_SIZE_DEFAULT)) || PAGE_SIZE_DEFAULT, 1),
+    PAGE_SIZE_MAX
+  );
+  const cursor = data.cursor ? String(data.cursor) : null;
+  const filters = parseFilters(data);
+
+  // Fast path: no filters -> a real Firestore query that reads only one page.
+  if (isDefaultFilter(filters)) {
+    let query = db.collection("inventory")
+      .orderBy(admin.firestore.FieldPath.documentId())
+      .limit(limit + 1);
+    if (cursor) query = query.startAfter(cursor);
+    const [snap, countSnap] = await Promise.all([
+      query.get(),
+      cursor ? Promise.resolve(null) : db.collection("inventory").count().get(),
+    ]);
+    const docs = snap.docs.slice(0, limit);
+    const hasMore = snap.size > limit;
+    return {
+      version,
+      period,
+      items: docs.map((doc) => normalizeItem(doc, periodWindow)),
+      next_cursor: hasMore ? docs[docs.length - 1].id : null,
+      has_more: hasMore,
+      total_matching: countSnap ? countSnap.data().count : null,
+    };
+  }
+
+  // Filters (search / category / derived stock status) need a scan.
+  const snapshot = await db.collection("inventory").get();
+  const items = snapshot.docs.map((doc) => normalizeItem(doc, periodWindow));
+  return { version, period, ...pageFromItems(items, filters, cursor, limit) };
+}
+
+async function getInventoryStats(data) {
+  const version = await readVersion();
+  const snapshot = await db.collection("inventory").get();
+  const result = buildInventoryData(snapshot, { period: data.period });
+  return {
+    version,
+    period: result.period,
+    stats: result.stats,
+    categories: result.categories,
+  };
 }
 
 // APP: ADMIN APP — inventory data and mutations for restaurant operators.
@@ -713,6 +821,12 @@ const manageInventory = functions
           duration_ms: Date.now() - startedAt,
         });
         return result;
+      }
+      if (action === "getInventoryPage") {
+        return await getInventoryPage(data || {});
+      }
+      if (action === "getInventoryStats") {
+        return await getInventoryStats(data || {});
       }
       if (action === "getStockHistory") {
         const result = await getStockHistory(data.id, data.cursor_id);
@@ -780,4 +894,5 @@ module.exports = {
   weightedAverageUnitCost,
   normalizeSaveInput,
   legacyStockHistory,
+  pageFromItems,
 };

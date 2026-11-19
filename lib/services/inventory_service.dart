@@ -1,14 +1,17 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/inventory_item_model.dart';
 
 class InventoryService {
-  InventoryService({FirebaseFunctions? functions})
+  InventoryService({FirebaseFunctions? functions, FirebaseFirestore? firestore})
       : _functions =
-            functions ?? FirebaseFunctions.instanceFor(region: 'us-central1');
+            functions ?? FirebaseFunctions.instanceFor(region: 'us-central1'),
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFunctions _functions;
+  final FirebaseFirestore _firestore;
 
   HttpsCallable get _callable => _functions.httpsCallable('manageInventory');
 
@@ -16,16 +19,53 @@ class InventoryService {
     if (kDebugMode) debugPrint('[InventoryService] $message');
   }
 
+  /// Emits the inventory "version" number whenever ANY inventory change
+  /// happens (add / use / edit / delete). One tiny document, so it is cheap,
+  /// and Firestore keeps it working across reconnects.
+  Stream<int> watchVersion() {
+    return _firestore.doc('inventory_meta/state').snapshots().map(
+          (snap) => (snap.data()?['version'] as num?)?.toInt() ?? 0,
+        );
+  }
+
+  /// One page of items (server-side filtered, ordered by item id).
+  Future<Map<String, dynamic>> fetchPage({
+    required String period,
+    required String search,
+    required String category,
+    required String stockLevel,
+    required int limit,
+    String? cursor,
+  }) async {
+    final response = await _callable.call<Map<dynamic, dynamic>>({
+      'action': 'getInventoryPage',
+      'period': period,
+      'search': search,
+      'category': category,
+      'stock_level': stockLevel,
+      'limit': limit,
+      if (cursor != null) 'cursor': cursor,
+    });
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  /// Aggregate stats + category list (needs a full scan, so it is only
+  /// requested when the inventory version actually changed).
+  Future<Map<String, dynamic>> fetchStats({required String period}) async {
+    final response = await _callable.call<Map<dynamic, dynamic>>({
+      'action': 'getInventoryStats',
+      'period': period,
+    });
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  /// Legacy full read (kept so other callers don't break).
   Future<Map<String, dynamic>> fetchInventoryData({
     required String period,
     required String search,
     required String category,
     required String stockLevel,
   }) async {
-    _log(
-      'getInventoryData started '
-      '(period: $period, category: $category, stock level: $stockLevel).',
-    );
     try {
       final response = await _callable.call<Map<dynamic, dynamic>>({
         'action': 'getInventoryData',
@@ -34,13 +74,7 @@ class InventoryService {
         'category': category,
         'stock_level': stockLevel,
       });
-      final data = Map<String, dynamic>.from(response.data);
-      _log(
-        'getInventoryData completed '
-        '(items: ${(data['items'] as List?)?.length ?? 0}, '
-        'matched: ${(data['filtered_items'] as List?)?.length ?? 0}).',
-      );
-      return data;
+      return Map<String, dynamic>.from(response.data);
     } on FirebaseFunctionsException catch (error) {
       _log('getInventoryData failed (${error.code}): ${error.message}');
       rethrow;

@@ -1,8 +1,9 @@
 import 'dart:async';
-
+import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:rdx_admin/core/store/inventory_cache.dart';
 import '../models/inventory_item_model.dart';
 import '../services/inventory_service.dart';
 
@@ -54,24 +55,48 @@ extension StatsPeriodLabel on StatsPeriod {
   }
 }
 
+/// Paginated, cached inventory state.
+///
+/// * Only [pageSize] items are fetched at a time ([loadMore] fetches the next).
+/// * Every result is persisted, so reopening the screen / app (even offline)
+///   shows data instantly.
+/// * No polling: we listen to a single "version" document and only re-fetch
+///   when something was actually added, used, edited or deleted.
 class InventoryProvider extends ChangeNotifier {
   InventoryProvider(
     this._service, {
-    Duration refreshInterval = const Duration(seconds: 10),
-  }) : _refreshInterval = refreshInterval;
+    InventoryCache? cache,
+    this.pageSize = 10,
+    this.maxCacheAge = const Duration(minutes: 10),
+  }) : _cache = cache ?? InventoryCache();
 
   final InventoryService _service;
-  final Duration _refreshInterval;
-  Timer? _refreshTimer;
+  final InventoryCache _cache;
+  final int pageSize;
+  final Duration maxCacheAge;
+
+  StreamSubscription<int>? _versionSub;
+  Timer? _searchDebounce;
   int _requestId = 0;
-  int _activeFetches = 0;
-  bool _hasLoadedData = false;
+  bool _started = false;
   bool _disposed = false;
 
+  int _version = -1; // version of the list on screen
+  int _statsVersion = -1; // version of the stats on screen
+  int _latestVersion = -1; // newest version we have heard of
+  String? _nextCursor;
+  List<Map<String, dynamic>> _rawItems = [];
+
+  // ---- Public state -------------------------------------------------------
   List<InventoryItemModel> items = [];
-  List<InventoryItemModel> filteredItems = [];
   List<String> categories = [];
   bool isLoading = false;
+  bool isLoadingMore = false;
+  bool hasMore = false;
+  bool hasLoadedOnce = false;
+  bool isOffline = false;
+  int totalMatching = 0;
+  DateTime? lastSyncedAt;
   String? errorMessage;
   String? refreshError;
 
@@ -86,221 +111,262 @@ class InventoryProvider extends ChangeNotifier {
   int periodUsedItemCount = 0;
   int needsRestockCount = 0;
 
+  /// Items are already filtered server-side; kept for screen compatibility.
+  List<InventoryItemModel> get filteredItems => items;
+
+  // ---- Keys ---------------------------------------------------------------
+  String get _queryKey => '${periodFilter.cloudKey}|$selectedCategory|'
+      '$stockLevelFilter|${searchQuery.trim().toLowerCase()}';
+  String get _statsKey => 'stats|${periodFilter.cloudKey}';
+
   void _log(String message) {
     if (kDebugMode) debugPrint('[InventoryProvider] $message');
   }
 
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  // ---- Lifecycle ----------------------------------------------------------
+  /// Safe to call every time the screen opens: after the first call it only
+  /// hits the network if the cache is older than [maxCacheAge].
   Future<void> load() async {
-    _startAutoRefresh();
-    await _loadFromCloud();
+    if (_started) {
+      final age = lastSyncedAt == null
+          ? null
+          : DateTime.now().difference(lastSyncedAt!);
+      if (age == null || age > maxCacheAge) await refresh();
+      return;
+    }
+    _started = true;
+
+    final cachedList = await _cache.read(_queryKey);
+    final cachedStats = await _cache.read(_statsKey);
+    if (_disposed) return;
+
+    if (cachedStats != null) _applyStats(cachedStats);
+    if (cachedList != null) {
+      _applyPage(cachedList);
+      lastSyncedAt = _savedAt(cachedList);
+      isLoading = false;
+      _notify();
+    }
+
+    _listenForChanges();
+    if (cachedList == null || _isStale(cachedList)) await refresh();
   }
 
-  void _startAutoRefresh() {
-    if (_disposed || _refreshTimer != null) return;
-    _refreshTimer = Timer.periodic(_refreshInterval, (_) {
-      if (_activeFetches == 0) {
-        unawaited(_loadFromCloud(silent: true));
-      }
-    });
-  }
-
-  Future<void> retryAutoRefresh() async {
+  /// Forces a re-fetch (retry button / manual refresh).
+  Future<void> refresh() async {
     refreshError = null;
-    notifyListeners();
-    await _loadFromCloud(silent: _hasLoadedData);
+    await Future.wait([
+      _refreshList(keepDepth: true, silent: items.isNotEmpty),
+      _refreshStats(),
+    ]);
   }
 
-  Future<void> _loadFromCloud({bool silent = false}) async {
+  Future<void> retryAutoRefresh() => refresh();
+
+  void _listenForChanges() {
+    _versionSub ??= _service.watchVersion().listen(
+      (version) {
+        if (_disposed) return;
+        _latestVersion = math.max(_latestVersion, version);
+        // Fetch only what is actually out of date.
+        if (version != _version) {
+          unawaited(_refreshList(keepDepth: true, silent: true));
+        }
+        if (version != _statsVersion) unawaited(_refreshStats());
+      },
+      onError: (Object error) {
+        _log('Version listener failed: $error');
+      },
+    );
+  }
+
+  // ---- Fetching -----------------------------------------------------------
+  Future<void> _refreshList({
+    bool keepDepth = false,
+    bool silent = true,
+  }) async {
     if (_disposed) return;
     final requestId = ++_requestId;
-    _activeFetches++;
-    isLoading = !silent && !_hasLoadedData;
-    final previousItems = items;
-    final previousFilteredItems = filteredItems;
-    final previousCategories = categories;
-    final previousExpenditure = periodExpenditure;
-    final previousTotalItems = totalItems;
-    final previousAddedCount = periodAddedItemCount;
-    final previousUsedCount = periodUsedItemCount;
-    final previousRestockCount = needsRestockCount;
-    final previousError = errorMessage;
-    final previousRefreshError = refreshError;
-    var shouldNotify = !silent;
-    if (!silent) {
-      errorMessage = null;
-      notifyListeners();
+    final key = _queryKey;
+    final limit = keepDepth
+        ? math.min(math.max(_rawItems.length, pageSize), 100)
+        : pageSize;
+
+    if (!silent && items.isEmpty) {
+      isLoading = true;
+      _notify();
     }
-    _log(
-      'Inventory request started '
-      '(period: ${periodFilter.cloudKey}, category: $selectedCategory, '
-      'stock level: $stockLevelFilter).',
-    );
 
     try {
-      final response = await _service.fetchInventoryData(
+      final page = await _service.fetchPage(
         period: periodFilter.cloudKey,
         search: searchQuery,
         category: selectedCategory,
         stockLevel: stockLevelFilter,
+        limit: limit,
       );
       if (_disposed || requestId != _requestId) return;
-
-      final nextItems = _parseItems(response['items']);
-      final nextItemsById = {
-        for (final item in _preserveUnchangedItems(nextItems, items))
-          item.id: item,
-      };
-      items = nextItemsById.values.toList(growable: false)
-        ..sort((a, b) => a.name.compareTo(b.name));
-      filteredItems = _filterItems(items);
-      final rawCategories = response['categories'];
-      final stats = Map<String, dynamic>.from(
-        response['stats'] as Map? ?? const {},
-      );
-      categories = rawCategories is List
-          ? rawCategories.map((value) => value.toString()).toList()
-          : const [];
-      periodExpenditure = _number(stats['expenditure']);
-      totalItems = _integer(stats['total_items']);
-      periodAddedItemCount = _integer(stats['added_item_count']);
-      periodUsedItemCount = _integer(stats['used_item_count']);
-      needsRestockCount = _integer(stats['needs_restock_count']);
+      _applyPage(page);
       errorMessage = null;
       refreshError = null;
-      _hasLoadedData = true;
-      shouldNotify = shouldNotify ||
-          !_sameItemReferences(previousItems, items) ||
-          !_sameItemReferences(previousFilteredItems, filteredItems) ||
-          !_sameStrings(previousCategories, categories) ||
-          previousExpenditure != periodExpenditure ||
-          previousTotalItems != totalItems ||
-          previousAddedCount != periodAddedItemCount ||
-          previousUsedCount != periodUsedItemCount ||
-          previousRestockCount != needsRestockCount ||
-          previousError != null ||
-          previousRefreshError != null;
-      _log(
-        'Inventory response applied '
-        '(items: ${items.length}, filtered: ${filteredItems.length}).',
-      );
-    } catch (error, stackTrace) {
+      isOffline = false;
+      lastSyncedAt = DateTime.now();
+      await _cache.write(key, _snapshot());
+    } catch (error) {
       if (_disposed || requestId != _requestId) return;
-      errorMessage = 'Failed to load inventory: $error';
-      if (_hasLoadedData) {
-        refreshError = 'Automatic inventory refresh failed: $error';
+      _log('Page request failed: $error');
+      if (items.isEmpty) {
+        errorMessage = 'Failed to load inventory: $error';
+      } else {
+        isOffline = true;
+        refreshError = 'Could not refresh. Showing saved inventory'
+            '${lastSyncedAt == null ? '' : ' from ${_clock(lastSyncedAt!)}'}.';
       }
-      shouldNotify = true;
-      _log('Inventory request failed: $error\n$stackTrace');
     } finally {
-      _activeFetches--;
       if (requestId == _requestId) {
         isLoading = false;
-        if (!_disposed && shouldNotify) notifyListeners();
+        _notify();
       }
     }
   }
 
-  List<InventoryItemModel> _parseItems(dynamic value) {
-    if (value is! List) return const [];
-    return value
+  Future<void> loadMore() async {
+    if (!hasMore || isLoadingMore || isLoading || _nextCursor == null) return;
+    final requestId = _requestId;
+    final key = _queryKey;
+    isLoadingMore = true;
+    _notify();
+    try {
+      final page = await _service.fetchPage(
+        period: periodFilter.cloudKey,
+        search: searchQuery,
+        category: selectedCategory,
+        stockLevel: stockLevelFilter,
+        limit: pageSize,
+        cursor: _nextCursor,
+      );
+      if (_disposed || requestId != _requestId) return; // filters changed
+      if (_integer(page['version']) != _version) {
+        // Data changed while paging: re-sync instead of mixing versions.
+        unawaited(_refreshList(keepDepth: true, silent: true));
+        return;
+      }
+      _applyPage(page, append: true);
+      refreshError = null;
+      await _cache.write(key, _snapshot());
+    } catch (error) {
+      if (_disposed || requestId != _requestId) return;
+      refreshError = 'Could not load more items. Check your connection.';
+      _log('loadMore failed: $error');
+    } finally {
+      isLoadingMore = false;
+      _notify();
+    }
+  }
+
+  Future<void> _refreshStats() async {
+    final period = periodFilter;
+    final key = _statsKey;
+    try {
+      final stats = await _service.fetchStats(period: period.cloudKey);
+      if (_disposed || period != periodFilter) return;
+      _applyStats(stats);
+      await _cache.write(key, {
+        ...stats,
+        'saved_at': DateTime.now().toIso8601String(),
+      });
+      _notify();
+    } catch (error) {
+      _log('Stats request failed: $error'); // keep cached stats
+    }
+  }
+
+  // ---- Applying data ------------------------------------------------------
+  void _applyPage(Map<String, dynamic> page, {bool append = false}) {
+    final incoming = (page['items'] as List? ?? const [])
         .whereType<Map>()
-        .map((item) => InventoryItemModel.fromCloud(
-              Map<String, dynamic>.from(item),
-            ))
+        .map((e) => Map<String, dynamic>.from(e))
         .toList();
-  }
 
-  List<InventoryItemModel> _preserveUnchangedItems(
-    List<InventoryItemModel> nextItems,
-    List<InventoryItemModel> currentItems,
-  ) {
-    final currentById = {for (final item in currentItems) item.id: item};
-    return nextItems.map<InventoryItemModel>((item) {
-      final current = currentById[item.id];
-      return current != null && _sameItem(current, item) ? current : item;
-    }).toList(growable: false);
-  }
-
-  bool _sameItem(InventoryItemModel a, InventoryItemModel b) {
-    return a.id == b.id &&
-        a.name == b.name &&
-        a.category == b.category &&
-        a.quantity == b.quantity &&
-        a.minRequired == b.minRequired &&
-        a.maxCapacity == b.maxCapacity &&
-        a.unit == b.unit &&
-        a.portionSize == b.portionSize &&
-        a.portionUnit == b.portionUnit &&
-        a.unitCost == b.unitCost &&
-        a.totalCost == b.totalCost &&
-        a.createdAt == b.createdAt &&
-        a.updatedAt == b.updatedAt &&
-        a.lastAddedAt == b.lastAddedAt &&
-        a.lastUsedAt == b.lastUsedAt &&
-        a.initialStockAt == b.initialStockAt &&
-        a.initialStockQty == b.initialStockQty &&
-        a.lastAddedQty == b.lastAddedQty &&
-        a.lastAddedCost == b.lastAddedCost &&
-        a.lastAddedStockBefore == b.lastAddedStockBefore &&
-        a.lastUsedQty == b.lastUsedQty &&
-        a.lastUsedStockBefore == b.lastUsedStockBefore &&
-        a.totalAdded == b.totalAdded &&
-        a.totalUsed == b.totalUsed &&
-        a.notes == b.notes &&
-        a.status == b.status &&
-        a.stockPercent == b.stockPercent &&
-        a.stockFillFraction == b.stockFillFraction &&
-        a.addedInPeriod == b.addedInPeriod &&
-        a.usedInPeriod == b.usedInPeriod &&
-        a.recentAction == b.recentAction;
-  }
-
-  bool _sameItemReferences(
-    List<InventoryItemModel> a,
-    List<InventoryItemModel> b,
-  ) {
-    if (a.length != b.length) return false;
-    for (var index = 0; index < a.length; index++) {
-      if (!identical(a[index], b[index])) return false;
+    final merged = <Map<String, dynamic>>[];
+    if (append) {
+      merged.addAll(_rawItems);
+      final seen = {for (final r in _rawItems) '${r['id']}'};
+      merged.addAll(incoming.where((r) => !seen.contains('${r['id']}')));
+    } else {
+      merged.addAll(incoming);
     }
-    return true;
-  }
 
-  bool _sameStrings(List<String> a, List<String> b) {
-    if (a.length != b.length) return false;
-    for (var index = 0; index < a.length; index++) {
-      if (a[index] != b[index]) return false;
+    // Re-use existing model objects for rows whose data did not change, so
+    // unchanged rows keep their identity and are not rebuilt.
+    final Map<String, InventoryItemModel> oldModels = {
+  for (final m in items) m.id.toString(): m,
+};
+final Map<String, String> oldJson = {
+  for (final r in _rawItems) '${r['id']}': jsonEncode(r),
+};
+items = merged.map<InventoryItemModel>((raw) {
+  final id = '${raw['id']}';
+  final InventoryItemModel? old = oldModels[id];
+  if (old != null && oldJson[id] == jsonEncode(raw)) return old;
+  return InventoryItemModel.fromCloud(raw);
+}).toList(growable: false);
+    _rawItems = merged;
+
+    _nextCursor = page['next_cursor']?.toString();
+    hasMore = page['has_more'] == true && _nextCursor != null;
+    if (page['total_matching'] != null) {
+      totalMatching = _integer(page['total_matching']);
+    } else if (!append) {
+      totalMatching = items.length;
     }
-    return true;
+
+    final version = _integer(page['version']);
+    if (!append) _version = version;
+    _latestVersion = math.max(_latestVersion, version);
+    hasLoadedOnce = true;
   }
 
-  List<InventoryItemModel> _filterItems(
-    List<InventoryItemModel> source,
-  ) {
-    final normalizedQuery = searchQuery.trim().toLowerCase();
-    return source.where((item) {
-      if (selectedCategory != 'All' && item.category != selectedCategory) {
-        return false;
-      }
-      if (normalizedQuery.isNotEmpty &&
-          !item.name.toLowerCase().contains(normalizedQuery) &&
-          !item.category.toLowerCase().contains(normalizedQuery)) {
-        return false;
-      }
-      switch (stockLevelFilter) {
-        case 'Low Stock':
-          return item.status == StockStatus.lowStock;
-        case 'Critical':
-          return item.status == StockStatus.critical;
-        case 'Added':
-          return item.addedInPeriod;
-        case 'Used':
-          return item.usedInPeriod;
-        default:
-          return true;
-      }
-    }).toList(growable: false);
+  void _applyStats(Map<String, dynamic> response) {
+    final stats = Map<String, dynamic>.from(
+      response['stats'] as Map? ?? const {},
+    );
+    final rawCategories = response['categories'];
+    categories = rawCategories is List
+        ? rawCategories.map((v) => v.toString()).toList()
+        : const [];
+    periodExpenditure = _number(stats['expenditure']);
+    totalItems = _integer(stats['total_items']);
+    periodAddedItemCount = _integer(stats['added_item_count']);
+    periodUsedItemCount = _integer(stats['used_item_count']);
+    needsRestockCount = _integer(stats['needs_restock_count']);
+    _statsVersion = _integer(response['version']);
+    _latestVersion = math.max(_latestVersion, _statsVersion);
   }
+
+  Map<String, dynamic> _snapshot() => {
+        'version': _version,
+        'items': _rawItems,
+        'next_cursor': _nextCursor,
+        'has_more': hasMore,
+        'total_matching': totalMatching,
+        'saved_at': DateTime.now().toIso8601String(),
+      };
+
+  DateTime? _savedAt(Map<String, dynamic> snap) =>
+      DateTime.tryParse('${snap['saved_at']}');
+
+  bool _isStale(Map<String, dynamic> snap) {
+    final saved = _savedAt(snap);
+    return saved == null || DateTime.now().difference(saved) > maxCacheAge;
+  }
+
+  String _clock(DateTime t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   double _number(dynamic value) {
     if (value is num) return value.toDouble();
@@ -314,39 +380,81 @@ class InventoryProvider extends ChangeNotifier {
     return 0;
   }
 
+  // ---- Filters ------------------------------------------------------------
   void setSearch(String query) {
     if (searchQuery == query) return;
     searchQuery = query;
-    filteredItems = _filterItems(items);
-    notifyListeners();
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 350),
+      () => unawaited(_onQueryChanged()),
+    );
   }
 
   void setCategory(String category) {
     if (selectedCategory == category) return;
     selectedCategory = category;
-    filteredItems = _filterItems(items);
-    notifyListeners();
+    unawaited(_onQueryChanged());
   }
 
   void setStockLevelFilter(String level, {StatsPeriod? period}) {
-    if (stockLevelFilter == level &&
-        (period == null || periodFilter == period)) {
-      return;
-    }
-    stockLevelFilter = level;
     final periodChanged = period != null && periodFilter != period;
-    if (period != null) periodFilter = period;
-    filteredItems = _filterItems(items);
-    notifyListeners();
-    if (periodChanged) {
-      unawaited(_loadFromCloud(silent: _hasLoadedData));
-    }
+    if (stockLevelFilter == level && !periodChanged) return;
+    stockLevelFilter = level;
+    if (periodChanged) periodFilter = period;
+    unawaited(_onQueryChanged(periodChanged: periodChanged));
   }
 
   void setPeriodFilter(StatsPeriod period) {
     if (periodFilter == period) return;
     periodFilter = period;
-    unawaited(_loadFromCloud());
+    unawaited(_onQueryChanged(periodChanged: true));
+  }
+
+  /// Shows the cached result for the new filters immediately (if any) and
+  /// only goes to the network when that cache is missing, stale or outdated.
+  Future<void> _onQueryChanged({bool periodChanged = false}) async {
+    final requestId = ++_requestId;
+    final cached = await _cache.read(_queryKey);
+    if (_disposed || requestId != _requestId) return;
+
+    items = [];
+    _rawItems = [];
+    hasMore = false;
+    totalMatching = 0;
+    _nextCursor = null;
+    _version = -1;
+    isLoadingMore = false;
+
+    if (periodChanged) {
+      _statsVersion = -1;
+      final cachedStats = await _cache.read(_statsKey);
+      if (_disposed || requestId != _requestId) return;
+      if (cachedStats != null) _applyStats(cachedStats);
+      unawaited(_refreshStats());
+    }
+
+    if (cached != null) {
+      _applyPage(cached);
+      isLoading = false;
+      _notify();
+      final upToDate =
+          _integer(cached['version']) == _latestVersion && !_isStale(cached);
+      if (upToDate) return;
+      await _refreshList(keepDepth: false, silent: true);
+    } else {
+      isLoading = true;
+      _notify();
+      await _refreshList(keepDepth: false, silent: false);
+    }
+  }
+
+  // ---- Mutations (writes need a connection) -------------------------------
+  Future<void> _afterMutation() async {
+    await Future.wait([
+      _refreshList(keepDepth: true, silent: true),
+      _refreshStats(),
+    ]);
   }
 
   Future<void> addStock(
@@ -354,17 +462,13 @@ class InventoryProvider extends ChangeNotifier {
     double quantity, {
     required double purchaseCost,
   }) async {
-    await _service.addStock(
-      id,
-      quantity,
-      purchaseCost: purchaseCost,
-    );
-    await _loadFromCloud(silent: true);
+    await _service.addStock(id, quantity, purchaseCost: purchaseCost);
+    await _afterMutation();
   }
 
   Future<void> useStock(String id, double quantity) async {
     await _service.useStock(id, quantity);
-    await _loadFromCloud(silent: true);
+    await _afterMutation();
   }
 
   Future<InventoryStockHistoryPage> fetchStockHistory(
@@ -415,26 +519,30 @@ class InventoryProvider extends ChangeNotifier {
       }
     }
 
-    await _loadFromCloud(silent: true);
+    await _afterMutation();
     return failures;
   }
 
   Future<String> saveItem(InventoryItemModel item) async {
     final id = await _service.saveItem(item);
-    await _loadFromCloud(silent: true);
+    await _afterMutation();
     return id;
   }
 
   Future<void> deleteItem(String id) async {
     await _service.deleteItem(id);
-    await _loadFromCloud(silent: true);
+    await _afterMutation();
   }
+
+  /// Call on logout.
+  Future<void> clearCache() => _cache.clear();
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     _disposed = true;
     _requestId++;
+    _versionSub?.cancel();
+    _searchDebounce?.cancel();
     super.dispose();
   }
 }

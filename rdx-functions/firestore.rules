@@ -78,6 +78,12 @@ service cloud.firestore {
     match /inventory/{itemId} {
       allow read, write: if false;
     }
+    // Single "version" doc bumped by the Cloud Function on every inventory
+    // change. Clients only listen to it to know when to re-fetch.
+    match /inventory_meta/{docId} {
+      allow read: if isRestaurantUser();
+      allow write: if false;
+    }
     match /inventory_categories/{categoryId} {
       allow read, write: if isAdmin();
     }

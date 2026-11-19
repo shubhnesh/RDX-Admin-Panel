@@ -66,7 +66,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     final isMobile = Responsive.isMobile(context);
     final showCategorySidebar = MediaQuery.sizeOf(context).width >= 1000;
     final pagePad = context.defaultScreenPadding();
-    if (provider.isLoading) {
+    if (provider.isLoading && !provider.hasLoadedOnce) {
       return Scaffold(
         backgroundColor: colors.background,
         body: const SafeArea(child: LoadingIndicator()),
@@ -88,7 +88,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 SizedBox(height: context.h(12)),
                 RdxActionButton(
                   label: 'Retry',
-                  onPressed: () => provider.load(),
+                  onPressed: () => provider.refresh(),
                   isPrimary: true,
                 ),
               ],
@@ -172,7 +172,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                     TextButton(
                       onPressed: provider.refreshError != null
                           ? provider.retryAutoRefresh
-                          : provider.load,
+                          : provider.refresh,
                       child: const Text('Retry'),
                     ),
                   ],
@@ -283,6 +283,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     InventoryProvider provider,
     List<InventoryItemModel> items,
   ) {
+    if (items.isEmpty && provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
     if (items.isEmpty) {
       return Center(
         child: Text(
@@ -435,7 +438,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                           builder: (_) => const InventoryManageCategoryScreen(),
                         ),
                       );
-                      if (context.mounted) await provider.load();
+                      if (context.mounted) await provider.refresh();
                     },
                     style: TextButton.styleFrom(
                       minimumSize: Size.zero,
@@ -834,12 +837,36 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         children: [
           if (showCategorySidebar) SizedBox(width: context.w(220) + context.w(10)),
           Expanded(
-            child: Text(
-              '${provider.filteredItems.length} '
-              '${provider.filteredItems.length == 1 ? 'item' : 'items'}',
-              style: AppTextStyles.body(context).copyWith(
-                color: AppColors.of(context).textSecondary,
-              ),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    'Showing ${provider.items.length} of '
+                    '${provider.totalMatching} '
+                    '${provider.totalMatching == 1 ? 'item' : 'items'}'
+                    '${provider.isOffline ? ' • offline' : ''}',
+                    style: AppTextStyles.body(context).copyWith(
+                      color: AppColors.of(context).textSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (provider.hasMore) ...[
+                  SizedBox(width: context.w(8)),
+                  provider.isLoadingMore
+                      ? SizedBox(
+                          width: context.h(18),
+                          height: context.h(18),
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : TextButton(
+                          onPressed: provider.loadMore,
+                          child: const Text('Load more'),
+                        ),
+                ],
+              ],
             ),
           ),
           if (canEdit)

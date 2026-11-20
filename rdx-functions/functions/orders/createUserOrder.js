@@ -30,6 +30,9 @@ const { readStoredRewardConfiguration } = require("../rewards/configuration");
 const { computeEarnPoints } = require("../rewards/earnOnDelivery");
 const { generateOrderId } = require("./orderId");
 const { getExtraScope, isExtraProduct } = require("./extraItems");
+const {
+  buildAdminOrderNotification,
+} = require("../notifications/notificationPolicy");
 
 // Admin is initialized in the main index entrypoint.
 const db = admin.firestore();
@@ -1279,6 +1282,18 @@ exports.createUserOrder = functions
           reward_points_earned: rewardPointsEarned,
           reward_awarded_at: rewardPointsEarned > 0 ? now : null,
         });
+        const adminNotification = buildAdminOrderNotification(
+          orderRef.id,
+          {
+            customer_name: baseOrderFields.customer_name,
+            total,
+          },
+          now
+        );
+        transaction.create(
+          db.collection("notifications").doc(adminNotification.id),
+          adminNotification.data
+        );
         transaction.create(idempotencyRef, {
           user_id: uid,
           payload_hash: requestHash,

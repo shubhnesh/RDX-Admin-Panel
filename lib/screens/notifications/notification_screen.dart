@@ -6,8 +6,12 @@ import 'package:rdx_admin/widgets/reusable_widgets/rdx_text_field.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/stat_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
+import '../../models/notification_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../widgets/notification_details_dialog.dart';
 import '../../widgets/reusable_widgets/loading_indicator.dart';
+import 'notification_activity_screen.dart';
 import 'notification_history_screen.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
@@ -63,6 +67,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       SizedBox(height: context.h(22)),
                       _buildStats(provider, colors, isMobile: isMobile),
                       SizedBox(height: context.h(22)),
+                      _buildActivityPreview(provider, colors),
+                      SizedBox(height: context.h(22)),
                       _buildMainContent(
                         provider,
                         colors,
@@ -77,6 +83,155 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               },
             ),
     );
+  }
+
+  Widget _buildActivityPreview(
+    NotificationProvider provider,
+    AppColorScheme colors,
+  ) {
+    final uid = ref.watch(authProvider).user?.uid;
+    final unread = provider.unreadActivityCountFor(uid);
+
+    return Container(
+      padding: EdgeInsets.all(context.h(18)),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(context.h(14)),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.notifications_active_outlined,
+                  color: AppColors.primary, size: context.h(19)),
+              SizedBox(width: context.w(8)),
+              Expanded(
+                child: Text(
+                  'Recent business activity',
+                  style: AppTextStyles.bodyLargeSemi(context),
+                ),
+              ),
+              if (unread > 0)
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.w(8),
+                    vertical: context.h(4),
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(context.h(20)),
+                  ),
+                  child: Text(
+                    '$unread unread',
+                    style: AppTextStyles.caption(context)
+                        .copyWith(color: AppColors.primary),
+                  ),
+                ),
+              TextButton(
+                onPressed: _openActivity,
+                child: const Text('View all'),
+              ),
+            ],
+          ),
+          if (provider.activityErrorMessage != null)
+            Padding(
+              padding: EdgeInsets.only(top: context.h(10)),
+              child: Text(
+                provider.activityErrorMessage!,
+                style:
+                    AppTextStyles.body(context).copyWith(color: colors.danger),
+              ),
+            )
+          else if (provider.isActivityLoading && provider.activity.isEmpty)
+            const LinearProgressIndicator()
+          else if (provider.activity.isEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: context.h(10)),
+              child: Text(
+                'New orders, payments, refunds, and support requests will appear here.',
+                style: AppTextStyles.body(context)
+                    .copyWith(color: colors.textMuted),
+              ),
+            )
+          else
+            ...provider.activity.take(5).map((notification) {
+              final isRead = uid == null || notification.isReadBy(uid);
+              return InkWell(
+                onTap: () => _openActivityDetails(notification.id),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: context.h(9)),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: context.h(8),
+                        height: context.h(8),
+                        decoration: BoxDecoration(
+                          color: isRead ? colors.border : AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(width: context.w(10)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              notification.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodyLargeSemi(context)
+                                  .copyWith(color: colors.textPrimary),
+                            ),
+                            SizedBox(height: context.h(2)),
+                            Text(
+                              notification.message,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.body(context)
+                                  .copyWith(color: colors.textMuted),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  void _openActivity() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const NotificationActivityScreen(),
+      ),
+    );
+  }
+
+  Future<void> _openActivityDetails(String notificationId) async {
+    final provider = ref.read(notificationProvider);
+    final uid = ref.read(authProvider).user?.uid;
+    NotificationModel? notification;
+    for (final item in provider.activity) {
+      if (item.id == notificationId) {
+        notification = item;
+        break;
+      }
+    }
+    final selectedNotification = notification;
+    if (selectedNotification == null) return;
+
+    if (uid != null && !selectedNotification.isReadBy(uid)) {
+      await provider.markActivityRead(selectedNotification.id, uid);
+    }
+    if (!mounted) return;
+
+    await showNotificationDetails(context, selectedNotification);
   }
 
   // ============================================================

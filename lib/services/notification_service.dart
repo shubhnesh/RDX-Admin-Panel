@@ -7,8 +7,8 @@ class NotificationService {
     FirebaseFirestore? firestore,
     FirebaseFunctions? functions,
   })  : _db = firestore ?? FirebaseFirestore.instance,
-        _functions = functions ??
-            FirebaseFunctions.instanceFor(region: 'us-central1');
+        _functions =
+            functions ?? FirebaseFunctions.instanceFor(region: 'us-central1');
 
   final FirebaseFirestore _db;
   final FirebaseFunctions _functions;
@@ -22,7 +22,51 @@ class NotificationService {
 
     return snap.docs
         .map((doc) => NotificationModel.fromFirestore(doc))
+        .where((notification) => notification.shouldShowInAdminHistory)
         .toList();
+  }
+
+  Stream<List<NotificationModel>> watchAdminActivity() {
+    return _adminActivityQuery().snapshots().map(_latestActivity);
+  }
+
+  Future<List<NotificationModel>> fetchAdminActivity() async {
+    final snapshot = await _adminActivityQuery().get();
+    return _latestActivity(snapshot);
+  }
+
+  List<NotificationModel> _latestActivity(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    final notifications = snapshot.docs
+        .map(NotificationModel.fromFirestore)
+        .toList(growable: false);
+    final sorted = notifications.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return sorted.take(50).toList(growable: false);
+  }
+
+  Query<Map<String, dynamic>> _adminActivityQuery() {
+    return _col.where('audience', isEqualTo: 'admin');
+  }
+
+  Future<void> markActivityRead(String notificationId, String uid) async {
+    await _col.doc(notificationId).update({
+      'read_by': FieldValue.arrayUnion([uid]),
+    });
+  }
+
+  Future<void> markAllActivityRead(
+    Iterable<String> notificationIds,
+    String uid,
+  ) async {
+    final batch = _db.batch();
+    for (final notificationId in notificationIds) {
+      batch.update(_col.doc(notificationId), {
+        'read_by': FieldValue.arrayUnion([uid]),
+      });
+    }
+    await batch.commit();
   }
 
   Future<void> sendBroadcast(

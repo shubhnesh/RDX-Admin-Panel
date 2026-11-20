@@ -26,6 +26,7 @@ class MainSideNav extends StatelessWidget {
   final VoidCallback? onLogout;
   final VoidCallback? onAddOrder;
   final bool showNotifications;
+  final int notificationUnreadCount;
 
   /// Design-time widths (scaled at runtime via [context.w]).
   static const double expandedWidth = 240;
@@ -44,6 +45,7 @@ class MainSideNav extends StatelessWidget {
     this.onLogout,
     this.onAddOrder,
     this.showNotifications = false,
+    this.notificationUnreadCount = 0,
   });
 
   @override
@@ -118,6 +120,7 @@ class MainSideNav extends StatelessWidget {
                           expanded: expanded,
                           selected: currentRoute == '/notifications',
                           onTap: () => onNavigate('/notifications'),
+                          unreadCount: notificationUnreadCount,
                         ),
                       _FooterTile(
                         icon: Icons.settings_outlined,
@@ -387,6 +390,7 @@ class _FooterTile extends StatelessWidget {
   final bool expanded;
   final VoidCallback onTap;
   final bool selected;
+  final int unreadCount;
 
   const _FooterTile({
     required this.icon,
@@ -394,6 +398,7 @@ class _FooterTile extends StatelessWidget {
     required this.expanded,
     required this.onTap,
     this.selected = false,
+    this.unreadCount = 0,
   });
 
   static const Duration _d = Duration(milliseconds: 280);
@@ -409,6 +414,26 @@ class _FooterTile extends StatelessWidget {
 
     final tileHeight = context.h(42);
     final squareSide = tileHeight;
+    final icon = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(this.icon, size: context.h(20), color: color),
+        if (unreadCount > 0)
+          Positioned(
+            top: -context.h(2),
+            right: -context.w(3),
+            child: Container(
+              width: context.h(8),
+              height: context.h(8),
+              decoration: BoxDecoration(
+                color: AppColors.danger,
+                shape: BoxShape.circle,
+                border: Border.all(color: colors.surface, width: 1.2),
+              ),
+            ),
+          ),
+      ],
+    );
 
     return Padding(
       padding: EdgeInsets.symmetric(vertical: context.h(6)),
@@ -438,14 +463,10 @@ class _FooterTile extends StatelessWidget {
                       Positioned(
                         left: expanded ? context.w(12) : null,
                         child: expanded
-                            ? Icon(icon, size: context.h(20), color: color)
+                            ? icon
                             : SizedBox(
                                 width: squareSide,
-                                child: Icon(
-                                  icon,
-                                  size: context.h(20),
-                                  color: color,
-                                ),
+                                child: Center(child: icon),
                               ),
                       ),
                       Positioned(

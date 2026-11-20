@@ -4,6 +4,7 @@ enum NotificationAudience {
   allApp,
   restaurantSpecific,
   newCustomers,
+  admin,
 }
 
 class NotificationModel {
@@ -27,6 +28,11 @@ class NotificationModel {
 
   /// True when this notification was created as a scheduled notification.
   final bool scheduled;
+  final String category;
+  final String? sourceId;
+  final String? deliveryStatus;
+  final String? source;
+  final List<String> readBy;
 
   const NotificationModel({
     required this.id,
@@ -38,6 +44,11 @@ class NotificationModel {
     this.sentAt,
     this.recipientCount = 0,
     this.scheduled = false,
+    this.category = 'broadcast',
+    this.sourceId,
+    this.deliveryStatus,
+    this.source,
+    this.readBy = const [],
   });
 
   factory NotificationModel.fromFirestore(DocumentSnapshot doc) {
@@ -70,6 +81,36 @@ class NotificationModel {
           _parseTimestamp(json['sent_at']) ?? _parseTimestamp(json['sentAt']),
       recipientCount: _parseInt(json['recipient_count']),
       scheduled: json['scheduled'] as bool? ?? false,
+      category: json['category'] as String? ?? 'broadcast',
+      sourceId: json['source_id'] as String?,
+      deliveryStatus: json['delivery_status'] as String?,
+      source: json['source'] as String?,
+      readBy: _parseStringList(json['read_by']),
+    );
+  }
+
+  bool isReadBy(String uid) => readBy.contains(uid);
+
+  bool get shouldShowInAdminHistory =>
+      source != 'automatic' || audience == NotificationAudience.admin;
+
+  NotificationModel withReadBy(String uid) {
+    if (isReadBy(uid)) return this;
+    return NotificationModel(
+      id: id,
+      title: title,
+      message: message,
+      audience: audience,
+      createdAt: createdAt,
+      scheduledAt: scheduledAt,
+      sentAt: sentAt,
+      recipientCount: recipientCount,
+      scheduled: scheduled,
+      category: category,
+      sourceId: sourceId,
+      deliveryStatus: deliveryStatus,
+      source: source,
+      readBy: [...readBy, uid],
     );
   }
 
@@ -84,6 +125,11 @@ class NotificationModel {
       'sent_at': sentAt == null ? null : Timestamp.fromDate(sentAt!),
       'recipient_count': recipientCount,
       'scheduled': scheduled,
+      'category': category,
+      'source_id': sourceId,
+      'delivery_status': deliveryStatus,
+      'source': source,
+      'read_by': readBy,
     };
   }
 
@@ -121,5 +167,10 @@ class NotificationModel {
     }
 
     return 0;
+  }
+
+  static List<String> _parseStringList(dynamic value) {
+    if (value is! Iterable) return const [];
+    return value.whereType<String>().toList(growable: false);
   }
 }

@@ -1,11 +1,14 @@
 "use strict";
 
-const crypto = require("crypto");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const {
   isMenuItemVisible,
   isPromotionActive,
+  notificationDocumentId,
+  buildAdminOrderNotification,
+  isAdminInitiatedOrderStatusChange,
+  isAdminInitiatedPaymentChange,
 } = require("./notificationPolicy");
 const { ADMIN_TOPIC } = require("./notificationPolicy");
 const {
@@ -17,8 +20,7 @@ const db = admin.firestore();
 const REGION = "us-central1";
 
 function eventDocumentId(category, eventId) {
-  const hash = crypto.createHash("sha256").update(eventId).digest("hex");
-  return `auto_${category}_${hash}`;
+  return notificationDocumentId(category, eventId);
 }
 
 function publishEvent(
@@ -52,10 +54,6 @@ function publishEvent(
     }));
   }
   return Promise.all(deliveries);
-}
-
-function orderName(order) {
-  return String(order.customer_name || "").trim() || "A customer";
 }
 
 function orderAmount(order) {
@@ -155,16 +153,17 @@ exports.notifyAppOrderCreated = functions
       return null;
     }
 
-    const name = orderName(order);
     const orderId = context.params.orderId;
-    return publishEvent(
-      "order",
-      context.eventId,
-      "Order placed successfully",
-      `${name} placed order ${orderId}.${orderAmount(order)}`,
-      orderId,
-      { customer: false, admin: true }
-    );
+    const notification = buildAdminOrderNotification(orderId, order);
+    return createAndDeliverNotification({
+      eventId: notification.id,
+      title: notification.data.title,
+      message: notification.data.message,
+      category: notification.data.category,
+      sourceId: notification.data.source_id,
+      audience: notification.data.audience,
+      topic: ADMIN_TOPIC,
+    });
   });
 
 exports.notifyAppOrderStatusChanged = functions
@@ -189,7 +188,10 @@ exports.notifyAppOrderStatusChanged = functions
       `Order ${status}`,
       `Order ${orderId} is now ${String(after.status || "updated").toLowerCase()}.`,
       orderId,
-      { customer: true, admin: true }
+      {
+        customer: true,
+        admin: !isAdminInitiatedOrderStatusChange(after),
+      }
     );
   });
 
@@ -212,7 +214,10 @@ exports.notifyOrderPaymentChanged = functions
       "Payment completed",
       `Payment received for order ${orderId} via ${method}.${orderAmount(after)}`,
       orderId,
-      { customer: true, admin: true }
+      {
+        customer: true,
+        admin: !isAdminInitiatedPaymentChange(after),
+      }
     );
   });
 

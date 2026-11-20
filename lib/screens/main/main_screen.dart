@@ -13,7 +13,9 @@ import 'package:rdx_admin/screens/support/support_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/responsive_size.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../widgets/dialogs/rdx_notice_dialog.dart';
+import '../../widgets/notification_toast_overlay.dart';
 import 'main_side_nav.dart';
 import '../../core/router/app_router.dart';
 
@@ -36,6 +38,26 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   late final Map<String, Widget> _screens;
   bool _didApplyHomeRoute = false;
+  bool _activityWatchConfigured = false;
+  String? _activityWatchUid;
+
+  void _syncActivityWatch(String? uid) {
+    if (_activityWatchConfigured && _activityWatchUid == uid) return;
+    final previousUid = _activityWatchUid;
+    _activityWatchConfigured = true;
+    _activityWatchUid = uid;
+    if (uid == null && previousUid == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final provider = ref.read(notificationProvider);
+      if (uid == null) {
+        provider.stopAdminActivityWatch();
+      } else {
+        provider.watchAdminActivity(uid);
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -200,19 +222,42 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final colors = AppColors.of(context);
     final useBottomNav = Responsive.useBottomNav(context);
     final navItems = _navItemsForRole();
+    var notificationUnreadCount = 0;
+    final notificationUid =
+        auth.permissions.canViewNotifications ? auth.user?.uid : null;
+    if (notificationUid != null) {
+      final notifications = ref.watch(notificationProvider);
+      _syncActivityWatch(notificationUid);
+      notificationUnreadCount =
+          notifications.unreadActivityCountFor(notificationUid);
+    } else {
+      _syncActivityWatch(null);
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _ensureHomeRoute();
     });
 
     if (useBottomNav) {
-      return Scaffold(
-          backgroundColor: colors.background,
-          body: SafeArea(bottom: false, child: _content()),
-          bottomNavigationBar: _MainBottomNav(
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Scaffold(
+            backgroundColor: colors.background,
+            body: SafeArea(bottom: false, child: _content()),
+            bottomNavigationBar: _MainBottomNav(
               currentIndex: _bottomNavIndex(navItems),
               items: navItems,
-              onTap: (index) => _navigate(navItems[index].route)));
+              notificationUnreadCount: notificationUnreadCount,
+              onTap: (index) => _navigate(navItems[index].route),
+            ),
+          ),
+          if (notificationUid != null)
+            NotificationToastOverlay(
+              bottomInset: Responsive.bottomNavHeight(context) + context.h(16),
+            ),
+        ],
+      );
     }
 
     final sideNav = MainSideNav(
@@ -225,14 +270,23 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         expanded: _sidebarExpanded,
         onToggleExpand: _toggleSidebar,
         onAddOrder: auth.permissions.canCreateOrders ? () {} : null,
-        showNotifications: auth.permissions.canViewNotifications);
+        showNotifications: auth.permissions.canViewNotifications,
+        notificationUnreadCount: notificationUnreadCount);
 
-    return Scaffold(
-        backgroundColor: colors.background,
-        body: Row(children: [
-          sideNav,
-          Expanded(child: _content()),
-        ]));
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Scaffold(
+          backgroundColor: colors.background,
+          body: Row(children: [
+            sideNav,
+            Expanded(child: _content()),
+          ]),
+        ),
+        if (notificationUid != null)
+          NotificationToastOverlay(bottomInset: context.h(24)),
+      ],
+    );
   }
 
   int _bottomNavIndex(List<SidebarItem> items) {
@@ -251,11 +305,13 @@ class _MainBottomNav extends StatelessWidget {
   final int currentIndex;
   final List<SidebarItem> items;
   final ValueChanged<int> onTap;
+  final int notificationUnreadCount;
 
   const _MainBottomNav({
     required this.currentIndex,
     required this.items,
     required this.onTap,
+    required this.notificationUnreadCount,
   });
 
   @override
@@ -282,6 +338,9 @@ class _MainBottomNav extends StatelessWidget {
                                 child: _MainBottomNavTile(
                                     item: items[i],
                                     selected: i == currentIndex,
+                                    showNotificationBadge:
+                                        items[i].route == '/notifications' &&
+                                            notificationUnreadCount > 0,
                                     onTap: () => onTap(i))),
                         ])))));
   }
@@ -291,11 +350,13 @@ class _MainBottomNavTile extends StatelessWidget {
   final SidebarItem item;
   final bool selected;
   final VoidCallback onTap;
+  final bool showNotificationBadge;
 
   const _MainBottomNavTile({
     required this.item,
     required this.selected,
     required this.onTap,
+    required this.showNotificationBadge,
   });
 
   @override
@@ -306,8 +367,26 @@ class _MainBottomNavTile extends StatelessWidget {
     return InkWell(
         onTap: onTap,
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(selected ? _selectedIcon(item.icon) : item.icon,
-              size: context.h(20).clamp(18.0, 23.0), color: color),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(selected ? _selectedIcon(item.icon) : item.icon,
+                  size: context.h(20).clamp(18.0, 23.0), color: color),
+              if (showNotificationBadge)
+                Positioned(
+                  top: -context.h(2),
+                  right: -context.w(4),
+                  child: Container(
+                    width: context.h(8),
+                    height: context.h(8),
+                    decoration: const BoxDecoration(
+                      color: AppColors.danger,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           SizedBox(height: context.h(3)),
           Text(item.label,
               maxLines: 1,

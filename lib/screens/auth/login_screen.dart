@@ -1506,6 +1506,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:rdx_admin/core/theme/app_colors.dart';
 import 'package:rdx_admin/core/theme/text_styles.dart';
 import 'package:rdx_admin/core/utils/responsive_size.dart';
+import 'package:rdx_admin/screens/main/main_screen.dart';
 import 'package:rdx_admin/widgets/buttons/rdx_action_button.dart';
 import 'package:rdx_admin/widgets/dialogs/category_dialog.dart';
 import 'package:rdx_admin/widgets/reusable_widgets/rdx_text_field.dart';
@@ -1657,6 +1658,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     super.dispose();
   }
 
+  // Future<void> _submit() async {
+  //   _log('Step 1: login form submitted.');
+  //   FocusScope.of(context).unfocus();
+
+  //   final auth = ref.read(authProvider);
+
+  //   _log('Step 2: forwarding sign-in to AuthProvider.');
+  //   final success = await auth.signIn(
+  //     _emailController.text.trim(),
+  //     _passwordController.text,
+  //   );
+  //   _log('Step 3: sign-in flow returned success=$success.');
+
+  //   if (!success && mounted) {
+  //     _log('Step 4: displaying login failure message.');
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text(auth.errorMessage ?? 'Unable to continue.'),
+  //         behavior: SnackBarBehavior.floating,
+  //         margin: EdgeInsets.all(context.w(20)),
+  //         elevation: 0,
+  //       ),
+  //     );
+  //   } else if (success) {
+  //     _log('Step 4: login accepted; app navigation is handled by auth state.');
+  //   }
+  // }
+
   Future<void> _submit() async {
     _log('Step 1: login form submitted.');
     FocusScope.of(context).unfocus();
@@ -1670,7 +1699,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
     _log('Step 3: sign-in flow returned success=$success.');
 
-    if (!success && mounted) {
+    if (!mounted) return;
+
+    if (!success) {
       _log('Step 4: displaying login failure message.');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1680,9 +1711,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           elevation: 0,
         ),
       );
-    } else if (success) {
-      _log('Step 4: login accepted; app navigation is handled by auth state.');
+      return;
     }
+
+    // Success → go to MainScreen
+    _log('Step 4: login accepted; navigating to MainScreen.');
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => const MainScreen(),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOut,
+            ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 480),
+      ),
+    );
   }
 
   Future<void> _showForgotPassword() async {

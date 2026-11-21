@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:rdx_admin/screens/auth/splash_onboarding_screen.dart';
 
 import 'firebase_options.dart';
 import 'core/router/app_router.dart';
@@ -70,15 +71,16 @@ class RdxAdminApp extends ConsumerWidget {
       title: 'RDX Admin',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
-      home: !auth.isLoggedIn
-          ? const LoginScreen()
-          : auth.isLoading
-              ? const LoginScreen()
-              : auth.isResolvingAccess
-                  ? const Scaffold(body: LoadingIndicator())
-                  : auth.canAccessApp
-                      ? const MainScreen()
-                      : const LoginScreen(),
+      // home: !auth.isLoggedIn
+      //     ? const LoginScreen()
+      //     : auth.isLoading
+      //         ? const LoginScreen()
+      //         : auth.isResolvingAccess
+      //             ? const Scaffold(body: LoadingIndicator())
+      //             : auth.canAccessApp
+      //                 ? const MainScreen()
+      //                 : const LoginScreen(),
+      home: const SplashOnboardingScreen(),
       onGenerateRoute: AppRoutes.generateRoute,
     );
   }

@@ -174,7 +174,7 @@ class RdxHeader extends StatelessWidget implements PreferredSizeWidget {
         ? Padding(
             padding: EdgeInsets.only(
               right: context.w(mobile ? 8 : 12),
-              top: mobile ? 0 : context.h(2),
+              // top: mobile ? 0 : context.h(0),
             ),
             child: AppBackButton(
               onPressed: onBack ?? () => Navigator.of(context).maybePop(),

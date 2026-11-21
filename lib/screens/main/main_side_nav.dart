@@ -155,69 +155,139 @@ class MainSideNav extends StatelessWidget {
 
   /// Brand block: text-only "RDX" wordmark with a small "Ops Center" tag.
   /// When collapsed, only the "RDX" wordmark remains, centered in the rail.
+  // Widget _buildHeader(BuildContext context, AppColorScheme colors) {
+  //   final inset = context.w(expanded ? 10 : 8);
+  //   final tile = context.h(50);
+
+  //   return Padding(
+  //     padding: EdgeInsets.fromLTRB(inset, context.h(20), inset, context.h(12)),
+  //     child: SizedBox(
+  //       height: tile,
+  //       child: Row(
+  //         mainAxisAlignment:
+  //             expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+  //         children: [
+  //           Flexible(
+  //             child: AnimatedSize(
+  //               duration: _animDuration,
+  //               curve: _animCurve,
+  //               alignment: Alignment.centerLeft,
+  //               child: ClipRect(
+  //                 child: Padding(
+  //                   padding: EdgeInsets.only(left: context.w(expanded ? 6 : 0)),
+  //                   child: Column(
+  //                     mainAxisAlignment: MainAxisAlignment.center,
+  //                     crossAxisAlignment: expanded
+  //                         ? CrossAxisAlignment.start
+  //                         : CrossAxisAlignment.center,
+  //                     mainAxisSize: MainAxisSize.min,
+  //                     children: [
+  //                       Text(
+  //                         'RDX',
+  //                         maxLines: 1,
+  //                         softWrap: false,
+  //                         overflow: TextOverflow.clip,
+  //                         style: AppTextStyles.bodyLargeSemi(context).copyWith(
+  //                           color: colors.textPrimary,
+  //                           fontSize: expanded ? 19 : 16,
+  //                           fontWeight: FontWeight.w800,
+  //                           letterSpacing: 1.4,
+  //                           height: 1.1,
+  //                         ),
+  //                       ),
+  //                       if (expanded) ...[
+  //                         SizedBox(height: context.h(2)),
+  //                         Text(
+  //                           'Ops Center',
+  //                           maxLines: 1,
+  //                           softWrap: false,
+  //                           overflow: TextOverflow.clip,
+  //                           style: AppTextStyles.caption(context).copyWith(
+  //                             color: colors.textMuted,
+  //                             fontSize: 10,
+  //                             fontWeight: FontWeight.w600,
+  //                             letterSpacing: 1.6,
+  //                             height: 1.1,
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     ],
+  //                   ),
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  /// Brand block: text-only RDX wordmark.
+  /// Prevents vertical overflow in the navigation header.
   Widget _buildHeader(BuildContext context, AppColorScheme colors) {
     final inset = context.w(expanded ? 10 : 8);
-    final tile = context.h(42);
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(inset, context.h(20), inset, context.h(12)),
+      padding: EdgeInsets.fromLTRB(
+        inset,
+        context.h(16),
+        inset,
+        context.h(10),
+      ),
       child: SizedBox(
-        height: tile,
-        child: Row(
-          mainAxisAlignment:
-              expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
-          children: [
-            Flexible(
-              child: AnimatedSize(
-                duration: _animDuration,
-                curve: _animCurve,
-                alignment: Alignment.centerLeft,
-                child: ClipRect(
-                  child: Padding(
-                    padding: EdgeInsets.only(left: context.w(expanded ? 6 : 0)),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: expanded
-                          ? CrossAxisAlignment.start
-                          : CrossAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'RDX',
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.clip,
-                          style: AppTextStyles.bodyLargeSemi(context).copyWith(
-                            color: colors.textPrimary,
-                            fontSize: expanded ? 19 : 16,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.4,
-                            height: 1.1,
-                          ),
-                        ),
-                        if (expanded) ...[
-                          SizedBox(height: context.h(2)),
-                          Text(
-                            'Ops Center',
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.clip,
-                            style: AppTextStyles.caption(context).copyWith(
-                              color: colors.textMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.6,
-                              height: 1.1,
-                            ),
-                          ),
-                        ],
-                      ],
+        height: context.h(50),
+        width: double.infinity,
+        child: Align(
+          alignment: expanded ? Alignment.centerLeft : Alignment.center,
+          child: AnimatedSize(
+            duration: _animDuration,
+            curve: _animCurve,
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: context.w(expanded ? 6 : 0),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: expanded
+                    ? CrossAxisAlignment.start
+                    : CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'RDX',
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodyLargeSemi(context).copyWith(
+                      color: colors.textPrimary,
+                      fontSize: expanded ? 19 : 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                      height: 1.0,
                     ),
                   ),
-                ),
+                  if (expanded) ...[
+                    SizedBox(height: context.h(2)),
+                    Text(
+                      'Ops Center',
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption(context).copyWith(
+                        color: colors.textMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                        height: 1.0,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
